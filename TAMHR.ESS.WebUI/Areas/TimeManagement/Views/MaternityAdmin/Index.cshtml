@@ -1,0 +1,305 @@
+﻿@using Kendo.Mvc.UI
+@using TAMHR.ESS.Domain
+@using TAMHR.ESS.Infrastructure
+@using TAMHR.ESS.Infrastructure.Web.ViewComponents
+@inject IScriptManager ScriptManager
+@inject AclHelper AclHelper
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService
+@model DocumentRequestDetailViewModel<MaternityLeaveViewModel>
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+
+    ScriptManager.RegisterReferences("datepicker", "combobox", "numeric", "timepicker");
+}
+@section styles {
+    <link rel="stylesheet" type="text/css" href="~/css/chat.css" />
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+}
+@section scripts {
+    <script type="text/javascript">
+        kendo.ui.DatePicker.fn.options.parseFormats = ["yyyy-MM-dd"];
+        kendo.ui.DatePicker.fn.options.format = "dd-MM-yyyy";
+
+        app.set("documentApprovalId", "@Model.DocumentApprovalId");
+        app.set("noreg", "@User.GetClaim("NoReg")");
+        app.set("users", @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(ApprovalService.GetDistinctTrackingApprovalUsers(Model.DocumentApprovalId, User.GetClaim("NoReg")))));
+        app.set("canCreateConversation", @AclHelper.CanCreateConversation().ToString().ToLower());
+    </script>
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <script type="text/javascript" src="~/js/app-upload.js"></script>
+    <script type="text/javascript" src="~/js/pages/common-form.js"></script>
+    <script type="text/javascript">
+        function onchange() {
+            if ($("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value() != null) {
+                $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value($(this).value)
+                var year = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getFullYear();
+                var month = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getMonth();
+                var day = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getDate();
+                var targetDate = new Date(year, month, day, 1, 0, 0);
+
+                var newDate = kendo.date.addDays(targetDate, 4);
+
+                var StartMaternityLeave = kendo.date.addDays(targetDate, -45);
+                var StartHandoverOfWork = kendo.date.addDays(StartMaternityLeave, -30);
+                var BackToWork = kendo.date.addDays(targetDate, 45);
+
+                $("#Object_StartHandoverOfWork").data("kendoDatePicker").value(StartHandoverOfWork);
+                $("#Object_StartMaternityLeave").data("kendoDatePicker").value(StartMaternityLeave);
+                $("#Object_BackToWork").data("kendoDatePicker").value(BackToWork);
+            }
+        }
+
+        function onChangeDayOfBirth() {
+            var dayOfBirth = $("#Object_DayOfBirth").data("kendoDatePicker").value();
+            
+            if (dayOfBirth != null) {
+                var backToWork = kendo.date.addDays(dayOfBirth, 45);
+                $("#Object_BackToWork").data("kendoDatePicker").value(backToWork);
+            }
+        }
+
+        $('#Object_GestationalAge').focusout(function (e) {
+            if ($('#Object_GestationalAge').val() > 40) {
+                $('#Object_GestationalAge').val(40);
+            }
+
+            if ($('#Object_GestationalAge').val() < 0) {
+                $('#Object_GestationalAge').val(0);
+            }
+        });
+
+        function onChangeMulaiKehamilan() {
+            $('#Object_EstimatedDayOfBirth').data("kendoDatePicker").value(null)
+
+            var tahun = $("#Object_Date").data("kendoDatePicker").value().getFullYear() + 1;
+            var bulan = $("#Object_Date").data("kendoDatePicker").value().getMonth();
+            var hari = $("#Object_Date").data("kendoDatePicker").value().getDate();
+
+            if (bulan == 1 && hari == 29) {
+                hari == 1;
+            }
+
+            var targetdate = new Date(tahun, bulan, hari, 1, 0, 0)
+            $('#Object_EstimatedDayOfBirth').kendoDatePicker({
+                max: targetdate,
+                format: "dd/MM/yyyy"
+            });
+
+            $('#Object_EstimatedDayOfBirth').data("kendoDatePicker").readonly(false);
+        };
+
+        app.registerHandler("submitHandler", function (d, parameters) {
+            app.flash(app.translate("Success create maternity document"));
+            window.location.reload(true);
+        });
+    </script>
+}
+@section pageTitle {
+    <div class="page-title">
+        @(await Component.InvokeAsync<TAMHR.ESS.Infrastructure.Web.ViewComponents.Breadcrumb>())
+    </div>
+}
+<form id="mainForm" method="POST" action="~/api/maternity-leave/create-maternity">
+    @Html.Hidden("Id", Model.Id, new { @class = "form-control" })
+    @Html.Hidden("DocumentApprovalId", Model.DocumentApprovalId, new { @class = "form-control" })
+    @Html.Hidden("FormKey", Model.FormKey, new { @class = "form-control" })
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Detail Pernyataan Hamil</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>Data Pernyataan Hamil</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Employee</label>
+                                        @(Html.Kendo().AutoComplete()
+                                            .Name("femaleAutoComplete")
+                                            .DataTextField("Name")
+                                            .Filter("contains")
+                                            .Placeholder(Localizer["Find user..."].Value)
+                                            .MinLength(3)
+                                            .Delay(500)
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .DataSource(source =>
+                                            {
+                                                source.ServerFiltering(true)
+                                                    .Custom()
+                                                    .Type("aspnetmvc-ajax")
+                                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/get-actives-by-gender/female"))))
+                                                    .PageSize(10)
+                                                    .Sort(sort => sort.Add("Name"))
+                                                    .Schema(config => config.Data("Data").Total("Total"));
+                                            })
+                                            .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                                            .Events(evt => evt.Select(@<text>function(e) {
+                                                var dataItem = this.dataItem(e.item.index()),
+                                                    encryptedData = dataItem.Username + "|" + dataItem.NoReg + "|" + dataItem.PostCode;
+
+                                                $("#mainForm").attr("action", app.resolveUrl("~/api/maternity-leave/create-maternity/" + encryptedData));
+                                            }</text>))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Usia Kehamilan</label>
+                                        <div class="row">
+                                            <div class="col-md-4 col-sm-4">
+                                                @(Html.Kendo().NumericTextBox<decimal>()
+                                                    .Name("Object.GestationalAge")
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.GestationalAge" })
+                                                    .Value(string.IsNullOrEmpty(Model.Object.GestationalAge) ? null : decimal.Parse(Model.Object.GestationalAge) as decimal?)
+                                                    .Spinners(true)
+                                                    .Min(0)
+                                                    .Format("#")
+                                                    .Decimals(0)
+                                                    .Round(false)
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                            <div class="col-md-2 col-sm-2">
+                                                <label>Minggu</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Tanggal Mulai kehamilan</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.Date)
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.Date", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                            .Format("dd/MM/yyyy")
+                                            .Events(e =>
+                                            {
+                                                e.Change("onChangeMulaiKehamilan");
+                                            })
+                                            .Max(DateTime.Now)
+                                            .Deferred()
+                                        )
+                                        <span class="invalid" data-validation-for="Object.Date"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Hari Perkiraan Lahir</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.EstimatedDayOfBirth)
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.EstimatedDayOfBirth", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                            .Format("dd/MM/yyyy")
+                                            .Min(DateTime.Now)
+                                            .Events(e =>
+                                            {
+                                                e.Change("onchange");
+                                            })
+                                            .Deferred()
+                                        )
+                                        <span class="invalid" data-validation-for="Object.EstimatedDayOfBirth"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Mulai Serah Terima Pekerjaan</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.StartHandoverOfWork)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StartHandoverOfWork", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1 Bulan Kalender Sebelum Cuti)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Mulai Cuti Melahirkan</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.StartMaternityLeave)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StartMaternityLeave", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1.5 Bulan Sebelum Melahirkan)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Kembali Bekerja</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.BackToWork)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.BackToWork", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1.5 Bulan Setelah Melahirkan)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>Lampiran Pendukung</legend>
+                                    <div class="form-group">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>Surat Keterangan Dokter</label>
+                                            @{
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.MedicalMertificatePath" })
+                                            }
+                                            <span class="invalid" data-validation-for="Object.MedicalMertificatePath"></span>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Catatan</legend>
+                                    <div class="form-group">
+                                        <label>Detail Catatan</label>
+                                        <br />
+                                        @Html.TextAreaFor(x => x.Object.Remarks, new { @class = "form-control", placeholder = "Masukkan Detail Catatan" })
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                        <div class="col-md-9 col-sm-8 col-8">
+                            <div class="float-right">
+                                <a class="btn btn-primary" href="javascript:;" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler">
+                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

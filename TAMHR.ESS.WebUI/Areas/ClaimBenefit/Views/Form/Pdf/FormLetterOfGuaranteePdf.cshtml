@@ -1,0 +1,121 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService personalDataService;
+
+@{
+    Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as LetterOfGuaranteeViewModel;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    string classKamar = personalDataService.GetPersonalDataInsurancesByNoreg(org.NoReg, obj.FamilyRelationshipId)?.BenefitClassification;
+
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string DepartmentHead = "";
+    string HRDivisionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRDivisionHead")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+
+    string jaminan = "";
+    string countString = "";
+    if (obj.CriteriaControl == "pascarawatinap")
+    {
+        if (int.Parse(obj.CheckUpCount) > 3)
+        {
+            jaminan = "Khusus";
+            countString = "(" + obj.CheckUpCount + ")";
+        }
+        else
+        {
+            if (int.Parse(obj.CheckUpCount) == 1)
+            {
+                countString = "( Pertama )";
+            }
+            else if (int.Parse(obj.CheckUpCount) == 2)
+            {
+                countString = "( Kedua )";
+            }
+            else if (int.Parse(obj.CheckUpCount) == 2)
+            {
+                countString = "( Ketiga )";
+            }
+            jaminan = "Kontrol ke " + obj.CheckUpCount;
+        }
+    }
+    else
+    {
+        jaminan = obj.Diagnosa;
+    }
+
+}
+
+<div style="font-family:'Segoe UI';">
+    <hr style="margin-bottom:50px;" />
+    <div style="text-align:right ;">
+        <label>Jakarta, @DateTime.Now.ToString("dd MMMM yyyy")</label><br />
+    </div>
+    <div style="text-align:left ;">
+        <label>Kepada Yth,</label><br />
+        <label><b>Pimpinan RS. @obj.Hospital</b></label><br />
+        <label>@obj.HospitalAddress</label><br />
+    </div>
+    <h1 style="text-align:center;"><u>SURAT JAMINAN</u></h1>
+    <div style="padding:0 50 50 50">
+        <p>Kami yang bertanda tangan dibawah ini, atas nama <b>PT. TOYOTA – ASTRA MOTOR</b> menjamin bahwa :</p>
+        <ul style="list-style-type:disc;">
+            <li>
+                <label>Data Pemohon</label><br />
+                <div style="display:inline-block;width:200px"><label>Nama</label></div><label>: @(string.IsNullOrEmpty(obj.PatientName) ? obj.PatientChildName : obj.PatientName)</label><br />
+                <div style="display:inline-block;width:200px"><label>Tanggal Lahir</label></div><label>: @obj.DateOfBirth.Value.ToString("dd MMMM yyyy")</label><br />
+                <div style="display:inline-block;width:200px"><label>Status Pasien</label></div><label>: @(string.IsNullOrEmpty(obj.FamilyRelationship) ? "Karyawan YSB" : obj.FamilyRelationship)</label><br />
+                <div style="display:inline-block;width:200px"><label>Noreg Karyawan</label></div><label>: @org.NoReg</label><br />
+                <div style="display:inline-block;width:200px"><label>Nama Karyawan</label></div><label>: @org.Name</label><br />
+                <div style="display:inline-block;width:200px"><label>Divisi</label></div><label>: @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division").ObjectText</label>
+            </li>
+            <li>
+                <label>Perusahaan menjamin untuk membayar biaya rawat jalan dari pasien tersebut diatas</label><br />
+                <div style="display:inline-block;width:200px"><label>Pemberian Jaminan untuk</label></div><label>: @jaminan @countString</label><br />
+                <div style="display:inline-block;width:200px"><label>Kelas Kamar</label></div><label>: @classKamar</label><br />
+                <div style="display:inline-block;width:200px"><label>Tanggal Rawat Jalan</label></div><label>: @obj.StartDateOfCare.Value.ToString("dd MMMM yyyy") - @obj.EndDateOfCare.Value.ToString("dd MMMM yyyy")</label>
+            </li>
+        </ul>
+        <p>
+            Demikian Surat Jaminan ini kami terbitkan untuk digunakan sebagaimana mestinya, atas bantuan dan kerjasamanya kami ucapkan terima kasih.
+        </p>
+        <div style="text-align:left ;">
+            <label style="margin-left:20px">Hormat Kami,</label><br /><br /><br /><br />
+            <label><b><u>Bayu Hariatmoko</u></b></label><br />
+            <label>Division Head</label><br />
+            <label>HR & GA Division</label><br />
+        </div>
+
+        <div style="text-align:left ;margin-top:50px;font-size:smaller ">
+            <label><b><u><i>Info penting :</i></u></b></label><br />
+            <ul>
+                <li><i>Terlampir surat perjanjian kontrol (Rawat Jalan) dari RS / Klinik / dokter permeriksa</i></li>
+                <li>
+                    <i>
+                        Pada saat penagihan, mohon dilampirkan : Surat Perjanjian Kontrol, Surat Jaminan Kontrol Asli (Stempel basah TAM), Kwitansi asli, Resume Medis (diagnosa), Copy Resep Obat, hasil Lab dll. dan Berkas dokumen dikirim ke Jl. Gaya Motor Selatan No. 5 Sunter 2 Jakarta Utara PT. Toyota-Astra Motor (Gedung HRGA) Up. Bpk. Hari Soesanto
+                    </i>
+                </li>
+                <li><i>Surat jaminan rawat jalan ini berlaku untuk satu hari kunjungan yang berhubungan dengan diagnosa perawatan / pengobatan sebelumnya </i></li>
+                <li><i>Apabila ada hal yang perlu dikonfirmasi harap menghubungi pihak HRD TAM dengan Bpk. Wahyu Wijayanto 081 232 666 880 / Bpk. Lukito Galuh 081399328519 , alamat email : wahyu.wijayanto@toyota.astra.co.id</i></li>
+            </ul>
+        </div>
+    </div>
+</div>

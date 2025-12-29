@@ -1,0 +1,219 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{ Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    TaxStatusViewModel obj = Model.Object as TaxStatusViewModel;
+    int year = Model.DocumentApproval.CreatedOn.Year;
+
+    var completed = Model.DocumentApproval.DocumentStatusCode == DocumentStatus.Completed;
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    var Approver = "";
+    var Requester = "";
+    var Known = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Known")
+        {
+            Known = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+<p></p>
+<style>
+    .border-top {
+        border-top: 2px solid black
+    }
+</style>
+<table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+    <colgroup> <col style="width: 30px;" /> <col style="width: 100px;" /> <col style="width: 300px;" /> <col style="width: 100px;" /> </colgroup>
+    <tbody>
+        <tr style="height: 20px;">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr style="height: 50px;">
+            <th colspan="4">
+                <p style="font-size: 18px;">FORM PERUBAHAN STATUS PAJAK</p>
+            </th>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>NoReg<label style="float: right;">:</label></td>
+            <td class="border-bottom">@org.NoReg</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>Nama<label style="float: right;">:</label></td>
+            <td class="border-bottom">@org.Name</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>Kelas<label style="float: right;">:</label></td>
+            <td class="border-bottom">@org.EmployeeSubgroupText</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>Divisi<label style="float: right;">:</label></td>
+            <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>Tahun<label style="float: right;">:</label></td>
+            <td class="border-bottom">@year</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td class="border-bottom">&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>PERUBAHAN STATUS PAJAK</strong></td>
+        </tr>
+        <tr>
+            <td colspan="4">
+                <table border="0" cellspacing="0" cellpadding="0">
+                    <tbody>
+                        <tr>
+                            <td style="width: 100px;">Status</td>
+                            <td style="width: 50px;">
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("TK0") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">TK/0</td>
+                            <td style="width:50px;"></td>
+                            <td style="width: 50px;">
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("K0") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">K/0</td>
+                        </tr>
+                        <tr style="height:10px"></tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("TK1") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">TK/1</td>
+                            <td style="width:50px;"></td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("K1") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">K/1</td>
+                        </tr>
+                        <tr style="height:10px"></tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("TK2") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">TK/2</td>
+                            <td style="width:50px;"></td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("K2") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">K/2</td>
+                        </tr>
+                        <tr style="height:10px"></tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("TK3") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">TK/3</td>
+                            <td style="width:50px;"></td>
+                            <td>
+                                <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                                    <tr>
+                                        <td align="center" valign="middle" style="width:100%">@Html.Raw((obj.StatusTax.Equals("K3") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td style="width:50px;" align="right">K/3</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" height="50px">
+                <table style="width: 100%; font-size: 12px;">
+                    <tbody>
+                        <tr>
+                            <td colspan="4" height="150px">
+                                <table style="width:100%; font-size:12px" cellspacing="50">
+                                    <tr>
+                                        <td align="center">
+                                            <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Approver) ? "signed" : "")</div>
+                                            @Approver
+                                            <hr />
+                                            HR. Admin
+                                        </td>
+                                        <td align="center">
+                                            <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Known) ? "signed" : "")</div>
+                                            @Known
+                                            <hr />
+                                            Atasan
+                                        </td>
+                                        <td align="center">
+                                            <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Requester) ? "signed" : "")</div>
+                                            @Requester
+                                            <hr />
+                                            Karyawan Ybs
+                                        </td>
+                                    </tr>
+
+                                </table>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+</table>

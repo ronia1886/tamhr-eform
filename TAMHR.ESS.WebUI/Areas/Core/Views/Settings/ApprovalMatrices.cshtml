@@ -1,0 +1,94 @@
+﻿@{
+    ScriptManager.RegisterReferences("datepicker", "combobox", "numeric", "multiselect");
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            app.registerHandler("dataInterceptor", function (d) {
+                d.Excludes = $("#Excludes").val().join(",");
+
+                return d;
+            });
+        })(jQuery, app);
+    </script>
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="approval-matrix-modal" data-modal-title="Create new Approval Matrix" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-handler="approvalmatrix">
+                    @Localizer["Create Approval Matrix"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/approvalmatrix/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Config" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/approvalmatrix">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Approval Matrix"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("Components/_ApprovalMatricesToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.ApprovalMatrixView>()
+                            .Name("grid")
+                            .HtmlAttributes(new { data_filter = "approval-matrices-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.FormTitle).Title("Approval Matrix").ClientTemplate(@"
+                                    <div class=""media"">
+                                        <div class=""media-body ml-2"">
+                                        <small class=""d-block"">
+                                            #:ApproverText# #if(data.ApproverType!='S'){#(#:ApproverTypeName#) #}#<br>
+                                            #if (data.InitiatorPattern!='') { # InitiatorPattern = #= InitiatorPatternName # # } #<br>
+                                            #if (data.InitiatorType!='') { # InitiatorType = #= InitiatorType # # } #
+                                        </small>
+                                        </div>
+                                    </div>
+                                ").ClientGroupHeaderTemplate("<b>#:value#</b>");
+                                columns.Bound(c => c.ApproverLevel).Title("Level").HtmlAttributes(new { @class = "text-center" }).MinScreenWidth(700);
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <div class=""btn-group"">
+                                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""approval-matrix-modal"" data-modal-title=""Edit Approval Matrix"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-handler=""approvalmatrix"" data-parameters-id=""#:Id#"">
+                                            <i class=""ft-edit""></i>
+                                        </a>
+                                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/approvalmatrix"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                            <i class=""ft-trash""></i>
+                                        </a>
+                                    </div>
+                                ").Width(170);
+                            })
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/approvalmatrix/gets")))
+                                .Group(group => group.Add(x => x.FormTitle))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("FormTitle");
+                                    sort.Add("InitiatorPattern");
+                                    sort.Add("InitiatorType");
+                                    sort.Add("ApproverLevel");
+                                })
+                            )
+                            .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

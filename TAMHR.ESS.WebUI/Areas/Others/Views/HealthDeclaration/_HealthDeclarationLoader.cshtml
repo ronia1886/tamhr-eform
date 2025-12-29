@@ -1,0 +1,337 @@
+﻿@model DocumentRequestDetailViewModel<HealthDeclarationViewModel>
+@inject UserService UserService
+@inject FormService FormService
+@inject ConfigService ConfigService
+@inject ApprovalService ApprovalService
+@{
+    var canEdit = false;
+    var documentApprovalId = Model.DocumentApprovalId;
+    var noreg = User.GetClaim("NoReg");
+    var user = UserService.GetByNoReg(Model.Requester);
+    var formQuestions = FormService.GetFormQuestions(Model.FormKey);
+    var roots = formQuestions.Where(x => x.ParentFormQuestionId == null);
+    var answers = Model.Object.FormAnswers.ToDictionary(x => x.FormQuestionId);
+    var trackingApprovals = ApprovalService.GetDistinctTrackingApprovalUsers(documentApprovalId, noreg);
+    var tracking = Newtonsoft.Json.JsonConvert.SerializeObject(trackingApprovals);
+    AclHelper.SetTemporaryPermissions(new[] { "Core.Approval.CreateConversation" });
+    var channelId = user.NoReg + "_" + Model.FormKey;
+    var members = trackingApprovals.Select(x => x.NoReg).ToArray();
+    var listFamilyStatus = new List<object> {
+        new { Text = "", Value = "" },
+        new { Text = "Suami / Istri", Value = "suamiistri" },
+        new { Text = "Anak", Value = "Anak" },
+        new { Text = "Lainnya", Value = "Lainnya" }
+    };
+}
+<script type="text/javascript">
+    app.set("url", "~/others/form/view?formKey=health-declaration&docid=@documentApprovalId");
+    app.set("channelId", "@channelId");
+    app.set("noreg", "@noreg");
+    app.set("name", "@User.GetClaim("Name")");
+    app.set("documentApprovalId", "@documentApprovalId");
+    app.set("users", @Html.Raw(tracking));
+</script>
+<script type="text/javascript" src="~/js/pages/common-conversation.js" asp-append-version="true"></script>
+<div class="row material">
+    <div class="order-1 order-md-0 col-md-9">
+        <div class="row">
+            <div class="form-group col-md-6">
+                <label>@Localizer["No Reg."]</label>
+                @(Html.Kendo().TextBox()
+                    .Name("NoReg")
+                    .Value(user.NoReg)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Enable(canEdit)
+                )
+            </div>
+            <div class="form-group col-md-6">
+                <label>@Localizer["Name"]</label>
+                @(Html.Kendo().TextBox()
+                    .Name("Name")
+                    .Value(user.Name)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Enable(canEdit)
+                )
+            </div>
+            <div class="form-group col-md-6">
+                <label>@Localizer["Phone Number"]</label>
+                @(Html.Kendo().TextBoxFor(x => x.Object.PhoneNumber)
+                    .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your phone number"].Value })
+                    .Enable(canEdit)
+                )
+            </div>
+            <div class="form-group col-md-6">
+                <label>@Localizer["Email"]</label>
+                @(Html.Kendo().TextBoxFor(x => x.Object.Email)
+                    .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your email address"].Value })
+                    .Enable(canEdit)
+                )
+            </div>
+            <div class="col-md-12">
+                <fieldset>
+                    <legend>Emergency Contact</legend>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Family Status"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().ComboBoxFor(x => x.Object.EmergencyFamilyStatus)
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Text")
+                                                .DataValueField("Value")
+                                                .ClearButton(true)
+                                                .BindTo(listFamilyStatus)
+                                                .AutoBind(true)
+                                                .SelectedIndex(0)
+                                                .ClearButton(false)
+                                                .Placeholder(Localizer["Please select emergency family status"].Value)
+                                                .Deferred()
+                                            )
+                        <span class="invalid" data-validation-for="Object.EmergencyFamilyStatus"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Name"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyName)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input emergency name"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.EmergencyName"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Phone Number"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyPhoneNumber)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input emergency phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.EmergencyPhoneNumber"></span>
+                    </div>
+                </fieldset>
+            </div>
+
+        </div>
+    </div>
+    <div class="col-md-3 order-0 order-md-1 d-flex align-items-center justify-content-center">
+        <img alt="Default Profile Picture" class="rounded center-image mb-4" style="width:8rem; height: 8.75rem; border: 1px solid #dddddd;" src="@ConfigService.ResolveAvatar(user.NoReg)" />
+    </div>
+</div>
+<div id="question_wrapper" class="row">
+    <div class="form-group col-md-12">
+        <label>@Localizer["Where are you working from?"]</label>
+        <div class="form-check mb-2 mb-md-0">
+            <input class="form-check-input" type="radio" name="Object.WorkTypeCode" id="cb_working_1" value="wt-wfo" @(Model.Object.WorkTypeCode == "wt-wfo" ? "checked" : string.Empty)>
+            <label class="form-check-label" for="cb_working_1">
+                @Localizer["Office"]
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="Object.WorkTypeCode" id="cb_working_2" value="wt-wfh" @(Model.Object.WorkTypeCode == "wt-wfh" ? "checked" : string.Empty)>
+            <label class="form-check-label" for="cb_working_2">
+                @Localizer["Home"]
+            </label>
+        </div>
+        <span class="invalid" data-validation-for="Object.WorkTypeCode"></span>
+    </div>
+    <div class="form-group col-md-12">
+        <label>@Localizer["Do you have a fever today?"]</label>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="Object.HaveFever" id="cb_fever_2" value="false" @(Model.Object.HaveFever.HasValue && !Model.Object.HaveFever.Value ? "checked" : string.Empty)>
+            <label class="form-check-label" for="cb_fever_2">
+                @Localizer["No"]
+            </label>
+        </div>
+        <div class="form-check mb-2 mb-md-0">
+            <input class="form-check-input" type="radio" name="Object.HaveFever" id="cb_fever_1" value="true" @(Model.Object.HaveFever.HasValue && Model.Object.HaveFever.Value ? "checked" : string.Empty)>
+            <label class="form-check-label" for="cb_fever_1">
+                @Localizer["Yes"]
+            </label>
+        </div>
+        <span class="invalid" data-validation-for="Object.HaveFever"></span>
+    </div>
+    <div class="form-group col-md-12">
+        <label>@Localizer[@"OtherTemperature.PlaceholderTitle"]</label>
+        <div class="form-check mb-2 mb-md-0">
+            <input class="form-check-input" type="radio" name="Object.BodyTemperature" id="cb_body_1" value="not-measured" @(Model.Object.BodyTemperature == "not-measured" ? "checked" : string.Empty)>
+            <label class="form-check-label" for="cb_body_1">
+                @Localizer["Not measured"]
+            </label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="Object.BodyTemperature" id="cb_body_2" value="others" @(Model.Object.BodyTemperature == "others" ? "checked" : string.Empty)>
+            <label class="form-check-label mb-1" for="cb_body_2">
+                @Localizer["OtherTemperature.Placeholder"]
+            </label>
+            @Html.TextBoxFor(x => x.Object.BodyTemperatureOtherValue, new { type = "number", @class = "form-control form-control-sm", style = "width: 6.5rem;", @readonly = "readonly" })
+            <span class="invalid" data-validation-for="Object.BodyTemperatureOtherValue"></span>
+        </div>
+        <span class="invalid" data-validation-for="Object.BodyTemperature"></span>
+    </div>
+    @foreach (var root in roots)
+    {
+        var counter = 0;
+
+        var items = formQuestions.Where(x => x.ParentFormQuestionId == root.Id && Model.Object.FormAnswers.Any(y => y.FormQuestionId == x.Id));
+
+        if (items.Count() == 0)
+        {
+            continue;
+        }
+        <div class="form-group col-md-12 question-wrapper">
+            <label>@Localizer[root.Title]</label>
+            <table class="table table-borderless" name="Object.FormAnswers.@root.Id">
+                <colgroup>
+                    <col />
+                    <col width="60" />
+                    <col width="60" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th class="border-top-0"></th>
+                        <th class="border-top-0 text-center">@Localizer["No"]</th>
+                        <th class="border-top-0 text-center">@Localizer["Yes"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in items)
+                    {
+                        var answer = answers.ContainsKey(item.Id) ? answers[item.Id] : null;
+                        var color = ++counter % 2 == 1 ? "aliceblue" : "inherit";
+                        var name = $"rb-{item.Id}";
+                        var id1 = $"{name}-1";
+                        var id2 = $"{name}-2";
+                        <tr style="background-color: @color">
+                            <td>@Localizer[item.Title]</td>
+                            <td class="text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="@name" id="@id2" data-uid="@item.Id" value="false" @(answer?.Value == "false" ? "checked" : string.Empty)>
+                                    <label class="form-check-label" for="@id2">
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="@name" id="@id1" data-uid="@item.Id" value="true" @(answer?.Value == "true" ? "checked" : string.Empty)>
+                                    <label class="form-check-label" for="@id1">
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <span class="invalid" data-validation-for="Object.FormAnswers.@root.Id"></span>
+        </div>
+    }
+</div>
+<div class="card">
+    <div class="card-header bordered">
+        <h4 class="card-title">@Localizer["History"]</h4>
+        <a class="heading-elements-toggle">
+            <i class="ft-ellipsis-h font-medium-3"></i>
+        </a>
+        <div class="heading-elements">
+            <ul class="list-inline mb-0">
+                <li>
+                    <a data-action="collapse">
+                        <i class="ft-minus"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body">
+        @(Html.Kendo().Grid<TAMHR.ESS.Infrastructure.Responses.HealthDeclarationHistoryResponse>()
+            .Name("historyGrid")
+            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+            .Columns(cols =>
+            {
+                cols.Bound(o => o.SubmissionDate)
+                    .Width(180)
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .Format("{0:dd/MM/yyyy}");
+
+                cols.Bound(o => o.DocumentNumber)
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(
+                        @"<a class=""font-blue-sharp"" data-trigger=""modal"" data-modal=""general-modal"" data-modal-title=""View Form - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/others/healthdeclaration/load"" data-parameters-id=""#:ReferenceDocumentApprovalId#"" data-parameters-noreg=""" + user.NoReg + @""">#:DocumentNumber#</a>"
+                    )
+                    .Width(200);
+
+                cols.Bound(o => o.IsSick)
+                    .Width(160)
+                    .Title(Localizer["Need Monitoring"].Value)
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate("#:IsSick ? 'Yes' : (IsSick != null ? 'No' : '')#");
+
+                cols.Bound(o => o.Remarks).Width(280);
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/health-declaration-report/get-history")).Data("function() { return { 'noreg': '" + user.NoReg + "' } }"))
+                .PageSize(10)
+                .Sort(sort => {
+                    sort.Add(x => x.SubmissionDate)
+                        .Descending();
+                })
+            )
+            .Sortable(sortable => sortable.Enabled(true))
+            .Resizable(resizable => resizable.Columns(true))
+            .Scrollable(scrollable => scrollable.Height("auto"))
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+            })
+        )
+    </div>
+</div>
+<div class="card">
+    <div class="card-header bordered">
+        <h4 class="card-title">@Localizer["Tracking Approval"]</h4>
+        <a class="heading-elements-toggle">
+            <i class="ft-ellipsis-h font-medium-3"></i>
+        </a>
+        <div class="heading-elements">
+            <ul class="list-inline mb-0">
+                <li>
+                    <a data-action="collapse">
+                        <i class="ft-minus"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body pb-0">
+        @(await Component.InvokeAsync<TrackingApproval>(new { id = documentApprovalId }))
+        <div class="modal-footer mt-4 mb-0 px-0 mx-0"></div>
+    </div>
+</div>
+<div class="card" style="position: static;">
+    <div class="card-header bordered" style="position: relative;">
+        <h4 class="card-title">@Localizer["Conversation"]</h4>
+        <a class="heading-elements-toggle">
+            <i class="ft-ellipsis-h font-medium-3"></i>
+        </a>
+        <div class="heading-elements">
+            <ul class="list-inline mb-0">
+                <li>
+                    <a data-action="collapse">
+                        <i class="ft-minus"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @(await Component.InvokeAsync<TAMHR.ESS.Infrastructure.Web.ViewComponents.CommonConversation>(new { id = channelId }))
+        <div style="padding: 0 12px; margin-top: -15px; padding-bottom: 1rem;">
+            <span class="small">@Localizer["Conversation.Placeholder1"]</span>
+        </div>
+    </div>
+</div>
+<script type="text/javascript">
+    $("#question_wrapper input[type='radio']").prop("disabled", true);
+
+    setTimeout(function () {
+        $("#question_wrapper").closest(".modal").find(".modal-content > .modal-footer > .actions").remove();
+    }, 100);
+</script>

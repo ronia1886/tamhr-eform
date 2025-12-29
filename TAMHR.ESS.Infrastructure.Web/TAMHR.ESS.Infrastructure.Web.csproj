@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Extensions\GenericListExtensions.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Pwa\ServiceWorker\Files\CacheFingerprinted.js" />
+    <None Remove="Pwa\ServiceWorker\Files\CacheFirst.js" />
+    <None Remove="Pwa\ServiceWorker\Files\CacheFirstSafe.js" />
+    <None Remove="Pwa\ServiceWorker\Files\Minimal.js" />
+    <None Remove="Pwa\ServiceWorker\Files\NetworkFirst.js" />
+    <None Remove="Pwa\ServiceWorker\Files\offline.html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\CacheFingerprinted.js" />
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\CacheFirst.js" />
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\CacheFirstSafe.js" />
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\Minimal.js" />
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\NetworkFirst.js" />
+    <EmbeddedResource Include="Pwa\ServiceWorker\Files\offline.html" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Hubs\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RestSharp" Version="112.1.0" />
+    <PackageReference Include="Rotativa.AspNetCore" Version="1.4.0" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.19" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TAMHR.ESS.Infrastructure\TAMHR.ESS.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

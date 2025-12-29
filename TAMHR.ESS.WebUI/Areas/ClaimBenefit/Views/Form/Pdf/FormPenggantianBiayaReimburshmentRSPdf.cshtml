@@ -1,0 +1,450 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string HRSectionHead = "";
+    string Requester = "";
+    string SectionHead = "";
+    var reimbursementObject = (obj as ReimbursementViewModel);
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRSectionHead")
+        {
+            HRSectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:50px;" />
+
+<table class="tableizer-table" border="0" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;font-family:'Segoe UI'; font-size:12px">
+    <tr>
+        <td colspan="2" class="bold" align="center">
+            <h3 style="text-align:center; height:10px">FORMULIR PENGGANTIAN BIAYA (REIMBURSEMENT) RUMAH SAKIT</h3>
+        </td>
+    </tr>
+    <tr>
+        <td align="center" style="width:100%;text-align:center;font-size:10px; height:10px ">
+            (Dilampirkan dengan surat-surat yang diperlukan)
+        </td>
+    </tr>
+    <tr style="height:10px"></tr>
+</table>
+
+<table border="0" cellspacing="0" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 6%">
+        <col style="width: 20%">
+        <col style="width: 20%">
+        <col style="width: 5%">
+        <col style="width: 20%">
+        <col style="width: 20%">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td class="bold">Nama<label style="float:right">:</label></td>
+        <td colspan="4" class="border-bottom">@org.Name</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="bold">No Registrasi<label style="float:right">:</label></td>
+        <td colspan="4" class="border-bottom">@org.NoReg</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="bold">Kelas<label style="float:right">:</label></td>
+        <td colspan="4" class="border-bottom">@org.EmployeeSubgroupText</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="bold">Divisi<label style="float:right">:</label></td>
+        <td colspan="4" class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="bold">Department<label style="float:right">:</label></td>
+        <td colspan="4" class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="bold">Seksi<label style="float:right">:</label></td>
+        <td colspan="2" class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+        <td class="bold" align="center">No. Extention<label style="float:right">:</label></td>
+        <td class="border-bottom">@reimbursementObject.PhoneNumber</td>
+    </tr>
+    <tr style="height:30px">
+    <tr>
+</table>
+
+<table border="0" cellspacing="0" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 6%">
+        <col style="width: 20%">
+        <col style="width: 15%">
+        <col style="width: 20%">
+        <col style="width: 15%">
+        <col style="width: 10%">
+        <col style="width: 20%">
+    </colgroup>
+    <tr>
+        <td align="center" colspan="7" class="border-bottom bold">
+            KETERANGAN
+        </td>
+    </tr>
+    <tr>
+        <td colspan="7">
+            Penggantian biaya (Reimbursement) Rumah Sakit a/n :
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama Pasien<label style="float:right">:</label></td>
+        <td colspan="5" class="border-bottom">
+            @if (typeof(ReimbursementViewModel) == obj.GetType())
+            {
+                var eye = (obj as ReimbursementViewModel);
+                <span>@(eye.FamilyRelationship == "rsanak" ? eye.PatientChildName : eye.PatientName)</span>
+            }
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Hubungan<label style="float:right">:</label>        </td>
+        <td colspan="5" class="border-bottom">
+            @if (typeof(ReimbursementViewModel) == obj.GetType())
+            {
+                var eye = (obj as ReimbursementViewModel);
+                if (eye.FamilyRelationship == "rskaryawan")
+                {
+
+                    <span class="bold">Karyawan Bersangkutan</span>
+                    <span style="text-decoration:line-through">/ Pasangan / Anak</span>
+                }
+                else if (eye.FamilyRelationship == "rspasangan")
+                {
+                    <span style="text-decoration:line-through">Karyawan Bersangkutan /</span>
+                    <span class="bold">Pasangan</span>
+                    <span style="text-decoration:line-through">/ Anak</span>
+
+                }
+                else
+                {
+                    <span style="text-decoration:line-through">Karyawan Bersangkutan / Pasangan / </span>
+                    <span class="bold">Anak</span>
+
+                }
+
+            }
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>
+            Nama Rumah Sakit<label style="float:right">:</label>
+        </td>
+        <td colspan="5" class="border-bottom">
+            @if (typeof(ReimbursementViewModel) == obj.GetType())
+            {
+                var eye = (obj as ReimbursementViewModel);
+                <span>@eye.Hospital</span>
+            }
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Tanggal Di Rawat<label style="float:right">:</label></td>
+        <td align="center">Tanggal Masuk</td>
+        <td class="border-bottom">
+            @if (typeof(ReimbursementViewModel) == obj.GetType())
+            {
+                var eye = (obj as ReimbursementViewModel);
+                string formated_date = eye.DateOfEntry.HasValue ? eye.DateOfEntry.Value.ToString("dd-MM-yyyy") : string.Empty;
+                <span>@formated_date</span>
+            }
+        </td>
+        <td align="center">Tanggal Keluar</td>
+        <td colspan="2" class="border-bottom">
+            @if (typeof(ReimbursementViewModel) == obj.GetType())
+            {
+                var eye = (obj as ReimbursementViewModel);
+                string formated_date = eye.DateOfOut.HasValue ? eye.DateOfOut.Value.ToString("dd-MM-yyyy") : string.Empty;
+                <span>@formated_date</span>
+            }
+        </td>
+    </tr>
+    <tr style="height:50px"></tr>
+</table>
+
+<table border="0" cellspacing="0" cellpadding="2" style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;">
+    <tbody>
+        <tr style="height: 21px;">
+            <td colspan="7" style="width: 96.6761%; height: 21px;">Jenis Reimbursement rumah sakit&nbsp;:</td>
+        </tr>
+        <tr style="height: 26px;">
+            <td style="width: 4.59127%; height: 26px;"></td>
+            <td style="width: 1.11982%; height: 26px;">1.</td>
+            <td colspan="2" class="bold" style="width: 36.2468%; height: 26px;">
+                <strong>Biaya Perawatan</strong><label style="float: right;">:</label>
+
+            </td>
+            <td class="border-bottom" style="width: 1.11982%; height: 26px;">
+                @if (typeof(ReimbursementViewModel) == obj.GetType())
+                {
+
+                    var eye = (obj as ReimbursementViewModel);
+                    @if (eye.InPatient == "perawataninap")
+                    {
+                        <span> @string.Format("{0:N}", eye.Cost)</span>
+                    }
+                }
+            </td>
+            <td class="border-bottom" style="width: 6.64119%; height: 26px;"></td>
+            <td style="width: 46.9572%; height: 26px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td colspan="4" class="bold" style="width: 44.0078%; height: 21px;"><u>Dokumen yang harus dilampirkan :</u></td>
+            <td style="width: 46.9572%; height: 21px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">a.</td>
+            <td colspan="2" style="width: 34.791%; height: 21px;">Perincian biaya perawatan</td>
+            <td style="width: 6.64119%; height: 21px;"></td>
+            <td style="width: 46.9572%; height: 21px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">b.</td>
+            <td colspan="4" style="width: 88.3894%; height: 21px;">Kwitansi asli ( bermaterai &gt;= 500.000,-) ---&gt; masa berlaku kwitansi &lt; 30 hari dari tgl.dirawat</td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">c.</td>
+            <td colspan="4" style="width: 88.3894%; height: 21px;">Copy Resep Obat</td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">d.</td>
+            <td colspan="4" style="width: 88.3894%; height: 21px;">Resume Medis</td>
+        </tr>
+        <tr style="height: 21px;">
+            <td style="height: 21px; width: 5.71109%;" colspan="2"></td>
+            <td style="width: 2.5756%; height: 21px;">e.</td>
+            <td style="height: 21px; width: 88.3894%;" colspan="4">Surat Keterangan lainnya.</td>
+        </tr>
+        <tr>
+            <td colspan="2" style="width: 5.71109%;"></td>
+            <td style="width: 2.5756%;"></td>
+            <td colspan="4" style="width: 88.3894%;"></td>
+        </tr>
+        <tr style="height: 26px;">
+            <td style="width: 4.59127%; height: 26px;"></td>
+            <td style="width: 1.11982%; height: 26px;">2.</td>
+            <td colspan="2" class="bold" style="height: 26px;"><strong>Biaya Rawat Jalan / Kontrol yang ke</strong><label style="float: right;">:</label></td>
+            <td colspan="2" style="width: 1.11982%; height: 26px;" class="border-bottom">
+                @if (typeof(ReimbursementViewModel) == obj.GetType())
+                {
+
+                    var eye = (obj as ReimbursementViewModel);
+                    @if (eye.InPatient == "rawatjalankontrol")
+                    {
+                        <span> @string.Format("{0:N}", eye.Cost)</span>
+                    }
+                }
+            </td>
+            <td style="width: 46.9572%; height: 26px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td colspan="4" class="bold" style="width: 44.0078%; height: 21px;"><u>Dokumen yang harus dilampirkan :</u></td>
+            <td style="width: 46.9572%; height: 21px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="width: 5.71109%; height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">a.</td>
+            <td colspan="2" style="width: 34.791%; height: 21px;">Surat Keterangan kontrol dari Rumah Sakit/Dokter</td>
+            <td style="width: 6.64119%; height: 21px;"></td>
+            <td style="width: 46.9572%; height: 21px;"></td>
+        </tr>
+        <tr style="height: 21px;">
+            <td colspan="2" style="height: 21px;"></td>
+            <td style="width: 2.5756%; height: 21px;">b.</td>
+            <td colspan="4" style="height: 21px;">Kwitansi asli ( bermaterai &gt;= 500.000,-) ---&gt; masa berlaku kwitansi &lt; 30 hari dari tgl.dirawat</td>
+        </tr>
+        <tr>
+            <td colspan="2"></td>
+            <td style="width: 2.5756%;">c.</td>
+            <td colspan="4">Copy Resep Obat</td>
+        </tr>
+        <tr>
+            <td colspan="2"></td>
+            <td style="width: 2.5756%;">d.</td>
+            <td colspan="4">Surat Keterangan lainnya.</td>
+        </tr>
+        <tr>
+            <td colspan="2"></td>
+            <td style="width: 2.5756%;"></td>
+            <td colspan="4"></td>
+        </tr>
+        <tr>
+            <td style="width: 5.71109%;" colspan="3">Catatan :</td>
+            <td style="width: 34.791%;" colspan="4"></td>
+        </tr>
+    </tbody>
+</table>
+
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 6%">
+        <col style="width: 20%">
+        <col style="width: 20%">
+        <col style="width: 14%">
+        <col style="width: 20%">
+        <col style="width: 20%">
+    </colgroup>
+    <tr>
+        <td>Jakarta,</td>
+        <td style="border-bottom:1px dotted"></td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="3">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px; width:100%">
+                <tr>
+                    <td colspan="3" align="center">DIVISION</td>
+                </tr>
+                <tr>
+                    <td align="center">SECTION HEAD</td>
+                    <td align="center">ADMINISTRATION</td>
+                    <td align="center">KARYAWAN YBS.</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px" valign="bottom" align="center">@SectionHead</td>
+                    <td height="100px" style="width:150px" valign="bottom" align="center"></td>
+                    <td height="100px" style="width:150px" valign="bottom" align="center">@Requester</td>
+                </tr>
+            </table>
+        </td>
+        <td></td>
+        <td colspan="2">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px; width:100%">
+                <tr>
+                    <td colspan="2" align="center">HRD</td>
+                </tr>
+                <tr>
+                    <td align="center">SECTION HEAD</td>
+                    <td align="center">ADMINISTRATION</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px" valign="bottom" align="center">@HRSectionHead</td>
+                    <td height="100px" style="width:150px" valign="bottom" align="center">@Approver</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr style="height:25px"></tr>
+    <tr>
+        <td colspan="3"></td>
+        <td colspan="3">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px; width:100%">
+                <colgroup>
+                    <col style="width: 40%">
+                    <col style="width: 60%">
+                </colgroup>
+                <tr>
+                    <td colspan="2">Diisi oleh petugas HRD</td>
+                </tr>
+                <tr>
+                    <td>Diterima tanggal</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Petugas</td>
+                    <td></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr style="height:25px"></tr>
+    <tr>
+        <td colspan="3">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px; width:100%">
+                <colgroup>
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                </colgroup>
+                <tr>
+                    <td>Note<label style="float:right">:</label></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Document No<label style="float:right">:</label></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Document Name<label style="float:right">:</label></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+        </td>
+        <td colspan="3">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px; width:100%">
+                <colgroup>
+                    <col style="width: 50%">
+                    <col style="width: 50%">
+                </colgroup>
+                <tr>
+                    <td>Revised No<label style="float:right">:</label></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Document Date<label style="float:right">:</label></td>
+                    <td></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

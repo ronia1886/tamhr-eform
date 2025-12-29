@@ -1,0 +1,80 @@
+﻿@{
+    ScriptManager.RegisterReferences("numeric");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="user-impersonation-modal" data-modal-title="Create new Impersonation" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-handler="user-impersonation">
+                    @Localizer["Create Impersonation"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/user-impersonation/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Impersonation" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/user-impersonation">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Impersonations"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("~/Areas/Core/Views/Settings/Components/_UserImpersonationToolbars.cshtml")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.UserImpersonationView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "user-impersonations-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Impersonation").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-2"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                    <small class=""d-block"">Impersonate as #:ImpersonateName# (#:PostName#)</small>
+                                    <small class=""d-block"">from <b>#:kendo.toString(StartDate, 'dd/MM/yyyy')#</b> until <b>#:kendo.toString(EndDate, 'dd/MM/yyyy')#</b></small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""user-impersonation-modal"" data-modal-title=""Edit Impersonation"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-id=""#:Id#"" data-parameters-handler=""user-impersonation"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/user-impersonation"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width("8rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/user-impersonation/gets")))
+                        .Sort(sort => sort.Add("Name"))
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

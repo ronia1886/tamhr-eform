@@ -1,0 +1,125 @@
+﻿@inject AclHelper AclHelper
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService service;
+@{
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+}
+@section scripts {
+    <script type="text/javascript">
+        console.log("test")
+        app.registerHandler("excel-handler", function (parameters) {
+            
+        });
+
+        function download(url, data, filename) {
+            var formData = new FormData();
+            Object.keys(data).forEach(function (key) {
+                var value = data[key];
+                if (value instanceof Array) {
+                    value.forEach(function (v) {
+                        formData.append(key, v);
+                    });
+                } else {
+                    formData.append(key, value);
+                }
+
+            });
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url);
+            //xhr.send(formData);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("RequestVerificationToken", REQUEST_VERIFICATION_TOKEN);
+            xhr.send(JSON.stringify(data));
+
+            xhr.onload = function (event) {
+                if (this.status == 200) {
+                    var bin = atob(xhr.response);
+                    var ab = s2ab(bin);
+                    var blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;' });
+
+                    let a = document.createElement("a");
+                    a.style = "display: none";
+                    document.body.appendChild(a);
+                    let url = window.URL.createObjectURL(blob);
+                    a.href = url;
+                    a.download = filename + '.xlsx';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                }
+            };
+        };
+
+        function s2ab(s) {
+            var buf = new ArrayBuffer(s.length);
+            var view = new Uint8Array(buf);
+            for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
+    </script>
+}
+@if (AclHelper.CanViewAction())
+{
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                            <div class="col-md-9 col-sm-8 col-8">
+                                <div class="float-right">
+                                    @if (AclHelper.CanEdit())
+                                    {
+                                        <button name="btnAction" class="btn btn-info mr-2" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true">
+                                            <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                        </button>
+                                    }
+                                    @if (AclHelper.CanSubmit())
+                                    {
+                                        <a class="btn btn-primary mr-2" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                            <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                        </a>
+                                    }
+                                    @if (AclHelper.CanApprove())
+                                    {
+                                        <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                            <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                        </a>
+                                    }
+                                    @if (AclHelper.CanReject())
+                                    {
+                                        <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                            <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                        </a>
+                                    }
+                                    @if (AclHelper.CanRevise())
+                                    {
+                                        <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                            <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                        </a>
+                                    }
+                                    @if (AclHelper.CanCancel())
+                                    {
+                                        if (ApplicationHelper.IsDefault(Model.Id))
+                                        {
+                                            <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                            </a>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

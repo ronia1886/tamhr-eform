@@ -1,0 +1,42 @@
+﻿@model TAMHR.ESS.Domain.Faskes
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/faskes">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Code"]</label>
+                @Html.TextBoxFor(x => x.FaskesCode, new { @class = "form-control", @data_validation_for = "FaskesCode", @placeholder = Localizer["Please input faskes code"].Value })
+                <span class="invalid" data-validation-for="FaskesCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                @Html.TextBoxFor(x => x.FaskesName, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input name"].Value })
+                <span class="invalid" data-validation-for="FaskesName"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["City"]</label>
+                @Html.TextBoxFor(x => x.FaskesCity, new { @class = "form-control", @data_validation_for = "FaskesCity", @placeholder = Localizer["Please input city"].Value })
+                <span class="invalid" data-validation-for="FaskesCity"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                @Html.TextBoxFor(x => x.FaskesAddress, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input address"].Value })
+                <span class="invalid" data-validation-for="FaskesAddress"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

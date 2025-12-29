@@ -1,0 +1,132 @@
+﻿@model DocumentRequestDetailViewModel<ReferenceLetterViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var permissions = Model.Permissions;
+    var canDownloadReferenceLetterDocument = permissions.Contains("CanDownload") && AclHelper.CanApprove();
+    var canUploadAttachment = permissions.Contains("CanUpload") && AclHelper.CanApprove();
+    var hasAttachment = Model.Attachments != null && Model.Attachments.Any(x => x.FieldCategory == "AttachmentFilePath");
+    var reasons = ConfigService.GetConfig("ReferenceLetter.Detail")?.ConfigValue ?? "{}";
+}
+@section scripts
+{
+    @if (canUploadAttachment)
+    {
+        <script type="text/javascript">
+            (function ($, app) {
+                app.interceptHandler("postHandler", x => x.action == "approve", function (parameters, callback) {
+                    let $form = $("#mainForm"),
+                        data = $form.serializeObject();
+
+                    $.post("~/api/reference-letter/upload-attachment", data, function (d) {
+                        callback();
+                    }).fail(function (xhr, status, error) {
+                        $form.validate(xhr.responseJSON);
+                    });
+                });
+            })(jQuery, app);
+        </script>
+    }
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Reference Letter Request"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a href="javascript:;" data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Request Detail"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Purpose Detail"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.ReferenceLetterPurposeCode, "ReferenceLetterPurpose")
+                                        .Enable(AclHelper.CanEdit())
+                                        .Placeholder(Localizer["Please select purpose detail"].Value)
+                                        .Events(events =>
+                                        {
+                                            events.Change(@<text>function() {
+                                                let mappings = @Html.Raw(reasons),
+                                                    value = this.value(),
+                                                    description = mappings[value] || "";
+
+                                                $("#detailWrapper").text(app.translate(description));
+                                            }</text>);
+                                        })
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.ReferenceLetterPurposeCode"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                                    @if (AclHelper.CanEdit())
+                                    {
+                                        @(await Component.InvokeAsync<FileUpload>(new { docId = Model.DocumentApprovalId, field = "Object.FilePath" }))
+                                        <span id="detailWrapper" class="d-block font-small-1 bold font-yellow-soft"></span>
+                                        <span class="invalid" data-validation-for="Object.FilePath"></span>
+                                    }
+                                    else
+                                    {
+                                        <br />
+                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "Object.FilePath" })
+                                    }
+                                </div>
+                            </fieldset>
+                            @if (canUploadAttachment || hasAttachment || canDownloadReferenceLetterDocument)
+                            {
+                                <fieldset class="mt-3">
+                                    <legend><span class="required" aria-required="true"> * </span>@Localizer["Reference Letter Attachment"]</legend>
+                                    @if (canDownloadReferenceLetterDocument)
+                                    {
+                                        <div class="form-group">
+                                            <a class="btn btn-sm green-jungle" href="~/others/form/DownloadReferenceLetterDocument?id=@Model.DocumentApprovalId" target="_blank">
+                                                <i class="ft-download"></i> &nbsp;@Localizer["Download Reference Letter Document"]
+                                            </a>
+                                        </div>
+                                    }
+                                    @if (canUploadAttachment)
+                                    {
+                                        <div class="form-group inline">
+                                            @if (canUploadAttachment)
+                                            {
+                                                @(await Component.InvokeAsync<FileUpload>(new { docId = Model.DocumentApprovalId, field = "AttachmentFilePath" }))
+                                            }
+                                            else
+                                            {
+                                                @(await Component.InvokeAsync<Attachment>(new { files = Model.Attachments, fieldCategory = "AttachmentFilePath" }))
+                                            }
+                                        </div>
+                                    }
+                                </fieldset>
+                            }
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group inline">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Remarks", placeholder = Localizer["Please input remarks"].Value, style = "height: 141px;" }, AclHelper.CanEdit()))
+                                    <span class="invalid" data-validation-for="Object.Remarks"></span>
+                                    @Html.HiddenFor(x => x.Object.ReferenceLetterNumber)
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

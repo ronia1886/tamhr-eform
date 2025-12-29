@@ -1,0 +1,429 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService claimBenefitService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService
+@model DocumentRequestDetailViewModel<Loan36ViewModel>
+
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var objInfo = claimBenefitService.GetInfo(requester).FirstOrDefault();
+    int Kelas = (int)objInfo.GetType().GetProperty("NP").GetValue(objInfo);
+    Model.Object.ClassRequester = Kelas;
+    Model.Object.IsVerified = Model.Permision.Contains("(isVerified)");
+    bool IsRoleForm = User.GetClaim("Roles").Split(",").Contains(Model.FormRoleKey);
+    var ConfigSequence = configService.GetConfig("ViewSequence.CompanyLoan");
+    var ViewSequence = User.GetClaim("Roles").Split(",").Contains(ConfigSequence.ConfigValue);
+}
+@section scripts {
+    <script type="text/javascript">
+        if ('@isCanEdit' == 'True') {
+            $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/claimbenefit/getinfo'),
+                    dataType: 'json',
+                    success: function (data) {
+                        $('#User').text(data.Data[0].Name);
+                        $('#Kelas').text(data.Data[0].Kelas);
+                    }
+                });
+
+            //get validationMatrix
+
+        } else {
+            if ('@Model.Object.IsVerified' == 'False') {
+                $("#divPinjaman").hide();
+            }
+            $("#headerinfo").hide();
+        }
+
+        function onchange() {
+            var str = ($("#Object_LoanType").data("kendoComboBox").text().toLowerCase());
+            var target = "kendaraan";
+            var value = str.substr((str.length - target.length), target.length);
+            if (value == target) {
+                $("#nonvehicle").hide();
+                $("#vehicle").show();
+                clear();
+            } else {
+                $("#nonvehicle").show();
+                $("#vehicle").hide();
+                clear();
+            }
+        }
+
+        function loantypechange(e) {
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/GetListInfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'CalculationLoan', subtype: ''
+                },
+                success: function (result) {
+                    var typeLoan = $("#Object_LoanType").data("kendoComboBox").value();
+                    var MaxTotalLoan = result.find(x => x.SubType === 'MaxTotalLoan') == undefined ? 0 : result.find(x => x.SubType === 'MaxTotalLoan').Ammount;
+                    var MaxTotalCarLoan = result.find(x => x.SubType === 'MaxTotalCarLoan') == undefined ? 0 : result.find(x => x.SubType === 'MaxTotalCarLoan').Ammount;
+                    var MaxTotalHouseLoan = result.find(x => x.SubType === 'MaxTotalHouseLoan') == undefined ? 0 : result.find(x => x.SubType === 'MaxTotalHouseLoan').Ammount;
+                    var InterestCarLoan = result.find(x => x.SubType === 'InterestCarLoan') == undefined ? 0 : result.find(x => x.SubType === 'InterestCarLoan').Ammount;
+                    var InterestHouseLoan = result.find(x => x.SubType === 'InterestHouseLoan') == undefined ? 0 : result.find(x => x.SubType === 'InterestHouseLoan').Ammount;
+                    var PeriodCarLoan = result.find(x => x.SubType === 'PeriodCarLoan') == undefined ? 0 : result.find(x => x.SubType === 'PeriodCarLoan').Ammount;
+                    var PeriodLoan = result.find(x => x.SubType === 'PeriodLoan') == undefined ? 0 : result.find(x => x.SubType === 'PeriodLoan').Ammount;
+
+                    if (typeLoan.indexOf("vehicle") != -1) {
+                        $("#nonvehicle").hide();
+                        $("#vehicle").show();
+                        if (@Kelas >= 7) {
+                            $('#Object_CalculationLoan').val(MaxTotalCarLoan == 0 ? MaxTotalLoan : MaxTotalCarLoan);
+                        } else {
+                            $('#Object_CalculationLoan').val(MaxTotalLoan);
+                        }
+                        $('#Object_Interest').val(InterestCarLoan);
+                        $('#Object_LoanPeriod').val(PeriodCarLoan);
+                        clear();
+                    } else {
+                        $("#nonvehicle").show();
+                        $("#vehicle").hide();
+                        if (@Kelas >= 7) {
+                            $('#Object_CalculationLoan').val(MaxTotalHouseLoan == 0 ? MaxTotalLoan : MaxTotalHouseLoan);
+                        } else {
+                            $('#Object_CalculationLoan').val(MaxTotalLoan);
+                        }
+                        $('#Object_Interest').val(InterestHouseLoan);
+                        $('#Object_LoanPeriod').val(PeriodLoan);
+                        clear();
+                    }
+                }
+            });
+        }
+
+        if ('@Model.Object.Brand' != "") {
+            $("#nonvehicle").hide();
+        }
+        else if ('@Model.Object.Address' != "") {
+            $("#vehicle").hide();
+        } else {
+            $("#nonvehicle").hide();
+            $("#vehicle").hide();
+        }
+
+        function clear() {
+            $("#Object_Address").val(null);
+            $("#Object_RT").val(null);
+            $("#Object_RW").val(null);
+            $("#Object_Brand").val(null);
+            $("#Object_LoanAmount").data("kendoNumericTextBox").value(null);
+        }
+
+        function casscadeDatabound(e) {
+            if ('@isCanEdit' == 'False') {
+                this.readonly(true);
+            }
+        }
+
+        $(document).ready(function () {
+            $("#Object_Province").val("");
+        })
+
+        function readonlyObject(e) {
+            if ('@isCanEdit' === 'False') {
+                this.readonly(true);
+            }
+        }
+
+        function readonlyObjectLoanType(e) {
+            if ("@Kelas" >= 9) {
+                var oldData = this.dataSource.data();
+                for (var i = 0; i < oldData.length; i++) {
+                    var item = oldData[i];
+                    if (item.Code == "buyingvehicle7up") {
+                        this.dataSource.remove(item);
+                        break;
+                    }
+                }
+            }
+
+            if ('@isCanEdit' === 'False') {
+                this.readonly(true);
+            }
+        }
+
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        };
+
+        //$('#Object_BasicSalary').focusout(function () {
+        //    var calculationLoan = $("#Object_CalculationLoan").val();
+        //    var basicSalary = this.value;
+        //    var maxloan = calculationLoan * basicSalary;
+        //    $("#Object_LoanAmount").data("kendoNumericTextBox").value(null);
+        //    $("#Object_LoanAmount").data("kendoNumericTextBox").max(maxloan);
+        //    //console.log(maxloan)
+        //});
+
+        const numberWithCommas = (x) => {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        };
+
+        $('#Object_LoanAmount').focusout(function () {
+            var loanAmmount = this.value;
+            var calculationLoan = $("#Object_CalculationLoan").val().toString();
+            var basicSalary = $("#Object_BasicSalary").val().toString();
+            if (basicSalary == '') {
+                $("#Object_LoanAmount").data("kendoNumericTextBox").value(null);
+                app.warning("Gaji pokok masih kosong");
+            }
+            else {
+                var maxloan = parseInt(calculationLoan) * parseInt(basicSalary);
+                if (loanAmmount > maxloan) {
+                    $("#Object_LoanAmount").data("kendoNumericTextBox").value(null);
+                    app.warning("Maksimal pinjaman dari perusahaan adalah " + numberWithCommas(maxloan));
+                }
+
+            }
+        });
+
+        function SalaryChange(e) {
+            var calculationLoan = $("#Object_CalculationLoan").val().toString();
+            var basicSalary = this.value();
+
+            $("#Object_LoanAmount").data("kendoNumericTextBox").value(parseInt(calculationLoan) * parseInt(basicSalary));
+        }
+    </script>
+}
+@Html.HiddenFor(x => x.Object.ClassRequester)
+@Html.HiddenFor(x => x.Object.Interest)
+@Html.HiddenFor(x => x.Object.LoanPeriod)
+
+<div id="headerinfo" class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Information</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='User'></b> with class <b class='font-red' id='Kelas'></b> will submit Company Loan request."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Company Loan Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Company Loan Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Loan Type"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.LoanType, "LoanType")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.LoanType" })
+                                        .Placeholder(Localizer["Select Loan Type"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=CompanyLoanPurpose36")))
+                                        )
+                                        .Events(e =>
+                                        {
+                                            e.Change("loantypechange").DataBound("readonlyObject");
+                                        })
+                                        .SelectedIndex(-1)
+                                        .Deferred()
+                                    )
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Cost Need"].Value</label>
+                                    @if (isCanEdit)
+                                    {
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.CostNeeds)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.CostNeeds", onkeydown = "return ValidateNumber(event);" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Model.Object.CostNeeds.HasValue ? Math.Floor(Model.Object.CostNeeds.Value) as decimal? : null)
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Deferred()
+                                        )
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Object.CostNeeds, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.CostNeeds" }, isCanEdit))
+                                    }
+                                </div>
+                                <div id="divPinjaman">
+                                    <label>@Localizer["Loan"]</label>
+                                    <div class="row">
+                                        <div class="form-group col-md-2">
+                                            @Html.TextBoxFor(m => m.Object.CalculationLoan, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.CalculationLoan", placeholder = "", @readonly = "readonly", onkeydown = "return ValidateNumber(event);" }, isCanEdit))
+                                        </div>
+                                        <div class="form-group col-md-1">
+                                            <label>x</label>
+                                        </div>
+                                        <div class="form-group col-md-9">
+                                            @if (isCanEdit)
+                                            {
+                                                @(Html.Kendo().NumericTextBoxFor(x => x.Object.BasicSalary)
+                                                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.BasicSalary", onkeydown = "return ValidateNumber(event);" })
+                                                    .Placeholder(Localizer["Basic Salary"].Value)
+                                                    .Value(Model.Object.BasicSalary.HasValue ? Math.Floor(Model.Object.BasicSalary.Value) as decimal? : null)
+                                                    .Format("##,#")
+                                                    .Decimals(0)
+                                                    .Spinners(false)
+                                                    .Events(e => e.Change("SalaryChange"))
+                                                    .Min(0)
+                                                    .Deferred()
+                                                )
+                                            }
+                                            else
+                                            {
+                                                @Html.TextBoxFor(x => x.Object.BasicSalary, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.BasicSalary" }, isCanEdit))
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Company Loan Amount"]</label>
+                                    @if (isCanEdit)
+                                    {
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.LoanAmount)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.LoanAmount", onkeydown = "return ValidateNumber(event);" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Model.Object.LoanAmount.HasValue ? Math.Floor(Model.Object.LoanAmount.Value) as decimal? : null)
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Deferred()
+                                        )
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Object.LoanAmount, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.LoanAmount" }, isCanEdit))
+                                    }
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Supporting Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @Html.HiddenFor(x => x.Object.SupportAttachmentPath)
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+                                @if (Model.Object.Period.HasValue && ViewSequence)
+                                {
+                                    @Html.HiddenFor(x => x.Object.Period)
+                                    @Html.HiddenFor(x => x.Object.Seq)
+                                    <div class="form-group">
+                                        <label>Periode Antrian : <b class="font-red">@Model.Object.Period.Value.ToString("MMMM yyyy")</b> Urutan <b class="font-red">@Model.Object.Seq</b> </label>
+                                    </div>
+                                }
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section formActions {
+    @if (IsRoleForm && Model.Permision.Contains("(inputVerified)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/verified" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Verified"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @(await Html.PartialAsync("Components/_ActionButtons"))
+    }
+}

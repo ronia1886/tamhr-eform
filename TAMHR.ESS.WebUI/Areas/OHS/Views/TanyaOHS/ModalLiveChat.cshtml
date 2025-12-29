@@ -1,0 +1,286 @@
+﻿<style>
+    .ChatFrom {
+        font-weight: 500;
+    }
+
+    .ChatMessage {
+        background: #2C3E50;
+        border-radius: 1em;
+        color: white;
+        margin-bottom: 1em;
+        max-width: 15em;
+        overflow-wrap: anywhere;
+        padding: 1em;
+    }
+
+    .ChatMessageMe {
+        background: #E5EBF0;
+        border-radius: 1em;
+        color: black;
+        max-width: 15em;
+        margin-bottom: 1em;
+        margin-left: auto;
+        overflow-wrap: anywhere;
+        padding: 1em;
+    }
+    .DividerVertical {
+        width: 2px;
+        /*margin: 6px 0;*/
+        margin: 0;
+        background: #dee2e6;
+    }
+</style>
+<script type="text/javascript">
+    var MlcData = null;
+    var LoginUsername = "@User.GetClaim("Username")";
+    var Type = "@User.GetClaim("Type")";
+    var UserType = 'Default';
+    function GetChat(TanyaOhsId){
+         axios.get('../../api/tanyaohs/GetChat',{
+             params:{
+                 TanyaOhsId
+             }
+         })
+         .then((response) => {
+             var ChatView = $("#ChatView");
+             ChatView.html("");
+                 response.data.forEach((it) => {
+                    const ChatCls = it.Username === LoginUsername ? "ChatMessageMe" : "ChatMessage";
+
+                const username = String(it.Username || "");
+                const message  = String(it.Message  || "");
+
+                safeAppendChat(ChatView, username, message);
+            });
+            $("#MLiveChat").modal("toggle");
+         })
+         .catch(function (error) {
+                 console.log(error);
+         })
+         .finally(function () {
+
+         });
+    }
+        function safeAppendChat(chatViewElement, username, message) {
+        const safeUsername = document.createTextNode(String(username ?? ""));
+        const safeMessage  = document.createTextNode(String(message ?? ""));
+
+        const chatCls = username === LoginUsername ? "ChatMessageMe" : "ChatMessage";
+
+        const msgWrap = document.createElement("div");
+        msgWrap.classList.add(chatCls);
+
+        const fromDiv = document.createElement("div");
+        fromDiv.classList.add("ChatFrom");
+        fromDiv.appendChild(safeUsername);
+
+        const textDiv = document.createElement("div");
+        textDiv.classList.add("ChatText");
+        textDiv.appendChild(safeMessage);
+
+        msgWrap.appendChild(fromDiv);
+        msgWrap.appendChild(textDiv);
+
+        // CxSafe: All DOM nodes created via createElement and textNode, no HTML injection possible
+        chatViewElement[0].appendChild(msgWrap);
+    }
+    var GetTanyaOhs = async (Id) => {
+        try {
+            var response = await axios.get('../../api/tanyaohs/GetTanyaOhs', {
+            params: {
+                Id
+            }});
+            var ChatView = $("#ChatView");
+                ChatView.html("");
+                var data = response.data;
+                MlcData = data;
+            $("#ChatINama").val(data.Nama);
+            $("#ChatINoreg").val(data.Noreg);
+            $("#ChatIKeluhan").val(data.Keluhan);
+
+            $("#EndChat").attr("disabled", false);
+            $("#MlcMessage").attr("disabled", false);
+            $("#Send").attr("disabled", false);
+            if (data.Status == "Closed") {
+                $("#EndChat").attr("disabled", true);
+                $("#MlcMessage").attr("disabled", true);
+                $("#Send").attr("disabled", true);
+            }
+            if (UserType == 'Admin') {
+                $("#EndChat").attr("disabled", true);
+                $("#MlcMessage").attr("disabled", true);
+                $("#Send").attr("disabled", true);
+            }
+        }
+        catch(e){
+            console.log(e);
+        }
+    }
+    var OpenChat = async (id) => {
+        var ChatId = $("#ChatId");
+        var ChatView = $("#ChatView");
+        ChatView.html('');
+        ChatId.val(id);
+        await GetTanyaOhs(id);
+        GetChat(id);
+        $('#grid').data('kendoGrid').dataSource.read()
+    }
+    var OpenChatAdmin = (id) => {
+        UserType = 'Admin';
+        OpenChat(id);
+    }
+</script>
+<script src="~/plugins/S/SignalR/signalr.js"></script>
+<script type="text/javascript">
+    "use strict";
+
+    var connection = new signalR.HubConnectionBuilder().withUrl("../../tanyaOhs").build();
+
+                connection.on("ReceiveMessage", (TanyaOhsId, Username, Message) => {
+                RefreshData();
+                if ($("#ChatId").val() == TanyaOhsId) {
+                    const ChatView = $("#ChatView");
+                    const ChatCls = Username === LoginUsername ? "ChatMessageMe" : "ChatMessage";
+
+                    const $msgWrap = $("<div>").addClass(ChatCls);
+                    const $from = $("<div>").addClass("ChatFrom").text(Username || "");
+                    const $msg  = $("<div>").text(Message || "");
+
+                    $msgWrap.append($from).append($msg);
+                    ChatView.append($msgWrap);
+                }
+            });
+
+
+    connection.on("ReceiveEvent", (EventName, TanyaOhsId) => {
+        console.log("coba");
+        if (EventName == "PicStatusChanged") {
+            GetDoctor();
+        }
+        var UserType = "@User.GetClaim("Type")";
+        RefreshData();
+        if ($("#ChatId").val() == TanyaOhsId && $("#MLiveChat").is(":visible")) {
+            if (EventName == "EndServicePic" && UserType == "Default") {
+                EndChat();
+            }
+            if (EventName == "EndServiceUser" && UserType == "OHS") {
+                EndChatPicResult();
+            }
+        }
+    });
+
+    connection.start().then(function () {
+        //document.getElementById("Send").disabled = false;
+    }).catch(function (err) {
+        return console.error(err.toString());
+    });
+
+    var AutoGrow = (element) => {
+        if (element.scrollHeight <= 84) {
+            element.style.height = "5px";
+            element.style.height = (element.scrollHeight) + "px";
+        }
+    }
+    var CloseLiveChat = () => $("#MLiveChat").modal("toggle");
+    var EndChat = () => {
+        axios.post('../../api/tanyaohs/EndService', {
+            "Id": $("#ChatId").val(),
+            "Solve": "",
+            "Rating": "",
+            "Feedback": ""
+        }, {
+            headers: {
+                Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+            }
+        })
+            .then((response) => {
+                if (Type != "OHS") {
+                    $('#grid').data('kendoGrid').dataSource.read();
+                    OpenFeedback($("#ChatId").val());
+                }
+                else EndChatPicResult();
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+    }
+    var EndChatPicResult = () => {
+        Swal.fire({
+            title: "Sukses",
+            html: '<div style="white-space: pre-line;">Sesi layanan TanyaOHS telah berakhir.</div>',
+            icon: "success",
+            showConfirmButton: true
+        });
+        $("#MLiveChat").modal("toggle");
+        $('#grid').data('kendoGrid').dataSource.read();
+    }
+    var MlcClose = () => {
+        if (MlcData.Status == "Closed") CloseLiveChat();
+        else EndChat();
+    }
+    var RefreshData = () => $('#grid').data('kendoGrid').dataSource.read();
+
+    document.addEventListener("DOMContentLoaded", (event) => {
+        document.getElementById("Send").onclick = (event) => {
+            var user = LoginUsername;
+            var message = document.getElementById("MlcMessage").value;
+            connection.invoke("SendMessage", $("#ChatId").val(), user, message).catch(function (err) {
+                return console.error(err.toString());
+            });
+            event.preventDefault();
+        };
+    });
+</script>
+<div id="MLiveChat" class="modal fade" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" onclick="CloseLiveChat();" class="close" data-dismiss-modal="modal2" style="font-weight: 700; font-size: 1.5rem; border: none;">-</button>
+                @* <button id="MlcClose" type="button" onclick="MlcClose();" class="close" data-dismiss-modal="modal2">&times;</button> *@
+                <h4 class="modal-title">Live Chat</h4>
+            </div>
+            <div class="modal-body" style="padding:0;">
+                <div style="display: flex;flex-direction: row;">
+                    <div style="margin: 1em; display: flex; flex-direction: column;">
+                        <div style="height: 23em;">
+                            <input class="k-textbox" type="text" id="ChatId" style="display:none;" />
+                            <div class="form-group col-md-12 material">
+                                <label>Nama *</label>
+                                <br />
+                                <input id="ChatINama" class="k-textbox" type="text" readonly />
+                            </div>
+                            <div class="form-group col-md-12 material">
+                                <label>Noreg *</label>
+                                <br />
+                                <input id="ChatINoreg" class="k-textbox" type="text" readonly />
+                            </div>
+                            <div class="form-group col-md-12 material">
+                                <label>Keluhan *</label>
+                                <br />
+                                <textarea id="ChatIKeluhan" class="k-textbox" readonly></textarea>
+                            </div>
+                        </div>
+                        <button id="EndChat" onclick="EndChat()" class="btn btn-primary" style=" background: maroon; border: none; width: inherit;">End Chat</button>
+                    </div>
+                    <div class="DividerVertical"></div>
+                    <div style="flex:1;">
+                        <div id="ChatView" class="overflow-auto" style=" padding: 1em; border-left: 1px solid #dee2e6; background: #f2f6f9; height: 23em; overflow-y: scroll;">
+                            <div class="ChatMessage">
+                                <div class="ChatFrom">dr. Dre</div>
+                                coba coba coba coba coba coba coba coba coba coba coba coba coba coba.
+                            </div>
+                            <div class="ChatMessageMe"><div class="ChatFrom">Snoop Dog</div>coba coba coba coba coba coba coba coba coba coba coba coba coba coba.</div>
+                            <div class="ChatMessage"><div class="ChatFrom">dr. Dre</div>coba coba coba coba coba coba coba coba coba coba coba coba coba coba.</div>
+                        </div>
+                        <div style="margin: 1em; display: flex; align-content: center; flex-direction: row; align-items: center; gap: 1em; ">
+                            <textarea id="MlcMessage" class="form-control" rows="1" wrap="hard" placeholder="Masukkan Pesan" oninput="AutoGrow(this)" style="flex-grow: 1; resize: none;"></textarea>
+                            <button id="Send" class="btn btn-link">
+                                <i class="ft-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

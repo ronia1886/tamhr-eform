@@ -1,0 +1,88 @@
+﻿@model TAMHR.ESS.Domain.Menu
+@{ 
+    var isNew = Model.Id == default(Guid);
+    var permissions = (IEnumerable<TAMHR.ESS.Domain.Permission>)ViewBag.Permissions;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/menu">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.ParentId)
+    @Html.HiddenFor(x => x.MenuGroupCode)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Url"]</label>
+                @Html.TextBoxFor(x => x.Url, new { @class = "form-control", @placeholder = Localizer["Please input url if any"].Value })
+                <span class="invalid" data-validation-for="Url"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Permission"]</label>
+                @(Html.Kendo().ComboBoxFor(x => x.PermissionId)
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "PermissionId" })
+                    .AutoWidth(true)
+                    .Filter(FilterType.Contains)
+                    .DataTextField("Description")
+                    .DataValueField("Id")
+                    .Value(Model.PermissionId == Guid.Empty ? string.Empty : Model.PermissionId.ToString())
+                    .BindTo(permissions)
+                    .Placeholder(Localizer["Please select permission"].Value)
+                )
+                <span class="invalid" data-validation-for="PermissionId"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Icon Class"]</label>
+                @Html.TextBoxFor(x => x.IconClass, new { @class = "form-control", @placeholder = Localizer["Please input icon class if any"].Value })
+                <span class="invalid" data-validation-for="IconClass"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Visible"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.Visible)
+                <span class="invalid" data-validation-for="Visible"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["OTP"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.EnableOtp)
+                <span class="invalid" data-validation-for="EnableOtp"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Params"]</label>
+                @Html.TextBoxFor(x => x.Params, new { @class = "form-control", @placeholder = Localizer["Please input params if any"].Value })
+                <span class="invalid" data-validation-for="Params"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", rows = 5, @data_validation_for = "Description", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

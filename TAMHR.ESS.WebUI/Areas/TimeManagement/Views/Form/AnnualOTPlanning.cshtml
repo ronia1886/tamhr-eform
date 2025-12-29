@@ -1,0 +1,1308 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AnnualOTPlanningViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualOTPlanningService AnnualOTPlanningService
+@{
+    bool canEdit = AclHelper.CanEdit();
+    var currentUser = User.GetClaim("NoReg");
+    var postCode = User.GetClaim("PostCode");
+    var requester = UserService.GetByNoReg(Model.Requester);
+    bool isRequester = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid)
+                     || (!string.IsNullOrEmpty(Model.Requester) && Model.Requester == User.GetClaim("NoReg"));
+    bool otherVersionExists = false;
+
+    IEnumerable<GeneralCategory> juklakOT = ConfigService.GetGeneralCategories().Where(g => g.Category == "juklak-ot-planning").OrderBy(g => g.OrderSequence);
+
+    ScriptManager.RegisterReferences("grid");
+    ScriptManager.RegisterReferences("multiselect");
+    ScriptManager.RegisterReferences("tooltip");
+
+    // If the form is new request form, then use the current user as the noreg. If the form is opened by his/her superior, then use requester as the noreg
+    currentUser = (Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid) ? User.GetClaim("NoReg") : Model.Requester);
+    //var aos = MdmService.GetActualOrganizationStructure(currentUser);
+
+    var now = DateTime.Now;
+    // If this is a new request form, then use next year as the default period. Otherwise, use the submitted period.
+    int periodYear = Model.Object.AnnualOTPlanning == null ?  (now.Month != 12 ? now.Year : now.Year + 1) : Model.Object.AnnualOTPlanning.YearPeriod;
+
+    var mode = ViewData["mode"] == null ? string.Empty : ViewData["mode"].ToString();
+
+    DateTime minDate = new DateTime(periodYear, 1, 1);
+    DateTime maxDate = new DateTime(periodYear, 12, 31);
+
+    AnnualOTPlanning awp = AnnualOTPlanningService.GetByKey(currentUser,postCode, periodYear);
+    if (awp != null)
+    {
+        otherVersionExists = true;
+    }
+
+    if (mode.ToLower() == "edit")
+    {
+        canEdit = true;
+
+        if (Model.DocumentApprovalId == null)
+        {
+            canEdit = false;
+        }
+
+        // If the approved data is going to be edited, then the new OT data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+    else if (otherVersionExists)
+    {
+        // If the approved data is going to be edited, then the new leave data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+
+    bool isApprover = false;
+    if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty)
+    {
+        TrackingApproval trackingApproval = ApprovalService.GetTrackingApprovals(Model.DocumentApprovalId).Where(a => a.NoReg != Model.Requester).FirstOrDefault();
+        if (trackingApproval != null && User.GetClaim("NoReg") == trackingApproval.NoReg)
+        {
+            isApprover = true;
+        }
+    }
+
+    bool janEnabled = true;
+    bool febEnabled = true;
+    bool marEnabled = true;
+    bool aprEnabled = true;
+    bool mayEnabled = true;
+    bool junEnabled = true;
+    bool julEnabled = true;
+    bool augEnabled = true;
+    bool sepEnabled = true;
+    bool octEnabled = true;
+    bool novEnabled = true;
+    bool decEnabled = true;
+
+    if (mode == "edit" || otherVersionExists)
+    {
+        if (!(((1 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            janEnabled = false;
+        }
+
+        if (!(((2 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            febEnabled = false;
+        }
+
+        if (!(((3 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            marEnabled = false;
+        }
+
+        if (!(((3 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            marEnabled = false;
+        }
+
+        if (!(((4 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            aprEnabled = false;
+        }
+
+        if (!(((5 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            mayEnabled = false;
+        }
+
+        if (!(((6 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            junEnabled = false;
+        }
+
+        if (!(((7 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            julEnabled = false;
+        }
+
+        if (!(((8 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            augEnabled = false;
+        }
+
+        if (!(((9 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            sepEnabled = false;
+        }
+
+        if (!(((10 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            octEnabled = false;
+        }
+
+        if (!(((11 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            novEnabled = false;
+        }
+
+        if (!(((12 - DateTime.Today.Month) + 12 * (periodYear - DateTime.Today.Year)) == 1))
+        {
+            decEnabled = false;
+        }
+    }
+}
+
+@section styles{
+    
+    <style>
+        .grid-header {
+            font-weight: bold !important;
+            text-align:center;
+            font-size: 1rem;
+        }
+
+        .change-background {
+            background-color: yellow !important;
+        }
+
+        .change-background-total {
+            background-color: lightblue !important;
+            font-weight: bold;
+        }
+
+        .k-grid tr td {
+            border: 1px solid #dde2e7;
+            
+        }
+
+        .k-grid tr:hover td{
+            /*background: transparent;*/
+        }
+
+        /*.k-grid tr td {
+          pointer-events: none;
+        }*/
+
+        #annualOTPlanningDetailGrid table {
+            font-size: small !important;
+        }
+
+        .category-style {
+            background-color:#eaedf2;
+        }
+
+        .word-ellipsis {
+            max-width: 8ch; 
+            text-overflow: ellipsis; 
+            overflow: hidden; 
+            white-space: nowrap;
+        }
+    </style>
+}
+
+@*@if (((otherVersionExists && Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty) || (Model.DocumentApprovalId == Guid.Empty && !otherVersionExists)) || (Model.DocumentStatusCode == DocumentStatus.Draft || Model.DocumentStatusCode == DocumentStatus.InProgress || Model.DocumentStatusCode == DocumentStatus.Revised  || Model.DocumentStatusCode == DocumentStatus.Rejected))*@
+@if (otherVersionExists && (Model.DocumentApprovalId == null || Model.DocumentApprovalId == Guid.Empty))
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["Tidak dapat membuat permohonan baru karena Annual OT Planning untuk tahun " + periodYear + " telah diinput sebelumnya."]</p>
+        <a href="@Url.Content("~/timemanagement/annualplanning")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+    </div>
+
+    @section formActions{
+    }
+}else
+{
+    @section scripts {
+        <script type="text/javascript">
+
+        var annualOTPlanningDetails = [];
+        var selectedEmp = [];
+        var period;
+
+        $('.numberonly').keypress(function (e) {    
+            var charCode = (e.which) ? e.which : event.keyCode    
+            if (String.fromCharCode(charCode).match(/[^0-9,]/g))
+                return false;                        
+        });
+
+        function uuidv4() {
+            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        function generateTotal() {
+            var jan = 0, feb = 0, mar = 0, apr = 0, may = 0, jun = 0, jul = 0, aug = 0, sep = 0, oct = 0, nov = 0, dec = 0, total = 0;
+            var indexTotal = -1;
+            //count total Overtime
+            $.each(annualOTPlanningDetails, function (index, item) {
+                if (item.CategoryCode.toLowerCase().includes("overtimeplanning")) {
+                    if (item.LabourType != "TOTAL") {
+                        jan += parseFloat(item.Jan);
+                        feb += parseFloat(item.Feb);
+                        mar += parseFloat(item.Mar);
+                        apr += parseFloat(item.Apr);
+                        may += parseFloat(item.May);
+                        jun += parseFloat(item.Jun);
+                        jul += parseFloat(item.Jul);
+                        aug += parseFloat(item.Aug);
+                        sep += parseFloat(item.Sep);
+                        oct += parseFloat(item.Oct);
+                        nov += parseFloat(item.Nov);
+                        dec += parseFloat(item.Dec);
+                        total = parseFloat((jan + feb + mar + apr + may + jun + jul + aug + sep + oct + nov + dec)).toFixed(2);
+                    }
+                    else {
+                        indexTotal = index;
+                    }
+                }
+            });
+
+            annualOTPlanningDetails[indexTotal].Jan = jan;
+            annualOTPlanningDetails[indexTotal].Feb = feb;
+            annualOTPlanningDetails[indexTotal].Mar = mar;
+            annualOTPlanningDetails[indexTotal].Apr = apr;
+            annualOTPlanningDetails[indexTotal].May = may;
+            annualOTPlanningDetails[indexTotal].Jun = jun;
+            annualOTPlanningDetails[indexTotal].Jul = jul;
+            annualOTPlanningDetails[indexTotal].Aug = aug;
+            annualOTPlanningDetails[indexTotal].Sep = sep;
+            annualOTPlanningDetails[indexTotal].Oct = oct;
+            annualOTPlanningDetails[indexTotal].Nov = nov;
+            annualOTPlanningDetails[indexTotal].Dec = dec;
+            annualOTPlanningDetails[indexTotal].Total = total;
+
+            //count total OT index
+            jan = 0, feb = 0, mar = 0, apr = 0, may = 0, jun = 0, jul = 0, aug = 0, sep = 0, oct = 0, nov = 0, dec = 0, total = 0;
+            indexTotal = -1;
+
+            if (annualOTPlanningDetails.filter(function (e) { return e.CategoryCode.toLowerCase().includes("otindex"); }).length > 0) {
+                $.each(annualOTPlanningDetails, function (index, item) {
+                    if (item.CategoryCode.toLowerCase().includes("otindex")) {
+                        if (item.LabourType != "TOTAL") {
+                            jan += parseFloat(item.Jan);
+                            feb += parseFloat(item.Feb);
+                            mar += parseFloat(item.Mar);
+                            apr += parseFloat(item.Apr);
+                            may += parseFloat(item.May);
+                            jun += parseFloat(item.Jun);
+                            jul += parseFloat(item.Jul);
+                            aug += parseFloat(item.Aug);
+                            sep += parseFloat(item.Sep);
+                            oct += parseFloat(item.Oct);
+                            nov += parseFloat(item.Nov);
+                            dec += parseFloat(item.Dec);
+                            total = (parseFloat(jan) + parseFloat(feb) + parseFloat(mar) + parseFloat(apr) + parseFloat(may) + parseFloat(jun) + parseFloat(jul) + parseFloat(aug) + parseFloat(sep) + parseFloat(oct) + parseFloat(nov) + parseFloat(dec)).toFixed(2);
+                            //total += (item.Jan + item.Feb + item.Mar + item.Apr + item.May + item.Jun + item.Jul + item.Aug + item.Sep + item.Oct + item.Nov + item.Dec);
+                        } else {
+                            indexTotal = index;
+                        }
+                    }
+                });
+
+                annualOTPlanningDetails[indexTotal].Jan = parseFloat(jan).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Feb = parseFloat(feb).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Mar = parseFloat(mar).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Apr = parseFloat(apr).toFixed(2);
+                annualOTPlanningDetails[indexTotal].May = parseFloat(may).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Jun = parseFloat(jun).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Jul = parseFloat(jul).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Aug = parseFloat(aug).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Sep = parseFloat(sep).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Oct = parseFloat(oct).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Nov = parseFloat(nov).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Dec = parseFloat(dec).toFixed(2);
+                annualOTPlanningDetails[indexTotal].Total = '-';
+            }
+
+            //generate total each row
+            $.each(annualOTPlanningDetails, function (index, item) {
+                if (!item.CategoryCode.toLowerCase().includes("remark") && !item.CategoryCode.toLowerCase().includes("otindex")) {
+                    item.Total = (parseFloat(item.Jan) + parseFloat(item.Feb) + parseFloat(item.Mar) + parseFloat(item.Apr) + parseFloat(item.May) + parseFloat(item.Jun) + parseFloat(item.Jul) + parseFloat(item.Aug) + parseFloat(item.Sep) + parseFloat(item.Oct) + parseFloat(item.Nov) + parseFloat(item.Dec));
+                }
+            });
+
+            // Generate actual work hours
+            var normalWorkingHour;
+            var totalLostHour;
+            var overtimePlanning;
+            var arrlabourType = ["dl","idl","total"];
+
+            $.each(annualOTPlanningDetails, function (index, item) {
+                
+                $.each(arrlabourType,function(i,dt){
+                    if (item.CategoryCode.toLowerCase().includes("actualworkhour") && item.LabourType.toLowerCase()==dt) {
+                        normalWorkingHour = annualOTPlanningDetails.filter(function (e) { return e.CategoryCode.toLowerCase().includes("normalworkhour") && e.LabourType.toLowerCase() == dt /*&& e.CategoryCode.toLowerCase() == item.LabourType.toLowerCase();*/ });
+                        totalLostHour = annualOTPlanningDetails.filter(function (e) { return e.CategoryCode.toLowerCase().includes("totallosthour") && e.LabourType.toLowerCase() == dt /*&& e.CategoryCode.toLowerCase() == item.LabourType.toLowerCase();*/ });
+                        overtimePlanning = annualOTPlanningDetails.filter(function (e) { return e.CategoryCode.toLowerCase().includes("overtimeplanning") && e.LabourType.toLowerCase() == dt /*&& e.CategoryCode.toLowerCase() == item.LabourType.toLowerCase();*/ });
+                        
+                        if (normalWorkingHour.length > 0) {
+                            //console.log(parseFloat(normalWorkingHour[0].Jan) - parseFloat(totalLostHour[0].Jan) + parseFloat(overtimePlanning[0].Jan));
+                    
+                            item.Jan = parseFloat(normalWorkingHour[0].Jan) - parseFloat(totalLostHour[0].Jan) + parseFloat(overtimePlanning[0].Jan);
+                            item.Feb = parseFloat(normalWorkingHour[0].Feb) - parseFloat(totalLostHour[0].Feb) + parseFloat(overtimePlanning[0].Feb);
+                            item.Mar = parseFloat(normalWorkingHour[0].Mar) - parseFloat(totalLostHour[0].Mar) + parseFloat(overtimePlanning[0].Mar);
+                            item.Apr = parseFloat(normalWorkingHour[0].Apr) - parseFloat(totalLostHour[0].Apr) + parseFloat(overtimePlanning[0].Apr);
+                            item.May = parseFloat(normalWorkingHour[0].May) - parseFloat(totalLostHour[0].May) + parseFloat(overtimePlanning[0].May);
+                            item.Jun = parseFloat(normalWorkingHour[0].Jun) - parseFloat(totalLostHour[0].Jun) + parseFloat(overtimePlanning[0].Jun);
+                            item.Jul = parseFloat(normalWorkingHour[0].Jul) - parseFloat(totalLostHour[0].Jul) + parseFloat(overtimePlanning[0].Jul);
+                            item.Aug = parseFloat(normalWorkingHour[0].Aug) - parseFloat(totalLostHour[0].Aug) + parseFloat(overtimePlanning[0].Aug);
+                            item.Sep = parseFloat(normalWorkingHour[0].Sep) - parseFloat(totalLostHour[0].Sep) + parseFloat(overtimePlanning[0].Sep);
+                            item.Oct = parseFloat(normalWorkingHour[0].Oct) - parseFloat(totalLostHour[0].Oct) + parseFloat(overtimePlanning[0].Oct);
+                            item.Nov = parseFloat(normalWorkingHour[0].Nov) - parseFloat(totalLostHour[0].Nov) + parseFloat(overtimePlanning[0].Nov);
+                            item.Dec = parseFloat(normalWorkingHour[0].Dec) - parseFloat(totalLostHour[0].Dec) + parseFloat(overtimePlanning[0].Dec);
+                            item.Total = parseFloat(normalWorkingHour[0].Total) - parseFloat(totalLostHour[0].Total) + parseFloat(overtimePlanning[0].Total);
+                        } 
+                    }
+                });
+
+                
+            });
+
+            annualOTPlanningDetails.sort((a, b) => (a.OrderSequence > b.OrderSequence) ? 1 : ((b.OrderSequence > a.OrderSequence) ? -1 : 0));
+        }
+
+        function refreshGrid() {
+            // Define Annual OT Planning Grid (bind to local data)
+            generateTotal();
+
+             $.each(annualOTPlanningDetails, function (index, item) {
+                if (item.CategoryCode.toLowerCase().includes("remark")) {
+                    item.Jan=item.Jan==null?"-":item.Jan;
+                    item.Feb=item.Feb==null?"-":item.Feb;
+                    item.Mar=item.Mar==null?"-":item.Mar;
+                    item.Apr=item.Apr==null?"-":item.Apr;
+                    item.May=item.May==null?"-":item.May;
+                    item.Jun=item.Jun==null?"-":item.Jun;
+                    item.Jul=item.Jul==null?"-":item.Jul;
+                    item.Aug=item.Aug==null?"-":item.Aug;
+                    item.Sep=item.Sep==null?"-":item.Sep;
+                    item.Oct=item.Oct==null?"-":item.Oct;
+                    item.Nov=item.Nov==null?"-":item.Nov;
+                    item.Dec=item.Dec==null?"-":item.Dec;
+
+                }
+            });
+
+            var dataSource = new kendo.data.DataSource({
+                data: annualOTPlanningDetails,
+                pageSize: 50,
+                schema: {
+                    total: function () {
+                        return annualOTPlanningDetails.length;
+                    }
+                },
+                sort: [
+                    { field: "OrderSequence", dir: "asc" },
+                    { field: "LabourType", dir: "asc" }
+                ]
+            });
+
+            var annualOTPlanningDetailGrid = $("#annualOTPlanningDetailGrid").data("kendoGrid");
+
+            if (annualOTPlanningDetailGrid != null) {
+                annualOTPlanningDetailGrid.setDataSource(dataSource);
+                annualOTPlanningDetailGrid.refresh();
+                MergeGridRows("annualOTPlanningDetailGrid", "Category");
+            }
+        }
+
+        function clearForm() {
+            $(':input', '#annual-ot-planning-input-form')
+                .not(':button, :submit, :reset, :hidden')
+                .val('')
+                .prop('checked', false)
+                .prop('selected', false);
+        }
+
+        function getObject() {
+            var annualOTPlanning = {
+                NoReg: '@currentUser',
+                YearPeriod: '@periodYear'
+            };
+
+            return {
+                AnnualOTPlanning: annualOTPlanning,
+                AnnualOTPlanningDetails: annualOTPlanningDetails
+            };
+        }
+
+        function validateUploadedData(result) {
+
+            return "";
+        }
+
+        function recalculate(result) {
+            var errorMessage = validateUploadedData(result);
+            if (errorMessage == "") {
+                $.each(result, function (index, item) {
+                    $.each(annualOTPlanningDetails, function (otIndex, otItem) {
+                        
+                        //TESTCHRIS
+                        if(otItem.CategoryCode=="Remark-DL"){
+                            //otItem.CategoryCode = "Remark-IDL";
+                            if (otItem.LabourType == item.LabourType && otItem.CategoryCode == item.CategoryCode) {
+                                console.log(otItem.LabourType + " " + item.LabourType);
+                                console.log(otItem.CategoryCode + " " + item.CategoryCode);
+                                console.log(otItem.Jan + " " + item.Jan);
+                                console.log(otItem.Dec + " " + item.Dec);
+                            }
+                        }
+
+                        //TESTCHRIS
+                        //if(otItem.LabourType=="-")
+                        //{
+                        //    otItem.LabourType = "IDL";
+                        //}
+
+                        if (otItem.LabourType == item.LabourType && otItem.CategoryCode == item.CategoryCode) {
+                            otItem.Jan = item.Jan;
+                            otItem.Feb = item.Feb;
+                            otItem.Mar = item.Mar;
+                            otItem.Apr = item.Apr;
+                            otItem.May = item.May;
+                            otItem.Jun = item.Jun;
+                            otItem.Jul = item.Jul;
+                            otItem.Aug = item.Aug;
+                            otItem.Sep = item.Sep;
+                            otItem.Oct = item.Oct;
+                            otItem.Nov = item.Nov;
+                            otItem.Dec = item.Dec;
+                        }
+                    });
+                    //annualOTPlanningDetails.push(item);
+                });
+
+                refreshGrid(annualOTPlanningDetails);
+            } else {
+                app.warning(errorMessage);
+            }
+        }
+
+        function MergeGridRows(gridId, colTitle) {
+            $('#' + gridId + '>table').each(function (index, item) {
+                var dimension_col = 1;
+                // First, scan first row of headers for the "Category" column.
+                $('#' + gridId + '>table').find('th').each(function () {
+                    var _this = $(this);
+                    if (_this.text() == colTitle) {
+
+                        // first_instance holds the first instance of identical td
+                        var first_instance = null;
+
+                        $(item).find('tr').each(function () {
+                            // find the td of the correct column (determined by the colTitle)
+                            var dimension_td = $(this).find('td:nth-child(' + dimension_col + ')');
+
+                            if (first_instance == null) {
+                                first_instance = dimension_td;
+                            } else if (dimension_td.text() == first_instance.text()) {
+                                // if current td is identical to the previous
+                                // then remove the current td and set the next td border
+                                var next_td = dimension_td.next();
+                                //dimension_td.text("-");
+                                dimension_td.remove();
+                                first_instance.attr('rowspan', typeof first_instance.attr('rowspan') == "undefined" ? 2 : parseInt(first_instance.attr('rowspan')) + 1);
+                                if (next_td != null && next_td != undefined) {
+                                    //next_td.css('border','1px solid black');
+                                }
+                            } else {
+                                // this cell is different from the last
+                                first_instance = dimension_td;
+                            }
+                        });
+                        return;
+                    }
+                    dimension_col++;
+                });
+
+            });
+        }
+
+        function onDataBound(e) {
+            //MergeGridRows("annualOTPlanningDetailGrid", "Category");
+            
+            e.sender.tbody.kendoTooltip({
+                show: function(e){
+                    if(this.content.text().length > 8){
+                        this.content.parent().css("visibility", "visible");
+                    }
+                },
+                hide:function(e){
+                    this.content.parent().css("visibility", "hidden");
+                },
+                filter: "td",
+                content: function (e) {
+                    var target = e.target; // element for which the tooltip is shown
+                    return $(target).text();
+                }
+            });
+
+            var rows = e.sender.tbody.children();
+            for (var i = 0; i < rows.length; i++) { 
+                var row = $(rows[i]);
+                
+                var dataItem = e.sender.dataItem(row);
+
+                if (!row.hasClass("k-grpPeriodriodYearuping-row")) {
+                    var categoryCode = dataItem.get("CategoryCode");
+                    var labourType = dataItem.get("LabourType");
+
+                    if (categoryCode == 'TargetVolume-DL' || categoryCode == 'OvertimePlanning-DL' || categoryCode == 'Remark-DL' || categoryCode == 'OTIndex-DL' ||
+                        categoryCode == 'OvertimePlanning-IDL' || categoryCode == 'Remark-IDL') {
+                        
+                        if(labourType=="TOTAL"){
+                            $(row).addClass("change-background-total");
+                        }else{
+                            //$(row).addClass("change-background");
+                        }
+                    }
+                    else {
+                        if (labourType == 'TOTAL') {
+                            $(row).addClass("change-background-total");
+                        }
+                    }
+                }
+            }
+        }
+
+        function openForm(monthName) {
+            var targetVolume;
+            var dlHour;
+            var idlHour;
+            var inputRemark;
+            var dlIndex;
+            var idlIndex;
+
+            // ClearForm
+            clearForm();
+
+            var division = '';
+            var month = monthName.substring(0, 3);
+            if (annualOTPlanningDetails.filter(function (e) { return e.Division === 'DL'; }).length == 0) {
+                //idl
+                division = 'IDL';
+                idlHour = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'OvertimePlanning-IDL' && e.LabourType == 'IDL'; });
+                inputRemark = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'Remark-IDL'; });
+
+                if(idlHour.length > 0)
+                    $("#idlHour").val(parseInt(idlHour[0][month]));
+
+                if(inputRemark.length > 0)
+                    $("#inputRemark").val(inputRemark[0][month].replace(null,"-"));
+            }
+            else {
+                division = 'DL';
+                targetVolume = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'TargetVolume-DL'; });
+                dlHour = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'OvertimePlanning-DL' && e.LabourType == 'DL'; });
+                idlHour = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'OvertimePlanning-DL' && e.LabourType == 'IDL'; });
+                inputRemark = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'Remark-DL'; });
+                dlIndex = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'OTIndex-DL' && e.LabourType == 'DL'; });
+                idlIndex = annualOTPlanningDetails.filter(function (e) { return e.Division === division && e.CategoryCode == 'OTIndex-DL' && e.LabourType == 'IDL'; });
+
+                if(targetVolume.length > 0)
+                    $("#targetVolume").val(targetVolume[0][month]);
+
+                if(dlHour.length > 0)
+                    $("#dlHour").val(parseInt(dlHour[0][month]));
+
+                if(idlHour.length > 0)
+                    $("#idlHour").val(parseInt(idlHour[0][month]));
+
+                if (inputRemark.length > 0)
+                    $("#inputRemark").val(inputRemark[0][month].replace(null,"-"));
+
+                if (dlIndex.length > 0)
+                    $("#dlIndex").val(parseFloat(dlIndex[0][month]));
+
+                if(idlIndex.length > 0)
+                    $("#idlIndex").val(parseFloat(idlIndex[0][month]));
+            }
+
+            $("#input_month_label").text(monthName);
+            $("#input_month").val(monthName);
+            if (division == 'IDL') {
+                //hide DL form
+                $("#targetVolume").closest(".form-group").hide();
+                $("#dlHour").closest(".form-group").hide();
+                $("#dlIndex").closest(".form-group").hide();
+                $("#idlIndex").closest(".form-group").hide();
+            }
+            $('#annual-ot-planning-input-modal').modal('show');
+        }
+
+        var module = (function ($, app) {
+
+            app.registerHandler("saveHandler", function (d) {
+                swal({
+                    title: "Save Changes",
+                    text: "Annual OT Planning Data saved successfully",
+                    type: "success"
+                }).then(function () {
+                    window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                });
+            });
+
+            app.registerHandler("dataInterceptor", function (d) {
+                d.Object = getObject();
+                return d;
+            });
+
+
+            let $form = $("#annual-ot-planning-upload-form"),
+                $actionsWrapper = $form.next(".actions"),
+                $uploadBtn = $actionsWrapper.find(".action-upload-merge"),
+                oldText = $uploadBtn.text(),
+                $actionsBtn = $actionsWrapper.find(".btn"),
+                $file = $form.find("input[type='file']");
+
+            $file.on("change", function () {
+                var $this = $(this),
+                    fileName = $this.val();
+
+                $(this).data("autoUpload", false);
+
+                if (fileName) {
+                    $this.next("label").text(fileName.substring(fileName.lastIndexOf("\\") + 1));
+                }
+            });
+
+            app.registerHandler("uploadDataHandler", function () {
+                let formData = new FormData();
+                formData.append("file", $file[0].files[0]);
+                formData.append("mode", "@mode");
+                formData.append("periodYear", @periodYear);
+                formData.append("details", JSON.stringify(annualOTPlanningDetails));
+
+                $actionsBtn.addClass("disabled");
+                $uploadBtn.text("@Localizer["Uploading, please wait..."].Value");
+
+                $.ajax({
+                    url: $form.attr("action"),
+                    data: formData,
+                    context: document.body,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    type: 'POST',
+                    success: function (data) {
+                        
+                        app.success(app.translate("Success upload and merge data"));
+                        $file.val("");
+                        $file.next("label").text(app.translate("Please choose a file"));
+                        $actionsBtn.removeClass("disabled");
+                        $uploadBtn.text(oldText);
+                        $("#annual-ot-planning-upload-modal").modal("hide");
+                        recalculate(data);
+                    },
+                    error: function (error) {
+                        console.error(error);
+                        app.warning(error.Message);
+                        $file.val("");
+                        $file.next("label").text(app.translate("Please choose a file"));
+                        $actionsBtn.removeClass("disabled");
+                        $uploadBtn.text(oldText);
+                    }
+                });
+            });
+
+            app.registerHandler("formDataHandler", function () {
+                var input_month = $("#input_month").val();
+                var targetVolume = $("#targetVolume").val();
+                var dlHour = $("#dlHour").val();
+                var idlHour = $("#idlHour").val();
+                var remark = $("#inputRemark").val();
+                var dlIndex = $("#dlIndex").val();
+                var idlIndex = $("#idlIndex").val();
+                var monthName;
+                switch (input_month) {
+                    case "January": monthName = "Jan"; break;
+                    case "February": monthName = "Feb"; break;
+                    case "March": monthName = "Mar"; break;
+                    case "April": monthName = "Apr"; break;
+                    case "May": monthName = "May"; break;
+                    case "June": monthName = "Jun"; break;
+                    case "July": monthName = "Jul"; break;
+                    case "August": monthName = "Aug"; break;
+                    case "September": monthName = "Sep"; break;
+                    case "October": monthName = "Oct"; break;
+                    case "November": monthName = "Nov"; break;
+                    case "December": monthName = "Dec"; break;
+                }
+                $.each(annualOTPlanningDetails, function (index, item) {
+                    if (item.CategoryCode.toLowerCase().includes("targetvolume")) {
+                        if (targetVolume != '' && targetVolume != null && targetVolume != undefined)
+                            item[monthName] = targetVolume;
+                    }
+                    if (item.CategoryCode.toLowerCase().includes("overtimeplanning") && item.LabourType == 'DL') {
+                        if (dlHour != '' && dlHour != null && dlHour != undefined)
+                            item[monthName] = dlHour;
+                    }
+                    if (item.CategoryCode.toLowerCase().includes("overtimeplanning") && item.LabourType == 'IDL') {
+                        if (idlHour != '' && idlHour != null && idlHour != undefined)
+                            item[monthName] = idlHour;
+                    }
+                    if (item.CategoryCode.toLowerCase().includes("remark")) {
+                        if (remark != '' && remark != null && remark != undefined)
+                            item[monthName] = remark;
+                    }
+                    if (item.CategoryCode.toLowerCase().includes("otindex") && item.LabourType == 'DL') {
+                        if (dlIndex != '' && dlIndex != null && dlIndex != undefined)
+                            item[monthName] = dlIndex;
+                    }
+                    if (item.CategoryCode.toLowerCase().includes("otindex") && item.LabourType == 'IDL') {
+                        if (idlIndex != '' && idlIndex != null && idlIndex != undefined)
+                            item[monthName] = idlIndex;
+                    }
+                });
+                app.success(app.translate("Data has been saved."));
+                $("#annual-ot-planning-input-modal").modal("hide");
+                clearForm();
+                refreshGrid();
+            });
+
+            $("#btn-edit-save").on("click", function (e) {
+                e.preventDefault();
+
+                app.confirm(app.translate("Save Changes"), app.translate("Save changes?"), function (d) {
+                    if (!d.value) return;
+
+                    var data = {
+                        DocumentApprovalId: '@Model.DocumentApprovalId',
+                        Object: getObject()
+                    };
+
+                    $.ajax({
+                        url: app.resolveUrl("~/api/annual-ot-planning/update-annual-ot-planning?action=save"),
+                        data: JSON.stringify(data),
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function (d) {
+                            swal({
+                                title: "Save Changes",
+                                text: "Annual OT Planning Data saved successfully",
+                                type: "success"
+                            }).then(function () {
+                                window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                            });
+                        },
+                        error: function (error) {
+                            //show error from validator
+                            $.each(error.responseJSON, function (k, v) {
+                                var spanEl = $("span[data-validation-for='" + k + "']")[0];
+                                spanEl.innerText = v;
+                            });
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            app.error("Something went wrong when saving changes.");
+                        }
+                    });
+                });
+            });
+
+            $("#btn-edit-submit").on("click", function (e) {
+                e.preventDefault();
+                app.confirm(app.translate("Submit Data"), app.translate("Do you want to submit this document?"), function (d) {
+                    if (!d.value) return;
+
+                    var data = {
+                        DocumentApprovalId: '@Model.DocumentApprovalId',
+                        Object: getObject()
+                    };
+
+                    $.ajax({
+                        url: app.resolveUrl("~/api/annual-ot-planning/update-annual-ot-planning?action=submit"),
+                        data: JSON.stringify(data),
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            swal({
+                                title: "Submit Changes",
+                                text: "Annual OT Planning Data submitted successfully",
+                                type: "success"
+                            }).then(function () {
+                                window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                            });
+                        },
+                        error: function (error) {
+                            //show error from validator
+                            $.each(error.responseJSON, function (k, v) {
+                                var spanEl = $("span[data-validation-for='"+k+"']")[0];
+                                spanEl.innerText = v;
+                            });
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            app.error("Something went wrong when submitting changes.");
+                        }
+                    });
+                });
+            });
+
+            $("#targetVolume").on("change",function(){
+                ChangeIndexIDL();
+                ChangeIndexDL();
+            });
+
+            $("#dlHour").on("change",function(){
+                ChangeIndexDL();
+            });
+
+             $("#idlHour").on("change",function(){
+                ChangeIndexIDL();
+            });
+
+            function ChangeIndexDL(){
+                if($("#targetVolume").val()>0 && $("#dlHour").val()>0){
+                    var total = parseInt($("#targetVolume").val()) / parseInt($("#dlHour").val());
+                    $("#dlIndex").val(parseFloat(total).toFixed(2));
+                }
+
+            }
+
+            function ChangeIndexIDL(){
+                if($("#targetVolume").val()>0 && $("#idlHour").val()>0){
+                    var total = parseInt($("#targetVolume").val()) / parseInt($("#idlHour").val());
+                    $("#idlIndex").val(parseFloat(total).toFixed(2));
+                }
+            }
+
+            
+
+
+            @if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != default(Guid))
+            {
+                <text>
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/annual-ot-planning/get-details/" + '@Model.DocumentApprovalId'),
+                    dataType: 'json',
+                    success: function (result) {
+                        $.each(result, function (index, item) {
+                            annualOTPlanningDetails.push(item);
+                        });
+                        refreshGrid();
+                        
+                    },
+                    error: function (error) {
+                        //show error from validator
+                        console.error(error);
+                    }
+                });
+                </text>
+            }
+            else
+            {
+                <text>
+                
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/annual-ot-planning/get-initial/" + '@periodYear'),
+                    //dataType: 'json',
+                    success: function (result) {
+                        $.each(result, function (index, item) {
+                            annualOTPlanningDetails.push(item);
+                        });
+                        refreshGrid();
+                    }
+                }); 
+                </text>
+            }
+
+        })(jQuery, app);
+        </script>
+    }
+
+    @if (isRequester && (Model.Progress < 100 || mode.ToLower() == "edit") && canEdit)
+    {
+        @section pageToolbars
+        {
+        <div class="toolbars" style="margin-left: 10px;">
+            <div class="dropdown">
+                <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown" style="width: 100%;">
+                    <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-right">
+                    <!--<li>
+                    <a href="/core/form/download?formKey=annual-ot-planning&amp;id=@Model.DocumentApprovalId" id="download-@Model.DocumentApprovalId" target="_blank">
+                        @Localizer["Download"]
+                    </a>
+                    </li>-->
+                    <li>
+                        <a href="~/api/annual-ot-planning/download-template?mode=@mode&docApprovalID=@Model.DocumentApprovalId">
+                            @Localizer["Download Template"]
+                        </a>
+                    </li>
+                    <li>
+                       <a href="javascript:;" data-trigger="modal" data-modal="annual-ot-planning-upload-modal">
+                            @Localizer["Upload"]
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        }
+    }
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Annual Overtime Planning"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            @Html.Hidden("UrlAvatar", ConfigService.ResolveAvatar(""))
+                            @* Profile and OT Information *@
+                            <div class="col-md-12 col-sm-12">
+                                <div class="row">
+                                    <div class="col-md-6 col-sm-12">
+                                        <div class="profpic">
+                                            <div class="profpic-wrapper">
+                                                <div class="profpic-avatar">
+                                                    <img src="@ConfigService.ResolveAvatar(currentUser)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                                </div>
+                                                <div class="profpic-body">
+                                                    <span class="profpic-title">@User.GetClaim("Name")</span>
+                                                    <span class="profpic-description">@User.GetClaim("PostName")</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid) || Model.Progress == 0 || mode.ToLower() == "edit")
+                                    {
+                                        <div class="col-md-6">
+                                            <div style="font-size:1rem;text-align: justify;text-justify: inter-word;">
+                                                @Localizer["TimeManagement.OTPInfo"]
+                                                
+                                                @*@Localizer["Berikut Juklak untuk pengisian OT Planning : <br/>"]
+                                                @foreach(GeneralCategory gc in juklakOT)
+                                                {
+                                                    @gc.Description <br />
+                                                }*@
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        @if (isApprover)
+                                        {
+                                            <div class="col-md-6" style="padding-top: 2px; float:right;">
+                                                <a href="~/api/annual-ot-planning/download-summary/@Model.DocumentApprovalId">
+                                                    <i class="fa fa-file-excel-o" style="font-size: xx-large;"></i>
+                                                </a>
+                                            </div>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Profile and OT Information *@
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12 text-left">
+                            <h5 class="font-weight-bold">@Localizer["Annual Overtime Planning"] @periodYear</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12 text-center" style="overflow:scroll">
+                            @(Html.Kendo()
+                                .Grid<AnnualOTPlanningDetailView>()
+                                .Name("annualOTPlanningDetailGrid")
+                                .Columns(col =>
+                                {
+                                    col.Bound(c => c.Category).HeaderHtmlAttributes(new { @class = "grid-header text-center"}).Width(150).HtmlAttributes(new {@class="category-style"});
+                                    col.Bound(c => c.LabourType).Title("Labour Type").HeaderHtmlAttributes(new { @class = "grid-header text-center" });
+                                    col.Bound(c => c.Jan).ClientTemplate("#=(isNaN(Jan) || isNaN(parseFloat(Jan)) ? Jan : kendo.toString(parseFloat(Jan), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && janEnabled ? "<a style='color:blue;' onclick='openForm(\"January\");'><u>Jan</u></a>" : "Jan");
+                                    col.Bound(c => c.Feb).ClientTemplate("#=(isNaN(Feb) || isNaN(parseFloat(Feb)) ? Feb : kendo.toString(parseFloat(Feb), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && febEnabled ? "<a style='color:blue;' onclick='openForm(\"February\");'><u>Feb</u></a>" : "Feb");
+                                    col.Bound(c => c.Mar).ClientTemplate("#=(isNaN(Mar) || isNaN(parseFloat(Mar)) ? Mar : kendo.toString(parseFloat(Mar), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && marEnabled ? "<a style='color:blue;' onclick='openForm(\"March\");'><u>Mar</u></a>" : "Mar");
+                                    col.Bound(c => c.Apr).ClientTemplate("#=(isNaN(Apr) || isNaN(parseFloat(Apr)) ? Apr : kendo.toString(parseFloat(Apr), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && aprEnabled ? "<a style='color:blue;' onclick='openForm(\"April\");'><u>Apr</u></a>" : "Apr");
+                                    col.Bound(c => c.May).ClientTemplate("#=(isNaN(May) || isNaN(parseFloat(May)) ? May : kendo.toString(parseFloat(May), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && mayEnabled ? "<a style='color:blue;' onclick='openForm(\"May\");'><u>May</u></a>" : "May");
+                                    col.Bound(c => c.Jun).ClientTemplate("#=(isNaN(Jun) || isNaN(parseFloat(Jun)) ? Jun : kendo.toString(parseFloat(Jun), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && junEnabled ? "<a style='color:blue;' onclick='openForm(\"June\");'><u>Jun</u></a>" : "Jun");
+                                    col.Bound(c => c.Jul).ClientTemplate("#=(isNaN(Jul) || isNaN(parseFloat(Jul)) ? Jul : kendo.toString(parseFloat(Jul), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && julEnabled ? "<a style='color:blue;' onclick='openForm(\"July\");'><u>Jul</u></a>" : "Jul");
+                                    col.Bound(c => c.Aug).ClientTemplate("#=(isNaN(Aug) || isNaN(parseFloat(Aug)) ? Aug : kendo.toString(parseFloat(Aug), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && augEnabled ? "<a style='color:blue;' onclick='openForm(\"August\");'><u>Aug</u></a>" : "Aug");
+                                    col.Bound(c => c.Sep).ClientTemplate("#=(isNaN(Sep) || isNaN(parseFloat(Sep)) ? Sep : kendo.toString(parseFloat(Sep), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && sepEnabled ? "<a style='color:blue;' onclick='openForm(\"September\");'><u>Sep</u></a>" : "Sep");
+                                    col.Bound(c => c.Oct).ClientTemplate("#=(isNaN(Oct) || isNaN(parseFloat(Oct)) ? Oct : kendo.toString(parseFloat(Oct), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && octEnabled ? "<a style='color:blue;' onclick='openForm(\"October\");'><u>Oct</u></a>" : "Oct");
+                                    col.Bound(c => c.Nov).ClientTemplate("#=(isNaN(Nov) || isNaN(parseFloat(Nov)) ? Nov : kendo.toString(parseFloat(Nov), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && novEnabled ? "<a style='color:blue;' onclick='openForm(\"November\");'><u>Nov</u></a>" : "Nov");
+                                    col.Bound(c => c.Dec).ClientTemplate("#=(isNaN(Dec) || isNaN(parseFloat(Dec)) ? Dec : kendo.toString(parseFloat(Dec), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" })
+                                        .ClientHeaderTemplate(canEdit && decEnabled ? "<a style='color:blue;' onclick='openForm(\"December\");'><u>Dec</u></a>" : "Dec");
+                                    col.Bound(c => c.Total).ClientTemplate("#=(isNaN(Total) || isNaN(parseFloat(Total)) ? Total : kendo.toString(parseFloat(Total), CategoryCode == 'OTIndex-DL' ? 'n2' : 'n0'))#")
+                                        .Width(100).HeaderHtmlAttributes(new { @class = "grid-header text-center" }).HtmlAttributes(new { @class = "text-right word-ellipsis" });
+                                })
+                                .DataSource(d => d
+                                    .Custom()
+                                    .PageSize(50)
+                                    .Sort(x =>
+                                    {
+                                        x.Add(y => y.OrderSequence).Ascending();
+                                    })
+                                    .Group(g => g.Add(x => x.Category))
+                                )
+                                .Events(e => e.DataBound("onDataBound"))
+                                //.Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Deferred(true)
+                            )
+                            <span class="invalid" data-validation-for="Object.AnnualOTPlanningDetails.Count"></span>
+                            <span class="invalid" data-validation-for="Object.AnnualOTPlanningDetails"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+@section formActions
+{
+    @if (canEdit)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (mode.ToLower() == "edit" && Model.Requester == User.GetClaim("NoReg"))
+                                        {
+                                            <button name="btnAction" class="btn-custom btn btn-info" id="btn-edit-save">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                            <button type="button" class="btn-custom btn btn-primary" id="btn-edit-submit">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </button>
+                                            <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            @if (AclHelper.CanEdit())
+                                            {
+                                                <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true" data-parameters-redirecturl="~/timemanagement/annualplanning">
+                                                    <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                </button>
+                                            }
+                                            @if (AclHelper.CanSubmit())
+                                            {
+                                                <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                            }
+                                            @if (AclHelper.CanCancel())
+                                            {
+                                                if (ApplicationHelper.IsDefault(Model.Id))
+                                                {
+                                                    <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                    </a>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-8 col-8">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@section pageFooter
+{
+    @* Upload Modal *@
+    <div id="annual-ot-planning-upload-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                    <h4 class="modal-title">Upload Annual OT Plan</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="annual-ot-planning-upload-form" role="form" enctype="multipart/form-data" method="post" action="~/api/annual-ot-planning/upload">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" required="required" id="upload-field" autoUpload="false" />
+                            <label class="custom-file-label" style="text-overflow: ellipsis;">Choose file...</label>
+                        </div>
+                        <div class="list-group"></div>
+                    </form>
+                    <div class="actions modal-footer">
+                        <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+                        <button class="btn red-haze action-upload-merge" data-trigger="handler" data-handler="uploadDataHandler">@Localizer["Upload"]</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @* End of Upload Modal *@
+
+    @* Input Modal Form *@
+    <div id="annual-ot-planning-input-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                    <h4 class="modal-title" id="input_month_label"></h4>
+                </div>
+                <div class="modal-body">
+                    <form id="annual-ot-planning-input-form" role="form" enctype="multipart/form-data" method="post">
+                        <input type="hidden" id="input_month" />
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["Target Volume"]</label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control numberonly" id="targetVolume" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["OT Planning DL (hour)"]</label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control numberonly" id="dlHour" />
+                                @*@(Html.Kendo().NumericTextBox().Name("dlHour").HtmlAttributes(new {@class = "form-control"}))*@
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["OT Planning IDL (hour)"]</label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control numberonly" min="0" id="idlHour" />
+                                @*@(Html.Kendo().NumericTextBox().Name("idlHour").Decimals(0).Format("#").HtmlAttributes(new {@class = "form-control"}))*@
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["OT Reason"] <span style="color:red;">@Localizer["(max 200 character)"]</span></label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="text" class="form-control" id="inputRemark"  />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["Index DL"]</label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control numberonly" min="0" pattern="+([\.,][0-9]+)?" id="dlIndex" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-7">
+                                <label>@Localizer["Index IDL"]</label>
+                            </div>
+                            <div class="col-md-5">
+                                <input type="number" class="form-control numberonly" min="0" pattern="+([\.,][0-9]+)?" id="idlIndex"  />
+                            </div>
+                        </div>
+                    </form>
+                    <div class="actions modal-footer">
+                        <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+                        <a style="color:white;" class="btn btn-success action-input" data-trigger="handler" data-handler="formDataHandler">@Localizer["Save"]</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @* End of Input Modal Form *@
+}
+
+}

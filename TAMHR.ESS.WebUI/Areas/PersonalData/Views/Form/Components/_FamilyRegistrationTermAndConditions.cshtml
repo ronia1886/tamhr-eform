@@ -1,0 +1,43 @@
+﻿<script data-template="term-and-conditions" type="text/template">
+    <table class="table table-borderless table-nopadding">
+        <tbody>
+            <tr>
+                <td style="width: 12rem!important;">@Localizer["Child Name"]</td>
+                <td>: #: $.toDefault(Object.ChildName, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Nationality"]</td>
+                <td>: #: $.toDefault(typeof Object.IsOtherNation !== 'undefined' ? Object.OtherNation : Object.NationCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Place of Birth"]</td>
+                <td>: #: $.toDefault(typeof Object.IsOtherPlaceOfBirthCode !== 'undefined' ? Object.OtherPlaceOfBirthCode : Object.PlaceOfBirthCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Date of Birth"]</td>
+                <td>: #: $.toDefault(Object.DateOfBirth, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Citizenship"]</td>
+                <td>: #: $.toDefault(Object.NationalityCode == 'wni' ? 'WNI' : 'WNA', '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Gender"]</td>
+                <td>: #: $.toDefault(Object.GenderCode == 'lakilaki' ? '@Localizer["Male"]' : '@Localizer["Female"]', '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Religion"]</td>
+                <td>: #: $.toDefault(Object.ReligionCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Blood Type"]</td>
+                <td>: #: $.toDefault(Object.BloodTypeCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Child Status"]</td>
+                <td>: #: $.toDefault(Object.ChildStatus == 'anakkandung' ? '@Localizer["Biological Children"]' : '@Localizer["Adopted Children"]', '-') #</td>
+            </tr>
+        </tbody>
+    </table>
+    <hr />
+</script>

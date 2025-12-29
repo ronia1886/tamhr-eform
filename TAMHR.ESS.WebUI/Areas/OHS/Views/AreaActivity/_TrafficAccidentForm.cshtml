@@ -1,0 +1,348 @@
+﻿@model TAMHR.ESS.Domain.SafetyIncidentViewModel
+@{
+    var isNew = Model.Id == default(Guid);
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    if (isNew)
+    {
+        Model.IncidentDate = DateTime.Now.Date;
+    }
+}
+
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    <script type="text/javascript">
+        function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { startDate: startDate, endDate: endDate };
+        }
+    </script>
+    
+}
+
+<script>
+    //Fungsi untuk mendapatkan nilai parameter dari URL
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    function populateFilters() {
+        var divisionCode = getUrlParameter('DivisionCode');
+        var areaId = getUrlParameter('AreaId');
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+
+        if (divisionCode && $("#DivisionCode").data("kendoComboBox")) {
+            $("#DivisionCode").data("kendoComboBox").value(divisionCode);
+            divisionComboBox.readonly(true);
+        }
+
+        if (areaId && areaComboBox) {
+            areaComboBox.dataSource.read(); // Load ulang data area
+            areaComboBox.value(areaId.toUpperCase());
+            areaComboBox.readonly(true);
+        }
+    }
+</script>
+
+<script>
+    $(document).ready(function() {
+         // Ambil instance ComboBox
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+
+         // Cek apakah ini mode edit atau tambah data
+        var isNew = @Json.Serialize(isNew);
+        var areaId = @Json.Serialize(Model.AreaId);
+        var divisionCode = @Json.Serialize(Model.DivisionCode);
+
+        if (!isNew && areaId) {
+            areaComboBox.enable(true); // Aktifkan area jika ada nilai saat update
+            areaComboBox.dataSource.read(); // Muat ulang data agar NamaArea muncul
+        } else {
+            areaComboBox.enable(false);
+        }
+
+         // Event ketika Divisi berubah
+         divisionComboBox.bind("change", function() {
+             var divisionCode = this.value();
+
+             if (divisionCode) {
+                 areaComboBox.enable(true); // Aktifkan Area jika Divisi dipilih
+                 areaComboBox.dataSource.read(); // Load ulang data area
+             } else {
+                 areaComboBox.enable(false); // Nonaktifkan jika Divisi kosong
+                 areaComboBox.value(""); // Kosongkan pilihan area
+             }
+         });
+
+         populateFilters();
+
+     });
+
+     // Function untuk filter area berdasarkan Divisi
+     function filterArea() {
+         return {
+             divisionCode: $("#DivisionCode").data("kendoComboBox").value(),
+         };
+     }
+</script>
+
+<form enctype="multipart/form-data" method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/ohs/area-activity/insertSafetyIncident" : "~/api/ohs/area-activity/updateSafetyIncident")">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.Attachment)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Incident Description"]</label>
+                @Html.TextAreaFor(x => x.IncidentDescription, new { @class = "form-control", rows = 2, cols = 50, @data_validation_for = "IncidentDescription", @placeholder = Localizer["Please input Incident Description"].Value })
+                @Html.Hidden("IncidentTypeCode", "traffic_accident", new { @class = "form-control", @data_validation_for = "IncidentTypeCode" })
+
+                <span class="invalid"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Loss Time"]</label>
+                @Html.TextBoxFor(x => x.LossTime, new { @class = "form-control", @data_validation_for = "LossTime", @placeholder = Localizer["Please input Loss Time"].Value })
+                <span class="invalid"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.IncidentDate)
+                    .HtmlAttributes(isNew ? (object)new { style = "width: 100%" } : (object)new { style = "width: 100%", @readonly = "readonly", id = "IncidentDate" })
+                    .Format("dd/MM/yyyy")
+                    .ParseFormats("dd/MM/yyyy")
+                    )
+                <span class="invalid" data-validation-for="OvertimeDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Total Victim"]</label>
+                @Html.TextBoxFor(x => x.TotalVictim, new { @class = "form-control", @data_validation_for = "TotalVictim", @placeholder = Localizer["Please input Total Victim"].Value })
+                <span class="invalid"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Divisi"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("DivisionCode")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisionCode", @required = "required" })
+                    .DataTextField("ObjectText")
+                    .DataValueField("ObjectCode")
+                    .Placeholder(Localizer["Please select Divisi"].Value)
+                    .Value(Model.DivisionCode ?? string.Empty)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-Divisi")))
+                    .Sort(sort => sort.Add("ObjectText"))
+                    )
+                    .SelectedIndex(-1)
+                    )
+                <span class="invalid" data-validation-for="DivisiCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Upload (Accident/Incident Report)"]</label>
+                <div class="custom-file">
+                    @Html.TextBoxFor(x => x.Attachment, new
+                        {
+                            type = "file",
+                            @class = "custom-file-input",
+                            @id = "fileInput",
+                            @data_validation_for = "FileUpload",
+                            @placeholder = Localizer["Please select a file"].Value
+                        })
+                    <label class="custom-file-label" for="fileInput">@Localizer["Choose file"]</label>
+                </div>
+                <div id="uploadSpinner" style="display: none;">
+                    <i class="fa fa-spinner fa-spin"></i> Uploading file...
+                </div>
+                <span class="invalid"></span>
+                @{
+                    if (!string.IsNullOrEmpty(Model.Attachment))
+                    {
+                        <a href="javascript:void(0);" onclick="getDownloadUrl('@Model.Attachment')">
+                            Download File <i class="ft-download"></i>
+                        </a>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Area"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AreaId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "AreaId", @required = "required" })
+                    .DataTextField("NamaArea")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Area"].Value)
+                    .Value(Model.AreaId ?? string.Empty)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-AreaDropDown"))
+                    .Data("filterArea"))
+                    .Sort(sort => sort.Add("NamaArea"))
+                    )
+                    )
+                <span class="invalid" data-validation-for="AreaId"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Time"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("IncidentTime", Model.IncidentDate, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "IncidentDate" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="Time"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Subject"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("Subject")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Subject", @required = "required" })
+                    .DataTextField("Name")
+                    .DataValueField("Name")
+                    .Placeholder(Localizer["Please select Subject"].Value)
+                    .Value(Model.Subject == default(string) ? string.Empty : Model.Subject)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/getGeneralCategory?category=OHSSubject")))
+                    .Sort(sort => sort.Add("Name"))
+
+                    ))
+                <span class="invalid" data-validation-for="AreaIdEquip"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Accident Type"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AccidentType")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Accident Type", @required = "required" })
+                    .DataTextField("Name")
+                    .DataValueField("Name")
+                    .Placeholder(Localizer["Please select Accident Type"].Value)
+                    .Value(Model.AccidentType == default(string) ? string.Empty : Model.AccidentType)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/getGeneralCategory?category=OHSTrafficAccidentType")))
+                    .Sort(sort => sort.Add("Name"))
+
+                    ))
+                <span class="invalid" data-validation-for="AccidentType"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    function getDownloadUrl(attachmentId) {
+        const currentPath = window.location.pathname;
+        const baseUrlWithEssOhs = `${window.location.origin}/ess_v2/api/files/download?id=${attachmentId}`;
+        const baseUrlWithoutEssOhs = `${window.location.origin}/api/files/download?id=${attachmentId}`;
+
+        let url = currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+
+        window.location.href = url;
+    }
+
+    $(function () {
+        window.setTimeout(function () {
+            $('.clockpicker').clockpicker({
+                 placement: 'top',
+                 align: 'left',
+                 autoclose: true
+            });
+        }, 1000);
+    });
+
+
+</script>
+<script>
+        $(document).ready(function () {
+        $("#IncidentDate").on("focus", function() {
+                $(this).data("kendoDatePicker").open();
+        });
+
+        // Update the label with the file name when the user selects a file
+        $(".custom-file-input").on("change", function (e) {
+            var fileName = e.target.files[0].name;
+            $(this).next(".custom-file-label").html(fileName);
+        });
+
+        // Function to determine the base URL dynamically
+        function getBaseUrl() {
+            const currentPath = window.location.pathname;
+            const baseUrlWithEssOhs = `${window.location.origin}/ess_v2/api/files/upload`;
+            const baseUrlWithoutEssOhs = `${window.location.origin}/api/files/upload`;
+
+            return currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+        }
+
+        // Submit the form with file upload handling
+        $("#fileInput").on("change", function (e) {
+            var fileInput = e.target;
+            var formData = new FormData();
+            $("#uploadSpinner").show(); // Tampilkan spinner
+            if (fileInput.files.length > 0) {
+                formData.append("file", fileInput.files[0]);
+
+                $.ajax({
+                    url: getBaseUrl(),  // Dynamically set the upload URL
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        if (response.files && response.files.length > 0) {
+                            // Ambil URL file yang berhasil diupload
+                            var fileUrl = response.files[0].Id;
+                            // Masukkan URL file ke dalam field Attachment
+                            $("#Attachment").val(fileUrl);
+                            alert("File uploaded successfully.");
+                            $("#uploadSpinner").hide(); // sembunyikan spinner
+                        } else {
+                            alert("File upload failed: " + response.Message);
+                        }
+                    },
+                    error: function () {
+                        $("#uploadSpinner").hide(); // sembunyikan spinner
+                        alert("File upload failed!");
+                    }
+                });
+            }
+        });
+
+    });
+</script>

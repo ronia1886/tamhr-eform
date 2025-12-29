@@ -1,0 +1,85 @@
+﻿@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+    Layout = "~/Views/Shared/_LoginLayout.cshtml";
+    ViewData["Title"] = "Welcome to e-Form";
+    var baseContentUrl = Url.Content("~");
+    var returnUrl = @Context.Request.Query["returnUrl"].ToString();
+    var url = returnUrl.StartsWith(baseContentUrl) ? returnUrl.Substring(baseContentUrl.Length) : string.Empty;
+}
+@section scripts {
+    <script type="text/javascript">
+        $.ajaxSetup({
+            headers: { "RequestVerificationToken": "@Xsrf.GetAndStoreTokens(Context).RequestToken" }
+        });
+
+        app.registerHandler("login-handler", function (d) {
+            window.location.href = app.resolveUrl("~" + (d.RedirectUrl || ""));
+        });
+
+        app.registerHandler("keypressHandler", function (parameters) {
+            if (parameters.event.keyCode === 13) {
+                var $el = $(parameters.element),
+                    $form = $el.closest("form"),
+                    $submitBtn = $form.find("[data-trigger='submit']");
+
+                $submitBtn.trigger("click");
+            }
+        });
+    </script>
+}
+<section class="flexbox-container">
+    <div class="col-12 d-flex align-items-center justify-content-center">
+        <div class="col-sm-8 col-md-7 col-lg-5 col-xl-4 col-12 box-shadow-2 p-0">
+            <div class="card border-grey border-lighten-3 m-0">
+                <div class="card-header border-0">
+                    <div class="card-title d-block text-center">
+                        <div class="pt-2">
+                            <img src="~/img/logo/logo1.png" style="width: 5rem;" alt="branding logo">
+                        </div>
+                    </div>
+                    <h6 class="card-subtitle line-on-side text-muted text-center font-small-3 pt-3 bold text-uppercase">
+                        <span>@Localizer["Login with e-Form"]</span>
+                    </h6>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <form class="form-horizontal form-simple" method="post" action="~/api/account/login">
+                            <input type="hidden" name="ReturnUrl" value="@url" />
+                            <div class="alert alert-warning hidden" role="alert">
+                                <h4 class="alert-heading">
+                                    <i class="fa fa-warning"></i>&nbsp; <span class="alert-title"></span>
+                                </h4>
+                                <p class="alert-message"></p>
+                            </div>
+                            <fieldset class="form-group position-relative has-icon-left">
+                                <input data-validation-for="Username" name="Username" onkeypress="app.invokeHandler('keypressHandler', { event: event, element: this })" type="text" class="form-control form-control-lg input-lg input-rounded" placeholder="@Localizer["Please enter your username"]" required="required">
+                                <div class="form-control-position">
+                                    <i class="ft-user"></i>
+                                </div>
+                            </fieldset>
+                            <fieldset class="form-group position-relative has-icon-left">
+                                <input data-validation-for="Password" name="Password" onkeypress="app.invokeHandler('keypressHandler', { event: event, element: this })" type="password" class="form-control form-control-lg input-lg input-rounded" placeholder="@Localizer["Please enter your password"]" required="required">
+                                <div class="form-control-position">
+                                    <i class="fa fa-key"></i>
+                                </div>
+                            </fieldset>
+                            <button type="button" class="btn btn-danger btn-lg btn-block btn-rounded" data-trigger="submit" data-callback="login-handler">
+                                <i class="ft-unlock"></i> @Localizer["Login"]
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-footer position-relative">
+                    <div class="">
+                        <p class="float-sm-left m-0">@Localizer["Best Viewed With"]</p>
+                        <p class="float-sm-right m-0 position-absolute font-medium-4" style="top: 18px;right: 20px;">
+                            <img src="~/img/chrome.svg" width="30" height="30">
+                            <img src="~/img/firefox.svg" width="30" height="30">
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+

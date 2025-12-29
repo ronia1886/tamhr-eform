@@ -1,0 +1,80 @@
+﻿<ul id="eshift-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["Name", "NoReg", "ShiftCodeUpdate"]' />
+    </li>
+    <li class="dropdown dropdown-arrow">
+        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="NoReg">@Localizer["No Reg."]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="Name">@Localizer["Name"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="Date">@Localizer["Date"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+    <li class="dropdown custom-filter">
+        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-filter"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-right" style="width: 250px;">
+            <form class="form-horizontal p-2" role="form">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["Start Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("StartDate")
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["End Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("EndDate")
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["NoReg"]</label>
+                            @Html.TextBox("NoReg", null, new { @class = "form-control", @placeholder = Localizer["Please input noreg"].Value })
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["Name"]</label>
+                            @Html.TextBox("Name", null, new { @class = "form-control", @placeholder = Localizer["Please input name"].Value })
+                        </div>
+                    </div>
+                </div>
+                <hr class="mt-1"/>
+                <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler">@Localizer["Search"]</a>
+            </form>
+        </div>
+    </li>
+    <li class="dropdown">
+        <a href="javascript:;" class="font-green-haze" data-target="eshift-grid" data-trigger="modal" data-modal="eshift-rule-modal" data-modal-title="Create Substitution" data-modal-ajax="true" data-ajax-url="~/masterdata/employeeworkschedule/loadsubstitution">
+            <i class="fa fa-plus-circle"></i>
+        </a>
+    </li>
+</ul>

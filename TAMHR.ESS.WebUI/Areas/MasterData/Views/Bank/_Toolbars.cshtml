@@ -1,0 +1,31 @@
+﻿<ul id="banks-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["BankKey" , "Branch", "BankName", "Address"]' />
+    </li>
+    <li class="dropdown dropdown-arrow">
+        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="BankKey">@Localizer["Bank Key"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="BankName">@Localizer["Name"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="Branch">@Localizer["Branch"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+</ul>

@@ -1,0 +1,29 @@
+﻿@model List<TAMHR.ESS.Domain.EmployeeDepartmentVacationStroredEntity>;
+
+@{
+    var data = Model;
+    bool withSelect = (bool)ViewData["WithSelect"];
+    string orgCode = ViewData["OrgCode"].ToString();
+}
+<form class="form-horizontal" role="form">
+    <div class="form-group">
+        <div class="mt-checkbox-list" style="max-height:300px;overflow-y:scroll">
+            @foreach (var item in data.OrderBy(x => x.Classification))
+            {
+                if (withSelect)
+                {
+                    <label>
+                        <input class="cb-employee" data-org-code="@orgCode" data-no-reg="@item.NoReg" data-name="@item.Name" data-classification="@item.Classification" type="checkbox" />
+                        <span>@item.Name -No Reg @item.NoReg - Kelas @item.Classification @(item.HasVacation ? " (already claim)" : string.Empty)</span>
+                    </label>
+                }
+                else
+                {
+        <label>@item.Name - No Reg @item.NoReg - Kelas @item.Classification @(item.HasVacation ? " (already claim)" : string.Empty)</label>
+                }
+                <hr style="margin:5px" />
+            }
+        </div>
+    </div>
+</form>
+

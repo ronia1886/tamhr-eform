@@ -1,0 +1,60 @@
+﻿@model TAMHR.ESS.Domain.Kategori_PenyakitVIEW
+@{
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/master-data/ohs/insertKp" : "~/api/master-data/ohs/updateKp")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Tingkat Sakit"]</label>
+                @(Html.Kendo().ComboBox().Name("IdTingkatSakit")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "IdTingkatSakit", @required = "required" })
+                    .DataTextField("Name")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select form"].Value)
+                    .Value(Model.IdTingkatSakit == default(Guid)? string.Empty : Model.IdTingkatSakit.ToString())
+                    //.Value(Model.IdTingkatSakit.ToString())
+                    @*.Events(events =>
+                {
+                events.Change("onchangeHospital");
+                })*@
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Tingkat-Sakit")))
+                    .Sort(sort => sort.Add("Name"))
+                    )
+                    @*.Template("<span class=\"k-state-default\">#: data.ProviderType# #: data.Name # </span>")*@
+                    //.ValueTemplate("<span class=\"selected-value\" style=\"background-image: url(" + Url.Content("~/shared/web/Customers/") + "#:data.CustomerID#.jpg"+ ");\" ></span>" + "<span>#:data.ContactName#</span>")
+                    )
+                <span class="invalid" data-validation-for="IdTingkatSakit"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Kategori Penyakit"]</label>
+                @Html.TextBoxFor(x => x.KategoriPenyakit, new { @class = "form-control", @data_validation_for = "KategoriPenyakit", @placeholder = Localizer["Please input KategoriPenyakit"].Value })
+                <span class="invalid" data-validation-for="KategoriPenyakit"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Penyakit"]</label>
+                @Html.TextBoxFor(x => x.Penyakit, new { @class = "form-control", @data_validation_for = "Penyakit", @placeholder = Localizer["Please input Penyakit"].Value })
+                <span class="invalid" data-validation-for="Penyakit"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit"  data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

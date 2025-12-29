@@ -1,0 +1,127 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+<script>
+    function getGridForm() {
+        return $("#gridForm").data("kendoGrid");
+    }
+
+    function getEmployeeHierarchy() {
+        return $("#EmployeeHierarchy").data("kendoTreeView");
+    }
+
+    setTimeout(
+        function () {
+            getEmployeeHierarchy().select(".k-first");
+        },1000
+    );
+
+
+    $.getDataForm = function (noReg) {
+        var x = {
+            NoReg: noReg,
+            Period: $("#yearDdl").val() == "" ? (new Date.getMonth() != 12 ? new Date().getFullYear():new Date().getFullYear()+1) : $("#yearDdl").val()
+        };
+        console.log(x);
+        return x;
+    };
+
+    function searchForm2() {
+        var val = getEmployeeHierarchy();
+        var selected = val.select();
+        var selectedData = val.dataItem(selected);
+        $.onSearchForm(selectedData.id);
+    }
+
+    $.onSearchForm = function (id) {
+
+        var $grid = getGridForm();
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+
+        var ids = id.split('#');
+
+        var NoReg = '';
+        var PostCode = '';
+
+        if(ids.length == 2){
+            NoReg = ids[0].substr(2, 6);
+            PostCode = ids[1];
+        }
+        var dataSource = $grid.dataSource,
+            Period = $("#yearDdl").val();
+
+        $.post(app.resolveUrl("~/api/annual-planning/gets?NoReg="+NoReg+"&Period="+Period+"&PostCode="+PostCode), {
+            NoReg: NoReg,
+            Period: Period,
+            PostCode: PostCode
+        }, function (d) {
+
+            if (d.Data.length > 0) {
+
+                var photo = "";
+                    $.get(
+                        app.resolveUrl("~/api/annual-planning/get-profpic-avatar"),
+                        { NoReg: encodeURIComponent(NoReg) }
+                    ).done(function (data) {
+                        var $box = $("#hierarchy-box").empty();
+
+                        // Tentukan sumber foto yang aman (hanya data:image/* atau URL http/https)
+                        var photo = "";
+                        if (typeof data === "string" && data) {
+                            if (data.startsWith("data:image")) {
+                                photo = data;
+                            } else if (/^https?:\/\//i.test(data)) {
+                                photo = data;
+                            }
+                        }
+
+                        // Buat elemen DOM secara terprogram (bukan string HTML)
+                        var $avatarWrap = $("<div>").addClass("profpic-avatar");
+                        var $img = $("<img>")
+                            .attr("alt", "avatar")
+                            .css({ width: "2rem", height: "2rem", borderRadius: "50%" });
+
+                        if (photo) {
+                            $img.attr("src", photo);
+                        } else {
+                            // fallback avatar aman (pastikan file ada)
+                            $img.attr("src", app.resolveUrl("~/images/default-avatar.png"));
+                        }
+                        $avatarWrap.append($img);
+
+                        var $body = $("<div>").addClass("profpic-body");
+                        // Gunakan .text() agar otomatis ter-escape (mencegah XSS dari Name/PostName)
+                        $body.append(
+                            $("<span>")
+                                .addClass("profpic-title")
+                                .css("font-size", "12px")
+                                .text((d.Data && d.Data[0] && d.Data[0].Name) ? d.Data[0].Name : "-")
+                        );
+                        $body.append(
+                            $("<span>")
+                                .addClass("profpic-description")
+                                .css("font-size", "12px")
+                                .text((d.Data && d.Data[0] && d.Data[0].PostName) ? d.Data[0].PostName : "-")
+                        );
+
+                        $box.append($avatarWrap, $body);
+                    }).fail(function () {
+                        $("#hierarchy-box").empty().text("Error loading profile picture.");
+                    });
+
+                $("#gridForm").data("kendoGrid").dataSource.data([]);
+
+                $.each(d.Data, function (index, val) {
+                    $("#gridForm").data("kendoGrid").dataSource.add(val);
+
+                });
+            }
+        });
+    };
+
+    (function ($, app) {
+        $(function () {
+            $(document).on('click', '.k-link, li.k-item', function (e) {
+                e.stopPropagation();
+            });
+        });
+    })(jQuery, app);
+</script>

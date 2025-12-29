@@ -1,0 +1,429 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService service;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    var loan = (obj as LoanViewModel);
+    var personalData = service.GetPdfInfoPersonal(org.NoReg).FirstOrDefault();
+    string KTP = personalData.GetType().GetProperty("KTP").GetValue(personalData).ToString();
+    string Address = personalData.GetType().GetProperty("Address").GetValue(personalData).ToString();
+    string rt = personalData.GetType().GetProperty("RT").GetValue(personalData).ToString();
+    string rw = personalData.GetType().GetProperty("RW").GetValue(personalData).ToString();
+    string City = personalData.GetType().GetProperty("City").GetValue(personalData).ToString();
+    string PostalCode = personalData.GetType().GetProperty("PostalCode").GetValue(personalData).ToString();
+    DateTime BirthDate = Convert.ToDateTime(personalData.GetType().GetProperty("BirthDate").GetValue(personalData).ToString());
+    DateTime StartDate = Convert.ToDateTime(personalData.GetType().GetProperty("StartDate").GetValue(personalData).ToString());
+    // Buat matrix Print Out
+    // var getPrintOut = coreService.GetPrintOut().ToList();
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Requester = "";
+    string DepartmentHead = "";
+    string SectionHead = "";
+    string DivisionHead = "";
+    string DirectorHR = "";
+    string HRDepartmentHead = "";
+    string HRDivisionHead = "";
+
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        var getSubType = i.GetType().GetProperty("SubType").GetValue(i) == null ? "" : i.GetType().GetProperty("SubType").GetValue(i).ToString();
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DivisionHead" && getSubType == "7up")
+        {
+            DivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DirectorHR" && getSubType == "7up")
+        {
+            DirectorHR = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "HRDepartmentHead" && getSubType == "7up")
+        {
+            HRDepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "DepartmentHead" && getSubType == "7up")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "HRDivisionHead" && getSubType == "7up")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+    }
+}
+
+<style type="text/css">
+    .top-left {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 28px;
+        width: 28px;
+        border-top: solid 2px #fff;
+        border-left: solid 2px #fff;
+    }
+
+    .cross-a, .cross-b {
+        position: absolute;
+        width: 0;
+        height: 0;
+    }
+
+    .cross-a {
+        top: -2px;
+        left: -2px;
+        border-top: 28px solid transparent;
+        border-right: 28px solid #000;
+    }
+
+    .cross-b {
+        top: 0px;
+        left: 0px;
+        border-top: 26px solid transparent;
+        border-right: 26px solid #FFFFFF;
+    }
+</style>
+
+<hr style="margin-bottom:20px" />
+
+<h2 style="text-align:center">FORMULIR  PERMOHONAN  PINJAMAN</h2>
+
+
+<table border="1" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+    <thead>
+        <tr>
+            <th colspan="10" rowspan="1">Nomor Registrasi</th>
+            <th colspan="15" rowspan="1">@org.NoReg</th>
+            <th>Tanggal</th>
+            <th colspan="12" rowspan="1">&nbsp;</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td colspan="10" rowspan="1" style="width:200px">&nbsp; Nama Lengkap</td>
+            <td colspan="28" rowspan="1">&nbsp; @org.Name</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Tanggal Lahir (Tgl / Bln / Thn)</td>
+            <td colspan="28" rowspan="1">&nbsp;  @BirthDate.ToString("dd/MM/yyyy")</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Nomor KTP</td>
+            <td colspan="28" rowspan="1">&nbsp; @KTP</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="3">&nbsp; Alamat Rumah Sekarang</td>
+            <td colspan="16" rowspan="2" valign="top">&nbsp; @Address</td>
+        </tr>
+        <tr>
+            <td colspan="15" rowspan="1">&nbsp; RT / RW : @rt / @rw</td>
+        </tr>
+        <tr>
+            <td style="width:60px">&nbsp; Kota :</td>
+            <td colspan="15" rowspan="1">&nbsp; @City</td>
+            <td colspan="4" rowspan="1">&nbsp; Kode Pos (wajib ditulis ) :</td>
+            <td colspan="8" rowspan="1">&nbsp; @PostalCode</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="3">&nbsp; Alamat sesuai KTP</td>
+            <td colspan="16" rowspan="2">&nbsp; @Address</td>
+        </tr>
+        <tr>
+            <td colspan="15" rowspan="1">&nbsp; RT / RW : @rt / @rw</td>
+        </tr>
+        <tr>
+            <td style="width:60px">&nbsp; Kota :</td>
+            <td colspan="15" rowspan="1">&nbsp; @City</td>
+            <td colspan="4" rowspan="1">&nbsp; Kode Pos (wajib ditulis ) :</td>
+            <td colspan="8" rowspan="1">&nbsp; @PostalCode</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Tanggal Mulai Bekerja</td>
+            <td colspan="14" rowspan="1">&nbsp; @StartDate.ToString("dd/MM/yyyy")</td>
+            <td colspan="15" rowspan="1">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Kelas</td>
+            <td colspan="14" rowspan="1">&nbsp; @org.EmployeeSubgroupText</td>
+            <td>&nbsp; Jabatan</td>
+            <td colspan="14" rowspan="1">&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Divisi</td>
+            <td colspan="14" rowspan="1">&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            <td>&nbsp; Departemen</td>
+            <td colspan="14" rowspan="1">&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td colspan="38">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Jenis Pinjaman</td>
+            <td align="center">1</td>
+            <td colspan="5" rowspan="1">&nbsp; Rumah</td>
+            <td colspan="3" align="center">
+                @if (loan.LoanType.ToLower() == "buyinghouse7up")
+                {
+                    <span>&#10006;</span>
+                }
+            </td>
+            <td colspan="7" rowspan="1">&nbsp; Pembelian</td>
+            <td colspan="12" rowspan="4">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">( beri tanda X pada kolom jenis pinjaman )</td>
+            <td colspan="6" rowspan="2"></td>
+            <td colspan="3" align="center">
+                @if (loan.LoanType.ToLower() == "buildhouse7up")
+                {
+                    <span>&#10006;</span>
+                }
+            </td>
+            <td colspan="7" rowspan="1">&nbsp; Pembangunan</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="3">&nbsp;</td>
+            <td colspan="3" align="center">
+                @if (loan.LoanType.ToLower() == "renovationhouse7up")
+                {
+                    <span>&#10006;</span>
+                }
+            </td>
+            <td colspan="7" rowspan="1">Renovasi</td>
+        </tr>
+        <tr>
+            <td align="center">2</td>
+            <td colspan="5" rowspan="1">&nbsp; Tanah</td>
+            <td colspan="3" align="center">
+                @if (loan.LoanType.ToLower() == "buyingland7up")
+                {
+                    <span>&#10006;</span>
+                }
+            </td>
+            <td colspan="7" rowspan="1">&nbsp; Pembelian</td>
+        </tr>
+        <tr>
+            <td align="center">3</td>
+            <td colspan="5" rowspan="1">&nbsp; Kendaraan</td>
+            <td colspan="3" align="center">
+                @if (loan.LoanType.ToLower() == "buyingvehicle7up")
+                {
+                    <span>&#10006;</span>
+                }
+            </td>
+            <td colspan="7" rowspan="1">&nbsp; Pembelian</td>
+            <td colspan="12" rowspan="1">
+                &nbsp;
+                Merek :
+                @if (loan.LoanType.ToLower() == "buyingvehicle7up")
+                {
+                <span>&nbsp; @loan.Brand</span>
+                }
+
+            </td>
+        </tr>
+        <tr>
+            <td colspan="38">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="38">
+                &nbsp; Alamat - Tanah / Rumah yang dibeli / bangun / renovasi / kontrak :
+                @if (loan.LoanType.ToLower() != "buyingvehicle7up")
+                {
+                <span>&nbsp; @loan.Address</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="3">&nbsp; ( lampirkan denah lokasi )</td>
+        </tr>
+
+        <tr>
+            <td colspan="16" rowspan="1">&nbsp;</td>
+            <td colspan="12" rowspan="1">
+                &nbsp; RT / RW :
+                @if (loan.LoanType.ToLower() != "buyingvehicle7up")
+                {
+                <span>&nbsp; @loan.RT/@loan.RW</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td style="width:60px">&nbsp; Kota :</td>
+            <td colspan="15" rowspan="1">
+                @if (loan.LoanType.ToLower() != "buyingvehicle7up")
+                {
+                <span>&nbsp; @loan.City</span>
+                }
+            </td>
+            <td colspan="4" rowspan="1">&nbsp; Kode Pos (wajib ditulis ) :</td>
+            <td colspan="8" rowspan="1">&nbsp; @loan.PostalCode</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; Pembiayaan</td>
+            <td colspan="12" rowspan="1">&nbsp; Kebutuhan Biaya</td>
+            <td align="center">&nbsp; Rp.</td>
+            <td colspan="3" rowspan="1">
+                <span>&nbsp; @string.Format("{0:N}", Convert.ToDecimal(loan.CostNeeds))</span>
+            </td>
+            <td colspan="11" rowspan="2">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="10" rowspan="1">&nbsp; (lampirkan perincian biaya)</td>
+            <td colspan="12" rowspan="1">&nbsp; Pinjaman dari Perusahaan</td>
+            <td align="center">&nbsp; Rp.</td>
+            <td colspan="3" rowspan="1">
+                <span>&nbsp;  @string.Format("{0:N}", Convert.ToDecimal(loan.LoanAmount))</span>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="38">&nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center">P</td>
+            <td colspan="9" rowspan="1">&nbsp; Nama Lengkap</td>
+            <td colspan="28" rowspan="1">&nbsp; @org.Name</td>
+        </tr>
+        <tr>
+            <td align="center">E</td>
+            <td colspan="9" rowspan="1">&nbsp; Tanggal Lahir (Tgl / Bln / Thn)</td>
+            <td colspan="28" rowspan="1">&nbsp; @BirthDate.ToString("dd/MM/yyyy")</td>
+        </tr>
+        <tr>
+            <td align="center">N</td>
+            <td colspan="9" rowspan="1">&nbsp; Kelas</td>
+            <td colspan="14" rowspan="1">&nbsp; @org.EmployeeSubgroupText</td>
+            <td colspan="5" rowspan="1">&nbsp; Jabatan : @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+            <td colspan="9" rowspan="1">&nbsp; Division Head</td>
+        </tr>
+        <tr>
+            <td align="center">J</td>
+            <td colspan="9" rowspan="1">&nbsp; Divisi</td>
+            <td colspan="14" rowspan="1">&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            <td rowspan="1">&nbsp; Departemen</td>
+            <td colspan="14" rowspan="1">&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td align="center">A</td>
+            <td colspan="9" rowspan="1">&nbsp; Nomor KTP</td>
+            <td colspan="28" rowspan="1">&nbsp; @KTP</td>
+        </tr>
+        <tr>
+            <td align="center">M</td>
+            <td colspan="9" rowspan="4">&nbsp; Alamat Rumah</td>
+            <td colspan="28" rowspan="1">&nbsp; @Address</td>
+        </tr>
+        <tr>
+            <td align="center">I</td>
+            <td colspan="28" rowspan="1">&nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center">N</td>
+            <td colspan="16" rowspan="1">&nbsp;</td>
+            <td colspan="12" rowspan="1">&nbsp; RT / RW : @rt / @rw</td>
+        </tr>
+        <tr>
+            <td>&nbsp;</td>
+            <td>&nbsp; Kota :</td>
+            <td colspan="15" rowspan="1">&nbsp; @City</td>
+            <td>&nbsp; Kode Pos (wajib ditulis ) :</td>
+            <td colspan="11" rowspan="1">&nbsp; @PostalCode</td>
+        </tr>
+        <tr>
+            <td colspan="38">
+                <label style="font-weight:bold">&nbsp; Keterangan</label><br />
+                &nbsp;  1.Untuk peminjam yang tidak memenuhi syarat maka akan diundur sampai dengan persyaratan dapat dipenuhi
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+    <colgroup>
+        <col style="width: 40%">
+        <col style="width: 10%">
+        <col style="width: 50%">
+    </colgroup>
+    <tr>
+        <td height="50px"></td>
+    </tr>
+    <tr>
+        <td>
+            <table border="1" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+                <colgroup>
+                    <col style="width: 50%">
+                    <col style="width: 50%">
+                </colgroup>
+                <tr>
+                    <td colspan="2">&nbsp; HUMAN RESOURCES DIVISION</td>
+                </tr>
+                <tr>
+                    <td align="center">Direktur</td>
+                    <td align="center">Kepala Divisi</td>
+                </tr>
+                <tr >
+                    <td height="80px" valign="bottom" align="center">@DirectorHR</td>
+                    <td height="80px" align="center">
+                        @if (!string.IsNullOrEmpty(HRDivisionHead))
+                        {
+                            <span>@HRDivisionHead</span>
+                        }
+                        <svg height="100%" width="100%">
+                            <line x1="0" y1="0" x2="100%" y2="100%" style="stroke:rgb(0,0,0);stroke-width:2" />
+                        </svg>
+                        @if (string.IsNullOrEmpty(HRDivisionHead))
+                        {
+                            <span>@HRDepartmentHead</span>
+                        }
+
+                    </td>
+                </tr>
+                <tr>
+                    <td height="20px" align="center" valign="bottom"></td>
+                    <td height="20px" align="center">Kepala Departemen</td>
+                </tr>
+            </table>
+        </td>
+        <td></td>
+        <td>
+            <table border="1" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+                <colgroup>
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                </colgroup>
+                <tr>
+                    <td colspan="3" align="left">&nbsp; Divisi :</td>
+                </tr>
+                <tr>
+                    <td align="center">Kepala Divisi</td>
+                    <td align="center">Kepala Department</td>
+                    <td align="center">Karyawan Ybs.</td>
+                </tr>
+                <tr>
+                    <td height="100px" valign="bottom" align="center">@DivisionHead</td>
+                    <td height="100px" valign="bottom" align="center">@DepartmentHead</td>
+                    <td height="100px" valign="bottom" align="center">@org.Name</td>
+                </tr>
+                @*<tr>
+                    <td height="20px" colspan="3">&nbsp; FORM LOAN 7-12 / !$&& HRD</td>
+                </tr>*@
+            </table>
+        </td>
+    </tr>
+</table>

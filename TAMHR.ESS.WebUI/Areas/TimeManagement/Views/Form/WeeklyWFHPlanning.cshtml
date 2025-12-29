@@ -1,0 +1,1578 @@
+﻿@using Newtonsoft.Json
+@using System.Globalization
+@using TAMHR.ESS.Infrastructure
+@using Microsoft.AspNetCore.Localization;
+@model DocumentRequestDetailViewModel<WeeklyWFHPlanningViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.WeeklyWFHPlanningService WeeklyWFHPlanningService
+@inject TAMHR.ESS.Infrastructure.DomainServices.EmployeeWorkScheduleService EmployeeWorkScheduleService
+@inject TAMHR.ESS.Infrastructure.DomainServices.EmployeeWorkPlanService EmployeeWorkPlanService
+@inject TAMHR.ESS.Infrastructure.DomainServices.WorkScheduleService WorkSchedule
+
+@{
+    bool canEdit = AclHelper.CanEdit();
+    var currentUser = User.GetClaim("NoReg");
+    var postCode = User.GetClaim("PostCode");
+    var postName = User.GetClaim("PostName");
+    var requester = UserService.GetByNoReg(Model.Requester);
+
+    bool isRequester = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid)
+                     || (!string.IsNullOrEmpty(Model.Requester) && Model.Requester == User.GetClaim("NoReg"));
+    var languageConfig = "c=en-US|uic=en-US|uic=id-ID";
+    Context.Request.Cookies.TryGetValue(CookieRequestCultureProvider.DefaultCookieName, out languageConfig);
+
+    if(languageConfig == null)
+    {
+        languageConfig = "c=en-US|uic=en-US|uic=id-ID";
+    }
+
+    var language = languageConfig.Split("|")[1].Split("=")[1];
+
+    //var cultureConfig = configService.GetConfig("Menu.FavouriteMenuCount");
+
+    ScriptManager.RegisterReferences("grid");
+    ScriptManager.RegisterReferences("multiselect");
+    ScriptManager.RegisterReferences("dropdownlist");
+
+    var now = DateTime.Now;
+    var firstMonthDate = new DateTime(now.Year, now.Month, 1);
+
+    Config testerDateCat = ConfigService.GetConfig("Others.TesterDate");
+    if(testerDateCat != null && testerDateCat.ConfigText == "True")
+    {
+        now = DateTime.Parse(testerDateCat.ConfigValue);
+    }
+    #region working schedule
+    var workingSchedule = WorkSchedule.GetLatestWorkSchedules().OrderByDescending(x => x.Date).FirstOrDefault();
+    int maxMonthWorkingSchedule = int.Parse(workingSchedule.MonthPeriod);
+    int maxYearWoringSchedule = int.Parse(workingSchedule.YearPeriod);
+
+    #endregion
+
+    #region submit record
+    var lsLastSubmit = WeeklyWFHPlanningService.GetWeeklyWFHPlannings().Where(x => x.Submitter == currentUser && x.StartDate >= firstMonthDate).Select(x => x.StartDate).Distinct().ToList();
+    var lsMonthSubmitRecord = new List<string>();
+    foreach (var item in lsLastSubmit) 
+    {
+        lsMonthSubmitRecord.Add(item.Month.ToString() + " " + item.Year.ToString());
+    }
+    #endregion
+
+    #region dropdown period
+    var currentPeriod = now.Year;
+    var currentMonth = now.Month;
+    var months = new List<SelectListItem>();
+    var monthsWorkingSchedule = new List<SelectListItem>();
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames;
+
+    for (var i = 0; i < monthNames.Length; i++)
+    {
+        if (maxYearWoringSchedule == currentPeriod)
+        {
+            if (i >= currentMonth - 1 && i < maxMonthWorkingSchedule)
+            {
+                monthsWorkingSchedule.Add(new SelectListItem { Text = monthNames[i], Value = (i + 1).ToString() });
+            }
+        }
+        if (maxYearWoringSchedule > currentPeriod)
+        {
+            monthsWorkingSchedule.Add(new SelectListItem { Text = monthNames[i], Value = (i + 1).ToString() });
+        }
+    }
+
+    var allPlanningSubmitted = false;
+
+    var currMonth = new List<SelectListItem>();
+    var futureMonth = new List<SelectListItem>();
+    foreach (var item in monthsWorkingSchedule)
+    {
+        if (!lsMonthSubmitRecord.Contains(item.Value + " " + currentPeriod.ToString()) && currentPeriod == maxYearWoringSchedule)
+        {
+            if(item.Text!=""){
+                months.Add(item);
+                currMonth.Add(item);
+            }
+            
+        }
+        else if (!lsMonthSubmitRecord.Contains(item.Value + " " + (currentPeriod + 1).ToString()) && currentPeriod < maxYearWoringSchedule)
+        {
+            
+            if(item.Text!=""){
+                months.Add(item);
+                futureMonth.Add(item);
+            }
+            
+        }
+    }
+
+    var currPeriod = currentPeriod;
+    if(currMonth.Count==0){
+        currPeriod = maxYearWoringSchedule;
+    }
+    var periods = Enumerable.Range(currPeriod, (maxYearWoringSchedule - currPeriod) + 1)
+        .OrderByDescending(x => x);
+
+    DateTime inputDate;
+    if (months.Count > 0)
+    {
+        var selPeriod = now.Year;
+        if(periods.Count() > 0){
+            selPeriod = periods.FirstOrDefault();
+        }
+        currentMonth = int.Parse(months[0].Value);
+        inputDate = new DateTime(selPeriod, int.Parse(months[0].Value), 1);
+    }
+    else 
+    {
+        allPlanningSubmitted = true;
+        inputDate = DateTime.Now;
+    }
+
+
+    #endregion
+
+
+    bool isLate = false;
+    if (inputDate.Month == now.Month)
+    {
+        isLate = true;
+    }
+    // int gap = 2;
+
+    // Config gapWeeklyWFHCon = ConfigService.GetConfig("WeeklyWFHPlanning.GapWeeklyWFH");
+    // if(gapWeeklyWFHCon != null)
+    // {
+    //     gap = Convert.ToInt32(gapWeeklyWFHCon.ConfigValue);
+    // }
+
+    // WFHGeneratePlanningDateWeekly pdw = WeeklyWFHPlanningService.GetWeeklyWFHPlanningByDate(now, gap*7, false);
+    WFHGeneratePlanningDateMonthly pdw = WeeklyWFHPlanningService.GetMonthlyWFHPlanningByDate(inputDate);
+
+    //special case bulan januari
+    if (pdw.StartDate.Month == 1){
+        pdw.StartDate = Convert.ToDateTime(pdw.StartDate.Year + "-" + pdw.StartDate.Month + "-01");
+    }
+    DateTime startDate = pdw.StartDate;
+    DateTime endDate = pdw.EndDate;
+    // Get the last day of the specified month
+    int lastDay = DateTime.DaysInMonth(maxYearWoringSchedule, maxMonthWorkingSchedule);
+
+    // Create a DateTime object for the last day of the month
+    DateTime lastDayOfMonth = new DateTime(maxYearWoringSchedule, maxMonthWorkingSchedule, lastDay);
+
+    var isNew = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid);
+
+    IEnumerable<EmployeeShiftNoRegStoredEntity> empShift = EmployeeWorkScheduleService.GetEmployeeShiftByNoreg(currentUser, startDate, lastDayOfMonth);
+
+    if (!isNew)
+    {
+        var WFHPlanning = Model.Object.WeeklyWFHPlanning;
+        empShift = EmployeeWorkScheduleService.GetEmployeeShiftByNoreg(currentUser, WFHPlanning.StartDate, WFHPlanning.EndDate);
+    }
+
+    List<DateTime> listOffDate = new List<DateTime>();
+    List<DateTime> listAbsentDate = new List<DateTime>();
+    List<DateTime> listWFFDate = new List<DateTime>();
+
+    foreach(EmployeeShiftNoRegStoredEntity shift in empShift)
+    {
+        if(shift.ShiftCode == "OFF")
+        {
+            listOffDate.Add(shift.Date);
+        } else if (shift.ShiftCode == "ABS")
+        {
+            listAbsentDate.Add(shift.Date);
+        }
+        else if (shift.ShiftCode == "WFF")
+        {
+            listWFFDate.Add(shift.Date);
+        }
+    }
+
+    //DateTime[] listDate = Enumerable.Range(0, 1 + endDate.Subtract(startDate).Days)
+    //      .Select(offset => startDate.AddDays(offset))
+    //      .ToArray(); 
+
+    bool otherVersionExists = false;
+    var awp = WeeklyWFHPlanningService.GetByKey(currentUser, postCode, startDate, endDate);
+    if (awp != null)
+    {
+        otherVersionExists = true;
+    }
+
+    GeneralCategory wfhConfig = ConfigService.GetGeneralCategory("workplace-wfh");
+    GeneralCategory wffConfig = ConfigService.GetGeneralCategory("workplace-wff");
+
+    bool isChecked = false;
+    currentUser = isNew ? User.GetClaim("NoReg") : Model.Requester;
+
+    var aos = MdmService.GetActualOrganizationStructure(currentUser);
+    var getDivision = WeeklyWFHPlanningService.GetDivisionByNoReg(currentUser);
+    var plans = EmployeeWorkPlanService.GetPlans(getDivision);
+    var dictPlan = plans.ToDictionary(x => x.Name);
+    if(plans != null)
+    {
+        isChecked = true;
+    }
+
+    var listDay = new List<int>();
+    foreach(var plan in plans)
+    {
+        if(plan.Name=="Monday")
+        {
+            listDay.Add(1);
+        }
+        if(plan.Name=="Tuesday")
+        {
+            listDay.Add(2);
+        }
+        if(plan.Name=="Wednesday")
+        {
+            listDay.Add(3);
+        }
+        if(plan.Name=="Thursday")
+        {
+            listDay.Add(4);
+        }
+        if(plan.Name=="Friday")
+        {
+            listDay.Add(5);
+        }
+    }
+
+
+    var mode = isNew ? "" : Model.DocumentStatusCode;
+
+    if (mode == "" || mode == "draft" || mode == "revised")
+    {
+        canEdit = true;
+    } 
+
+    bool isApprover = false;
+
+    string jsonvm = "";
+
+    bool hasNewerVersion = false;
+
+    List<WeeklyWFHPlanningDetailView> prevDetail = new List<WeeklyWFHPlanningDetailView>();
+
+    string prevDetailJSON = "";
+    bool isView = currentUser != User.GetClaim("NoReg");
+
+    if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty)
+    {
+        WeeklyWFHPlanningViewModel vm =  JsonConvert.DeserializeObject<WeeklyWFHPlanningViewModel>(Model.ObjectValue);
+
+        startDate = vm.WeeklyWFHPlanning.StartDate;
+        endDate = vm.WeeklyWFHPlanning.EndDate;
+
+        hasNewerVersion = WeeklyWFHPlanningService.HasNewerVersion(Model.DocumentApprovalId);
+        if (hasNewerVersion)
+        {
+            prevDetail = WeeklyWFHPlanningService.GetPreviousDetails(Model.DocumentApprovalId, currentUser).ToList<WeeklyWFHPlanningDetailView>();
+            prevDetailJSON = JsonConvert.SerializeObject(prevDetail);
+        }
+
+        TrackingApproval trackingApproval = ApprovalService.GetTrackingApprovals(Model.DocumentApprovalId).Where(a => a.NoReg != Model.Requester).FirstOrDefault();
+        if (trackingApproval != null)
+        {
+            isApprover = true;
+        }
+
+        
+        
+    }
+
+    var completeEdit = false;
+    if(mode == "completed")
+    {
+        completeEdit = true;
+    }
+
+    
+
+    int minWFOCount = 2;
+
+    Config minWFOCon = ConfigService.GetConfig("WeeklyWFHPlanning.MinWFOCount");
+    if(minWFOCon != null)
+    {
+        minWFOCount = Convert.ToInt32(minWFOCon.ConfigValue);
+        //minWFOCount = Convert.ToInt32(((pdw.EndDate - pdw.StartDate).TotalDays + 1) / 7) * minWFO;
+    }
+    
+}
+
+@* @if (otherVersionExists && (Model.DocumentApprovalId == null || Model.DocumentApprovalId == Guid.Empty)) *@
+@if(allPlanningSubmitted && !completeEdit)
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["Tidak dapat membuat permohonan baru karena Anda sudah mengisi semua perencanaan untuk jadwal kerja yang tersedia"].</p>
+        <a href="@Url.Content("~/core/form/index?formKey=weekly-wfh-planning")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+    </div>
+@section formActions
+{
+
+}
+}
+else
+{
+    @section scripts {
+        <script type="text/javascript" src="~/plugins/kendo/kendo.all.min.js"></script>
+        <script type="text/javascript" src="~/plugins/kendo/cultures/kendo.culture.id-ID.min.js"></script>
+        <script type="text/javascript" src="~/plugins/kendo/cultures/kendo.culture.en-US.min.js"></script>
+        <script>kendo.culture('@language')</script>
+        <script type="text/javascript">
+
+            function beforeDate(date1, date2){
+                var date1date = kendo.parseDate(date1, "dddd, dd-MMM-yyyy");
+                var date2date = kendo.parseDate(date2, "dddd, dd-MMM-yyyy", 'en-US');
+
+                var x = date1date <= date2date;
+                return x;
+            }
+
+            function checkedDays(WorkingDate) {
+                var date = kendo.parseDate(WorkingDate, "dddd, dd-MMM-yyyy");
+
+                var x = listChecked.indexOf(kendo.parseInt(date.getDay())) > -1;
+                return x;
+            }
+
+            if('@Model.DocumentApprovalId'!=""){
+                $("#download-@Model.DocumentApprovalId").remove();
+            }
+
+            var init = true;
+
+            var wfoCount = 0;
+            var listWfoCount = [];
+            var absCount = 0;
+            var listAbsCount = [];
+            var exceptAbsOFFCount = 0;
+            var listexceptAbsOFFCount = [];
+
+
+            var now = kendo.parseDate('@now', 'MM/dd/yyyy').toString("dddd, dd-MMM-yyyy");
+
+            var offDateList = [];
+
+            var prevWFHPlanningDetail = [];
+            try {
+                //prevWFHPlanningDetail = JSON.parse('@Html.Raw(prevDetailJSON)');
+                prevWFHPlanningDetail = @Html.Raw(JsonConvert.SerializeObject(prevDetail));
+                //prevWFHPlanningDetail = @Html.Raw(prevDetailJSON);
+            } catch(e) {
+
+            }
+
+            @foreach (var d in listOffDate)
+            {
+                @:offDateList.push("@d.ToShortDateString()");
+            }
+
+            var absDateList = [];
+
+            @foreach (var d in listAbsentDate)
+            {
+                @:absDateList.push("@d.ToShortDateString()");
+            }
+
+            function uuidv4() {
+                return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+                );
+            }
+
+            var avatarURL = function (noreg) {
+                var linkUrlAvatar = $('#UrlAvatar').val();
+                return linkUrlAvatar + noreg;
+            }
+
+            let strStartDate = kendo.parseDate('@startDate', 'MM/dd/yyyy').toString('yyyy-MM-dd');
+            let strEndDate = kendo.parseDate('@endDate', 'MM/dd/yyyy').toString('yyyy-MM-dd');
+
+            function getObject() {
+                var weeklyWFHPlanning = {
+                        Submitter: '@currentUser',
+                        StartDate: strStartDate,
+                        EndDate: strEndDate
+                }
+
+                // Parse Kendo Date to Date only (excluding time)
+                var tempweeklyWFHPlanningDetail = [];
+                var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+                var weeklyWFHPlanningDetails = grid.dataSource.data();
+
+                wfoCount = 0;
+                absCount = 0;
+                exceptAbsOFFCount = 0;
+                var temp = 0;
+                var tempAbs = 0;
+                var tempExceptAbs = 0;
+                listWfoCount = [];
+                listAbsCount = [];
+                listexceptAbsOFFCount = [];
+                // console.log("getobject()")
+                // console.log(weeklyWFHPlanningDetails);
+                $.each(weeklyWFHPlanningDetails, function (index, item) {
+                    const tempDate = kendo.parseDate(item.WorkingDate, 'dddd, dd-MMM-yyyy');
+                    let week = Math.floor(index / 7) + 1;
+
+                    //alert(absDateList.includes(tempDate));
+                    //alert(tempDate);
+                    tempItem = {
+                        NoReg : '@currentUser',
+                        Index : item.Index,
+                        WorkPlace: item.IsOff && item.WorkPlace == "WFF" ? "WFF" : absDateList.includes(tempDate.toString('M/d/yyyy')) ? 'ABS' : item.IsOff ? 'OFF' : $('input[name="rbnWorkingPlace_'+index+'"]:checked').val(),
+                        WorkingDate : tempDate.toString('yyyy-MM-dd'),
+                        uid : item.uid,
+                        IsOff : item.IsOff,
+                        RequireWFO: item.RequireWFO
+                    }
+                    //alert(tempItem.WorkPlace);
+                    if(tempItem.WorkPlace == 'WFO' || tempItem.WorkPlace == 'WFF' || tempItem.WorkPlace == 'WFH'){
+                        exceptAbsOFFCount+=1;
+                        //alert(tempItem.WorkPlace);
+                        if(tempExceptAbs!=week && week != 1){
+				        tempExceptAbs = week;
+					    exceptAbsOFFCount = 1;
+				        }
+                        exceptData = {
+                            Week : week,
+                            TotalCount : exceptAbsOFFCount
+                        }
+                        //alert(temp);
+                        //alert("except week ke " + week + ":" + exceptAbsOFFCount);
+
+                    listexceptAbsOFFCount.push(exceptData);
+
+                    }
+
+                    if(tempItem.WorkPlace == 'WFO' || tempItem.WorkPlace == 'WFF'){
+                        wfoCount+=1;
+                        //alert(tempItem.WorkPlace);
+                        if(temp!=week && week != 1){
+				        temp = week;
+					    wfoCount = 1;
+				        }
+                        wfoData = {
+                            Week : week,
+                            TotalCount : wfoCount
+                        }
+                        //alert(temp);
+                        //alert("week ke " + week + ":" + wfoCount);
+
+                    listWfoCount.push(wfoData);
+
+                    }
+
+                    if(tempItem.WorkPlace == 'ABS' || tempItem.WorkPlace == 'OFF'){
+                        absCount+=1;
+                        //alert(tempItem.WorkPlace);
+                        if(tempAbs!=week && week != 1){
+				        tempAbs = week;
+					    absCount = 1;
+				        }
+                        absData = {
+                            Week : week,
+                            TotalCount : absCount
+                        }
+                        //alert(tempAbs);
+                        //alert("abs week ke " + week + ":" + absCount);
+
+                    listAbsCount.push(absData);
+
+                    }
+
+
+
+                    tempweeklyWFHPlanningDetail.push(tempItem);
+                });
+
+                return {
+                    WeeklyWFHPlanning: weeklyWFHPlanning,
+                    WeeklyWFHPlanningDetails: tempweeklyWFHPlanningDetail
+                };
+            }
+
+            function onDataBound(e) {
+                //ON DATA BOUND FUNCTION
+                //var rows = e.sender.tbody.children();
+                if(init){
+                    init = false;
+                    console.log("onDataBound")
+                    SeedWorkingDate();
+                }
+            }
+
+            $(window).on('load', function () {
+                //ON LOAD FUNCTION
+            });
+            let dayOfWeekFirstMonth;
+            let dayOfWeekLastMonth;
+            function SeedWorkingDate(e){
+                if('@isNew' == "True" && '@isChecked' == "False"){
+                        var startDate = '@startDate';
+                        var endDate = '@endDate';
+
+                    var listDate = GetDaysArray(startDate, endDate);
+
+                    var listItem = [];
+
+                    listDate.forEach(function (date, index) {
+                      listItem.push({
+                          WorkPlace: absDateList.includes(kendo.toString(date, "M/d/yyyy")) ? 'ABS' : 'WFH',
+                          WorkingDate: kendo.toString(date, "dddd, dd-MMM-yyyy"),
+                          Index: index,
+                          IsOff: offDateList.includes(kendo.toString(date, "M/d/yyyy")) || absDateList.includes(kendo.toString(date, "M/d/yyyy"))
+                          //? 'True' : 'False'
+                      });
+                    });
+
+                    var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+
+                    var dataSource = new kendo.data.DataSource({
+                      data: listItem
+                    });
+
+                    grid.setDataSource(dataSource);
+                } else if ('@isNew' == "True" && '@isChecked' == "True") {
+
+                    var startDate = '@startDate';
+                    var endDate = '@endDate';
+
+                    var listDate = GetDaysArray(startDate, endDate);
+                    console.log("startDate=@startDate")
+                    console.log("endDate=@endDate")
+                    var listItem = [];
+
+                    listDate.forEach(function (date, index) {
+                      listItem.push({
+                          WorkPlace: absDateList.includes(kendo.toString(date, "M/d/yyyy")) ? 'ABS' : listSelectedDay.indexOf(kendo.parseInt(date.getDay())) > -1 ? 'WFO' : ("@isLate" == "True" && beforeDate(date, now)) ? 'WFO' : 'WFH',
+                          WorkingDate: kendo.toString(date, "dddd, dd-MMM-yyyy"),
+                          Index: index,
+                          IsOff: offDateList.includes(kendo.toString(date, "M/d/yyyy")) || absDateList.includes(kendo.toString(date, "M/d/yyyy"))
+                          //? 'True' : 'False'
+                      });
+                    });
+
+                    var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+
+                    var dataSource = new kendo.data.DataSource({
+                      data: listItem
+                    });
+
+                    grid.setDataSource(dataSource);
+                }
+                else {
+                    $.ajax({
+                        url: app.resolveUrl("~/api/weekly-wfh-planning/get-details/" + '@Model.DocumentApprovalId'),
+                        type: 'POST',
+                        contentType: 'application/json',
+                        success: function (d) {
+                            var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+                            let dateLate = new Date(d[0].WorkingDate);
+
+                            let firstOfMonth = new Date(dateLate.getFullYear(), dateLate.getMonth(), 1);
+                            let day = firstOfMonth.getDay();
+
+                            // Calculate how many days to add to get to the first Monday
+                            // If the first day is a Monday, no need to add days (day === 1)
+                            // If the first day is Sunday (day === 0), add 1 day to get to Monday
+                            // Otherwise, add 8 - day days to get to the next Monday
+                            let daysToAdd = (day === 0) ? 1 : (day === 1) ? 0 : (8 - day);
+
+                            if(firstOfMonth.getMonth()>0){
+                                // Set the date to the first Monday
+                            firstOfMonth.setDate(firstOfMonth.getDate() + daysToAdd);
+                            }
+
+
+                            while (dateLate.getTime() !== firstOfMonth.getTime()) {
+                                dateLate.setDate(dateLate.getDate() - 1);
+                                d.unshift(
+                                    {
+                                        WorkPlace: 'WFO',
+                                        WorkingDate: kendo.toString(dateLate, "dddd, dd-MMM-yyyy"),
+                                        // Index: i,
+                                        IsOff: offDateList.includes(kendo.toString(dateLate, "M/d/yyyy")) || absDateList.includes(kendo.toString(dateLate, "M/d/yyyy"))
+                                    }
+                                )
+                            }
+                            d.forEach(function (data, index) {
+                                data.Index = index;
+                                let date = new Date(data.WorkingDate);
+                                data.WorkingDate = kendo.toString(date, "dddd, dd-MMM-yyyy")
+                            });
+                            // console.log(d);
+
+                            var dataSource = new kendo.data.DataSource({
+                              data: d
+                            });
+
+                            grid.setDataSource(dataSource);
+                        },
+                        error: function (error) {
+                            console.error(error);
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                        }
+                    });
+                }
+            }
+
+            function GetDaysArray(start, end) {
+                for(var arr=[],dt=new Date(start); dt<=new Date(end); dt.setDate(dt.getDate()+1)){
+                    arr.push(new Date(dt));
+                }
+                return arr;
+            };
+
+            var listSelectedDay = [];
+            var listChecked = [];
+
+            @foreach (var d in listDay)
+            {
+                @:listSelectedDay.push(@d);
+                @:listChecked.push(@d);
+            }
+
+            function CheckQuickActionDay(e){
+                var checked = $(e).is(':checked');
+                var dayNumber = parseInt($(e).attr('name').slice(-1));
+
+                const index = listSelectedDay.indexOf(dayNumber);
+
+                if(checked){
+                    if (index === -1){
+                        listSelectedDay.push(dayNumber)
+                    }
+                } else {
+                    if (index > -1) {
+                      listSelectedDay.splice(index, 1);
+                    }
+                }
+
+                var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+                var data = grid.dataSource.data();
+
+                $.each(data, function (index, item) {
+                    const tempDate = kendo.parseDate(item.WorkingDate, 'dddd, dd-MMM-yyyy');
+
+                    const checkIndex = listSelectedDay.indexOf(kendo.parseInt(tempDate.getDay()));
+
+                    var monthMap = {
+                        "Jan": 0, "Feb": 1, "Mar": 2, "Apr": 3, "May": 4, "Jun": 5,
+                        "Jul": 6, "Aug": 7, "Sep": 8, "Oct": 9, "Nov": 10, "Dec": 11
+                    };
+
+                    var parts = item.WorkingDate.split(', ')[1].split('-');
+                    var day = parseInt(parts[0], 10);
+                    var monthShort = parts[1];
+                    var year = parseInt(parts[2], 10);
+
+                    var normMonthShort = normalizeDateString(monthShort);
+                    var month = monthMap[normMonthShort];
+                    var jsDate = new Date(year, month, day);
+
+                    if (jsDate > new Date()) {
+                        if (!item.IsOff) {
+                            if (checkIndex > -1) {
+                                item.WorkPlace = "WFO";
+                            } else {
+                                item.WorkPlace = "WFH";
+                            }
+                        }
+                    }
+                });
+
+                grid.setDataSource(data);
+            }
+
+            function normalizeDateString(dateString) {
+                const replacements = {
+                    "Mei": "May",
+                    "Agt": "Aug",
+                    "Okt": "Oct",
+                    "Des": "Dec"
+                };
+
+                for (let key in replacements) {
+                    dateString = dateString.replace(new RegExp(key, 'g'), replacements[key]);
+                }
+
+                return dateString;
+            }
+
+            function prevVersionCheck(Date, Place){
+                const tempDate = kendo.toString(kendo.parseDate(Date, 'dddd, dd-MMM-yyyy'), 'yyyy-MM-ddT00:00:00');
+
+                if(prevWFHPlanningDetail.length > 0){
+                    var placeFound = "";
+
+                    const isFound = prevWFHPlanningDetail.some(element => {
+                        if (element.WorkingDate == tempDate && element.WorkPlace != Place) {
+                            return true;
+                        } else {
+                            placeFound = element.WorkPlace;
+                            return false;
+                        }
+                    });
+
+                    //if(isFound){
+                    //    console.log(placeFound);
+                    //    console.log(Place);
+                    //    if(placeFound == Place){
+                    //        return true;
+                    //    } else {
+                    //        return false;
+                    //    }
+                    //} else {
+                    //    return false;
+                    //}
+
+                    return !isFound;
+                } else {
+                    return false;
+                }
+            }
+
+            $.OnChangeMonth = function (e) {
+                let selectedMonth = $("#Month").val() - 1;
+                let selectedPeriod = $("#Period").val();
+                var selectedDate = selectedPeriod + "-01-01";
+                let startDateOnChange = changeMonth(selectedDate, selectedMonth, true);
+                let endDateOnChange = changeMonth(selectedDate, selectedMonth, false);
+                // let startDateOnChange = changeMonth('@startDate', selectedMonth, true);
+                // let endDateOnChange = changeMonth('@endDate', selectedMonth, false);
+                let lastWorkingSchedule = kendo.parseDate('@workingSchedule.Date', 'MM/dd/yyyy');
+                if (endDateOnChange > lastWorkingSchedule) {
+                    endDateOnChange = lastWorkingSchedule;
+                }
+                var listDate = GetDaysArray(startDateOnChange, endDateOnChange);
+
+                // assign new startDate & endDate to global variable
+                strStartDate = startDateOnChange.toString('yyyy-MM-dd');
+                strEndDate = endDateOnChange.toString('yyyy-MM-dd');
+
+                var listItem = [];
+
+                listDate.forEach(function (date, index) {
+                    listItem.push({
+                        WorkPlace: absDateList.includes(kendo.toString(date, "M/d/yyyy")) ? 'ABS' : listSelectedDay.indexOf(kendo.parseInt(date.getDay())) > -1 ? 'WFO' : ("@isLate" == "True" && beforeDate(date, now)) ? 'WFO' : 'WFH',
+                        WorkingDate: kendo.toString(date, "dddd, dd-MMM-yyyy"),
+                        Index: index,
+                        IsOff: offDateList.includes(kendo.toString(date, "M/d/yyyy")) || absDateList.includes(kendo.toString(date, "M/d/yyyy"))
+                        //? 'True' : 'False'
+                    });
+                });
+
+                var grid = $("#weeklyWFHPlanningDetailGrid").data("kendoGrid");
+
+                var dataSource = new kendo.data.DataSource({
+                    data: listItem
+                });
+
+                grid.setDataSource(dataSource);
+            }
+
+            $.OnChangePeriod = function (e) {
+                var monthComboBox = $("#Month").kendoComboBox({
+                    dataTextField: "text",
+                    dataValueField: "value",
+                    filter: "contains",
+                    suggest: true,
+                    change: function(e) {
+
+                        $.OnChangeMonth();
+                    }
+                }).data("kendoComboBox");
+
+                var monthPeriod = "";
+                if($("#Period").val()=="@currentPeriod"){
+                    if(@currMonth.Count>0){
+                        monthPeriod = "@currMonth.OrderByDescending(ob => ob.Text).FirstOrDefault()";
+                    }
+                }else{
+                    //monthPeriod = "@maxMonthWorkingSchedule";
+                    monthPeriod = "@futureMonth";
+                }
+                console.log(monthPeriod);
+                if(monthPeriod!=""){
+                    var newDropdownMonth = generateMonthData(monthPeriod);
+                    monthComboBox.setDataSource(newDropdownMonth);
+                    monthComboBox.select(0);
+                    $.OnChangeMonth();
+                }
+
+
+            }
+
+            function changeMonth(stringDate, Month, isFirstDate) {
+                let date = new Date(stringDate);
+                let oldDate = date.getDate();
+                let oldMonth = date.getMonth();
+                let oldYear = date.getFullYear();
+
+                let outputDate = new Date(stringDate);
+                if (isFirstDate) {
+                    // first date of selected month
+                    outputDate.setFullYear(oldYear, Month, 1);
+
+                    if(Month>0){
+                                // set date to first monday of selected month
+                        while (outputDate.getDay() !== 1) {
+                            outputDate.setDate(outputDate.getDate() + 1);
+                        }
+                    }
+
+                    return outputDate;
+                }
+                else {
+                    // move to next month of selected month
+                    outputDate.setMonth(Month + 1);
+
+                    // set date to last day of month
+                    outputDate.setDate(0);
+                    if (outputDate.getDay() === 0) {
+                        // If last day of month is Sunday, return that date
+                        return outputDate;
+                    } else {
+                        // Otherwise, find the first Sunday of the next month
+                        outputDate.setDate(1); // Start from the first day
+                        outputDate.setMonth(Month + 1); // move to next month
+
+                        // Loop to find the first Sunday
+                        while (outputDate.getDay() !== 0) {
+                            outputDate.setDate(outputDate.getDate() + 1);
+                        }
+
+                        return outputDate;
+                    }
+                }
+            }
+
+            function generateMonthData(maxMonth) {
+                var monthsData = [];
+
+                // Validate input (optional)
+                if (maxMonth < 1 || maxMonth > 12) {
+                    console.error("Invalid maxMonth input. Please provide a number between 1 and 12.");
+                    return monthsData;
+                }
+
+                // Generate month data
+                for (var i = 1; i <= maxMonth; i++) {
+                    var monthObject = {
+                        value: i,
+                        text: monthNumberToName(i)
+                    };
+                    monthsData.push(monthObject);
+                }
+
+                return monthsData;
+            }
+
+            // Function to convert month number to month name
+            function monthNumberToName(monthNumber) {
+                var monthNames = [
+                    "January", "February", "March", "April", "May", "June",
+                    "July", "August", "September", "October", "November", "December"
+                ];
+
+                return monthNames[monthNumber - 1]; // Adjust for zero-indexed array
+            }
+
+            var module = (function ($, app) {
+                app.registerHandler("saveHandler", function (d) {
+                    swal({
+                        title: "Save Changes",
+                        text: "Hybrid Work Schedule Plan Data saved successfully",
+                        type: "success"
+                    }).then(function () {
+                        window.location.href = app.resolveUrl("~/core/form/index?formKey=weekly-wfh-planning");
+                    });
+                });
+
+                app.registerHandler("submitHandler", function (d) {
+                    $form = $('#mainForm');
+                    var data = {
+                        DocumentApprovalId: d.id,
+                        Object: getObject()
+                    };
+
+                    Swal.fire({
+                        title: 'Saving Changes. Please Wait!',
+                        allowOutsideClick: false,
+                        onBeforeOpen: () => {
+                            Swal.showLoading()
+                        },
+                    });
+
+                    // $.post("~/api/weekly-wfh-planning/create-approval", data, function (de) {
+                    //     swal.close();
+
+                    //     swal({
+                    //         title: "Save Changes",
+                    //         text: "Hybrid Work Schedule Plan Data submitted successfully",
+                    //         type: "success"
+                    //     }).then(function () {
+                    //         window.location.href = app.resolveUrl("~/core/form/index?formKey=weekly-wfh-planning");
+                    //     });
+                    // }).fail(function (xhr, status, error) {
+                    //     swal.close();
+
+                    //     var obj = {};
+                    //     for (var key in xhr.responseJSON) {
+                    //         obj["Object." + key] = xhr.responseJSON[key];
+                    //     }
+                    //     $form.validate(obj);
+                    // });
+                });
+
+                app.registerHandler("dataInterceptor", function (d) {
+                    d.Object = getObject();
+
+                    var totalWFOList = listWfoCount.filter(x => x.TotalCount == @minWFOCount).length;
+                    var totalAbsList = listAbsCount.filter(x => x.TotalCount == 5).length;
+                    var totalListExcept = listexceptAbsOFFCount.filter(x => x.TotalCount == 3).length;
+
+                    var minWeek = 4;
+                    var startDate = new Date(strStartDate);
+                    var lastDateOfMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+                    var endDate = new Date(strEndDate);
+                    var lastWorkingSchedule = kendo.parseDate('@workingSchedule.Date', 'MM/dd/yyyy');
+
+                    if (((startDate.getDate() == 3 && lastDateOfMonth.getDate() > 30) ||
+                         (startDate.getDate() == 2 && lastDateOfMonth.getDate() > 29) ||
+                         (startDate.getDate() == 1 && lastDateOfMonth.getDate() > 28)) && (endDate <= lastWorkingSchedule)) {
+                        minWeek = 5;
+                    }
+                    // alert("minWeek before : " + minWeek);
+                    if (totalAbsList > 0 && totalListExcept != minWeek) {
+                        minWeek = minWeek - totalAbsList;
+                    }
+                    // alert("minWeek after " + minWeek);
+                    // alert("total Abs : "+totalAbsList);
+                    // alert("total wfo: " + totalWFOList);
+                    //if(wfoCount < '@minWFOCount'){
+
+
+                    //20240912|Roni|validasi frontend dipindah ke backend
+                    // if (totalWFOList != minWeek) {
+                    //     swal({
+                    //         title: '@Localizer["Total WFO / WFF Day minimum each Week is"].Value' + " " + '@minWFOCount' ,
+                    //         //text: "Hybrid Work Schedule Plan Data submitted successfully",
+                    //         type: "warning"
+                    //     });
+
+                    //     return;
+                    // }
+
+                    return d;
+                });
+
+                $("#btn-edit-submit").on("click", function (e) {
+                    e.preventDefault();
+                    app.confirm(app.translate("Submit Data"), app.translate("Do you want to submit this document?"), function (d) {
+                        if (!d.value) return;
+
+                        var data = {
+                            DocumentApprovalId: '@Model.DocumentApprovalId',
+                            Object: getObject()
+                        };
+
+                        var totalWFOList = listWfoCount.filter(x => x.TotalCount == @minWFOCount).length;
+                        var totalAbsList = listAbsCount.filter(x => x.TotalCount == 5).length;
+                        var totalListExcept = listexceptAbsOFFCount.filter(x => x.TotalCount == 3).length;
+
+                        var minWeek = 4;
+                        var startDate = new Date(strStartDate);
+                        var lastDateOfMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+                        var endDate = new Date(strEndDate);
+                        var lastWorkingSchedule = kendo.parseDate('@workingSchedule.Date', 'MM/dd/yyyy');
+
+                        if (((startDate.getDate() == 3 && lastDateOfMonth.getDate() > 30) ||
+                            (startDate.getDate() == 2 && lastDateOfMonth.getDate() > 29) ||
+                            (startDate.getDate() == 1 && lastDateOfMonth.getDate() > 28)) && (endDate <= lastWorkingSchedule)) {
+                            minWeek = 5;
+                        }
+                        // alert("minWeek before : " + minWeek);
+                        // alert("minWeek : " + minWeek);
+                        if (totalAbsList > 0 && totalListExcept != minWeek) {
+                                minWeek = minWeek - totalAbsList;
+                        }
+                        //alert(@minWFOCount);
+                        //alert("total Abs : "+totalAbsList);
+                        //alert("total WFO: "+totalWFOList);
+                        //alert("minWeek after : "+minWeek);
+                        //if(wfoCount < '@minWFOCount'){
+
+                        //20240912|Roni|validasi frontend dipindah ke backend
+                        // if (totalWFOList != minWeek) {
+                        //     swal({
+                        //         title: '@Localizer["Total WFO / WFF Day minimum is"].Value' + " " + '@minWFOCount' ,
+                        //         //text: "Hybrid Work Schedule Plan Data submitted successfully",
+                        //         type: "warning"
+                        //     });
+
+                        //     return;
+                        // }
+                        //console.log(data);
+                        try{
+                            $.ajax({
+                                url: app.resolveUrl("~/api/weekly-wfh-planning/update-weekly-wfh-planning?action=edit"),
+                                data: JSON.stringify(data),
+                                type: 'POST',
+                                dataType: 'json',
+                                contentType: 'application/json',
+                                success: function (resp) {
+                                    //console.log(resp)
+                                    if(resp.status == false){
+                                        app.error(resp.message);
+                                    }else{
+                                        swal({
+                                            title: "Submit Changes",
+                                            text: resp.message,
+                                            type: "success"
+                                            }).then(function () {
+                                                window.location.href = app.resolveUrl("~/core/form/index?formKey=weekly-wfh-planning");
+                                            });
+                                    }
+
+                                },
+                                error: function (xhr, status, error) {
+                                    //console.log(error)
+                                    //show error from validator
+                                    // $.each(error.responseJSON, function (k, v) {
+                                    //     var spanEl = $("span[data-validation-for='" + k + "']")[0];
+                                    //     if (spanEl != "") {
+                                    //         spanEl.innerText = v;
+                                    //     }
+                                    // });
+
+                                    // show error 2
+                                    // if (error.responseJSON != null && error.responseJSON != undefined){
+                                    //     app.error(error.responseJSON.Message);
+                                    // }
+
+                                    //alert("An error occurred while fetching data.");
+
+                                },
+                                fail: function (error) {
+
+                                    app.error("Something went wrong when submitting changes.");
+                                }
+                            });
+                        }catch(error){
+                            //console.error("Error parsing JSON:", error);
+                            app.error("An error occurred while processing the data.");
+                        }
+
+                    });
+                });
+            })(jQuery, app);
+        </script>
+
+        <style>
+
+            .dropdown-header {
+                border-width: 0 0 1px 0;
+                text-transform: uppercase;
+            }
+
+                .dropdown-header > span {
+                    display: inline-block;
+                    padding: 10px;
+                }
+
+                    .dropdown-header > span:first-child {
+                        width: 50px;
+                    }
+
+            .selected-value {
+                display: inline-block;
+                vertical-align: middle;
+                width: 18px;
+                height: 18px;
+                background-size: 100%;
+                margin-right: 5px;
+                border-radius: 50%;
+            }
+
+            #employees-list .k-item {
+                line-height: 1em;
+                min-width: 300px;
+            }
+
+            /* Material Theme padding adjustment*/
+
+            .k-material #employees-list .k-item,
+            .k-material #employees-list .k-item.k-state-hover,
+            .k-materialblack #employees-list .k-item,
+            .k-materialblack #employees-list .k-item.k-state-hover {
+                padding-left: 5px;
+                border-left: 0;
+            }
+
+            #employees-list .k-item > span {
+                -webkit-box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                box-sizing: border-box;
+                display: inline-block;
+                vertical-align: top;
+                margin: 20px 10px 10px 5px;
+            }
+
+                #employees-list .k-item > span:first-child {
+                    -moz-box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                    -webkit-box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                    box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                    margin: 10px;
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    background-size: 100%;
+                    background-repeat: no-repeat;
+                }
+
+            #employees-list h3 {
+                font-size: 1.2em;
+                font-weight: normal;
+                margin: 0 0 1px 0;
+                padding: 0;
+            }
+
+            #employees-list p {
+                margin: 0;
+                padding: 0;
+                font-size: .8em;
+            }
+
+            .employeeHeader .profilePicture {
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-size: 100%;
+                float: left;
+                margin-left: 3rem;
+                margin-right: 1rem;
+                margin-top: 0.3125rem;
+                display: inline-block;
+            }
+
+            .employeeHeader span {
+                line-height: 0.001rem;
+                display: inline-block;
+            }
+
+            .employeeHeader .planInfo {
+                float: right;
+            }
+
+            .lblWorkingPlace {
+              margin-right: 20px;
+            }
+
+            br.responsive {
+              display: none;
+            }
+
+            .quickAction {
+                display: flex; 
+                row-gap: 10px;
+                align-content: flex-start;
+                align-items: flex-start;
+                margin: 10px; auto;
+                justify-content: flex-start;
+                justify-items: flex-start;;
+            }
+
+            .quickActionItem {
+                flex: 0 0 calc(33%);
+                align-self: center;
+            }
+
+            .k-checkbox-label {
+                flex: 0 0 calc(33%);
+            }
+
+            .prevVersionSelected {
+                background-color: yellow;
+            }
+
+            @@media (max-width: 425px) {
+              .lblWorkingPlace {
+                  margin-bottom: 10px;
+                  margin-right: 0px;
+              }
+
+              br.responsive {
+                display: inline;
+              }
+
+              .quickAction {
+                flex-flow: row wrap;
+              }
+
+              .quickActionItem {
+                align-self: center;
+              }
+            }
+        </style>
+    }
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <!--<div class="card-header">
+                    <h4 class="card-title">@Localizer["Hybrid Work Schedule Plan"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>-->
+                <div class="card-content">
+                    <div class="card-body">
+                        @Html.Hidden("UrlAvatar", ConfigService.ResolveAvatar(""))
+                        @* Profile and WFH Information *@
+                        <div class="col-md-12 col-sm-12">
+                            <div class="row" style="margin-bottom:10px; display: flex; flex-wrap: wrap;">
+                                <div class="col-md-6 col-sm-12" style="flex-grow: 1">
+                                    <div class="profpic">
+                                        <div class="profpic-wrapper">
+                                            <div class="profpic-avatar">
+                                                <img src="@ConfigService.ResolveAvatar(currentUser)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                            </div>
+                                            <div class="profpic-body">
+                                                <span class="profpic-title">@aos.Name</span>
+                                                <span class="profpic-description">@aos.PostName</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @if (isRequester && canEdit)
+                                {
+                                    <div class="col-md-6 col-12" style="flex-grow: 1;">
+                                        <span class="bold font-small-3">@Localizer["Recurring Day of WFO"]</span>
+                                        <div class="row quickAction h-100">
+                                                @if (!dictPlan.ContainsKey("Monday"))
+                                                {
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay1").Label(Localizer["Monday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                                  <input class="k-checkbox quickActionItem" id="QuickActionDay1" name="QuickActionDay1" onchange="CheckQuickActionDay(this);" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay1">@Localizer["Monday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay1" onchange="CheckQuickActionDay(this);" type="hidden" value="false">
+                                                }else{
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay1").Checked(true).Enable(false).Label(Localizer["Monday"].Value).HtmlAttributes(new {@class = "quickActionItem" }))
+                                                  <input checked="checked" class="k-state-disabled k-checkbox quickActionItem" disabled="disabled" id="QuickActionDay1" name="QuickActionDay1" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay1">@Localizer["Monday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay1" type="hidden" value="false">
+                                                }
+                                                @if (!dictPlan.ContainsKey("Tuesday"))
+                                                {
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay2").Label(Localizer["Tuesday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                                  <input class="k-checkbox quickActionItem" id="QuickActionDay2" name="QuickActionDay2" onchange="CheckQuickActionDay(this);" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay2">@Localizer["Tuesday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay2" onchange="CheckQuickActionDay(this);" type="hidden" value="false">
+                                                }else{
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay2").Checked(true).Enable(false).Label(Localizer["Tuesday"].Value).HtmlAttributes(new {@class = "quickActionItem" }))
+                                                  <input checked="checked" class="k-state-disabled k-checkbox quickActionItem" disabled="disabled" id="QuickActionDay2" name="QuickActionDay2" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay2">@Localizer["Tuesday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay2" type="hidden" value="false">
+                                                }
+                                            
+                                                @if (!dictPlan.ContainsKey("Wednesday"))
+                                                {
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay3").Label(Localizer["Wednesday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                                  <input class="k-checkbox quickActionItem" id="QuickActionDay3" name="QuickActionDay3" onchange="CheckQuickActionDay(this);" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay3">@Localizer["Wednesday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay3" onchange="CheckQuickActionDay(this);" type="hidden" value="false">
+                                                }else{
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay3").Checked(true).Enable(false).Label(Localizer["Wednesday"].Value).HtmlAttributes(new {@class = "quickActionItem" }))
+                                                  <input checked="checked" class="k-state-disabled k-checkbox quickActionItem" disabled="disabled" id="QuickActionDay3" name="QuickActionDay3" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay3">@Localizer["Wednesday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay3" type="hidden" value="false">
+                                                }
+                                            
+                                                @if (!dictPlan.ContainsKey("Thursday"))
+                                                {
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay4").Label(Localizer["Thursday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                                  <input class="k-checkbox quickActionItem" id="QuickActionDay4" name="QuickActionDay4" onchange="CheckQuickActionDay(this);" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay4">@Localizer["Thursday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay4" onchange="CheckQuickActionDay(this);" type="hidden" value="false">
+                                                }else{
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay4").Checked(true).Enable(false).Label(Localizer["Thursday"].Value).HtmlAttributes(new {@class = "quickActionItem" }))
+                                                  <input checked="checked" class="k-state-disabled k-checkbox quickActionItem" disabled="disabled" id="QuickActionDay4" name="QuickActionDay4" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay4">@Localizer["Thursday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay4" type="hidden" value="false">
+                                                }
+                                            
+                                                @if (!dictPlan.ContainsKey("Friday"))
+                                                {
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay5").Label(Localizer["Friday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                                  <input class="k-checkbox quickActionItem" id="QuickActionDay5" name="QuickActionDay5" onchange="CheckQuickActionDay(this);" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay5">@Localizer["Friday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay5" onchange="CheckQuickActionDay(this);" type="hidden" value="false">
+                                                }else{
+                                                  //@(Html.Kendo().CheckBox().Name("QuickActionDay5").Checked(true).Enable(false).Label(Localizer["Friday"].Value).HtmlAttributes(new {@class = "quickActionItem" }))
+                                                  <input checked="checked" class="k-state-disabled k-checkbox quickActionItem" disabled="disabled" id="QuickActionDay5" name="QuickActionDay5" type="checkbox" value="true">
+                                                  <label class="k-checkbox-label" for="QuickActionDay5">@Localizer["Friday"].Value</label>
+                                                  <input class="quickActionItem" name="QuickActionDay5" type="hidden" value="false">
+                                                }
+                                            @*@(Html.Kendo().CheckBox().Name("QuickActionDay1").Label(Localizer["Monday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem" }))
+                                            @(Html.Kendo().CheckBox().Name("QuickActionDay2").Label(Localizer["Tuesday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem"}))
+                                            @(Html.Kendo().CheckBox().Name("QuickActionDay3").Label(Localizer["Wednesday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem"}))
+                                            @(Html.Kendo().CheckBox().Name("QuickActionDay4").Label(Localizer["Thursday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem"}))
+                                            @(Html.Kendo().CheckBox().Name("QuickActionDay5").Label(Localizer["Friday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem"}))*@
+                                            @*@(Html.Kendo().CheckBox().Name("QuickActionDay6").Label(Localizer["Saturday"].Value).HtmlAttributes(new { onchange = "CheckQuickActionDay(this);", @class = "quickActionItem"}))*@
+                                        </div>
+                                    </div>
+                                }
+                                </div>
+                            @if(isNew)
+                            {
+                                <form class="form-horizontal p-2" role="form">
+                                    <div class="form-group row">
+                                        <div class="col-6">
+                                            <label class="col-form-label">@Localizer["Period"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("Period")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                //.Value(currentPeriod.ToString())
+                                                .SelectedIndex(0)
+                                                .BindTo(periods)
+                                                .Events(e => {
+                                                    e.Change("$.OnChangePeriod");
+                                                })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                        <div class="col-6">
+                                            <label class="col-form-label">@Localizer["Month"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("Month")
+                                                .DataTextField("Text")
+                                                .DataValueField("Value")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .Value((currentMonth).ToString())
+                                                .BindTo(months)
+                                                .Events(e => {
+                                                    e.Change("$.OnChangeMonth");
+                                                })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                    </div>
+                                </form>
+                            }
+                            @* Add WFH Form *@
+                            <div class="form-wrapper">
+                                @(Html.Kendo()
+                                    .Grid<WeeklyWFHPlanningDetailView>()
+                                    .Name("weeklyWFHPlanningDetailGrid")
+                                    .Columns(col =>
+                                    {
+                                        //col.Bound(c => c.RequireWFO).ClientHeaderTemplate(Localizer["RequireWFO"].Value).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center col-md-3 col-6" });
+                                        col.Bound(c => c.WorkingDate).ClientHeaderTemplate(Localizer["Working Date"].Value).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center col-md-3 col-6" });
+                                        col.Bound(c => c.WorkPlace).ClientHeaderTemplate(Localizer["Workplace"].Value).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center col-md-9 col-6" })
+                                            .ClientTemplate( 
+                                                "#if(IsOff == '0'){#" +
+                                                    "<span class='demo-section'>" +
+                                                        "<input type='radio' class='radio-inline' value = 'WFO' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFO_'#:Index#'\" #if(WorkPlace == 'WFO'){#checked#}# #if(('" + canEdit + "' == 'False' && '" + completeEdit + "' == 'False' && WorkPlace != 'WFO') || beforeDate(WorkingDate,now) || '"+isView+"' == 'True' ){#disabled#}#/> <label for=\"rbnWorkingPlaceWFO_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFO' && prevVersionCheck(WorkingDate,'WFO' && !beforeDate(WorkingDate,now))){#prevVersionSelected#}#\"> WFO </label> <br class=\"responsive\" />" +
+                                                        "<input type='radio' class='radio-inline' value = 'WFH' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFH_'#:Index#'\" #if(WorkPlace == 'WFH'){#checked#}# #if(('" + canEdit + "' == 'False' && '" + completeEdit + "' == 'False' && WorkPlace != 'WFH') || beforeDate(WorkingDate,now) || '"+isView+"' == 'True' || ('" + isChecked + "' == 'True'  && checkedDays(WorkingDate) && WorkPlace != 'WFH')){#disabled#}#/> <label for=\"rbnWorkingPlaceWFH_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFH' && prevVersionCheck(WorkingDate,'WFH') && !beforeDate(WorkingDate,now)){#prevVersionSelected#}#\"> WFH </label> <br class=\"responsive\" />" +
+                                                        "<input type='radio' class='radio-inline' value = 'WFF' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFF_'#:Index#'\" #if(WorkPlace == 'WFF'){#checked#}# #if(('" + canEdit + "' == 'False' && '" + completeEdit + "' == 'False' && WorkPlace != 'WFF') || beforeDate(WorkingDate,now) || '"+isView+"' == 'True' ){#disabled#}#/> <label for=\"rbnWorkingPlaceWFF_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFF' && prevVersionCheck(WorkingDate,'WFF') && !beforeDate(WorkingDate,now)){#prevVersionSelected#}#\"> WFF </label>" +
+                                                    "</span>" +
+                                                "#}else if(IsOff == '1' && WorkPlace == 'WFF'){#" +
+                                                    @* "<span class='demo-section'>" +
+                                        "<input type='radio' class='radio-inline' value = 'WFO' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFO_'#:Index#'\" #if(WorkPlace == 'WFO'){#checked#}# disabled /><label for=\"rbnWorkingPlaceWFO_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFO' && prevVersionCheck(WorkingDate,'WFO') && !beforeDate(WorkingDate,now)){#prevVersionSelected#}#\"> WFO </label> <br class=\"responsive\" />" +
+                                        "<input type='radio' class='radio-inline' value = 'WFH' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFH_'#:Index#'\" #if(WorkPlace == 'WFH'){#checked#}# disabled /><label for=\"rbnWorkingPlaceWFH_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFH' && prevVersionCheck(WorkingDate,'WFH') && !beforeDate(WorkingDate,now)){#prevVersionSelected#}#\"> WFH </label> <br class=\"responsive\" />" +
+                                        "<input type='radio' class='radio-inline' value = 'WFF' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFF_'#:Index#'\" #if(WorkPlace == 'WFF'){#checked#}# disabled /><label for=\"rbnWorkingPlaceWFF_#:Index#\" class=\"lblWorkingPlace #if(WorkPlace != 'WFF' && prevVersionCheck(WorkingDate,'WFF') && !beforeDate(WorkingDate,now)){#prevVersionSelected#}#\"> WFF </label>" +
+                                                    "</span>" + *@
+                                    "<input type='radio' class='radio-inline hidden' value = 'WFF' name=\"rbnWorkingPlace_#:Index#\" id=\"rbnWorkingPlaceWFF_'#:Index#'\" checked /> WFF" +
+                                                "#}else if(WorkPlace == 'ABS'){#" +
+                                                    Localizer["Absen"].Value +
+                                                "#}else{#" +
+                                                    "OFF" +
+                                                "#}#"
+                                            );
+                                    })
+                                    .Sortable(false)
+                                    .Events(e => e.DataBound("onDataBound"))
+                                    .Deferred(true)
+                                )
+                            </div>  
+                            <div class="row" style="margin-top:10px;">
+                                <div class="col-md-12 col-12">
+                                <label class="bold">@Localizer["Notes"] :</label>
+                                    <div class="row">
+                                        <div class="col-md-3 col-3"><label class="font-small-3" style="float:left">WFO</label></div>
+                                        <div class="col-md-1 col-1"><label class="font-small-3" style="float:left">:</label></div>
+                                        <div class="col-md-7 col-7"><label class="font-small-3">Work From Office</label></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3 col-3"><label class="font-small-3" style="float:left">WFH</label></div>
+                                        <div class="col-md-1 col-1"><label class="font-small-3" style="float:left">:</label></div>
+                                        <div class="col-md-7 col-7"><label class="font-small-3">Work From Home</label></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3 col-3"><label class="font-small-3" style="float:left">WFF</label></div>
+                                        <div class="col-md-1 col-1"><label class="font-small-3" style="float:left">:</label></div>
+                                        <div class="col-md-7 col-7"><label class="font-small-3">Work From Field (Genba, etc)</label></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3 col-3"><label class="font-small-3" style="float:left">OFF</label></div>
+                                        <div class="col-md-1 col-1"><label class="font-small-3" style="float:left">:</label></div>
+                                        <div class="col-md-7 col-7"><label class="font-small-3">Days Off</label></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3 col-3"><label class="font-small-3" style="float:left">Absen</label></div>
+                                        <div class="col-md-1 col-1"><label class="font-small-3" style="float:left">:</label></div>
+                                        <div class="col-md-7 col-7"><label class="font-small-3">On Leave</label></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @section formActions
+    {
+        @if (canEdit)
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-9">
+                                        <div class="float-right">
+                                            @if (AclHelper.CanEdit())
+                                            {
+                                                <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="~/core/form/index?formKey=weekly-wfh-planning">
+                                                    @* <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span> *@
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                            }
+                                            @* @if (AclHelper.CanSubmit())
+                                            {
+                                                <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="@(Url.Content("~/core/form/index?formKey=weekly-wfh-planning"))">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                            } *@
+                                            @if (AclHelper.CanCancel())
+                                            {
+                                                if (ApplicationHelper.IsDefault(Model.Id))
+                                                {
+                                                    <a class="btn btn-danger" href="~/core/form/index?formKey=weekly-wfh-planning">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                    </a>
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (completeEdit && !isView){
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-9">
+                                        <div class="float-right">
+                                            <button type="button" class="btn-custom btn btn-warning" id="btn-edit-submit">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Edit"]</span>
+                                            </button>
+                                            <a class="btn btn-danger" href="~/core/form/index?formKey=weekly-wfh-planning">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            if(AclHelper.CanApprove()||AclHelper.CanReject()||AclHelper.CanRevise()){
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                        <div class="col-md-9 col-sm-8 col-8">
+                                            <div class="float-right">
+                                                @if (AclHelper.CanApprove())
+                                                {
+                                                    <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/core/form/index?formKey=weekly-wfh-planning"))">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanReject())
+                                                {
+                                                    <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/core/form/index?formKey=weekly-wfh-planning"))">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanRevise())
+                                                {
+                                                    <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/core/form/index?formKey=weekly-wfh-planning"))">
+                                                        <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                                    </a>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        
+        }
+    }
+
+    @section pageFooter
+    {
+        @* Modal *@
+        @* End of Modal *@
+    }
+
+}

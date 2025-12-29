@@ -1,0 +1,143 @@
+﻿@{ 
+    var now = DateTime.Now;
+    var retro = 2015;
+    var yearNow = now.Year;
+    var maxRetro = yearNow + 5;
+    var list = new List<int>();
+    for (var i = maxRetro; i >= retro; i--)
+    {
+        list.Add(i);
+    }
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/eventscalendar/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Events Calendar" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/eventscalendar">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            app.registerHandler("updateHandler", function (d) {
+                app.close(this);
+                app.success("Success update events calendar");
+
+                $("#loader").load(app.resolveUrl("~/core/home/eventscalendar"), { period: $("#periodDdl").val() });
+                app.refreshControl("grid");
+            });
+
+            app.registerHandler("deleteHandler", function (parameters) {
+                var $el = $(this),
+                    dataUrl = $el.data("url");
+
+                app.confirm(app.translate("Are you sure want to delete this object?"), app.translate("You won't be able to revert this!"), function (d) {
+                    if (!d.value) return;
+
+                    $.delete(dataUrl, { id: parameters.id }, function () {
+                        app.success("Success delete");
+                        $("#loader").load(app.resolveUrl("~/core/home/eventscalendar"), { period: $("#periodDdl").val() });
+                        app.refreshControl("grid");
+                    });
+                });
+            });
+        })(jQuery, app);
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Event Calendars"]</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 col-12 form-group">
+                        <label>Period</label>
+                        @(Html.Kendo().ComboBox()
+                            .Name("periodDdl")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .BindTo(list)
+                            .Value(yearNow.ToString())
+                            .Placeholder(Localizer["Select period"].Value)
+                            .Events(events =>
+                            {
+                                events.Change(@<text>function() {
+                                    var value = this.value();
+
+                                    $("#loader").load(app.resolveUrl("~/core/home/eventscalendar"), { period: value });
+                                    app.refreshControl("grid");
+                                }</text>);
+
+                                events.DataBound(@<text>function() { this.trigger("change"); }</text>);
+                            })
+                            .SelectedIndex(0)
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+                <hr />
+                <div class="row">
+                    <div class="col-12">
+                        <div id="loader"></div>
+                    </div>
+                </div>
+                <hr />
+                <div class="row">
+                    <div class="col-12">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.EventsCalendar>()
+                            .Name("grid")
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Title).ClientTemplate(@"
+                                    <div class=""media"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">#:Title#</h6>
+                                            <small class=""d-block"">#:Description#</small>
+                                            <small class=""d-block""><b>Date - </b> #:kendo.toString(StartDate, 'dd/MM/yyyy')# # if (kendo.toString(StartDate, 'dd/MM/yyyy') != kendo.toString(EndDate, 'dd/MM/yyyy')) { #until #:kendo.toString(EndDate, 'dd/MM/yyyy')# # } #</small>
+                                        </div>
+                                    </div>
+                                ");
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <div class=""btn-group"">
+                                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""events-calendar-modal"" data-modal-title=""Edit Events Calendar"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-id=""#:Id#"" data-parameters-handler=""eventscalendar"">
+                                            <i class=""ft-edit""></i>
+                                        </a>
+                                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/eventscalendar"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                            <i class=""ft-trash""></i>
+                                        </a>
+                                    </div>
+                                ").Width(170);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No events calendar"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/eventscalendar/gets")).Data(@<text>function() { return { year: $("#periodDdl").val() } }</text>))
+                                .Sort(sort => sort.Add("StartDate"))
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

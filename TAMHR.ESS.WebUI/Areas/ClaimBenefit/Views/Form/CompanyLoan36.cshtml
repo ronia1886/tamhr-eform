@@ -1,0 +1,170 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService
+@model DocumentRequestDetailViewModel<LoanViewModel>
+
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    bool IsRoleForm = User.GetClaim("Roles").Split(",").Contains(Model.FormRoleKey);
+    var ConfigSequence = configService.GetConfig("ViewSequence.CompanyLoan");
+    var ViewSequence = User.GetClaim("Roles").Split(",").Contains(ConfigSequence.ConfigValue);
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Company Loan Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Company Loan Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Loan Type"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.LoanType, "LoanType")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.LoanType" })
+                                        .Placeholder(Localizer["Select Loan Type"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=CompanyLoanPurpose36")))
+                                        )
+                                        //.Events(e =>
+                                        //{
+                                        //    e.Change("onchange").DataBound("readonlyObject");
+                                        //})
+                                        .Events(e =>
+                                        {
+                                            e.Change("loantypechange").DataBound("readonlyObject");
+                                        })
+                                        .SelectedIndex(-1)
+                                        //.Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Cost Need"].Value</label>
+                                    @if (isCanEdit)
+                                    {
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.CostNeeds)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.CostNeeds", onkeydown = "return ValidateNumber(event);" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Model.Object.CostNeeds.HasValue ? Math.Floor(Model.Object.CostNeeds.Value) as decimal? : null)
+                                            .Decimals(0)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Deferred()
+                                        )
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Object.CostNeeds, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.CostNeeds" }, isCanEdit))
+                                    }
+                                </div>
+                                <div id="divPinjaman">
+                                    <label>@Localizer["Loan"]</label>
+                                    <div class="row">
+                                        <div class="form-group col-md-2">
+                                            @Html.TextBoxFor(m => m.Object.CalculationLoan, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.CalculationLoan", placeholder = "", @readonly = "readonly", onkeydown = "return ValidateNumber(event);" }, isCanEdit))
+                                        </div>
+                                        <div class="form-group col-md-1">
+                                            <label>x</label>
+                                        </div>
+                                        <div class="form-group col-md-9">
+                                            @if (isCanEdit)
+                                            {
+                                                @(Html.Kendo().NumericTextBoxFor(x => x.Object.BasicSalary)
+                                                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.BasicSalary", onkeydown = "return ValidateNumber(event);" })
+                                                    .Placeholder(Localizer["Basic Salary"].Value)
+                                                    .Value(Model.Object.BasicSalary.HasValue ? Math.Floor(Model.Object.BasicSalary.Value) as decimal? : null)
+                                                    .Format("##,#")
+                                                    .Decimals(0)
+                                                    .Spinners(false)
+                                                    .Events(e => e.Change("SalaryChange"))
+                                                    .Min(0)
+                                                    .Deferred()
+                                                )
+                                            }
+                                            else
+                                            {
+                                                @Html.TextBoxFor(x => x.Object.BasicSalary, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.BasicSalary" }, isCanEdit))
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Company Loan Amount"]</label>
+                                    @if (isCanEdit)
+                                    {
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.LoanAmount)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.LoanAmount", onkeydown = "return ValidateNumber(event);" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Model.Object.LoanAmount.HasValue ? Math.Floor(Model.Object.LoanAmount.Value) as decimal? : null)
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Deferred()
+                                        )
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Object.LoanAmount, "{0:N0}", ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.LoanAmount" }, isCanEdit))
+                                    }
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Supporting Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @Html.HiddenFor(x => x.Object.SupportAttachmentPath)
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+                                @if (Model.Object.Period.HasValue && ViewSequence)
+                                {
+                                    @Html.HiddenFor(x => x.Object.Period)
+                                    @Html.HiddenFor(x => x.Object.Seq)
+                                    <div class="form-group">
+                                        <label>Periode Antrian : <b class="font-red">@Model.Object.Period.Value.ToString("MMMM yyyy")</b> Urutan <b class="font-red">@Model.Object.Seq</b> </label>
+                                    </div>
+                                }
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,258 @@
+﻿@model TAMHR.ESS.Domain.MasterDataBdjkView
+@{
+    var IsNew = !Model.WorkingTimeIn.HasValue;
+
+    if (IsNew)
+    {
+        Model.WorkingDate = DateTime.Now;
+    }
+
+    var CanEdit = false;
+
+    if(IsNew || Model.IsEdit)
+    {
+        CanEdit = true;
+    };
+
+    if(!IsNew)
+    {
+        var spBdjkCode = Model.BdjkCode.Split(" ");
+        Model.ListBdjkCode = spBdjkCode.ToList();
+        Model.NoRegEdit = Model.NoReg;
+        Model.ActivityCode = Model.ActivityCode;
+    }
+}
+
+<form method="post" action="~/api/abnormality-bdjk/request-master-data">
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    
+    <script type="text/javascript">
+        $(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done',
+                autoclose: true
+            });
+        });
+
+        app.registerHandler("dataInterceptor", function (d) {
+            d.WorkingTimeIn = $('#WorkingTimeIn').val() + ":00";
+            d.WorkingTimeOut = $('#WorkingTimeOut').val() + ":00";
+            d.BdjkCode = $('#BdjkMultiedit').val().join(' ');
+            return d;
+        });
+
+        app.registerHandler("saveHandler", function (data) {
+            var isTaxi = false;
+            if($('#BdjkMultiedit').val().includes("T")){
+                isTaxi = true;
+            }
+
+            var isUangMakan = false;
+            if($('#BdjkMultiedit').val().includes("D")){
+                isUangMakan = true;
+            }
+
+            var bdjkCodeList = $('#BdjkMultiedit').val().filter( function( el ) {
+                return (el != 'T' && el != 'D')
+            } );
+
+            if(bdjkCodeList.length > 1){
+                app.error(app.translate("Cannot select more than 1 mandatory bdjk code"));
+                return;
+            }
+
+            var viewModel = {
+                //viewModel : {
+                    Id : '@Model.Id',
+                    WorkingDate : $('#WorkingDateEdit').val(),
+                    BdjkCode : bdjkCodeList[0],
+                    ActivityCode : $('#ActivityCode').val(),
+                    BdjkReason : $('#BdjkReason').val(),
+                    Taxi : isTaxi,
+                    UangMakanDinas : isUangMakan,
+                    DocumentApprovalId : '@Model.DocumentApprovalId',
+                    ParentId : '@Model.ParentId'
+                //}
+            }
+
+            console.log(viewModel);
+
+            var saveUrl = app.resolveUrl("~/api/abnormality-bdjk/update-detail");
+            $.post(saveUrl, viewModel, function () {
+                app.success(app.translate("Success update items"), window.location.reload());
+            }).fail(function (xhr, status, error) {
+                console.log(xhr);
+            });
+        });
+    </script>
+
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Master Data BDJK Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+
+                                    <legend>@Localizer["Master Data BDJK"]</legend>
+
+                                    <div class="row">
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                                            @Html.KendoComboBoxAutocompleteFor(x => x.NoReg, Url.Content("~/api/abnormality-bdjk/all-employee"), valueField: "NoReg", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Employee" }).Enable(false)
+                                            <span class="invalid" data-validation-for="NoReg"></span>
+                                        </div>
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Working Date"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("WorkingDateEdit")
+                                                .HtmlAttributes(new {style = "width: 100%" })
+                                                .Format("dd/MM/yyyy")
+                                                .ParseFormats("dd/MM/yyyy HH:mm tt")
+                                                .Enable(CanEdit)
+                                                .Value(Model.WorkingDate)
+                                                )
+                                            <span class="invalid" data-validation-for="WorkingDate"></span>
+                                        </div>
+                                        <div class="form-group col-md-6 col-xs-12" id="DivWorkingTimeIn">
+                                            <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Working Time Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy Out"]</span></label>
+                                            <div class="input-group clockpicker">
+                                                @Html.TextBoxFor(x => x.WorkingTimeIn, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "WorkingTimeIn", id = "WorkingTimeIn"}, !CanEdit))
+                                                <div class="input-group-append input-group-addon">
+                                                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                </div>
+                                            </div>
+                                            <span class="invalid" data-validation-for="WorkingTimeIn"></span>
+                                        </div>
+                                        <div class="form-group col-md-6 col-xs-12" id="DivWorkingTimeOut">
+                                            <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Working Time Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy Out"]</span></label>
+                                            <div class="input-group clockpicker">
+                                                @Html.TextBoxFor(x => x.WorkingTimeOut, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "WorkingTimeOut", id = "WorkingTimeOut"}, !CanEdit))
+                                                <div class="input-group-append input-group-addon">
+                                                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                </div>
+                                            </div>
+                                            <span class="invalid" data-validation-for="WorkingTimeOut"></span>
+                                        </div>
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["BDJK Code"]</label>
+                                            @(Html.Kendo().MultiSelect()
+                                                              .Name("BdjkMultiedit")
+                                                              .DataTextField("Name")
+                                                              .DataValueField("Name")
+                                                              .Placeholder(Localizer["Please select BDJK Code"].Value)
+                                                              .DataSource(source => {
+                                                                  source.Read(read =>
+                                                                  {
+                                                                      read.Url(Url.Content("~/api/abnormality-bdjk/get-employee"));
+                                                                  })
+                                                                  .ServerFiltering(true);
+                                                              })
+                                                              .Height(400)
+
+                                                              .HeaderTemplate("<div class=\"dropdown-header k-widget k-header\">" +
+                                                                            "<span>BDJK Code</span>" +
+                                                                        "</div>")
+                                                              .FooterTemplate("Total <strong>#: instance.dataSource.total() #</strong> BDJK Code Found")
+                                                              .ItemTemplate("<span class=\"k-state-default\" style=\"background-image: url(\'#: data.Name #\');\"></span>" +
+                                                                        "<span class=\"k-state-default\">#: data.Name #</span>")
+                                                              .TagTemplate("<span>#: data.Name #</span>")
+                                                              .Events(e => e.Select("selectEmployee").Deselect("deselectEmployee"))
+                                                              .Value(Model.ListBdjkCode)
+                                                              .Enable(CanEdit)
+                                                              )
+                                            @*@Html.KendoComboBoxAutocompleteFor(x => x.BdjkCode, Url.Content("~/api/abnormality-bdjk/gets-general-category?category=BdjkCode"), valueField: "Name", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Bdjk Code" }).Enable(IsRequest)*@
+                                            <span class="invalid" data-validation-for="BdjkCode"></span>
+                                        </div>
+
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Actifity"]</label>
+                                            @Html.KendoComboBoxAutocompleteFor(x => x.ActivityCode, Url.Content("~/api/abnormality-bdjk/gets-general-category?category=CategorySPKL"), valueField: "Code", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Activity" }).Enable(CanEdit)
+                                            <span class="invalid" data-validation-for="ActivityCode"></span>
+                                        </div>
+                                    </div>
+
+                                </fieldset>
+                            </div>
+                            
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Notes"]</legend>
+                                    <div style="padding: 10px">
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">A</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Kerja Biasa Minimal 2 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">B</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Libur Minimal 2 Jam &gt; 5 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">C</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Libur diatas 5 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">D</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Uang Makan Dinas Luar</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">T</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Uang Taksi diatas jam 21.00, untuk Kls 7 &amp; 8spv</label></div>
+                                        </div>
+                                    </div>
+
+
+                                </fieldset>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+
+                                <fieldset>
+                                    <legend>@Localizer["Reason"]</legend>
+                                    <div class="form-group ">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Detail Reason"]</label>
+                                        @Html.TextAreaFor(x => x.BdjkReason, ApplicationHelper.Enable(new { @class = "form-control", rows = 5, data_validation_for = "BdjkReason", placeholder = Localizer["Input Notes"].Value }, CanEdit))
+
+                                        <span class="invalid" data-validation-for="BdjkReason"></span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (CanEdit)
+    {
+        @if (!Model.IsEdit)
+        {
+            <div class="actions">
+                <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="dataInterceptor">@Localizer["Save"]</a>
+            </div>
+        } else
+        {
+            <div class="actions">
+                <a class="btn red-haze" data-trigger="handler" data-handler="saveHandler">@Localizer["Save"]</a>
+            </div>
+        }
+    }
+
+</form>

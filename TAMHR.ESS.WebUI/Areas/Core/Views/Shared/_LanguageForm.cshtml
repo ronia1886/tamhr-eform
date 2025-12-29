@@ -1,0 +1,34 @@
+﻿@model TAMHR.ESS.Domain.Language
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/language">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label><span class="required" aria-required="true"> * </span>@Localizer["Language"]</label>
+            @(Html.KendoComboBoxFor(x => x.CultureCode, "Culture")
+                .Placeholder(Localizer["Please select language"].Value)
+                .Suggest(true)
+            )
+            <span class="invalid" data-validation-for="CultureCode"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label><span class="required" aria-required="true"> * </span>@Localizer["Translate Key"]</label>
+            @Html.TextBoxFor(x => x.TranslateKey, new { @class = "form-control", @data_validation_for = "TranslateKey", @placeholder = Localizer["Please input translate key"].Value })
+            <span class="invalid" data-validation-for="TranslateKey"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Translate Value"]</label>
+                @Html.TextAreaFor(x => x.TranslateValue, new { @class = "form-control", @data_validation_for = "TranslateValue", @placeholder = Localizer["Please input translate value"].Value, @rows = 5 })
+                <span class="invalid" data-validation-for="TranslateValue"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

@@ -1,0 +1,307 @@
+﻿@section styles {
+    <link href="~/plugins/jstree/dist/themes/default/style.min.css" rel="stylesheet" type="text/css" />
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/jstree/dist/jstree.min.js"></script>
+    <script type="text/javascript">
+        var menuModule = (function ($, app) {
+            function preload(show, message) {
+                var $wrapper = getTree().closest(".card");
+            }
+
+            function getTree() {
+                return $(".tree");
+            }
+
+            function getJsTree() {
+                return getTree().jstree(true);
+            }
+
+            function getModal() {
+                return $("#MenuModal");
+            }
+
+            function getForm() {
+                return getModal().find("form");
+            }
+
+            // function toJsTree(id, d) {
+            //     var root = {
+            //         "id": "root",
+            //         "text": "Pages",
+            //         "type": "root",
+            //         "state": { opened: true },
+            //         "children": []
+            //     };
+
+            //     var map = $.map(d, function (input) {
+            //         var cssClass = (input.Visible != 1 ? " font-grey" : "");
+
+            //         return {
+            //             id: input.Id,
+            //             text: input.Title,
+            //             parentId: input.ParentId,
+            //             a_attr: { class: cssClass },
+            //             icon: (input.IconClass || "icon-folder") + cssClass
+            //         };
+            //     });
+
+            //     var hierarchyData = app.toHierarchy(map, "id", "parentId", "children");
+
+            //     root.children = hierarchyData;
+
+            //     return [root];
+            // }
+
+            function toJsTree(id, d) {
+                // Root node
+                var root = {
+                    id: "root",
+                    text: "Pages",
+                    type: "root",
+                    state: { opened: true },
+                    children: []
+                };
+
+                // Flat map semua node
+                var map = {};
+                d.forEach(function(item) {
+                    map[item.Id] = {
+                        id: item.Id,
+                        text: item.Title,
+                        parentId: item.ParentId || "root", // kalau null/undefined, jadikan root
+                        icon: item.IconClass || "fa fa-folder",
+                        children: [] // wajib ada untuk jsTree
+                    };
+                });
+
+                // Buat hierarchy
+                var tree = [];
+                Object.values(map).forEach(function(node) {
+                    if (node.parentId === "root") {
+                        // langsung jadi anak root
+                        root.children.push(node);
+                    } else if (map[node.parentId]) {
+                        // tambahkan ke children parent
+                        map[node.parentId].children.push(node);
+                    } else {
+                        // parent tidak ada, jadikan anak root (fallback)
+                        root.children.push(node);
+                    }
+                });
+
+                // Paksa children true jika node punya anak agar icon plus muncul
+                function forceChildrenFlag(node) {
+                    if (node.children && node.children.length > 0) {
+                        node.children.forEach(forceChildrenFlag);
+                    } else {
+                        node.children = []; // kosong tetap array, jsTree perlu array
+                    }
+                }
+                forceChildrenFlag(root);
+
+                console.log("Final Root:", root);
+                return [root];
+            }
+
+            function getMenus(code) {
+                var $tree = getJsTree();
+
+                preload(true, "Load Data");
+                $.get(app.resolveUrl("~/api/menu/group"), { group: code }, function (d) {
+                    var dataSource = toJsTree(code, d);
+
+                    setTimeout(function () {
+                        preload(false);
+                    }, 300);
+
+                    setTimeout(function () {
+                        $tree.settings.core.data = dataSource;
+                        $tree.refresh();
+                    }, 600);
+                });
+            }
+
+            function getSelectedValue() {
+                return $("input[name='MenuGroup']").val();
+            }
+
+            app.registerHandler("updateHandler", function () {
+                app.close(this);
+                getMenus(getSelectedValue());
+                app.success("Success create/update menu");
+            });
+
+            return {
+                save: function (el) {
+                    var $el = $(el),
+                        $form = getForm();
+
+                    $.post(app.resolveUrl("~/api/menu/upsert"), getForm().serialize(), function (d) {
+                        getMenus(getSelectedValue());
+                        getModal().modal("hide");
+                        app.success("Success create/upate menu", "");
+                    }).fail(function (e) {
+                        $.helper.onError($form, e);
+                    }).done(function () {
+                        $.helper.clearError($form);
+                    });
+                },
+                getMenus: getMenus,
+                init: function () {
+                    getTree().jstree({
+                        "plugins": ["contextmenu", "dnd", "state", "types"],
+                        "core": {
+                            "check_callback": function (o, n, p, i, m) {
+                                return !(m && m.dnd && (m.pos === 'b' || m.pos === 'a') && m.ref.parent == "#");
+                            },
+                            "themes": {
+                                "responsive": false
+                            }
+                        },
+                        "contextmenu": {
+                            "items": function ($node) {
+                                var contextMenu = {
+                                    "Create": {
+                                        "label": "Create new menu",
+                                        "action": function (obj) {
+                                            var inst = $.jstree.reference(obj.reference),
+                                                data = inst.get_node(obj.reference),
+                                                id = data.id,
+                                                $form = getForm(),
+                                                code = getSelectedValue(),
+                                                $createBtn = $("#createBtn");
+
+                                            $createBtn.attr("data-parameters-pid", id == "root" ? null : id);
+                                            $createBtn.attr("data-parameters-group", code);
+                                            $createBtn.trigger("click");
+                                        }
+                                    },
+                                    "Edit": {
+                                        "label": "Edit",
+                                        "action": function (obj) {
+                                            var id = obj.reference.closest("li").attr("id"),
+                                                $editBtn = $("#editBtn");
+
+                                            $editBtn.attr("data-parameters-id", id);
+                                            $editBtn.trigger("click");
+                                        }
+                                    },
+                                    "Rename": {
+                                        "label": "Rename",
+                                        "action": function (obj) {
+                                            var inst = $.jstree.reference(obj.reference),
+                                                data = inst.get_node(obj.reference),
+                                                id = data.id;
+
+                                            inst.edit(data);
+                                        }
+                                    },
+                                    "ToggleVisible": {
+                                        "label": "Toggle Visible",
+                                        "action": function (obj) {
+                                            var inst = $.jstree.reference(obj.reference),
+                                                data = inst.get_node(obj.reference),
+                                                id = data.id;
+
+                                            $.post(app.resolveUrl("~/api/menu/toggle/" + id), { }, function (d) {
+                                                getMenus(getSelectedValue());
+                                                app.success("Success toggling menu");
+                                            });
+                                        }
+                                    },
+                                    "Remove": {
+                                        "label": "Remove",
+                                        "action": function (obj) {
+                                            app.confirm("Are you sure want to delete this menu?", function (result) {
+                                                if (result) {
+                                                    var id = obj.reference.closest("li").attr("id");
+                                                    $.delete(app.resolveUrl("~/api/menu"), { id: id }, function (d) {
+                                                        getMenus(getSelectedValue());
+                                                        app.success("Success delete menu", "");
+                                                    });
+                                                }
+                                            });
+                                        }
+                                    }
+                                };
+
+                                if ($node.type == 'root') {
+                                    delete contextMenu["ToggleVisible"];
+                                    delete contextMenu["Rename"];
+                                    delete contextMenu["Edit"];
+                                    delete contextMenu["Remove"];
+                                }
+
+                                return contextMenu;
+                            }
+                        },
+                        "types": {
+                            "default": {
+                                "valid_children": ["default", "hidden"],
+                                "icon": "fa fa-folder icon-state-warning icon-lg"
+                            },
+                            "hidden": {
+                                "valid_children": ["default", "hidden"],
+                                "icon": "fa fa-folder icon-state-warning icon-lg"
+                            },
+                            "root": {
+                                "valid_children": ["default"],
+                                "icon": "fa fa-folder icon-state-warning icon-lg"
+                            }
+                        }
+                    }).on("move_node.jstree rename_node.jstree", function (e, data) {
+                        var type = e.type,
+                            menuGroupCode = getSelectedValue();
+
+                        if (type == "move_node") {
+                            $.post(app.resolveUrl("~/api/menu/setparent"), { Id: data.node.id, ParentId: data.parent == "root" ? null : data.parent, MenuGroupCode: menuGroupCode, OrderIndex: data.old_position < data.position ? data.position + 1 : data.position }, function (d) {
+                                getMenus(menuGroupCode);
+                                app.success("Success move menu");
+                            });
+                        } else if (type == "rename_node" && data.text != data.old) {
+                            $.post(app.resolveUrl("~/api/menu/rename"), { Id: data.node.id, Title: data.text }, function (d) {
+                                getMenus(menuGroupCode);
+                                app.success("Success rename menu");
+                            });
+                        }
+                    });
+                }
+            };
+        })(jQuery, app);
+
+        $(function () {
+            menuModule.init();
+        })
+    </script>
+}
+<div class="card">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="actions d-none">
+                    <a id="createBtn" href="javascript:;" data-trigger="modal" data-modal="menu-modal" data-modal-title="Create Menu" data-modal-ajax="true" data-ajax-url="~/core/menu/load"></a>
+                    <a id="editBtn" href="javascript:;" data-trigger="modal" data-modal="menu-modal" data-modal-title="Edit Menu" data-modal-ajax="true" data-ajax-url="~/core/menu/load" data-parameters-id="0"></a>
+                </div>
+                @Html.KendoComboBox("MenuGroup", string.Empty, "MenuGroup").Events(events =>
+                {
+                    events.Change(@<text>function() {
+                        var value = this.value();
+                        menuModule.getMenus(value);
+                    }</text>);
+
+                    events.DataBound(@<text>function() {
+                        var value = this.value();
+                        menuModule.getMenus(value);
+                    }</text>);
+                }).SelectedIndex(0).Deferred()
+            </div>
+        </div>
+        <hr />
+        <div class="row">
+            <div class="col-md-12">
+                <div class="tree"></div>
+            </div>
+        </div>
+    </div>
+</div>

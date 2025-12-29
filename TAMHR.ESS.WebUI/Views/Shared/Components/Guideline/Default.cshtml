@@ -1,0 +1,47 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.Guideline>
+@{
+    var id = Guid.NewGuid();
+    var isEmpty = Model == null || Model.Count() == 0;
+    var dicts = new Dictionary<string, string>
+    {
+        { ".zip", "zip.svg" },
+        { ".pdf", "pdf.svg" },
+        { ".xls", "xls.svg" },
+        { ".xlsx", "xlsx.svg" },
+        { ".ppt", "ppt.svg" },
+        { ".pptx", "pptx.svg" },
+        { ".doc", "word.svg" },
+        { ".docx", "word.svg" }
+    };
+}
+@if (isEmpty)
+{
+<div class="text-center p-3 text-muted">
+    <i class="fa fa-clipboard font-large-1"></i><br />@Localizer["No user guidelines found"]
+</div>
+}
+else
+{
+    var ordered = Model.OrderByDescending(x => x.CreatedOn);
+<div id="wrapper_@id" class="mt-comments mt-comments-bordered">
+    @foreach (var item in ordered)
+        {
+            var fileExtension = System.IO.Path.GetExtension(item.FileUrl);
+            var icon = dicts.ContainsKey(fileExtension) ? dicts[fileExtension] : "doc.svg";
+    <div class="mt-comment">
+        <div class="mt-comment-img">
+            <img src="~/img/assets/@icon" style="width: 3rem; height: 3.5rem; border-radius: 0 !important;">
+        </div>
+        <div class="mt-comment-body d-flex align-items-center">
+            <a class="mt-comment-info w-100" style="margin: 0; padding: 0; width: 3rem;" href="@Url.Content(item.FileUrl)" target="_blank">
+                <span class="mt-comment-author font-small-3">@item.Title</span>
+                <span class="mt-comment-sub-info font-dark">@item.Description</span>
+                <span class="mt-comment-time mt-1">
+                    <i class="las la-clock"></i> @item.CreatedOn.ToString("dd MMM yyyy - HH:mm tt")
+                </span>
+            </a>
+        </div>
+    </div>
+        }
+</div>
+}

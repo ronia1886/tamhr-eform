@@ -1,0 +1,157 @@
+﻿@model TAMHR.ESS.Domain.FormQuestionDetail
+@{ 
+
+}
+<form action="~/api/form-question/upsert-formquestiondetail" method="@ApplicationHelper.Method(Model.Id)">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.FormQuestionId)
+    <div class="row">
+        <div class="form-group col-md-12">
+            <label>@Localizer["Description Type"]</label>
+            @Html.Kendo().TextBoxFor(x => x.Description).HtmlAttributes(new { @class = "form-control" })
+            <span class="invalid" data-validation-for="Description"></span>
+        </div>
+        <div class="form-group col-md-12">
+            <label>@Localizer["Description Type"]</label>
+            @{
+                var dataSource = new[]
+                {
+                    new { Text = "Text", Value = "text" },
+                    new { Text = "Numeric", Value = "numeric" },
+                    new { Text = "Date", Value = "date" }
+                };
+
+            }
+            @(Html.Kendo().ComboBoxFor(x => x.DescriptionType)
+                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "DescriptionType" })
+                        .DataValueField("Value")
+                        .DataTextField("Text")
+                        .BindTo(dataSource)
+                )
+
+            <span class="invalid" data-validation-for="DescriptionType"></span>
+        </div>
+        <div class="form-group col-md-12 limitClass">
+            <label>@Localizer["Criteria Type"]</label>
+            @{
+                var criteriaDataSource = new[]
+                {
+                    new { Value = "between", Text = "Between" },
+                    new { Value = "morethan", Text = "More Than" },
+                    new { Value = "lessthan", Text = "Less Than" }
+                };
+
+            }
+
+            @(Html.Kendo().ComboBoxFor(x => x.CriteriaType)
+                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "CriteriaType" })
+                        .DataValueField("Value")
+                        .DataTextField("Text")
+                        .BindTo(criteriaDataSource)
+                        )
+            <span class="invalid" data-validation-for="CriteriaType"></span>
+        </div>
+        <div class="form-group col-md-12 limitClass dateTypeClass">
+            <label>Submitted Date</label>
+            @(Html.Kendo().CheckBoxFor(x =>x.IsSubmittedDate).HtmlAttributes(new { @Class = "form-control", data_validation_for = "IsSubmittedDate" }))
+        </div>
+        <div class="form-group col-md-6 MinValClass limitClass">
+            <label id="lblMinVal">@Localizer["Limit From"]</label>
+            <input type="text" id="MinVal" name="MinVal" value="@Model.MinVal" class="form-control" />
+            <span class="invalid" data-validation-for="MinVal"></span>
+        </div>
+        <div class="form-group col-md-6 MaxValClass isBetween limitClass">
+            <label>@Localizer["Limit To"]</label>
+            <input type="text" id="MaxVal" name="MaxVal" value="@Model.MaxVal" class="form-control" />
+            <span class="invalid" data-validation-for="MaxVal"></span>
+        </div>
+        <div class="form-group col-md-6 MinTrueClass limitClass">
+            <label  id="lblMinTrue">@Localizer["Min True Value"]</label>
+            <input type="text" id="MinTrue"  name="MinTrue" value="@Model.MinTrue" class="form-control" />
+            <span class="invalid" data-validation-for="MinTrue"></span>
+        </div>
+        <div class="form-group col-md-6 MaxTrueClass isBetween limitClass">
+            <label>@Localizer["Max True"]</label>
+            <input type="text" id="MaxTrue"  name="MaxTrue" value="@Model.MaxTrue" class="form-control" />
+            <span class="invalid" data-validation-for="MaxTrue"></span>
+        </div>
+        <div class="form-group col-md-12">
+            <label>@Localizer["Order Sequence"]</label>
+            @Html.Kendo().NumericTextBoxFor(x => x.OrderSequence).HtmlAttributes(new { @class = "form-control" }).Min(1).Decimals(0).Format("#")
+            <span class="invalid" data-validation-for="OrderSequence"></span>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-dismiss-modal="modal2" data-callback="updateHandler" data-interceptor="dataInterceptor">@Localizer["Save"]</a>
+    </div>
+</form>
+<script>
+    setTimeout(function () {
+        changeType();
+        changeCriteriaType();
+    },200);
+    
+    app.registerHandler("dataInterceptor", function (d) {
+        if ($("#IsSubmittedDate:checked").val() == "true") {
+            d.IsSubmittedDate = true;
+        } else {
+            d.IsSubmittedDate = false;
+        }
+        return d;
+    });
+
+    $("#DescriptionType").on("change", function () {
+        changeType();
+    });
+
+    $("#CriteriaType").on("change", function () {
+        changeType();
+    });
+
+    $("#IsSubmittedDate").on("change", function () {
+        changeType();
+    });
+
+    function changeType() {
+        $(".limitClass").removeClass("hidden");
+
+        $(".MinValClass").html("<label id='lblMinVal'>Limit From</label><input type='text' id='MinVal' name='MinVal' value='@Model.MinVal' class='form-control' /> ");
+        $(".MaxValClass").html("<label>Limit To</label><input type='text' id='MaxVal' name='MaxVal' value='@Model.MaxVal' class='form-control' /> ");
+        $(".MinTrueClass").html("<label id='lblMinTrue'>Min True Value</label><input type='text' id='MinTrue' name='MinTrue' value='@Model.MinTrue' class='form-control' /> ");
+        $(".MaxTrueClass").html("<label>Max True Value</label><input type='text' id='MaxTrue' name='MaxTrue' value='@Model.MaxTrue' class='form-control' /> ");
+
+        if ($("#DescriptionType").val() == "numeric") {
+            $(".dateTypeClass").addClass("hidden");
+            $("#MinVal").kendoNumericTextBox();
+            $("#MaxVal").kendoNumericTextBox();
+            $("#MinTrue").kendoNumericTextBox();
+            $("#MaxTrue").kendoNumericTextBox();
+        } else if ($("#DescriptionType").val() == "date") {
+            $(".dateTypeClass").removeClass("hidden");
+
+            $("#MinVal").kendoDatePicker({ format: "dd/MM/yyyy" });
+            $("#MaxVal").kendoDatePicker({ format: "dd/MM/yyyy" });
+            //if based on submitted date
+            if ($("#IsSubmittedDate:checked").val() == "true") {
+                $("#MinTrue").kendoNumericTextBox({format:"#"});
+                $("#MaxTrue").kendoNumericTextBox({format:"#"});
+            } else {
+                $("#MinTrue").kendoDatePicker({ format: "dd/MM/yyyy" });
+                $("#MaxTrue").kendoDatePicker({ format: "dd/MM/yyyy" });
+            }
+            
+        } else {
+            $(".limitClass").addClass("hidden");
+        }
+
+        if ($("#CriteriaType").val() == "between") {
+            $(".isBetween").removeClass("hidden");
+            $("#lblMinVal").html("Limit From");
+            $("#lblMinTrue").html("Min True Value");
+        } else {
+            $(".isBetween").addClass("hidden");
+            $("#lblMinVal").html("Limit From"); 
+            $("#lblMinTrue").html("True Value");
+        }
+    }
+</script>

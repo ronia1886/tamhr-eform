@@ -1,0 +1,22 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.ArsMatrixDetailStoredEntity>
+@{ 
+    var hasItems = Model != null && Model.Any();
+}
+<div class="row">
+    <div class="col-12">
+        @if (hasItems)
+        {
+            foreach (var detail in Model)
+            {
+                <small class="d-block">@detail.NoReg - @detail.Name at @detail.Proxy.ToString("HH:mm")</small>
+            }
+        }
+        else
+        {
+            <div class="text-center p-4 text-muted">
+                <i class="fa fa-clipboard font-large-1"></i>
+                <br/>@Localizer["No data found"]
+            </div>
+        }
+    </div>
+</div>

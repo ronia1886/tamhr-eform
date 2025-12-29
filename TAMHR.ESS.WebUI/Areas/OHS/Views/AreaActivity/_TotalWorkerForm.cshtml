@@ -1,0 +1,207 @@
+﻿@model TAMHR.ESS.Domain.TotalEmployeeViewModel
+@{
+    var isNew = Model.Id == default(Guid);
+}
+
+<script>
+	//Fungsi untuk mendapatkan nilai parameter dari URL
+	function getUrlParameter(name) {
+		name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+		var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+		var results = regex.exec(location.search);
+		return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+	}
+
+	function populateFilters() {
+		var divisionCode = getUrlParameter('DivisionCode');
+		var areaId = getUrlParameter('AreaId');
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+
+        if (divisionCode && $("#DivisionCode").data("kendoComboBox")) {
+            $("#DivisionCode").data("kendoComboBox").value(divisionCode);
+            divisionComboBox.readonly(true);
+        }
+
+        if (areaId && areaComboBox) {
+            areaComboBox.dataSource.read(); // Load ulang data area
+            areaComboBox.value(areaId.toUpperCase());
+            areaComboBox.readonly(true);
+        }
+	}
+</script>
+<script>
+    $(document).ready(function() {
+        // Ambil instance ComboBox
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+        
+         // Cek apakah ini mode edit atau tambah data
+        var isNew = @Json.Serialize(isNew);
+        var areaId = @Json.Serialize(Model.AreaId);
+        var divisionCode = @Json.Serialize(Model.DivisionCode);
+
+        
+        if (!isNew && areaId) {
+            areaComboBox.readonly(false); //Aktifkan area jika ada nilai saat update
+            areaComboBox.dataSource.read(); //Muat ulang data agar NamaArea muncul
+        } else {
+            areaComboBox.readonly(true);
+        }
+      
+        //Event ketika Divisi berubah
+        divisionComboBox.bind("change", function() {
+            var divisionCode = this.value();
+
+            if (divisionCode) {
+               areaComboBox.readonly(false); //Aktifkan Area jika Divisi dipilih
+               areaComboBox.dataSource.read(); //Load ulang data area
+            } else {
+               areaComboBox.readonly(true); //Nonaktifkan jika Divisi kosong
+               areaComboBox.value(""); //Kosongkan pilihan area
+            }
+        });
+
+        populateFilters();
+    });
+    //Function untuk filter area berdasarkan Divisi
+    function filterArea() {
+        return {
+            divisionCode: $("#DivisionCode").data("kendoComboBox").value(),
+        };
+    }
+</script>
+
+<form id="employeeForm" enctype="multipart/form-data" method="@(isNew ? "post" : "put")"
+      action="@(isNew ? "~/api/ohs/area-activity/insertTotalEmployee" : "~/api/ohs/area-activity/updateTotalEmployee")">
+    @Html.HiddenFor(x => x.Id)
+
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Divisi"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("DivisionCode")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisionCode", required = "required" })
+                    .DataTextField("ObjectText")
+                    .DataValueField("ObjectCode")
+                    .Placeholder(Localizer["Please select Divisi"].Value)
+                    .Value(Model.DivisionCode ?? string.Empty)
+                    .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-Divisi")))
+                    .Sort(sort => sort.Add("ObjectText"))
+                    )
+                    .SelectedIndex(-1)
+                    )
+                <span class="invalid" data-validation-for="DivisionCode"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Area"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AreaId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "AreaId", required = "required" })
+                    .DataTextField("NamaArea")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Area"].Value)
+                    .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                    .Value(Model.AreaId ?? string.Empty)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-AreaDropDown"))
+                    .Data("filterArea"))
+                    .Sort(sort => sort.Add("NamaArea"))
+                    )
+                    .SelectedIndex(-1)
+                    )
+                <span class="invalid" data-validation-for="AreaId"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Total Employee"]</label>
+                @Html.TextBoxFor(x => x.TotalEmployee, new
+                    {
+                        @class = "form-control",
+                        data_validation_for = "TotalEmployee",
+                        placeholder = Localizer["Please input Total Employee"].Value,
+                        required = "required",
+                        type = "number",
+                        min = "1"
+                    })
+                <span class="invalid" data-validation-for="TotalEmployee"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Total Employee Outsourcing"]</label>
+                @Html.TextBoxFor(x => x.TotalEmployeeOutsourcing, new
+                    {
+                        @class = "form-control",
+                        data_validation_for = "TotalEmployeeOutsourcing",
+                        placeholder = Localizer["Please input Total Employee Outsourcing"].Value,
+                        required = "required",
+                        type = "number",
+                        min = "1"
+                    })
+                <span class="invalid" data-validation-for="TotalEmployeeOutsourcing"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Total Work Day"]</label>
+                @Html.TextBoxFor(x => x.TotalWorkDay, new
+                    {
+                        @class = "form-control",
+                        data_validation_for = "TotalWorkDay",
+                        placeholder = Localizer["Please input Total Work Day"].Value,
+                        required = "required",
+                        type = "number",
+                        min = "1"
+                    })
+                <span class="invalid" data-validation-for="TotalWorkDay"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Total Overtime"]</label>
+                @Html.TextBoxFor(x => x.TotalOvertime, new
+                    {
+                        @class = "form-control",
+                        // data_validation_for = "TotalOvertime",
+                        placeholder = Localizer["Please input Total Overtime"].Value,
+                        type = "number"
+                    })
+                
+            </div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+
+<script>
+    $(document).ready(function () {
+        // $("#employeeForm").kendoValidator();
+    });
+</script>

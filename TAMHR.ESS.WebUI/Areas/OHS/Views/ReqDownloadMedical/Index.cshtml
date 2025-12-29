@@ -1,0 +1,171 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+
+    
+    bool isAdminApprover = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_admin_approver"));
+
+}
+@section styles  {
+
+    <style>
+        /*.k-grid-header .k-grid-header-wrap th.k-header {
+                                                            text-align: center;
+                                                            vertical-align: middle;
+                                                            word-break: break-word;
+                                                            overflow: visible;
+                                                            white-space: normal;
+                                                        }*/
+
+        .custom-approve-button {
+            background-color: #28a745 !important;
+            color: white !important;
+            border: none !important;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+            .custom-approve-button[disabled] {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+
+    </style>
+    }
+    @section scripts {
+
+    <script type="text/javascript">
+        $(function () {
+
+            // alert('xx');
+            app.registerHandler("ApproveDownloadHandler", function (parameters) {
+               var iddata = parameters.id;
+                
+                var requestData = {
+                    Id: iddata // Pastikan ini menghasilkan string
+                };
+               
+                app.confirm(app.translate("Do you want to approve ?"), function (d) {
+                    if (!d.value) {//Klik No
+                        return;
+                    }
+
+                    else { // Klik Yes
+
+                       $.ajax({
+                            url: app.resolveUrl("~/api/ohs/req-download-medical/ApproveRequest"),
+                            type: "PUT",
+                            contentType: "application/json",
+                            data: JSON.stringify(requestData),  // Pastikan JSON.stringify digunakan
+                            success: function () {
+                                app.success("Success Approved");
+                                $("#gridReqDownload").data("kendoGrid").dataSource.read();
+                            },
+                            error: function (xhr) {
+                                app.error("Error: " + xhr.responseText);
+                            }
+                        });
+
+
+                    }
+
+
+                });
+
+            });
+           
+        });
+
+    </script>
+
+}
+
+
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bordered">
+                    <h4 class="card-title">@Localizer["Request List"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12">
+                                @(
+                            Html.Kendo().Grid<TAMHR.ESS.Domain.ReqDownloadMedicalStoredEntity>
+                                ()
+                                .Name("gridReqDownload")
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .HtmlAttributes(new { style = "height:600px;" })
+                                .Sortable()
+                                .Resizable(resizable => resizable.Columns(true))
+                                .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                                .Scrollable()
+                                .DataSource(dataSource => dataSource.Ajax().Read(read => read.Url(Url.Content("~/api/ohs/req-download-medical/gets-req-download-medical"))))
+                                .Columns(columns =>
+                                {
+
+                                    columns.Bound(x => x.Id).Hidden(true);
+                                    columns.Bound(x => x.RowNum).Title("No").Width(100);
+                                    columns.Bound(x => x.Approver).Title("Approver").Width(200);
+                                    columns.Bound(x => x.Requestor).Title("Requestor").Width(200);
+                                    columns.Bound(x => x.StatusRequest).Title("Status").Width(200);
+                                    //columns.Bound(x => x.CreatedBy).Title("Created By").Width(200);
+                                    columns.Bound(c => c.CreatedOn).Title("Created Date").Format("{0:dd/MM/yyyy}"); // Format tanggal sesuai keinginan
+
+                                    // Hanya tampilkan kolom Action jika user punya role OHS_APPROVER
+                                    if (isAdminApprover)
+                                    {
+                                        columns.Bound(c => c.Id).Title("Action").ClientTemplate(@"
+                            <a class='k-button custom-approve-button'
+                            data-trigger='handler'
+                            data-handler='ApproveDownloadHandler'
+                            data-parameters-id='#:Id#'
+                            #: StatusRequest == 'Approved' ? 'disabled' : '' #>
+                            
+                            <span class='k-icon k-i-check'></span> APPROVE
+                            </a>
+                            ").Width(140);
+
+
+
+
+                                    }
+
+                                })
+
+                                .Scrollable()
+                                .Deferred()
+                                )
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

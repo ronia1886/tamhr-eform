@@ -1,0 +1,1033 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+	var areaData = (IEnumerable<DropDownTreeItemModel>)ViewBag.areaData;
+	string item = "";
+
+	Console.WriteLine("areaData>>", areaData);
+}
+@section scripts {
+	<script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+	<script>
+		function baseUrl() {
+			const currentPath = window.location.pathname;
+			const baseUrlWithEssOhs = `${window.location.origin}/ess_v2`;
+			const baseUrlWithoutEssOhs = `${window.location.origin}`;
+
+			let url = currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+
+			return url;
+		}
+
+</script>
+<script>
+	// Function to determine the base URL dynamically
+	function getBaseUrl() {
+		const currentPath = window.location.pathname;
+		const baseUrlWithEssOhs = `${window.location.origin}/ess_v2/api/ohs/area-activity/report/download-report`;
+		const baseUrlWithoutEssOhs = `${window.location.origin}/api/ohs/area-activity/report/download-report`;
+
+		return currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+	}
+
+	$(document).ready(function() {
+		setTimeout(function() {
+			var areaComboBox = $("#AreaSearch").data("kendoComboBox");
+			areaComboBox.readonly(true);
+		},500);
+		$('#btnDownload').on('click', function () {
+			// Ambil nilai filter
+			const periode = $("#Periode").data("kendoDatePicker").value();
+			const DivisionSelected = $("#division").data("kendoComboBox").value();
+			const area = $("#AreaSearch").data("kendoComboBox").value();
+			var division = DivisionSelected.split('#')[0];
+			var divisionName = DivisionSelected.split('#')[1];
+			// Format nilai periode menjadi 'YYYY-MM'
+			const formattedPeriode = periode ? kendo.toString(kendo.parseDate(periode), "yyyy-MM") : "";
+			// Susun query string
+			const queryParams = [];
+			if (formattedPeriode) queryParams.push(`Periode=${formattedPeriode}`);
+			if (division) queryParams.push(`DivisionCode=${encodeURIComponent(division)}`);
+			if (area) queryParams.push(`AreaId=${encodeURIComponent(area)}`);
+			if (divisionName) queryParams.push(`DivisionName=${encodeURIComponent(divisionName)}`);
+
+			// Buat URL akhir
+			const baseUrl = getBaseUrl();
+			const fullUrl = baseUrl + (queryParams.length ? `?${queryParams.join("&")}` : "");
+
+			// Arahkan browser ke URL untuk memulai unduhan
+			window.open(fullUrl, "_blank");
+		})
+
+		$("#Periode").on("focus", function() {
+			$(this).data("kendoDatePicker").open();
+		});
+
+		function getMonthName(monthNumber) {
+			const date = new Date();
+			date.setMonth(monthNumber - 1); // Karena bulan dalam JavaScript dimulai dari 0 (Januari) hingga 11 (Desember)
+			return date.toLocaleString('default', { month: 'long' });
+		}
+		function reloadChart(){
+			$(".reloadChart").html(`
+				<div class="col-md-6">
+					<div id="TotalWorkerChart"></div>
+				</div>
+				<div class="col-md-6">
+					<div id="IncidentAccidentChart"></div>
+				</div>
+				<div class="col-md-6">
+					<div id="AparDistributionChart"></div>
+				</div>
+				<div class="col-md-6">
+					<div id="TrainingRecordChart"></div>
+				</div>
+				<div class="col-md-6">
+					<div id="DistrubutionWorkingChart"></div>
+				</div>
+				<div class="col-md-6">
+					<div id="FRSRChart"></div>
+				</div>
+			`);
+
+		}
+		$('#btnSearch').on('click', function () {
+				
+			// Ambil nilai dari filter
+			const periode = $('#Periode').data('kendoDatePicker').value(); // Ambil nilai DatePicker
+			const DivisionSelected = $('#division').data('kendoComboBox').value(); // Ambil nilai ComboBox Division
+			const areas = $('#AreaSearch').data('kendoComboBox').value(); // Ambil nilai ComboBox Area
+			var divisions = DivisionSelected.split('#')[0];
+				
+			// Format filter
+			const filters = [];
+
+			if (periode) {
+				const year = kendo.toString(kendo.parseDate(periode), 'yyyy');
+				const monthNumber = kendo.toString(kendo.parseDate(periode), 'MM');
+				const monthName = getMonthName(parseInt(monthNumber, 10));
+				console.log(year);
+				console.log(monthName);
+				filters.push({
+					field: 'Year',
+					operator: 'eq',
+					value: year
+				});
+
+				filters.push({
+					field: 'Month',
+					operator: 'eq',
+					value: monthName
+				});
+			}
+
+			if (divisions && divisions.length > 0) {
+				filters.push({
+					field: 'DivisionCode',
+						operator: 'eq',
+					value: divisions
+				});
+			}
+
+			if (areas && areas.length > 0) {
+				filters.push({
+					field: 'AreaId',
+					operator: 'eq',
+					value: areas
+				});
+			}
+				console.log('filter>>',filters)
+			// Terapkan filter ke semua grid
+			applyFiltersToAllGrids(filters);
+			$(".reloadChart").empty();
+			reloadChart();
+			loadChartData(kendo.toString(kendo.parseDate(periode), 'yyyy-MM'), areas, divisions);
+		});
+
+		$('#btnClear').on('click', function () {
+			// Reset filter form
+			$('#Periode').data('kendoDatePicker').value(null);
+			$('#division').data('kendoComboBox').value('');
+			$('#AreaSearch').data('kendoComboBox').value('');
+
+
+			// Hapus filter dari semua grid
+			applyFiltersToAllGrids([]);
+		});
+
+		function loadChartData(periode, areaId, divisionCode) {
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+					data: JSON.stringify({
+					categoryChart: 'Project_Activity',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(data) {
+					console.log('DistrubutionWorkingChart>>',data);
+					if (data.length > 0) {
+						createDonutChart("DistrubutionWorkingChart", data, 500, 'Distribusi Pekerjaan Berdasarkan Pekerjaan');
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+						$("#DistrubutionWorkingChart").data("kendoChart").destroy();
+						$("#DistrubutionWorkingChart").empty(); // Kosongkan elemen agar tidak ada sisa elemen lama
+					}
+				},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+			});
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+					data: JSON.stringify({
+					categoryChart: 'Total_Worker',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(response) {
+					console.log('dataBarChartTotalWorker>>', response); // Lihat struktur data
+					// Pastikan response memiliki properti series yang berupa array
+					if (response.series.length > 0) {
+						createLineChart("TotalWorkerChart", response.series, response.categoryAxis.categories, 400, 'Distribution of Outsourcing and Internal Workers');
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+						// $("#TotalWorkerChart").data("kendoChart").destroy();
+						$("#TotalWorkerChart").empty(); // Kosongkan elemen agar tidak ada sisa elemen lama
+					}
+				},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+			});
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					categoryChart: 'IncidentAccident',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(response) {
+					console.log('dataBarChartIncidentAccident>>',response);
+					var colorChart = [
+						"#E74C3C", "#3498DB", "#1ABC9C", "#9B59B6", "#34495E", "#16A085"]
+						// Pastikan response memiliki properti series yang berupa array
+					if (response && Array.isArray(response.series)) {
+						var series = response.series;
+						var categories=response.categoryAxis.categories;
+						createBarChart("IncidentAccidentChart", series, categories, 400, 'Distribution of Incident and Accident',colorChart);
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+					}
+				},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+			});
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					categoryChart: 'Apar',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(response) {
+					console.log('dataBarChartAPAR>>',response);
+					var colorChart = ["#34495E", "#16A085","#E74C3C", "#FF8C00","#B8860B", "#006400", "#8B0000"]
+						// Pastikan response memiliki properti series yang berupa array
+					if (response && Array.isArray(response.series)) {
+						var series = response.series;
+						var categories=response.categoryAxis.categories;
+						createBarChart("AparDistributionChart", series, categories, 400, 'APAR Distribution : Ready vs Installed',colorChart);
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+					}
+					},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+
+			});
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+				data: JSON.stringify({
+					categoryChart: 'TrainingRecord',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(response) {
+					console.log('dataBarChartTrainingRecord>>',response);
+					var colorChart = ["#FF8C00", "#8B0000", "#E9967A", "#8FBC8F", "#483D8B", "#2F4F4F"]
+						// Pastikan response memiliki properti series yang berupa array
+					if (response && Array.isArray(response.series)) {
+						var series = response.series;
+						var categories=response.categoryAxis.categories;
+							createBarChart("TrainingRecordChart", series,categories, 400, 'OHS Training Record',colorChart);
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+					}
+					},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+
+			});
+
+			// Panggil API untuk mendapatkan data
+			$.ajax({
+				url: '@(Url.Content("~/api/ohs/area-activity/getChartDashboard"))',
+				method: 'POST',
+				contentType: 'application/json',
+					data: JSON.stringify({
+					categoryChart: 'FRSRChart',
+					periode: periode || null, // Kirim null jika tidak dipilih
+					areaId: areaId || null,
+					divisionCode: divisionCode || null
+				}),
+				success: function(response) {
+					console.log('dataMultipleChartFRSR>>', response); // Lihat struktur data
+					// Pastikan response memiliki properti series yang berupa array
+					
+					if (response) {
+						
+						createMultipleChart("FRSRChart", response, 500, "Frequency Rate Dan Severity Rate Chart");
+					} else {
+						console.error("Invalid response format, expected array in 'series':", response);
+					}
+				},
+				error: function(error) {
+					console.error("Error fetching data", error);
+				}
+			});
+		}
+
+		function createMultipleChart(chartId, data, height = 500, title) {
+		// 🔹 Dapatkan nilai maksimum untuk SR dan FR
+		let maxSeverity = Math.max(...data.severityRate, 0);
+		let maxFrequency = Math.max(...data.frequencyRate, 0);
+
+		// 🔹 Tentukan majorUnit dinamis untuk Severity Rate (SR)
+		let majorUnitSR = maxSeverity < 10 ? 1 :
+						  maxSeverity < 100 ? 10 :
+						  maxSeverity < 1000 ? 100 : 1000;
+
+		// 🔹 Tentukan majorUnit dinamis untuk Frequency Rate (FR)
+		let majorUnitFR = maxFrequency < 10 ? 1 :
+						  maxFrequency < 100 ? 10 :
+						  maxFrequency < 1000 ? 100 : 1000;
+
+			$("#" + chartId).kendoChart({
+				title: {
+					text: title,
+					font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+					color: "#000000",
+					align: "center",
+				},
+				legend: {
+					position: "bottom",
+					labels: {
+						font: "12px 'Open Sans', Inter, 'Noto Sans'"
+					}
+				},
+				seriesDefaults: {
+					type: "bar"
+				},
+				series: [
+					{
+						type: "column",
+						name: "Severity Rate (SR)",
+						data: data.severityRate,
+						color: "rgba(54, 162, 235, 0.7)",
+						axis: "rightAxis",
+					},
+					{
+						type: "line",
+						name: "Frequency Rate (FR)",
+						data: data.frequencyRate,
+						color: "rgba(255, 99, 132, 1)",
+						markers: {
+							visible: true,
+							size: 6
+						},
+						axis: "leftAxis"
+					}
+				],
+				chartArea: {
+					height: height
+				},
+				categoryAxis: {
+					categories: data.labels,
+					title: {
+						text: "Periode", font: "12px 'Open Sans', Inter, 'Noto Sans'",
+					},
+					labels: {
+						font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+						rotation: 0,
+						color: "#000"
+					}
+				},
+				valueAxis: [
+					{
+						name: "leftAxis",
+						title: { text: "Jumlah Orang", font: "12px 'Open Sans', Inter, 'Noto Sans'" },
+						min: 0,
+						majorUnit: majorUnitFR, // 🔹 Gunakan majorUnit dinamis
+						labels: { format: "N0" }, // ✅ Menampilkan angka bulat
+						color: "red",
+						position: "left"
+					},
+					{
+						name: "rightAxis",
+						title: { text: "Waktu (Jam)", font: "12px 'Open Sans', Inter, 'Noto Sans'" },
+						min: 0,
+						majorUnit: majorUnitSR, // 🔹 Gunakan majorUnit dinamis
+						labels: { format: "N0" }, // ✅ Menampilkan angka bulat
+						color: "blue",
+						position: "right"
+					}
+				],
+				tooltip: {
+					visible: true,
+					format: "{0}",
+					template: "#= series.name #: #= value #"
+				}
+			});
+		}
+
+
+
+		// Fungsi untuk membuat donut chart
+		function createDonutChart(chartId, data, height = 200, title) {
+			$("#" + chartId).kendoChart({
+				title: {
+					text: title,
+					font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+					color: "#000000",
+					align: "center",
+				},
+				legend: {
+					position: "bottom",
+					labels: {
+						font: "12px 'Open Sans', Inter, 'Noto Sans'"
+					}
+				},
+				seriesColors: [
+					"#FF8C00", "#8B0000", "#E9967A", "#8FBC8F", "#483D8B", "#2F4F4F",
+					"#E74C3C", "#3498DB", "#1ABC9C", "#9B59B6", "#34495E", "#16A085",
+					"#FFEBCD", "#5F9EA0", "#B8860B", "#006400", "#BDB76B", "#8B008B",
+					"#00CED1", "#696969", "#1E90FF", "#FFFAF0", "#B22222", "#228B22"
+				],
+				series: [{
+					type: "donut",
+					data: data,
+					field: "value",
+					categoryField: "category",
+					labels: {
+						visible: true, // Tampilkan label
+						position: "center", // Posisi label di dalam segmen
+						template: "#= value #", // Menampilkan kategori dan nilai asli
+						font: "10px 'Open Sans', Inter, 'Noto Sans'",
+						color: "#000000"
+					}
+				}],
+				tooltip: {
+					visible: true,
+					template: "#= category #: #= value #", // Menampilkan kategori & nilai asli di tooltip
+					font: "14px 'Open Sans', Inter, 'Noto Sans'"
+				},
+				chartArea: {
+					height: height
+				}
+			});
+		}
+
+		function createBarChart(chartId, data, categories, height = 200, title, colorChart) {
+		// 🔹 Dapatkan nilai maksimum
+		//let maxUnit = Math.max(...data.severityRate, 0);
+
+		//🔹 Tentukan majorUnit dinamis
+		//let majorUnit = maxUnit < 10 ? 1 :
+						// maxUnit < 100 ? 10 :
+						// maxUnit < 1000 ? 100 : 1000;
+
+			// Validasi bahwa `data` adalah array
+			if (!Array.isArray(data) || data.length === 0) {
+				console.error("Data tidak valid atau kosong:", data);
+				return;
+			}
+
+			console.log('Categories (sebelum diproses) >>', categories);
+
+			// Daftar nama bulan dalam setahun
+			const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+
+			// Konversi periode dari format "YYYY-MM" menjadi nama bulan
+			categories = categories.map(period => {
+				const monthIndex = parseInt(period.split("-")[1], 10) - 1; // Ambil bulan (02 -> 1 untuk indeks array)
+				return monthNames[monthIndex] || period; // Jika tidak valid, tetap tampilkan aslinya
+			});
+
+			// Konversi data ke format series untuk Kendo Chart
+			const seriesData = data.map(item => ({
+				name: item.name,   // Misalnya: "Internal", "Outsourcing"
+				data: item.data,   // Array nilai dari API
+				axis: item.axis || "Total"
+			}));
+
+			
+			// 🔹 Tentukan majorUnit berdasarkan maxValue
+			// 🔹 Kumpulkan semua nilai
+			const allValues = data.flatMap(item => item.data || []);
+
+			// 🔹 Ambil nilai terkecil yang lebih besar dari nol
+			const minNonZero = Math.min(...allValues.filter(v => v > 0));
+
+			// 🔹 Ambil nilai terkecil yang lebih besar dari nol
+			const maxValues = Math.max(...allValues.filter(v => v > 0));
+
+			let majorUnitMax = maxValues < 10 ? 1 :
+					maxValues < 20 ? 5 :
+					maxValues < 100 ? 10 :
+					maxValues < 1000 ? 100 : 1000;
+
+			// 🔹 Tentukan majorUnit berdasarkan nilai terendah (fallback ke 1 jika tidak ada)
+			const majorUnit = minNonZero > 0 ? minNonZero  < 5 ? majorUnitMax : minNonZero : 1;
+
+			console.log('Series Data:', seriesData);
+
+			// Render Chart
+			$("#" + chartId).kendoChart({
+				title: {
+					text: title,
+					font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+					color: "#000000",
+					align: "center",
+				},
+				legend: {
+					position: "bottom",
+					labels: {
+						font: "12px 'Open Sans', Inter, 'Noto Sans'"
+					}
+				},
+				seriesColors: colorChart,
+				series: seriesData,
+				tooltip: {
+					visible: true,
+					template: "#= series.name #: #= value #", // Menampilkan kategori dan nilai di tooltip
+					font: "14px 'Open Sans', Inter, 'Noto Sans'"
+				},
+				chartArea: {
+					height: height
+				},
+				categoryAxis: {
+					categories: categories, // Gunakan hasil kategori yang sudah diproses
+					title: { text: "Periode", font: "12px 'Open Sans', Inter, 'Noto Sans'", },
+					labels: {
+						font: "bold 12px 'Open Sans', Inter, 'Noto Sans'", // **Buat nama bulan bold**
+						rotation: 0, // Pastikan label tidak miring
+						color: "#000" // Warna teks hitam untuk kontras
+					}
+			
+				},
+				valueAxis: [{
+					name: "Total",
+					labels: {
+						format: "{0}"
+					},
+					majorUnit: majorUnit, // 🔹 Gunakan majorUnit dinamis
+					// title: { text: "Total" }
+				}]
+			});
+		}
+
+		function createLineChart(chartId, data, categories, height = 200, title) {
+			// Validasi bahwa `data` adalah array
+			if (!Array.isArray(data) || data.length === 0) {
+				console.error("Data tidak valid atau kosong:", data);
+				return;
+			}
+
+			// Daftar nama bulan dalam setahun
+			const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+
+			// Konversi periode dari format "YYYY-MM" menjadi nama bulan
+			categories = categories.map(period => {
+				const monthIndex = parseInt(period.split("-")[1], 10) - 1; // Ambil bulan (02 -> 1 untuk indeks array)
+				return monthNames[monthIndex] || period; // Jika tidak valid, tetap tampilkan aslinya
+			});
+
+			// Konversi data ke format series untuk Kendo Chart
+			const seriesData = data.map(item => ({
+				name: item.name,   // Misalnya: "Internal", "Outsourcing"
+				data: item.data,   // Array nilai dari API
+				axis: item.axis || "Total",
+				type: "line",      // Set tipe chart menjadi "line"
+				style: "smooth"    // Buat garis lebih halus
+			}));
+
+			console.log('Series Data:', seriesData);
+
+			// Render Line Chart
+			$("#" + chartId).kendoChart({
+				title: {
+					text: title,
+					font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+					color: "#000000",
+					align: "center",
+				},
+				legend: {
+					position: "bottom",
+					labels: {
+						font: "12px 'Open Sans', Inter, 'Noto Sans'"
+					}
+				},
+				seriesColors: [
+					"#E74C3C", "#00CED1", "#1ABC9C", "#9B59B6", "#34495E", "#16A085",
+					"#FFEBCD", "#5F9EA0", "#B8860B", "#006400", "#BDB76B", "#8B008B",
+					"#3498DB","#00CED1", "#696969", "#1E90FF", "#FFFAF0", "#B22222", "#228B22"
+				],
+				series: seriesData,
+				tooltip: {
+					visible: true,
+					template: "#= series.name #: #= value #", // Menampilkan kategori dan nilai di tooltip
+					font: "14px 'Open Sans', Inter, 'Noto Sans'"
+				},
+				chartArea: {
+					height: height
+				},
+				categoryAxis: {
+					categories: categories, // Gunakan hasil kategori yang sudah diproses
+					title: { text: "Periode", font: "12px 'Open Sans', Inter, 'Noto Sans'", },
+					labels: {
+						font: "bold 12px 'Open Sans', Inter, 'Noto Sans'", // **Buat nama bulan bold**
+						rotation: 0, // Pastikan label tidak miring
+						color: "#000" // Warna teks hitam untuk kontras
+					}
+				},
+				valueAxis: [{
+					name: "Total",
+					labels: {
+						format: "{0}"
+					}
+					// title: { text: "Total" }
+				}]
+			});
+		}
+
+		loadChartData();
+
+	});
+
+	function applyFiltersToAllGrids(filters) {
+		const gridIds = [
+			'#grid_dashboard'
+		];
+
+		gridIds.forEach(gridId => {
+			const grid = $(gridId).data('kendoGrid');
+			if (grid) {
+				grid.dataSource.filter({
+					logic: 'and',
+					filters: filters
+				});
+			}
+		});
+	}
+
+	</script>
+}
+
+@section styles  {
+	<link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+            left: -1.13rem;
+        }
+
+		.nav-item {
+			margin-right: 15px; /* Sesuaikan dengan kebutuhan Anda */
+		}
+    </style>
+}
+
+    @section pageToolbars
+    {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+				<a id="btnDownload" onclick="downloadReport()">
+					<i class="ft-download"></i> &nbsp;@Localizer["Download Area Activity"]
+				</a>
+            </li>
+        </ul>
+    </div>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+			<div class="card-header">
+			</div>
+			<div class="card-body">
+				<div class="col-md-12">
+					<div class="row">
+						<div class="card">
+							<div class="card-header bordered">
+								<h4 class="card-title">@Localizer["Area Activity Dashboard"]</h4>
+								<a class="heading-elements-toggle">
+									<i class="ft-ellipsis-h font-medium-3"></i>
+								</a>
+								<div class="heading-elements">
+									<ul class="list-inline mb-0">
+										<li>
+											<a data-action="collapse">
+												<i class="ft-minus"></i>
+											</a>
+										</li>
+									</ul>
+								</div>
+							</div>
+							<div class="card-content">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-12 col-sm-12">
+											<fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+												<legend>Filter</legend>
+												<div class="row container-by-date">
+													<div class="form-group col-md-4">
+														<label>@Localizer["Periode"]</label>
+														@(Html.Kendo().DatePicker()
+														.Name("Periode")
+														.Value(string.Empty)
+														.Events(e => e.Change("$.filterChange"))
+														.Format("MM/yyyy")
+														.Start(CalendarView.Year)
+														.Depth(CalendarView.Year)
+														.DateInput(true)
+														.HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+														.Deferred()
+														)
+													</div>
+													<div class="form-group col-md-4 col-12">
+														<label>@Localizer["Division"]</label>
+														@(Html.Kendo().ComboBox()
+														.Name("division")
+														.DataTextField("Text")
+														.DataValueField("Value")
+														.HtmlAttributes(new { @class = "form-control" })
+														.Filter(Kendo.Mvc.UI.FilterType.Contains)
+														.BindTo(divisiData)
+														.Placeholder(Localizer["Please select division"].Value)
+														.Events(e => e.Change("onDivisionChange"))
+														.Deferred()
+														)
+													</div>
+													<div class="form-group col-md-4 col-12">
+														<label>@Localizer["Area"]</label>
+														@(Html.Kendo().ComboBox()
+														.Name("AreaSearch")
+														.HtmlAttributes(new { @class = "form-control" })
+														.DataTextField("Text")
+														.DataValueField("Value")
+														.Filter(Kendo.Mvc.UI.FilterType.Contains)
+														.BindTo(areaData)
+														.Placeholder(Localizer["Please select Area"].Value)
+														.Deferred()
+														)
+													</div>
+												</div>
+												<div class="row container-by-date">
+													<div class="form-group col-md-12 col-12 text-right">
+														<a class="btn btn-primary" id="btnSearch" style="color: #fff;">
+															<i class="ft-search"></i> &nbsp;@Localizer["Search"]
+														</a>
+														<a class="btn btn-danger" id="btnClear" style="color: #fff;">
+															<i class="ft-refresh-cw"></i> &nbsp;@Localizer["Clear"]
+														</a>
+													</div>
+												</div>
+
+											</fieldset>
+										</div>
+									</div>
+									<div class="row mt-12 reloadChart">
+										<!-- Line Chart -->
+										<div class="col-md-6">
+											<div id="TotalWorkerChart"></div>
+										</div>
+										<!-- Bar Chart -->
+										<div class="col-md-6">
+											<div id="IncidentAccidentChart"></div>
+										</div>
+										<!-- Bar Chart Besar -->
+										<div class="col-md-6">
+											<div id="AparDistributionChart"></div>
+										</div>
+										<!-- Bar Chart Besar -->
+										<div class="col-md-6">
+											<div id="TrainingRecordChart"></div>
+										</div>
+										<!-- Donut Chart -->
+										<div class="col-md-6">
+											<div id="DistrubutionWorkingChart"></div>
+										</div>
+										<!-- Multiple Chart -->
+										<div class="col-md-6">
+											<div id="FRSRChart"></div>
+										</div>
+										
+									</div>
+
+									<div class="row " style="padding-top: 10px;">
+										<div id="total_worker" class="col-md-12 tab-pane fade show active">
+											<div class="col-md-12"></div>
+											<div class="col-md-12">
+												<div class="card-header bordered">
+													<h3 class="card-title">@Localizer["List of Area Activity"]</h3>
+													<div class="heading-elements">
+														<ul id="dashboard-filter" class="page-toolbars" data-role="filter">
+															<li>
+																<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+																	<i class="icon-magnifier"></i>
+																</a>
+																<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["AreaName" , "DivisionName", "Periode", "Year"]' />
+															</li>
+															<li class="dropdown dropdown-arrow">
+																<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+																	<i class="fa fa-sort-amount-desc"></i>
+																</a>
+																<ul class="dropdown-menu dropdown-menu-right">
+																	<li>
+																		<a href="javascript:;" data-trigger="filter" data-sort="Periode">@Localizer["Periode"]</a>
+																	</li>
+																	<li>
+																		<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Divisi Name"]</a>
+																	</li>
+																	<li>
+																		<a href="javascript:;" data-trigger="filter" data-sort="AreaName">@Localizer["Nama Area"]</a>
+																	</li>
+																	<li>
+																		<a href="javascript:;" data-trigger="filter" data-sort="Year">@Localizer["Tahun"]</a>
+																	</li>
+																	<li class="dropdown-divider"></li>
+																	<li class="p-2">
+																		<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+																	</li>
+																</ul>
+															</li>
+
+															<li class="dropdown">
+																<a href="~/ohs/areaactivity/listAreaActivity" class="font-green-haze">
+																	<i class="fa fa-plus-circle"></i>
+																</a>
+															</li>
+														</ul>
+													</div>
+												</div>
+												@(Html.Kendo().Grid<TAMHR.ESS.Domain.DashboardListAreaActivityViewModel>()
+												.Name("grid_dashboard")
+												.HtmlAttributes(new { data_filter = "dashboard-filter" })
+												.Columns(columns =>
+												{
+													columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+
+													// Date column
+													columns.Bound(o => o.Month)
+													.Title("Periode")
+													.HtmlAttributes(new { @class = "text-center" })
+													.Width(120)
+													.Sortable(true); // Tambahkan sortable
+
+													columns.Bound(o => o.DivisionName).HtmlAttributes(new { @class = "text-center" }).Title("Division").Width(180).Sortable(true); // Tambahkan sortable
+													columns.Bound(o => o.AreaName).HtmlAttributes(new { @class = "text-center" }).Title("Area").Width(210).Sortable(true); // Tambahkan sortable
+													columns.Bound(o => o.Year)
+													.Title("Tahun")
+													.HtmlAttributes(new { @class = "text-center" })
+													.Width(100)
+													.Sortable(true); // Tambahkan sortable
+
+													// Action column
+													columns.Bound(o => o.DivisionName).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+													.ClientTemplate(@"
+													<a class='btn btn-sm blue-sharp' href='javascript:void(0);' onclick='btnView(""#:Periode#"",""#:DivisionCode#"",""#:DivisionName#"",""#:AreaId#"",""#:AreaName#"")'>
+													<i class='ft-eye'></i>
+													</a>
+													").Width(100)
+													.Sortable(false); // Nonaktifkan sortable untuk kolom aksi
+												})
+												.DataSource(dataSource => dataSource
+												.Ajax()
+												.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/dashboard-list/gets")))
+												.PageSize(20)
+												.Sort(sort =>
+												{
+													sort.Add("RowNum");
+												})
+												)
+												.Sortable() // Tambahkan opsi sortable di sini
+												.Resizable(resize => resize.Columns(true))
+												.Pageable(options =>
+												{
+													options.Input(true);
+													options.Numeric(false);
+													options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+												})
+												.Scrollable(scrollable => scrollable.Height("auto"))
+												.Deferred()
+												)
+
+											</div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	var rowNumber = 0;
+	$(document).ready(function() {
+		var grid = $("#grid_total_worker").data("kendoGrid");
+		grid.bind("dataBinding", function() {
+			rowNumber = 0; // Reset the row number counter before data is bound
+		});
+		grid.bind("dataBound", function() {
+			var items = grid.items();
+			items.each(function(index, item) {
+				var row = $(item);
+				row.find(".row-number").text(++rowNumber);
+			});
+		});
+	});
+
+	function onDivisionChange() {
+		const DivisionSelected = $('#division').data('kendoComboBox').value(); // Ambil nilai ComboBox Division
+		var divisions = DivisionSelected.split('#')[0];
+		// Panggil AJAX untuk mendapatkan data area yang difilter berdasarkan divisi yang dipilih
+		$.ajax({
+			url: baseUrl()+'/api/ohs/area-activity/gets-filterAreaDropDown', // Ganti dengan endpoint API Anda untuk mendapatkan data area
+			type: 'POST',
+			data: { divisionCode: divisions },
+			success: function (data) {
+				console.log('dataArea:',data.Data)
+				var areaComboBox = $("#AreaSearch").data("kendoComboBox");
+				areaComboBox.setDataSource(data.Data); // Atur data sumber baru untuk ComboBox area
+				areaComboBox.text(''); // Kosongkan teks input
+				areaComboBox.readonly(false);
+			},
+			error: function (error) {
+				console.log("Error:", error);
+			}
+		});
+	}
+
+	function btnView(periode, divisionCode, divisionName, AreaId, AreaName) {
+		// Susun query string
+		const queryParams = [];
+		if (periode) queryParams.push(`Periode=${periode}`);
+		if (divisionCode) queryParams.push(`DivisionCode=${encodeURIComponent(divisionCode)}`);
+		if (divisionName) queryParams.push(`DivisionName=${encodeURIComponent(divisionName)}`);
+		if (AreaId) queryParams.push(`AreaId=${encodeURIComponent(AreaId)}`);
+		if (AreaName) queryParams.push(`AreaName=${encodeURIComponent(AreaName)}`);
+		console.log('DivisionCode>>',divisionCode);
+		// if (divisionName) queryParams.push(`DivisionName=${encodeURIComponent(divisionName)}`);
+		// Buat URL akhir
+		const url = '@(Url.Content("~/ohs/areaactivity/listAreaActivity/"))'
+		const fullUrl = url + (queryParams.length ? `?${queryParams.join("&")}` : "");
+
+		// Arahkan browser ke URL untuk memulai unduhan
+		window.location.href = fullUrl;
+	}
+
+</script>
+
+<script>
+	$(document).ready(function () {
+		$("#IncidentTime").clockpicker({
+			autoclose: true,
+			default: 'now',
+			placement: 'bottom',
+			align: 'left'
+		});
+		$("#IncidentDate").on("focus", function() {
+				$(this).data("kendoDatePicker").open();
+		});
+
+	});
+</script>

@@ -1,0 +1,81 @@
+﻿@model TAMHR.ESS.Domain.PersonalDataBpjs
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/insurance">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["NoReg"]</label>
+                @Html.TextBoxFor(x => x.NoReg, new { @class = "form-control", @data_validation_for = "NoReg", @placeholder = Localizer["Please input noreg"].Value })
+                <span class="invalid" data-validation-for="NoReg"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Family Member"]</label>
+                @(Html.Kendo().ComboBox().Name("FamilyMemberId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "FamilyMemberId" })
+                    .DataTextField("FullName")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select family"].Value)
+                    .Value(Model.FamilyMemberId == default(Guid) ? string.Empty : Model.FamilyMemberId.ToString())
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/personaldata/get-family-members")).Data(@<text>function() { return { noreg: "@Model.NoReg" }; }</text>))
+                    )
+                )
+                <span class="invalid" data-validation-for="FamilyMemberId"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Action Type"]</label>
+                @Html.TextBoxFor(x => x.ActionType, new { @class = "form-control", @data_validation_for = "ActionType", @placeholder = Localizer["Please input action type"].Value })
+                <span class="invalid" data-validation-for="ActionType"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Complete Status"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.CompleteStatus)
+                <span class="invalid" data-validation-for="CompleteStatus"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["BPJS Number"]</label>
+                @Html.TextBoxFor(x => x.BpjsNumber, new { @class = "form-control", @data_validation_for = "BpjsNumber", @placeholder = Localizer["Please input BPJS"].Value })
+                <span class="invalid" data-validation-for="BpjsNumber"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+    </div>
+    @*<div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>*@
+</form>

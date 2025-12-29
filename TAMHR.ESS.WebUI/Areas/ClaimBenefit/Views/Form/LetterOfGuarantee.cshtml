@@ -1,0 +1,549 @@
+﻿@model DocumentRequestDetailViewModel<LetterOfGuaranteeViewModel>
+@{
+    var isCanEdit = AclHelper.CanEdit();
+    var requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var minDate = Model.Id == Guid.Empty ? DateTime.Now.AddDays(-1) : Model.CreateOn.AddDays(-1);
+}
+@section scripts {
+    <script type="text/javascript">
+        $("#DivCheckUpCount").hide();
+        $("#DivDiagnosa").hide();
+        $("#divControlKhusus").hide();
+        $("#TreatmentResumeControlup3").hide();
+
+        function OnChange() {
+            $("#Object_CheckUpCount").data("kendoNumericTextBox").value(null);
+            $("#TreatmentResume").show();
+            $("#Object_Diagnosa").data("kendoComboBox").value("");
+            $("#divRawatInap").hide();
+            $("#DivDiagnosa").hide();
+
+            if ($("#Object_CriteriaControl").val() == 'pascarawatinap') {
+                $("#DivCheckUpCount").hide();
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/claimbenefit/getContolPascaRawatInap"),
+                    dataType: 'json',
+                    data: { noreg: '@requester', ControlCriteria: $("#Object_CriteriaControl").val() },
+                    success: function (data) {
+                        var total = data.Total + 1;
+                        $("#Object_CheckUpCount").data("kendoNumericTextBox").value(total);
+
+                        if (total >= 2) {
+                            $("#divRawatInap").show();
+                        }
+                    }
+                });
+            }
+            else if ($("#Object_CriteriaControl").val() == 'nonpascarawatinap') {
+                $("#DivCheckUpCount").show();
+                $("#DivDiagnosa").show();
+            }
+            else {
+                $("#DivDiagnosa").hide();
+            }
+        }
+
+        if ('@Model.Object.CheckUpCount' == 2 || '@Model.Object.CheckUpCount' == 3) {
+            $("#TreatmentResume").hide();
+        }
+
+        if ('@Model.Object.CheckUpCount' > 3) {
+            $("#TreatmentResumeControlup3").show();
+            //$("#divControlKhusus").show();
+            $("#divCheckUpCount").hide();
+            $("#divDoctorAgreementPath").show();
+            $("#TreatmentResume").hide();
+            $("#divControl12").hide();
+        }
+
+        function onChangeDiagnosa() {
+            $("#Object_CheckUpCount").data("kendoNumericTextBox").value(null);
+            $("#TreatmentResumeControlup3").hide();
+
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/claimbenefit/getContolNonPascaRawatInap"),
+                dataType: 'json',
+                data: { noreg: '@requester', Diagnosa: $("#Object_Diagnosa").val(), ControlCriteria: $("#Object_CriteriaControl").val()},
+                success: function (data) {
+                    var total = data.Total + 1;
+
+                    $("#Object_CheckUpCount").data("kendoNumericTextBox").value(total);
+                }
+            });
+        }
+        
+        if ('@Model.Object.CriteriaControl' == 'pascarawatinap') {
+            $("#DivCheckUpCount").hide();
+            $("#DivDiagnosa").hide();
+        }
+        else if ('@Model.Object.CriteriaControl' == 'nonpascarawatinap') {
+            $("#DivCheckUpCount").show();
+            $("#DivDiagnosa").show();
+        }
+        else {
+            $("#DivCheckUpCount").hide();
+            $("#DivDiagnosa").hide();
+        }
+
+        function onSelectHospital(e) {
+            var hospitalName = this.value(),
+                hosAddress = '',
+                city = '';
+
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/personaldata/gethospitaladdress"),
+                dataType: 'json',
+                data: { hospitalName: hospitalName },
+                success: function (data) {
+                    hosAddress = data.Data[0].HospitalAddress;
+                    city = data.Data[0].HospitalCity;
+
+                    $("#Object_HospitalAddress").val(hosAddress);
+                    $("#Object_HospitalCity").data("kendoComboBox").value(city);
+                }
+            });
+        };
+
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+
+            return true;
+        };
+
+        function readonlyObject(e) {
+            if ('@isCanEdit' === 'False') {
+                this.readonly(true);
+            }
+        }
+
+        function onchangeFamilyRelationship() {
+            var val = $("#Object_FamilyRelationship").data("kendoComboBox").value();
+
+            if (val == '' || val == null) {
+                $("#DivComboPatient").hide();
+                $("#DivPatientName").show();
+                $("#Object_PatientName").val("");
+                $("#Object_DateOfBirth").data("kendoDatePicker").value(null);
+                $("#Object_FamilyRelationshipId").val(null);
+            }
+            else {
+                if (val.toLowerCase().includes('anak')) {
+                    $("#DivComboPatient").show()
+                    $("#DivPatientName").hide()
+                    $("#Object_DateOfBirth").data("kendoDatePicker").value("")
+                    $("#Object_FamilyRelationshipId").val(null);
+                }
+                else if (val.toLowerCase().includes('pasangan')) {
+                    $("#DivComboPatient").hide();
+                    $("#DivPatientName").show();
+                    $("#Object_PatientChildName").data("kendoComboBox").value("");
+                    $("#Object_PatientName").attr("readonly", true);
+                    $("#Object_DateOfBirth").data("kendoDatePicker").value("");
+                    $("#Object_PatientName").val("");
+
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/claimbenefit/getpartner"),
+                        dataType: 'json',
+                        data: { ismainfamily: true },
+                        success: function (data) {
+                            $("#Object_PatientName").val(data.Data[0].Name);
+                            $("#Object_FamilyRelationshipId").val(data.Data[0].FamilyMemberId);
+
+                            kendo.toString($("#Object_DateOfBirth").data("kendoDatePicker").value(data.Data[0].BirthDate), "dd/MM/YYYY")
+                        }
+                    });
+                }
+                else {
+                    $("#Object_PatientName").attr("readonly", true)
+                    $("#Object_PatientChildName").data("kendoComboBox").value("");
+                    $("#DivComboPatient").hide();
+                    $("#DivPatientName").show();
+                    $("#Object_DateOfBirth").data("kendoDatePicker").value("");
+                    $("#Object_PatientName").val("");
+
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/claimbenefit/getinfoemployee"),
+                        dataType: 'json',
+                        data: { ismainfamily: false },
+                        success: function (data) {
+                            $("#Object_PatientName").val(data.Data[0].Name);
+                            $("#Object_FamilyRelationshipId").val(null);
+
+                            kendo.toString($("#Object_DateOfBirth").data("kendoDatePicker").value(data.Data[0].BirthDate), "dd/MM/YYYY")
+                        }
+                    });
+                }
+            }
+        };
+
+        function onchangePatientChildName() {
+            var val = $("#Object_PatientChildName").data("kendoComboBox").value();
+
+            if (val == '' || val == null) { }
+            else {
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/claimbenefit/GetInfoChild"),
+                    dataType: 'json',
+                    data: { PatientChildName: $("#Object_PatientChildName").data("kendoComboBox").value() },
+                    success: function (data) {
+                        kendo.toString($("#Object_DateOfBirth").data("kendoDatePicker").value(data.Data[0].BirthDate), "dd/MM/YYYY")
+                        $("#Object_FamilyRelationshipId").val(data.Data[0].FamilyMemberId);
+                        // $("#Object_NIK").data("kendoNumericTextBox").value(data.Data[0].NIK);
+                    }
+                });
+            }
+        }
+
+        $("#Object_PatientName").attr("readonly", true);
+
+        if ('@Model.Object.FamilyRelationship' == 'rsanak' || '@Model.Object.FamilyRelationship' == 'Anak') {
+            $("#DivComboPatient").show();
+            $("#DivPatientName").hide();
+        }
+        else {
+            $("#DivComboPatient").hide();
+            $("#DivPatientName").show();
+        }
+
+        $("#divRawatInap").hide();
+
+        if ('@Model.Object.DiagnosaRawatInap' != "") {
+            $("#divRawatInap").show();
+        }
+
+        function onChangeAmount() {
+            var checkUpCount = $("#Object_CheckUpCount").data("kendoNumericTextBox").value();
+
+            if (checkUpCount == 2 || checkUpCount == 3) {
+                $("#TreatmentResume").hide();
+            }
+            else if (checkUpCount == 1) { 
+                $("#TreatmentResume").show();
+            }
+            else if (checkUpCount > 3) {
+                $("#TreatmentResumeControlup3").show();
+                //$("#divControlKhusus").show();
+                //$("#divCheckUpCount").hide();
+                $("#TreatmentResume").hide();
+                $("#divDoctorAgreementPath").hide();
+                $("#divControl12").hide();
+            }
+        }
+    </script>
+}
+@Html.HiddenFor(x => x.Object.FamilyRelationshipId)
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title"><i class="ft-info" style="font-size: 0.95rem;"></i> @Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="description">PKB, 31 Ayat 3 (d): Rawat Jalan atas rekomendasi dokter yang merawat maksimum 3 (tiga) kali, untuk hal-hal tertentu karena dibutuhkan rawat jalan lebih lanjut Perusahaan dapat menentukan yang lain. Untuk pengajuan Surat Jaminan Perusahaan lebih dari 3X, karyawan harus menghubungi HRD - Employee Health terlebih dahulu dan mengirimkan diagnosa dokter dari RS. (diagnosa penyakit yang telath disepakati oleh Manajemen &amp; Union)<br />(Permintaan Surat Jaminan ke Perusahaan harus sesuai dengan data yang valid dan tidak dibenarkan memberikan data yang tidak aktual/palsu).</p>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Letter of Guarantee Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Patient Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Family Relationship"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.FamilyRelationship, "FamilyRelationship")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.FamilyRelationship" })
+                                        .Placeholder(Localizer["Select Family Relationship"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=FamilyRSType")))
+                                        )
+                                        .Events(e =>
+                                        {
+                                            e.Change("onchangeFamilyRelationship").DataBound("readonlyObject");
+                                        })
+                                        .SelectedIndex(-1)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group" id="DivPatientName">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Patient Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.PatientName, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.PatientName", placeholder = Localizer["Input Patient Name"].Value}, isCanEdit))
+                                </div>
+                                <div class="form-group" id="DivComboPatient">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Patient Name"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.PatientChildName, "PatientChildName")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PatientChildName" })
+                                        .Placeholder(Localizer["Select Patient Name"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Name")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/claimbenefit/getchild")))
+                                        )
+                                        .Events(e =>
+                                        {
+                                            e.Change("onchangePatientChildName").DataBound("readonlyObject");
+                                        })
+                                        .SelectedIndex(-1)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Date of Birth"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.DateOfBirth)
+                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DateOfBirth", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value, @readonly = "readonly" })
+                                        .Format("dd/MM/yyyy")
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Hospital & Medical History Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Hospital Name"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.Hospital, "Hospital")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Hospital" })
+                                        .Placeholder(Localizer["Select Hospital Name"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Name")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/hospital/gets")))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Events(e => e.Change("onSelectHospital"))
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Hospital Address"]</label>
+                                    @Html.TextAreaFor(x => x.Object.HospitalAddress, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.HospitalAddress", placeholder = Localizer["Input Hospital Address"].Value}, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Hospital City"]</label>
+                                    @(Html.Kendo()
+                                        .ComboBoxFor(x => x.Object.HospitalCity)
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.HospitalCity" })
+                                        .Placeholder(Localizer["Select Hospital City"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Name")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/hospital/get-cities")))
+                                            .Sort(sort => sort.Add("Name"))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Opname History"]</label>
+                                <div class="row">
+                                    <div class="form-group col-md-6 col-sm-6">
+                                        <label>@Localizer["In"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.StartDateOfCare)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = "Pilih Tanggal (dd/mm/yyyy)", @data_validation_for = "Object.StartDateOfCare" })
+                                            .Format("dd/MM/yyyy")
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-6 col-sm-6">
+                                        <label>@Localizer["Out"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.EndDateOfCare)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = "Pilih Tanggal (dd/mm/yyyy)", @data_validation_for = "Object.EndDateOfCare" })
+                                            .Format("dd/MM/yyyy")
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Diagnosa"]</label>
+                                    @Html.TextBoxFor(x => x.Object.DiagnosaRawatInap, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.DiagnosaRawatInap", placeholder = Localizer["Diagnosa"].Value}, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Criteria Control"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.CriteriaControl, "CriteriaControl")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.CriteriaControl" })
+                                        .Placeholder(Localizer["Select Criteria Control"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=ControlCriteria")))
+                                        )
+                                        .Events(e => e.Change("OnChange"))
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group" id="DivDiagnosa">
+                                    @(Html.KendoComboBoxFor(x => x.Object.Diagnosa, "Diagnosa")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Diagnosa" })
+                                        .Placeholder(Localizer["Select Disease"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Name")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=SurgeryControlCriteria")))
+                                        )
+                                        .Events(x => x.Change("onChangeDiagnosa"))
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-12 col-md-6">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Control Date"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.ControlDate)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please select a date (dd/mm/yyyy)"].Value, @data_validation_for = "Object.ControlDate" })
+                                            .Format("dd/MM/yyyy")
+                                            .Min(minDate)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-12 col-md-6" id="divCheckUpCount">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Control to"]</label>
+                                        @(Html.Kendo().NumericTextBox()
+                                            .Name("Object.CheckUpCount")
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.CheckUpCount" })
+                                            .Placeholder(Localizer["Control to"].Value)
+                                            .Value(int.Parse(string.IsNullOrEmpty(Model.Object.CheckUpCount) ? "0" : Model.Object.CheckUpCount))
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Min(1)
+                                            .Max(999)
+                                            .Events(e => e.Change("onChangeAmount"))
+                                            .Enable(isCanEdit)
+                                            .Round(false)
+                                            .Deferred()
+                                        )
+                                        @*@Html.TextBoxFor(x => x.Object.CheckUpCount, ApplicationHelper.Enable(new { @class = "form-control text-right", data_validation_for = "Object.CheckUpCount", placeholder = Localizer["Control to"].Value, onkeydown = "return ValidateNumber(event);" }, isCanEdit))*@
+                                    </div>
+                                </div>
+                                <div class="form-group" id="divControlKhusus">
+                                    <label><span>Kontrol Khusus</span></label>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <div id="divControl12">
+                                <fieldset>
+                                    <legend>@Localizer["Supporting Attachment"]</legend>
+                                    <div class="form-group" id="TreatmentResume">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Treatment Resume"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportingAttachmentPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportingAttachmentPath" })
+                                            }
+                                        }
+                                    </div>
+                                    <div class="form-group" id="divDoctorAgreementPath">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Doctor's Agreement Letter"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.DoctorAgreementPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "DoctorAgreementPath" })
+                                            }
+                                        }
+                                    </div>
+                                </fieldset>
+                            </div>
+                            
+                            <div id="TreatmentResumeControlup3">
+                                <fieldset>
+                                    <legend>@Localizer["Supporting Attachment"]</legend>
+                                    <div class="form-group" id="TreatmentResume">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Company Doctor's Letter"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.TreatmentResumePath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "TreatmentResumePath" })
+                                            }
+                                        }
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <fieldset>
+                                <legend class="w-auto">@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

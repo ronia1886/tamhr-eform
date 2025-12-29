@@ -1,0 +1,147 @@
+﻿<link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+      integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+      crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+        integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+        crossorigin=""></script>
+<script type="text/javascript">
+    (function ($, app) {
+        // Menambahkan handler untuk save Proxy In
+        app.registerHandler("saveHandler", function () {
+            // Menambahkan data dari form ke variabel
+            var proxyIn = $("#ProxyIn").val();
+            var proxyOut = $("#ProxyOut").val();
+            var latitude = $("#Latitude").val();
+            var longitude = $("#Longitude").val();
+            console.log("test Proxy",proxyIn);
+
+            // Mengirim data menggunakan AJAX ke backend untuk Proxy In
+            $.post(app.resolveUrl("~/api/proxy-time-form/proxy-in"), {
+                proxyIn: proxyIn,
+                proxyOut: proxyOut,
+                latitude: latitude,
+                longitude: longitude
+            }, function () {
+                app.flash("@Localizer["Success update proxy"]");
+                // Update UI atau hanya reload bagian tertentu jika diperlukan
+                location.reload(); // Jika Anda ingin mereload halaman setelah berhasil
+            }).fail(function () {
+                app.flash("@Localizer["Failed to update proxy"]", "error");
+            });
+        });
+
+        // Menambahkan handler untuk Proxy Out
+        app.registerHandler("proxyOutHandler", function () {
+            // Menambahkan data dari form ke variabel
+            var proxyIn = $("#ProxyIn").val();
+            var proxyOut = $("#ProxyOut").val();
+            var latitude = $("#Latitude").val();
+            var longitude = $("#Longitude").val();
+
+            // Mengirim data menggunakan AJAX ke backend untuk Proxy Out
+            $.post(app.resolveUrl("~/api/proxy-time-form/proxy-out"), {
+                proxyIn: proxyIn,
+                proxyOut: proxyOut,
+                latitude: latitude,
+                longitude: longitude
+            }, function () {
+                app.flash("@Localizer["Success update proxy"]");
+                // Update UI atau hanya reload bagian tertentu jika diperlukan
+                location.reload(); // Jika Anda ingin mereload halaman setelah berhasil
+            }).fail(function () {
+                app.flash("@Localizer["Failed to update proxy"]", "error");
+            });
+        });
+
+        $(document).ready(function () {
+            var presenceCombo = $("#PresenceCode").data("kendoComboBox");
+            if (presenceCombo) {
+                presenceCombo.bind("change", function () {
+                    onProxyInChanged();  // Cek ulang dan set Proxy Out sesuai kondisi baru
+                });
+            }
+        });
+
+        function onProxyInChanged() {
+            let proxyInPicker = $("#WorkingTimeIn").data("kendoDateTimePicker");
+            let proxyOutPicker = $("#WorkingTimeOut").data("kendoDateTimePicker");
+            let UpdateShiftCode = $("#ShiftCode").val();
+            let NormalTimeIn = $("#NormalTimeIn").val();
+            let NormalTimeOut = $("#NormalTimeOut").val();
+            let presenceCode = $("#PresenceCode").data("kendoComboBox")?.value() || $("#PresenceCode").val();
+            if (presenceCode === "Masuk Kerja Biasa") {
+                if (proxyInPicker && proxyOutPicker) {
+                    let proxyInValue = proxyInPicker.value();
+
+                    let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+                    if (UpdateShiftCode === "1NJ8") {
+                        threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+                    }
+
+                    if (proxyInValue) {
+                        // Tambah 8 jam 45 menit
+                        let minOutValue = new Date(proxyInValue.getTime() + threshold * 60000);
+                        proxyOutPicker.value(minOutValue);
+                        proxyOutPicker.min(minOutValue);
+                    }
+                }
+            }
+        }
+
+        function onProxyOutChanged() {
+            let proxyInPicker = $("#WorkingTimeIn").data("kendoDateTimePicker");
+            let proxyOutPicker = $("#WorkingTimeOut").data("kendoDateTimePicker");
+            let presenceCode = $("#PresenceCode").data("kendoComboBox")?.value() || $("#PresenceCode").val();
+            let UpdateShiftCode = $("#ShiftCode").val();
+            if (presenceCode === "Masuk Kerja Biasa") {
+                if (proxyInPicker && proxyOutPicker) {
+                    let proxyInValue = proxyInPicker.value();
+                    let proxyOutValue = proxyOutPicker.value();
+
+                    let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+                    if (UpdateShiftCode === "1NJ8") {
+                        threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+                    }
+                    let minOutValue = new Date(proxyInValue.getTime() + threshold * 60000);
+
+                    if (proxyOutValue < minOutValue) {
+                        alert("Proxy Out tidak boleh kurang dari 8 jam 45 menit setelah Proxy In.");
+                        proxyOutPicker.value(minOutValue);
+                    }
+                }
+            }
+        }
+
+        // Memastikan bahwa geolocation berfungsi
+        if (navigator.geolocation) {
+            var options = {
+                enableHighAccuracy: false,
+                timeout: 1000,
+                maximumAge: 0
+            };
+
+            function success(position) {
+                // Menyimpan lokasi dalam form
+                $("#GeoLocation").val(position.coords.latitude + "," + position.coords.longitude);
+                $("#Latitude").val(position.coords.latitude);
+                $("#Longitude").val(position.coords.longitude);
+
+                // Menampilkan peta menggunakan Leaflet
+                var map = L.map('map-wrapper').setView([position.coords.latitude, position.coords.longitude], 16);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+
+                L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
+            }
+
+            function error(err) {
+                console.warn(`ERROR(${err.code}): ${err.message}`);
+            }
+
+            // Memanggil geolocation untuk mendapatkan lokasi
+            navigator.geolocation.getCurrentPosition(success, error, options);
+        }
+    })(jQuery, app);
+</script>

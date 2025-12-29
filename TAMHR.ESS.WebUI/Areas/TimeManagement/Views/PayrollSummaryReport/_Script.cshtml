@@ -1,0 +1,75 @@
+﻿<script>
+    $.getDataReport = function () {
+        return {
+            keyDate: kendo.toString(kendo.date.lastDayOfMonth($("#periode").data("kendoDatePicker").value()), 'yyyy-MM-dd')
+        };   
+    };
+
+    $.onSearch = function () {
+        //debugger;
+        var $grid = getGridReport();
+
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+
+        var dataSource = $grid.dataSource;
+
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+
+        var Class = $("#class").val();
+
+        var finalFilter = {
+            logic: "and",
+            filters: []
+        }
+
+        //DIVISION FILTER
+        if(divisionList.length > 0){
+            var divisionFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+            divisionList.forEach(
+                division =>
+                divisionFilter.filters.push(
+                    {
+                        field: 'Division',
+                        operator: 'eq',
+                        value: division.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(divisionFilter);
+        }
+
+        dataSource.filter(finalFilter);
+
+        var date = kendo.date.lastDayOfMonth($("#periode").data("kendoDatePicker").value());
+
+        var periodDate = new Date(date);
+
+        periodDate = periodDate.addMonths(1);
+
+        $('#titleSummary').text('@Localizer["PAYROLL PERIOD"]' + " " + kendo.toString(periodDate, 'MMMM yyyy'));
+    };
+
+    function getGridReport() {
+        return $("#gridReport").data("kendoGrid");
+    }
+
+    app.registerHandler("downloadReportHandler", function () {
+        var periode = kendo.toString($("#periode").data("kendoDatePicker").value() || new Date(), "yyyy-MM-dd");
+
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+        divisionList.forEach(
+            division =>
+            divisionValue.push(
+                division.split('#')[1]
+            )
+        )
+
+        window.open(app.resolveUrl("~/api/payroll-summary/download-report?listDivision=" + encodeURIComponent(divisionValue) + "&keyDate=" + periode), "_blank");
+    });
+</script>

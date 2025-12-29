@@ -1,0 +1,38 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.UserImpersonationView>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@if (Model == null || Model.Count() == 0)
+{
+    <div class="text-center p-3 text-muted">
+        <i class="fa fa-clipboard font-large-1"></i><br />@Localizer["No data found"]
+    </div>
+}
+else
+{
+    <div class="mt-comments mt-comments-bordered">
+        @foreach (var item in Model)
+        {
+            <div class="mt-comment">
+                <div class="mt-comment-img">
+                    <img src="@ConfigService.ResolveAvatar(item.ImpersonateNoReg)" style="width: 2.5rem; height: 3rem;">
+                </div>
+                <div class="mt-comment-body">
+                    <div class="mt-comment-info">
+                        <div class="mt-comment-author">@item.ImpersonateName</div>
+                        <div class="mt-comment-status">
+                            <a href="javascript:;" class="btn btn-xs green-jungle" data-trigger="handler" data-handler="impersonateHandler" data-parameters-username="@item.ImpersonateUsername">
+                                impersonate
+                            </a>
+                        </div>
+                        <div class="mt-comment-sub-info">@item.PostName</div>
+                        @if (!string.IsNullOrEmpty(item.Description))
+                        {
+                            <span class="mt-comment-time">
+                                @item.Description
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

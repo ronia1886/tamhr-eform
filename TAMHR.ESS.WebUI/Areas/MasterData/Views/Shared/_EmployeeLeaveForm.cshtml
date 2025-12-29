@@ -1,0 +1,759 @@
+﻿@model List<TAMHR.ESS.Domain.EmployeeLeaveHistoryView>
+
+@{
+    var isNew = Model?.FirstOrDefault()?.Id == default(Guid);
+    var firstItem = Model?.FirstOrDefault(); // Get first item for single object properties
+}
+
+@{
+    var currentYears = DateTime.Now.Year;
+
+    
+
+    //var maxAnnualLeave = Model?.Where(x => x.leavetype == "annual-leave")
+    //                          .OrderByDescending(x => x.Period)
+    //                          .FirstOrDefault()?.RemainingLeave ?? 0; // Default to 0 if no data
+    var maxAnnualLeave = Model?
+    .Where(x => x.leavetype == "annual-leave" && x.Period == currentYears)
+    .OrderBy(x => x.Period)
+    .Sum(x => x.RemainingLeave) ?? 0;
+}
+
+@{
+    var maxPeriod = Model.Where(x => x.leavetype == "long-leave").Any()
+        ? Model.Where(x => x.leavetype == "long-leave").Max(x => x.Period)
+        : 0; // Handle case where there are no "long-leave" records
+
+    var maxLongLeave = Model?
+    .Where(x => x.leavetype == "long-leave" && x.Period == maxPeriod)
+    .OrderBy(x => x.Period)
+    .FirstOrDefault()?.RemainingLeave ?? 0;
+
+    var annualLeavePeriods = Model.Where(x => x.leavetype == "annual-leave").Select(x => x.Period).ToList();
+
+    int currentYear = DateTime.Now.Year;
+    int nextYear = currentYear + 1;
+
+    // Determine maxPeriodAnnual based on available years
+    var maxPeriodAnnual = annualLeavePeriods.Contains(currentYear) ? currentYear :
+                          annualLeavePeriods.Contains(nextYear) ? nextYear :
+                          (annualLeavePeriods.Any() ? annualLeavePeriods.Max() : currentYear); // Fallback to max available or current year
+
+    // Determine valid years for showing the pencil icon
+    var validYears = new HashSet<int> { maxPeriodAnnual, nextYear };
+    var validLongLeaveYears = new HashSet<int> { maxPeriod, maxPeriod + 5 };
+}
+@* <style>
+    .modal .modal-footer {
+        display: none !important;
+    }
+
+</style>
+ *@
+<form method="@(isNew ? "post" : "put")" action="~/api/employee-leave">
+    @Html.HiddenFor(x => firstItem.Id)
+    @Html.HiddenFor(x => firstItem.noreg)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                @(Html.Kendo().AutoComplete()
+                    .Name("noregAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Placeholder(Localizer["Find user..."].Value)
+                    //.Value("Employee" + (Model.FirstOrDefault()?.noreg ?? ""))
+                    .Value(Model.FirstOrDefault()?.Nama_Pegawai ?? "")
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Enable(isNew)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/gets"))))
+                            .PageSize(10)
+                            .Sort(sort => sort.Add("Name"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+
+                        $("#NoReg").val(dataItem.NoReg);
+                    }</text>))
+                )
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Current Long Leave"]</label>
+                @Html.TextBoxFor(x => maxLongLeave, new { @class = "form-control", @data_validation_for = "LongLeave", @placeholder = Localizer["Please input long leave"].Value, @disabled = "disabled" })
+                <span class="invalid" data-validation-for="LongLeave"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Current Annual Leave"]</label>
+                @Html.TextBoxFor(x => maxAnnualLeave, new { @class = "form-control", @data_validation_for = "AnnualLeave", @placeholder = Localizer["Please input annual leave"].Value, @disabled = "disabled" })
+                <span class="invalid" data-validation-for="AnnualLeave"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Annual Leave"]</label>
+
+                <!-- Dropdown for selecting items per page -->
+               
+                <!-- Table -->
+                <table class="table table-striped" style="border: 1px solid #ddd; white-space: nowrap;">
+                    <thead style="background-color:#74a4ac;">
+                        <tr>                  
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Period"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Total Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Used Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Remaining Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Action"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaveTable" data-ajax-url="@Url.Content("~/masterdata/employeeleave/UpdateLeave")">
+
+                        @if (Model != null && Model.Any(x => x.leavetype == "annual-leave")) 
+                        {
+                            @foreach (var leave in Model.Where(x => x.leavetype == "annual-leave").OrderByDescending(x => x.Period)) 
+                            {
+                                <tr data-id="@leave.noreg">
+                                    <td class="noreg" data-original-value="@leave.noreg" style="text-align: center; border: 1px solid #ddd;" hidden>@leave.noreg</td>
+                                    <td style="text-align: center; border: 1px solid #ddd;">@leave.Period</td>
+                                    <td class="period" data-original-value="@leave.Period"  style="text-align: center; border: 1px solid #ddd;"hidden>@leave.Period</td>
+                                    <td class="total-leave" data-original-value="@leave.TotalLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.TotalLeave
+                                    </td>
+                                    <td class="used-leave" data-original-value="@leave.UsedLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.UsedLeave
+                                    </td>
+                                    <td class="remaining-leave" data-original-value="@leave.RemainingLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.RemainingLeave
+                                    </td>
+                                    <td style="text-align: center; border: 1px solid #ddd;">
+                                        @if (validYears.Contains(leave.Period))
+                                        {
+                                            <i class="fa fa-pencil edit-btn" style="cursor: pointer;"></i>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; border: 1px solid #ddd;">No records found</td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+
+                <!-- Pagination Info -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <nav class="d-flex align-items-center">
+                        <ul class="pagination mb-0">
+                            <li class="page-item disabled" id="prevPage">
+                                <a class="page-link" href="#"><i class="fa fa-angle-left"></i></a>
+                            </li>
+                            <li class="page-item mx-2 d-flex align-items-center">
+                                <span id="pageLabel" class="mr-2">Page</span>
+                                <select id="pageInfo" class="form-control w-auto"></select>
+                                <span id="totalPagesText" class="ml-2">of X</span>
+                            </li>
+
+                            <li class="page-item" id="nextPage">
+                                <a class="page-link" href="#"><i class="fa fa-angle-right"></i></a>
+                            </li>
+
+                            <li class="page-item ml-3 d-flex align-items-center">
+                                <select id="itemsPerPage" class="form-control w-auto">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                                <span class="ml-2">Items per page</span>
+                            </li>
+                        </ul>
+                    </nav>
+                    <span id="paginationInfo" class="text-muted">1 - 3 of 10 items</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Long Leave"]</label>
+
+                <!-- Dropdown for selecting items per page -->
+                <!-- Table -->
+                <table class="table table-striped" style="border: 1px solid #ddd; white-space: nowrap; display: block; overflow-x: auto;">
+                    <thead style="background-color:#74a4ac;">
+                        <tr>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Entry Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Start Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["End Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Total Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Used Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Remaining Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Action"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="longleave" data-ajax-url="@Url.Content("~/masterdata/employeeleave/UpdateLongLeave")">
+                        @if (Model != null && Model.Any(x => x.leavetype == "long-leave"))
+                        {
+
+                            foreach (var leave in Model.Where(x => x.leavetype == "long-leave").OrderByDescending(x => x.PeriodDateLeave))
+                            {
+                                <tr data-id="@leave.noreg">
+                                    <td class="noreg" data-original-value="@leave.noreg" style="text-align: center; border: 1px solid #ddd;" hidden>@leave.noreg</td>
+                                    <td style="text-align: center; border: 1px solid #ddd;"> @leave.DateIn?.ToString("dd/MM/yyyy")</td>
+                                    <td class="period" data-original-value="@leave.Period" style="text-align: center; border: 1px solid #ddd;" hidden>@leave.Period</td>
+                                    <td class="createdon" data-original-value="@leave.CreatedOn" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.CreatedOn?.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="period-leave" data-original-value="@leave.PeriodDateLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.PeriodDateLeave?.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="total-leave" data-original-value="@leave.TotalLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.TotalLeave
+                                    </td>
+                                    <td class="used-leave" data-original-value="@leave.UsedLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.UsedLeave
+                                    </td>
+                                    <td class="remaining-leave" data-original-value="@leave.RemainingLeave" style="text-align: center; border: 1px solid #ddd;">
+                                        @leave.RemainingLeave
+                                    </td>
+                                    <td style="text-align: center; border: 1px solid #ddd;">
+                                        @if (validLongLeaveYears.Contains(leave.Period))
+                                        {
+                                            <i class="fa fa-pencil editlng-btn" style="cursor: pointer;"></i>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; border: 1px solid #ddd;">No records found</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Pagination Info -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <nav class="d-flex align-items-center">
+                        <ul class="pagination mb-0">
+                            <li class="page-item disabled" id="prevPages">
+                                <a class="page-link" href="#"><i class="fa fa-angle-left"></i></a>
+                            </li>
+                            <li class="page-item mx-2 d-flex align-items-center">
+                                <span id="pageLabels" class="mr-2">Page</span>
+                                <select id="pageInfos" class="form-control w-auto"></select>
+                                <span id="totalPagesTexts" class="ml-2">of X</span>
+                            </li>
+
+                            <li class="page-item" id="nextPages">
+                                <a class="page-link" href="#"><i class="fa fa-angle-right"></i></a>
+                            </li>
+
+                            <li class="page-item ml-3 d-flex align-items-center">
+                                <select id="itemsPerPages" class="form-control w-auto">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                                <span class="ml-2">Items per page</span>
+                            </li>
+                        </ul>
+                    </nav>
+                    <span id="paginationInfos" class="text-muted">1 - 3 of 10 items</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            function paginateTable(rowsPerPage) {
+                let tableRows = $("#leaveTable tr");
+                let totalRows = tableRows.length;
+                let totalPages = Math.ceil(totalRows / rowsPerPage);
+                let currentPage = 1;
+
+                function updatePageDropdown() {
+                    let dropdown = $("#pageInfo").empty();
+                    for (let i = 1; i <= totalPages; i++) {
+                        dropdown.append(`<option value="${i}">${i}</option>`);
+                    }
+                    dropdown.val(currentPage);
+
+                    // Display "Page X of Y" outside the dropdown
+                    $("#pageLabel").text(`Page`);
+                    $("#totalPagesText").text(`of ${totalPages}`);
+                }
+
+
+                function updatePaginationInfo() {
+                    let start = (currentPage - 1) * rowsPerPage + 1;
+                    let end = Math.min(start + rowsPerPage - 1, totalRows);
+                    $("#paginationInfo").text(`${start} - ${end} of ${totalRows} items`);
+                }
+
+                function showPage(page) {
+                    tableRows.hide();
+                    let start = (page - 1) * rowsPerPage;
+                    let end = start + rowsPerPage;
+                    tableRows.slice(start, end).show();
+
+                    // Update buttons state
+                    $("#prevPage").toggleClass("disabled", page === 1);
+                    $("#nextPage").toggleClass("disabled", page === totalPages);
+
+                    // Update dropdown & text info
+                    $("#pageInfo").val(page);
+                    updatePaginationInfo();
+                }
+
+                // Handle next button click
+                $("#nextPage").off("click").on("click", function () {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        showPage(currentPage);
+                    }
+                });
+
+                // Handle previous button click
+                $("#prevPage").off("click").on("click", function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        showPage(currentPage);
+                    }
+                });
+
+                // Handle page dropdown change
+                $("#pageInfo").off("change").on("change", function () {
+                    currentPage = parseInt($(this).val());
+                    showPage(currentPage);
+                });
+
+                // Initialize
+                updatePageDropdown();
+                updatePaginationInfo();
+                showPage(1);
+            }
+
+            // Handle items per page change
+            $("#itemsPerPage").on("change", function () {
+                paginateTable(parseInt($(this).val()));
+            });
+
+            // Initialize with default value
+            paginateTable(parseInt($("#itemsPerPage").val()));
+        });
+    </script>
+
+    <script>
+        $(document).ready(function () {
+            function paginateTables(rowsPerPage) {
+                let tableRows = $("#longleave tr");
+                let totalRows = tableRows.length;
+                let totalPages = Math.ceil(totalRows / rowsPerPage);
+                let currentPage = 1;
+
+                function updatePageDropdowns() {
+                    let dropdown = $("#pageInfos").empty();
+                    for (let i = 1; i <= totalPages; i++) {
+                        dropdown.append(`<option value="${i}">${i}</option>`);
+                    }
+                    dropdown.val(currentPage);
+
+                    // Display "Page X of Y" outside the dropdown
+                    $("#pageLabels").text(`Page`);
+                    $("#totalPagesTexts").text(`of ${totalPages}`);
+                }
+
+
+                function updatePaginationInfos() {
+                    let start = (currentPage - 1) * rowsPerPage + 1;
+                    let end = Math.min(start + rowsPerPage - 1, totalRows);
+                    $("#paginationInfos").text(`${start} - ${end} of ${totalRows} items`);
+                }
+
+                function showPages(page) {
+                    tableRows.hide();
+                    let start = (page - 1) * rowsPerPage;
+                    let end = start + rowsPerPage;
+                    tableRows.slice(start, end).show();
+
+                    // Update buttons state
+                    $("#prevPages").toggleClass("disabled", page === 1);
+                    $("#nextPages").toggleClass("disabled", page === totalPages);
+
+                    // Update dropdown & text info
+                    $("#pageInfos").val(page);
+                    updatePaginationInfos();
+                }
+
+                // Handle next button click
+                $("#nextPages").off("click").on("click", function () {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        showPages(currentPage);
+                    }
+                });
+
+                // Handle previous button click
+                $("#prevPages").off("click").on("click", function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        showPages(currentPage);
+                    }
+                });
+
+                // Handle page dropdown change
+                $("#pageInfos").off("change").on("change", function () {
+                    currentPage = parseInt($(this).val());
+                    showPages(currentPage);
+                });
+
+                // Initialize
+                updatePageDropdowns();
+                updatePaginationInfos();
+                showPages(1);
+            }
+
+            // Handle items per page change
+            $("#itemsPerPages").on("change", function () {
+                paginateTables(parseInt($(this).val()));
+            });
+
+            // Initialize with default value
+            paginateTables(parseInt($("#itemsPerPages").val()));
+        });
+    </script>
+
+    <script>
+        $(document).on("click", ".edit-btn", function () {
+            var row = $(this).closest("tr"); // Get the row
+
+            // Get original values stored in data attributes
+            var noreg = row.find(".noreg").data("original-value");
+            var period = row.find(".period").data("original-value");
+            var totalLeave = row.find(".total-leave").data("original-value");
+            var usedLeave = row.find(".used-leave").data("original-value");
+            var remainingLeave = row.find(".remaining-leave").data("original-value");
+
+            // Convert text into input fields
+            row.find(".noreg").html('<input type="text" class="form-control noreg-input" value="' + noreg + '">');
+            row.find(".period").html('<input type="text" disabled class="form-control period-input" value="' + period + '">');
+            row.find(".total-leave").html('<input type="text" class="form-control total-leave-input" value="' + totalLeave + '">');
+            row.find(".used-leave").html('<input type="text" class="form-control used-leave-input" value="' + usedLeave + '">');
+            row.find(".remaining-leave").html('<input type="text" class="form-control remaining-leave-input" value="' + remainingLeave + '" disabled>');
+
+            row.find(".total-leave-input, .used-leave-input").on("input", function () {
+                var total = parseInt(row.find(".total-leave-input").val(), 10) || 0;
+                var used = parseInt(row.find(".used-leave-input").val(), 10) || 0;
+                var remaining = total - used;
+                row.find(".remaining-leave-input").val(remaining);
+            });
+
+            // Change the edit button to a save button
+            $(this).removeClass("fa-pencil edit-btn").addClass("btn btn-sm blue-sharp save-btn").text("Save");
+            row.find(".close-btn-ann").remove();
+
+            // Append close button
+            $(this).after('<button class="btn btn-sm btn-danger close-btn-ann" style="margin-left:5px;">Close</button>');
+        });
+
+        $(document).off("click", ".save-btn").on("click", ".save-btn", function () {
+            var row = $(this).closest("tr"); // Get the row
+
+            // Get updated input values
+            var updatedNoReg = row.find(".noreg-input").val();
+            var updatedPeriod = row.find(".period-input").val();
+            var updatedTotalLeave = parseInt(row.find(".total-leave-input").val(), 10) || 0;
+            var updatedUsedLeave = parseInt(row.find(".used-leave-input").val(), 10) || 0;
+            var updatedRemainingLeave = parseInt(row.find(".remaining-leave-input").val(), 10) || 0;
+
+            var sumLeave = updatedUsedLeave + updatedRemainingLeave;
+
+            var calculatedLeave = updatedTotalLeave - updatedUsedLeave;
+
+            // if (calculatedLeave < 0) {
+            //     swal({
+            //         title: '@Localizer["Error Saving Changes"]',
+            //         text: `@Localizer["Result of Used Must be Equal or Greater Than 0"] (Total Leave: ${updatedTotalLeave})`,
+            //         type: "error"
+            //     });
+            //     return; //Stop eksekusi jika validasi gagal
+            // }
+
+            if (sumLeave !== updatedTotalLeave) {
+                swal({
+                    title: '@Localizer["Error Saving Changes"]',
+                    text: '@Localizer["Result of Used Leave and Remaining Leave not valid with Total Leave"]',
+                    type: "error"
+                });
+                return; //Stop eksekusi jika validasi gagal
+            }
+
+            // Prepare data for API
+            var requestData = {
+                NoReg: updatedNoReg,
+                Period: updatedPeriod,
+                TotalLeave: updatedTotalLeave,
+                UsedLeave: updatedUsedLeave,
+                RemainingLeave: updatedRemainingLeave 
+            };
+
+            //console.log("data:", requestData);
+
+            // Get the AJAX URL from the table attribute
+            var ajaxUrl = $("#leaveTable").data("ajax-url");
+
+            // Send data to API via AJAX
+            $.ajax({
+                url: ajaxUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(requestData),
+                success: function (response) {
+                    swal({
+                        title: '@Localizer["Save Changes"]',
+                        text: '@Localizer["Update Employee Leave Successfully"]',
+                        type: "success"
+                    }).then(function () {
+                        // Update table with new values
+                        row.find(".noreg").html(updatedNoReg).data("original-value", updatedNoReg);
+                        row.find(".period").html(updatedPeriod).data("original-value", updatedPeriod);
+                        row.find(".total-leave").html(updatedTotalLeave).data("original-value", updatedTotalLeave);
+                        row.find(".used-leave").html(updatedUsedLeave).data("original-value", updatedUsedLeave);
+                        row.find(".remaining-leave").html(updatedRemainingLeave).data("original-value", updatedRemainingLeave);
+
+                        // Change save button back to edit button
+                        row.find(".save-btn")
+                            .removeClass("btn btn-sm blue-sharp save-btn")
+                            .addClass("fa fa-pencil edit-btn")
+                            .text("");
+
+                        row.find(".close-btn-ann").remove();
+                    });
+
+                    // Break execution after showing alert
+                    return false;
+                },
+                error: function (xhr) {
+                    let errorMessage = "Unknown error";
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText;
+                    }
+
+                    swal({
+                        title: "Error",
+                        text: errorMessage,
+                        icon: "error"
+                    });
+                },
+            });
+        });
+
+        // Close Button Click - Restore Original Values
+        $(document).on("click", ".close-btn-ann", function () {
+            var row = $(this).closest("tr");
+
+            // Restore original values
+            row.find(".noreg").text(row.find(".noreg").data("original-value"));
+            row.find(".period").text(row.find(".period").data("original-value"));
+            row.find(".total-leave").text(row.find(".total-leave").data("original-value"));
+            row.find(".used-leave").text(row.find(".used-leave").data("original-value"));
+            row.find(".remaining-leave").text(row.find(".remaining-leave").data("original-value"));
+
+            // Restore the edit button
+            row.find(".save-btn")
+                .removeClass("btn btn-sm blue-sharp save-btn")
+                .addClass("fa fa-pencil edit-btn")
+                .text("");
+
+            // Remove the close button
+            $(this).remove();
+        });
+
+    </script>
+
+    <script>
+        let isSaving = false;
+
+        $(document).on("click", ".editlng-btn", function () {
+            var row = $(this).closest("tr");
+
+            // Prevent editing multiple rows at once
+            if (row.hasClass("editing")) return;
+            $(".editing").removeClass("editing"); // clear any existing edit mode
+            $(".close-btn-long").click(); // trigger close if any
+
+            row.addClass("editing");
+
+            var noreg = row.find(".noreg").data("original-value");
+            var period = row.find(".period").data("original-value");
+            var usedLeave = row.find(".used-leave").data("original-value");
+            var remainingLeave = row.find(".remaining-leave").data("original-value");
+            var totalLeave = row.find(".total-leave").data("original-value");
+
+            // Replace text with input fields
+            row.find(".noreg").html(`<input type="text" class="form-control noreg-input" value="${noreg}">`);
+            row.find(".period").html(`<input type="text" class="form-control period-input" value="${period}" disabled>`);
+            row.find(".used-leave").html(`<input type="text" class="form-control used-leave-input" value="${usedLeave}">`);
+            row.find(".remaining-leave").html(`<input type="text" class="form-control remaining-leave-input" value="${remainingLeave}" disabled>`);
+            row.find(".total-leave").html(`<input type="text" class="form-control total-leave-input" value="${totalLeave}">`);
+
+            // Input logic: update remaining leave
+            row.find(".used-leave-input, .total-leave-input").on("input", function () {
+                let used = parseInt(row.find(".used-leave-input").val(), 10) || 0;
+                let total = parseInt(row.find(".total-leave-input").val(), 10) || 0;
+                let remaining = total - used;
+                row.find(".remaining-leave-input").val(remaining);
+            });
+
+            // Change icon to Save button
+            const saveBtn = $('<button class="btn btn-sm btn-primary save-btn-long">Save</button>');
+            const closeBtn = $('<button class="btn btn-sm btn-danger close-btn-long" style="margin-left:5px;">Close</button>');
+
+            $(this).replaceWith(saveBtn);
+            row.find("td:last").append(closeBtn);
+        });
+
+        $(document).on("click", ".save-btn-long", function () {
+            if (isSaving) return;
+
+            var $btn = $(this);
+            var row = $btn.closest("tr");
+
+            // Fetch updated values
+            var updatedNoReg = row.find(".noreg-input").val();
+            var updatedPeriod = row.find(".period-input").val();
+            var updatedUsedLeave = parseInt(row.find(".used-leave-input").val(), 10) || 0;
+            var updatedRemainingLeave = parseInt(row.find(".remaining-leave-input").val(), 10) || 0;
+            var updatedTotalLeave = parseInt(row.find(".total-leave-input").val(), 10) || 0;
+
+            var calculatedLeave = updatedTotalLeave - updatedUsedLeave;
+            var sumLeave = updatedUsedLeave + updatedRemainingLeave;
+
+            if (calculatedLeave < 0) {
+                swal({
+                    title: '@Localizer["Error Saving Changes"]',
+                    text: `@Localizer["Result of Used Must be Equal or  Greater Than 0"] (Total Leave: ${updatedTotalLeave})`,
+                    type: "error"
+                });
+                return;
+            }
+
+            if (sumLeave !== updatedTotalLeave) {
+                swal({
+                    title: '@Localizer["Error Saving Changes"]',
+                    text: `@Localizer["Result of Used Leave and Remaining Leave not valid with Total Leave"] (Total Leave: ${updatedTotalLeave})`,
+                    type: "error"
+                });
+                return;
+            }
+
+            let ajaxUrl = $("#longleave").data("ajax-url");
+            let requestData = {
+                NoReg: updatedNoReg,
+                Period: updatedPeriod,
+                UsedLeave: updatedUsedLeave,
+                RemainingLeave: updatedRemainingLeave
+            };
+
+            // Prevent double save
+            isSaving = true;
+            $btn.prop("disabled", true);
+
+            $.ajax({
+                url: ajaxUrl,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(requestData),
+                success: function (response) {
+                    swal({
+                        title: '@Localizer["Save Changes"]',
+                        text: '@Localizer["Update Employee Long Leave Successfully"]',
+                        type: "success"
+                    }).then(function () {
+                        // Update original values
+                        row.find(".noreg").html(updatedNoReg).data("original-value", updatedNoReg);
+                        row.find(".period").html(updatedPeriod).data("original-value", updatedPeriod);
+                        row.find(".used-leave").html(updatedUsedLeave).data("original-value", updatedUsedLeave);
+                        row.find(".remaining-leave").html(updatedRemainingLeave).data("original-value", updatedRemainingLeave);
+                        row.find(".total-leave").html(updatedTotalLeave).data("original-value", updatedTotalLeave);
+
+                        row.removeClass("editing");
+
+                        // Replace Save button back to Edit icon
+                        $btn.replaceWith('<i class="fa fa-pencil editlng-btn"></i>');
+                        row.find(".close-btn-long").remove();
+                    });
+                },
+                error: function (xhr) {
+                    let errorMessage = "Unknown error";
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText;
+                    }
+
+                    swal({
+                        title: "Error",
+                        text: errorMessage,
+                        icon: "error"
+                    });
+                },
+                complete: function () {
+                    isSaving = false;
+                    $btn.prop("disabled", false);
+                }
+            });
+        });
+
+        $(document).on("click", ".close-btn-long", function () {
+            var row = $(this).closest("tr");
+
+            // Restore original values
+            row.find(".noreg").text(row.find(".noreg").data("original-value"));
+            row.find(".period").text(row.find(".period").data("original-value"));
+            row.find(".used-leave").text(row.find(".used-leave").data("original-value"));
+            row.find(".remaining-leave").text(row.find(".remaining-leave").data("original-value"));
+            row.find(".total-leave").text(row.find(".total-leave").data("original-value"));
+
+            row.removeClass("editing");
+
+            // Replace Save button back to Edit
+            row.find(".save-btn-long").replaceWith('<i class="fa fa-pencil editlng-btn"></i>');
+            $(this).remove(); // remove Close button
+        });
+    </script>
+
+  @*   <div class="actions">
+    <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a> 
+    </div> *@
+</form>

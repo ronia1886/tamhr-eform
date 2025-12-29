@@ -1,0 +1,38 @@
+﻿@model TAMHR.ESS.Domain.EmployeeLeave
+@{
+    var type = (string)ViewBag.Type;
+}
+@if (type == "annual-leave")
+{
+    <span>@Localizer["Remaining annual leave is"] @Model.AnnualLeave</span>
+}
+else if (type == "long-leave")
+{
+    <span>@Localizer["Remaining long leave is"] @Model.LongLeave</span>
+}
+<hr/>
+@(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeLeaveStoredEntity>()
+    .Name("employeeAbsentGrid")
+    .Columns(columns =>
+    {
+        columns.Bound(c => c.WorkingDate).Title("Date").ClientTemplate(@"
+            <div class=""media"">
+                <div class=""media-body ml-2"">
+                    <h6 class=""mt-1 mb-0 bold"">#:kendo.toString(WorkingDate, 'dd-MM-yyyy')# #if(DocumentStatus==='inprogress'){#<span>(Waiting Approval)</span> # }# </h6>
+                </div>
+            </div>
+        ");
+    })
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/masterdata/absence/get-leaves")).Data(@<text>function() { return { category: "@type" } }</text>))
+        .Sort(sort => sort.Add("WorkingDate"))
+    )
+    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No leave data"].Value + "</div>"))
+    .Pageable(options =>
+    {
+        options.Input(true);
+        options.Numeric(false);
+        options.AlwaysVisible(false);
+    })
+)

@@ -1,0 +1,45 @@
+<div id="proxy-modal" class="modal fade bs-modal-md" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localizer["Proxy As"]</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                @(Html.Kendo().AutoComplete()
+                    .Name("proxyAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Placeholder(Localizer["Find user..."].Value)
+                    .MinLength(3)
+                    .Delay(500)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/getactives"))))
+                            .PageSize(30)
+                            .Sort(sort => sort.Add("Name"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+
+                        $.post("~/api/account/proxy", { Username: dataItem.Username }, function(d) {
+                            window.location.href = app.resolveUrl('~/');
+                        });
+                    }</text>))
+                    .Deferred()
+                )
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+            </div>
+        </div>
+    </div>
+</div>

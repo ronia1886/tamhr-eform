@@ -1,0 +1,422 @@
+﻿<script type="text/javascript">
+    function ClearDropDownTree(id) {
+        $("#" + id).data("kendoDropDownTree").enable(false);
+        $("#" + id).data("kendoDropDownTree").value("");
+    }
+    $.OnChangeDirectorate = function (e) {
+        ClearDropDownTree("division");
+        var directorates = $("#directorate").data("kendoDropDownTree").value();
+
+        var directorateValue = [];
+        //console.log(directorateValue);
+
+        directorates.forEach(
+            Directorate =>
+                directorateValue.push(Directorate.split('#')[0])
+        )
+
+        var child = $("#division").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/payroll-detail/get-division")",
+            dataType: "json",   
+            data: { DirectorateList: directorateValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDivision = function (e) {
+        ClearDropDownTree("department");
+        var divisions = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+
+        divisions.forEach(
+            division =>
+                divisionValue.push(division.split('#')[0])
+        )
+
+
+        var child = $("#department").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/payroll-detail/get-department")",
+            dataType: "json",   
+            data: { DivisionList: divisionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDepartment = function (e) {
+        ClearDropDownTree("section");
+        var departments = $("#department").data("kendoDropDownTree").value();
+
+        var departmentValue = [];
+
+        departments.forEach(
+            department =>
+                departmentValue.push(department.split('#')[0])
+        )
+
+        var child = $("#section").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/payroll-detail/get-section")",
+            dataType: "json",   
+            data: { DepartmentList: departmentValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeSection = function (e) {
+        var sections = $("#section").data("kendoDropDownTree").value();
+
+        var sectionValue = [];
+
+        sections.forEach(
+            section =>
+                sectionValue.push(section.split('#')[0])
+        )
+
+        var child = $("#line").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/payroll-detail//get-line")",
+            dataType: "json",   
+            data: { SectionList: sectionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+    /*$(function () {
+        app.initiateMultiSelect = function (fieldName, url) {
+            $("#" + fieldName).kendoMultiSelect({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: app.resolveUrl(url),
+                            type: 'post'
+                        }
+                    }
+                }
+            });
+        }
+    });*/
+
+    /*function initiateFilters(){
+        var multiSelectBaseUrl = app.resolveUrl('~/api/employe-profile/get-dashboard-unique-column-values?field=');
+
+        //app.initiateMultiSelect("Directorate", multiSelectBaseUrl + "Directorate" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("Divisi", multiSelectBaseUrl + "Divisi" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("Department", multiSelectBaseUrl + "Department" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("Section", multiSelectBaseUrl + "JobName" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("NoReg", multiSelectBaseUrl + "NoReg" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("Name", multiSelectBaseUrl + "Name" + "&table=EmployeProfileView");
+        app.initiateMultiSelect("Status", multiSelectBaseUrl + "Expr1" + "&table=EmployeProfileView");
+    }*/
+    $(function () {
+        /*app.initiateMultiSelect = function (fieldName, url) {
+            $("#" + fieldName).kendoMultiSelect({
+                dataSource: {
+                    transport: {
+                        read: {
+                            url: app.resolveUrl(url),
+                            type: 'post'
+                        }
+                    }
+                }
+            });
+        }
+        initiateFilters();*/
+
+        $("#btnClear").on("click", function (e) {
+            /*$("#Directorate").data("kendoMultiSelect").value([]);
+            $("#Divisi").data("kendoMultiSelect").value([]);
+            $("#Department").data("kendoMultiSelect").value([]);
+            $("#Section").data("kendoMultiSelect").value([]);*/
+            //ClearDropDownTree("directorate");
+            $("#directorate").data("kendoDropDownTree").value("");
+            ClearDropDownTree("division");
+            ClearDropDownTree("department");
+            ClearDropDownTree("section");
+            $("#NoReg").data("kendoMultiSelect").value([]);
+            $("#Name").data("kendoMultiSelect").value([]);
+            $("#Status").data("kendoMultiSelect").value([]);
+
+            var grid = $("#gridEmployeeProfile").data("kendoGrid");
+
+            var defaultFilter = {
+                logic: "and",
+                filters: []
+            };
+
+            grid.dataSource.filter(defaultFilter);
+        });
+
+        $("#btnSearch").on("click", function (e) {
+            var filter = {
+                logic: "and",
+                filters: []
+            };
+
+            
+            var directorate = $("#directorate").data("kendoDropDownTree").value();
+            if (directorate.length > 0) {
+                var directorateFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                directorate.forEach(
+                    directorate =>
+                        directorateFilter.filters.push(
+                            {
+                                field: 'Directorate',
+                                operator: 'eq',
+                                value: directorate.split('#')[1]
+                            }
+                        )
+                )
+                filter.filters.push(directorateFilter);
+            }
+
+            //DIVISION FILTER
+            var divisi = $("#division").data("kendoDropDownTree").value();
+            //console.log(divisi);
+            if (divisi.length > 0) {
+                var divisionFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                divisi.forEach(
+                    division =>
+                        divisionFilter.filters.push(
+                            {
+                                field: 'Divisi',
+                                operator: 'eq',
+                                value: division.split('#')[1]
+                            }
+                        )
+                )
+                filter.filters.push(divisionFilter);
+            }
+
+            //DEPARTMENT FILTER
+            var depart = $("#department").data("kendoDropDownTree").value();
+            if (depart.length > 0) {
+                var departmentFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                depart.forEach(
+                    department =>
+                        departmentFilter.filters.push(
+                            {
+                                field: 'Department',
+                                operator: 'eq',
+                                value: department.split('#')[1]
+                            }
+                        )
+                )
+                filter.filters.push(departmentFilter);
+            }
+
+            //SECTION FILTER
+            var section = $("#section").data("kendoDropDownTree").value();
+            if (section.length > 0) {
+                var sectionFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                section.forEach(
+                    section =>
+                        sectionFilter.filters.push(
+                            {
+                                field: 'Section',
+                                operator: 'eq',
+                                value: section.split('#')[1]
+                            }
+                        )
+                )
+                filter.filters.push(sectionFilter);
+            }
+
+            /*var Directorate = $("#Directorate").data("kendoMultiSelect").value();
+            if (Directorate != undefined && Directorate != null && Directorate.length > 0) {
+
+                var tempFilters = [];
+                $.each(Directorate, function (index, value) {
+                    tempFilters.push({
+                        field: "Directorate",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var divisi = $("#Divisi").data("kendoMultiSelect").value();
+            if (divisi != undefined && divisi != null && divisi.length > 0) {
+
+                var tempFilters = [];
+                $.each(divisi, function (index, value) {
+                    tempFilters.push({
+                        field: "Divisi",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var depart = $("#Department").data("kendoMultiSelect").value();
+            if (depart != undefined && depart != null && depart.length > 0) {
+
+                var tempFilters = [];
+                $.each(depart, function (index, value) {
+                    tempFilters.push({
+                        field: "Department",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var jobName = $("#Section").data("kendoMultiSelect").value();
+            if (jobName != undefined && jobName != null && jobName.length > 0) {
+
+                var tempFilters = [];
+                $.each(jobName, function (index, value) {
+                    tempFilters.push({
+                        field: "JobName",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }*/
+
+            var NoReg = $("#NoReg").data("kendoMultiSelect").value();
+            if (NoReg != undefined && NoReg != null && NoReg.length > 0) {
+
+                var tempFilters = [];
+                $.each(NoReg, function (index, value) {
+                    tempFilters.push({
+                        field: "NoReg",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var Name = $("#Name").data("kendoMultiSelect").value();
+            if (Name != undefined && Name != null && Name.length > 0) {
+
+                var tempFilters = [];
+                $.each(Name, function (index, value) {
+                    tempFilters.push({
+                        field: "Name",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var Status = $("#Status").data("kendoMultiSelect").value();
+            if (Status != undefined && Status != null && Status.length > 0) {
+
+                var tempFilters = [];
+                $.each(Status, function (index, value) {
+                    tempFilters.push({
+                        field: "Expr1",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var grid = $("#gridEmployeeProfile").data("kendoGrid");
+            grid.dataSource.filter(filter);
+        });
+    });
+
+    function onDataBound(e) {
+        // Initiate Kendo Combobox
+        $.each($(".dd-job"), function (index, item) {
+            $(item).kendoComboBox();
+        });
+
+    }
+
+
+</script>

@@ -1,0 +1,40 @@
+﻿<script type="text/javascript">
+    function onchangeHospital() {
+        var entity = { Id: $("#Hospital").data("kendoComboBox").value(), }
+        $.post(app.resolveUrl("~/api/vaccinehospital/get-hospital-byid"), entity, function (result) {
+            $("#Name").val(result.Data[0].Name)
+            $("#Province").val(result.Data[0].Province)
+            $("#City").val(result.Data[0].City)
+            $("#Address").val(result.Data[0].Address)
+            $("#HospitalId").val(result.Data[0].Id)
+            $("#ProviderType").val(result.Data[0].ProviderType)
+
+        });
+    }
+
+    function checkboxChange(e) {
+        debugger;
+        if (e["checked"]) {
+            $("#Name").show()
+            $("#Hospital").closest(".k-widget").hide();
+            $("#Name").val("")
+            $("#Province").val("")
+            $("#City").val("")
+            $("#Address").val("")
+            $("#HospitalId").val("")
+            $("#ProviderType").val("")
+            $("#Province").prop('readonly', false);
+            $("#City").prop('readonly', false);
+            $("#Address").prop('readonly', false);
+        } else {
+            $("#Hospital").closest(".k-widget").show();
+            $("#Name").hide()
+
+            $("#Province").prop('readonly', true);
+            $("#City").prop('readonly', true);
+            $("#Address").prop('readonly', true);
+        }
+
+    }
+
+</script>

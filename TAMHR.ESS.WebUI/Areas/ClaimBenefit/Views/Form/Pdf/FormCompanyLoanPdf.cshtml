@@ -1,0 +1,22 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService svc;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var info = svc.GetInfo(Model.DocumentApproval.CreatedBy).FirstOrDefault();
+    var kelas = int.Parse(info.GetType().GetProperty("NP").GetValue(info).ToString());
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+}
+
+@{
+    if (kelas < 7)
+    {
+        await Html.RenderPartialAsync("pdf/FormPermohonanPinjamanKelas36Pdf");
+
+    } else
+    {
+        await Html.RenderPartialAsync("pdf/FormPermohonanPinjamanKelas7UpPdf");
+    }
+}

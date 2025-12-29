@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentFTP" Version="32.4.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.7.0" />
+    <PackageReference Include="Moq" Version="4.20.72" />
+    <PackageReference Include="Scrutor" Version="6.1.0" />
+    <PackageReference Include="xunit" Version="2.3.1" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.3.1" />
+    <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TAMHR.ESS.Infrastructure\TAMHR.ESS.Infrastructure.csproj" />
+    <ProjectReference Include="..\TAMHR.ESS.WebUI\TAMHR.ESS.WebUI.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Agit.Domain">
+      <HintPath>C:\Users\ErwinDevTech\.nuget\packages\agit.domain\1.0.38\lib\netstandard2.0\Agit.Domain.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

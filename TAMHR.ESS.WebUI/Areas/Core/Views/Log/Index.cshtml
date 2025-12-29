@@ -1,0 +1,62 @@
+﻿@inject TAMHR.ESS.Infrastructure.Web.Authorization.AclHelper AclHelper
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Application Log List"]
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.ApplicationLog>()
+                    .Name("logGrid")
+                    .HtmlAttributes(new { data_filter = "log-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">
+                                        Log for <b>#:Username#</b> on #: kendo.toString(CreatedOn, 'dd MMM yyyy - HH:mm:ss') #
+                                    </h6>
+                                    <small class=""d-block""><b>IP Address - </b> #: (IpAddress === '::1') ? 'localhost' : IpAddress #</small>
+                                    <small class=""d-block""><b>Browser - </b> #:Browser#</small>
+                                    <small class=""d-block""><b>Log Type - </b> <span class=""#: (LogTypeCode == 'error' ? 'font-red' : 'font-green') #"">#:LogTypeCode#</span></small>
+                                    <small class=""d-block""><b>Description - </b> #=MessageDescription#</small>
+                                </div>
+                            </div>
+                        ");
+
+                        if (AclHelper.HasPermission("Core.ViewLogLocation"))
+                        {
+                            columns.Bound(c => c.MessageLocation).Encoded(false).MinScreenWidth(1024);
+                        }
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No logs data"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/log/application")))
+                        .Sort(sort => sort.Add("CreatedOn").Descending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

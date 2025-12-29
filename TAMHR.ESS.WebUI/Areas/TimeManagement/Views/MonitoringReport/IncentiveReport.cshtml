@@ -1,0 +1,171 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var now = DateTime.Now;
+    var year = now.Year;
+    var start = (DateTime)ViewBag.StartDate;
+    var end = (DateTime)ViewBag.EndDate;
+    var noreg = User.GetClaim("NoReg");
+    var category = ViewBag.Category;
+    var categories = (Dictionary<int, string>)ViewBag.Categories;
+    var len = categories.Count;
+    var offset = 5;
+    var gt = len > offset;
+    ScriptManager.RegisterReferences("datepicker", "grid", "chart");
+}
+@section scripts {
+    <script type="text/javascript">
+        function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { noreg: "@noreg", startDate: startDate, endDate: endDate, category: "@category", showAll: true };
+        }
+
+        app.registerHandler("searchHandler", function () {
+            var currYear = @now.Year,
+                sd = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                ed = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31);
+
+            $(".date-detail").text("(" + kendo.toString(sd, "d MMM yyyy") + " - " + kendo.toString(ed, "d MMM yyyy")+ ")");
+
+            app.refreshControl("grid");
+            app.refreshControl("chart");
+        });
+
+        $(function () {
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Dashboard Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Dashboard summary chart"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Chart<AbsenceSummaryStoredEntity>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = (gt ? "height: 140px;" : "height: 105px;") + " position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(gt ? ChartLegendPosition.Right : ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ text } = ${ value }"))
+                                )
+                                .DataSource(ds => ds
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-report/absence-summary")).Data("getParameters")))
+                                    .Schema(config => config.Data("Data").Total("Total"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", @"\#9717A8", @"\#005A91", @"\#007FAD", @"\#00D3E4", @"\#FF96DA", @"\#FF7D81", @"\#E0FF4D" })
+                                .Series(series => {
+                                    series.Donut(x => x.Total, x => x.DisplayName)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ category }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Description"]</h3>
+                    <span class="m-widget-desc">@Localizer["Summary description"]</span>
+                </div>
+                <div class="m-widget-item pt-2">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <ol class="pl-3 font-small-2 mb-0">
+                                @foreach (var item in categories)
+                                {
+                                    <li>@item.Value Kode Presensi <b>@item.Key</b></li>
+                                }
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Details"] <span class="date-detail">(@start.ToString("d MMM yyyy") - @end.ToString("d MMM yyyy"))</span></h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_CommonToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.AbsenceSummaryDetailsStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "common-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.WorkingDate).Title("Date")
+                            .ClientTemplate(@"<div class=""d-none d-md-block text-center"">#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')#</div><div class=""d-block d-md-none""><h6 class=""bold mb-0"">Date</h6><span class=""small mb-2 d-block"">#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')#</span><h6 class=""bold mb-0"">Proxy In</h6><span class=""small mb-2 d-block"">#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')#</span><h6 class=""bold mb-0"">Proxy Out</h6><span class=""small mb-2 d-block"">#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')#</span><h6 class=""bold mb-0"">Presence Code</h6><span class=""small mb-2 d-block"">#:$.toDefault(PresenceCode, '-')#</span><h6 class=""bold mb-0"">Description</h6><span class=""small mb-2 d-block"">#:$.toDefault(Description, '-')#</span></div>");
+
+                        columns.Bound(c => c.WorkingTimeIn).Title("Proxy In")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"Proxy In<br/><small>#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')#</small>")
+                            .Width("8rem")
+                            .MinScreenWidth(700);
+
+                        columns.Bound(c => c.WorkingTimeOut).Title("Proxy Out")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"Proxy Out<br/><small>#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')#</small>")
+                            .Width("8rem")
+                            .MinScreenWidth(700);
+
+                        columns.Bound(c => c.WorkingTimeOut).Title("Presence Code")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"Presence Code<br/><small>#:$.toDefault(PresenceCode, '-')#</small>")
+                            .Width("10rem")
+                            .MinScreenWidth(700);
+
+                        columns.Bound(c => c.Description).Title("Description")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"#:$.toDefault(Description, '-')#")
+                            .Width("33rem")
+                            .MinScreenWidth(700);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/monitoring-report/absence-summary-details")).Data("getParameters"))
+                        .Sort(sort => sort.Add("WorkingDate"))
+                        .PageSize(60)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Events(events =>
+                    {
+                        events.DataBound(@<text>function() { $("#chart").data("kendoChart").dataSource.read(); }</text>);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

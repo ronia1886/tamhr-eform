@@ -1,0 +1,117 @@
+﻿@model FormQuestion
+@{ 
+
+    var newmodel = Model;
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Question Detail"]</h3>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-target="formQuestionDetailGrid" data-trigger="modal" data-modal="formquestiondetail-modal" data-modal-title="Create New Question Detail" data-modal-ajax="true" data-ajax-url="~/masterdata/formquestion/loaddetail" data-parameters-FormQuestionId="@Model.Id">
+                                    @Localizer["Create Question Detail"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.FormQuestionDetail>()
+                    .Name("formQuestionDetailGrid")
+                    .HtmlAttributes(new { data_filter = "formquestiondetail-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Description).Title("Description");
+                        columns.Bound(c => c.DescriptionType).Title("Type");
+                        columns.Bound(c => c.MinVal).Title("Limit").Width(100).ClientTemplate(@"
+                        #if(CriteriaType!=null){
+                           if(CriteriaType==""between""){
+                                if(MinVal!=null && MaxVal != null){#
+                                    <span>#=MinVal#-#=MaxVal#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                            else if(CriteriaType==""morethan""){
+                                if(MinVal!=null){#
+                                    <span>>#=MinVal#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                            else if(CriteriaType==""lessthan""){
+                                if(MinVal!=null){#
+                                    <span>>#=MinVal#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                        }else{#<span></span>#}#
+                        ");
+                        columns.Bound(c => c.MaxVal).Title("True Value").Width(100).ClientTemplate(@"
+                        #if(CriteriaType!=null){
+                           if(CriteriaType==""between""){
+                                if(MinTrue!=null && MaxTrue != null){#
+                                    <span>#=MinTrue#-#=MaxTrue#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                            else if(CriteriaType==""morethan""){
+                                if(MinTrue!=null){#
+                                    <span>>#=MinTrue#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                            else if(CriteriaType==""lessthan""){
+                                if(MinTrue!=null){#
+                                    <span><#=MinTrue#</span>
+                                #}else{#
+                                    <span></span>
+                                #}
+                            }
+                        }else{#<span></span>#}#
+                        ");
+                        columns.Bound(c => c.OrderSequence).Title("Seq");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""formquestiondetail-modal"" data-modal-title=""Edit Question Detail"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/formquestion/loaddetail"" data-parameters-Id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/form-question/delete-formquestiondetail"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width(150);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/form-question/get-details")).Data("function() { return { 'formQuestionId': '"+Model.Id+"' } }"))
+                        .Sort(sort =>
+                        {
+                            sort.Add("OrderSequence");
+                        })
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    
+                )
+            </div>
+        </div>
+    </div>
+</div>

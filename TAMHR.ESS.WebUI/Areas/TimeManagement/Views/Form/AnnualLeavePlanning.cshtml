@@ -1,0 +1,1605 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AnnualLeavePlanningViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualLeavePlanningService AnnualLeavePlanningService
+@{
+    bool canEdit = AclHelper.CanEdit();
+    var now = DateTime.Now.Date;
+    var requester = UserService.GetByNoReg(Model.Requester);
+    var currentUser = User.GetClaim("NoReg");
+    var postCode = User.GetClaim("PostCode");
+    bool isRequester = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid)
+                     || (!string.IsNullOrEmpty(Model.Requester) && Model.Requester == User.GetClaim("NoReg"));
+    bool otherVersionExists = false;
+
+    var nextMonth = DateTime.Now.AddMonths(1).ToString("yyyy-MM"); 
+    // If the form is new request form, then use the current user as the noreg. If the form is opened by his/her superior, then use requester as the noreg
+    currentUser = (Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid) ? User.GetClaim("NoReg") : Model.Requester);
+    var aos = MdmService.GetActualOrganizationStructure(currentUser);
+
+    // Register kendo grid reference
+    ScriptManager.RegisterReferences("grid");
+
+    // Get max leave days, will be used in validation
+    Config maxLeaveDaysConfig = ConfigService.GetConfig("AnnualLeavePlanning.MaxLeaveDays");
+    int maxLeaveDays = (maxLeaveDaysConfig == null) ? 6 : int.Parse(maxLeaveDaysConfig.ConfigValue);
+
+    // If this is a new request form, then use next year as the default period. Otherwise, use the submitted period.
+    int periodYear = Model.Object.AnnualLeavePlanning == null ? (now.Month != 12 ? now.Year : now.Year + 1) : Model.Object.AnnualLeavePlanning.YearPeriod;
+
+    int periodNextYear = periodYear + 1;
+
+    var mode = ViewData["mode"] == null ? string.Empty : ViewData["mode"].ToString();
+
+    var OffDayList = ViewBag.OffDayList;
+    DateTime minDate = new DateTime(periodYear, 1, 1);
+    DateTime maxDate = new DateTime(periodYear, 12, 31);
+
+    AnnualLeavePlanning alp = AnnualLeavePlanningService.GetByKey(currentUser,postCode, periodYear);
+    if (alp != null)
+    {
+        otherVersionExists = true;
+    }
+
+    if (mode.ToLower() == "edit")
+    {
+        canEdit = true;
+
+        if (Model.DocumentApprovalId == null)
+        {
+            canEdit = false;
+        }
+
+        // If the approved data is going to be edited, then the new leave data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        //maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(12).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+    else if(otherVersionExists)
+    {
+        // If the approved data is going to be edited, then the new leave data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        //maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+
+    bool isApprover = false;
+    if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty)
+    {
+        TrackingApproval trackingApproval = ApprovalService.GetTrackingApprovals(Model.DocumentApprovalId).Where(a => a.NoReg != Model.Requester).FirstOrDefault();
+        if (trackingApproval != null && trackingApproval.NoReg == User.GetClaim("NoReg"))
+        {
+            isApprover = true;
+        }
+    }
+
+    Config cutOffDateConfig = ConfigService.GetConfig("AnnualPlanning.CutOffDate");
+    DateTime cutOffDate = DateTime.Parse(cutOffDateConfig.ConfigValue);
+
+    Config dateFromAnnualPlanningConfig = ConfigService.GetConfig("AnnualPlanning.DateFrom");
+    DateTime dateFromAnnualPlanning = DateTime.Parse(dateFromAnnualPlanningConfig.ConfigValue);
+
+    Config dateToAnnualPlanningConfig = ConfigService.GetConfig("AnnualPlanning.DateTo");
+    DateTime dateToAnnualPlanning = DateTime.Parse(dateToAnnualPlanningConfig.ConfigValue);
+
+    bool isCutOff = (cutOffDate < DateTime.Now) && DateTime.Now <= dateToAnnualPlanning && DateTime.Now >= dateFromAnnualPlanning;
+}
+
+@* Display the page if the form is in edit, new, or draft state  *@
+@*@if((otherVersionExists && Model.DocumentApprovalId != Guid.Empty) || (Model.DocumentApprovalId == Guid.Empty && !otherVersionExists) || (Model.DocumentStatusCode == DocumentStatus.Draft || Model.DocumentStatusCode == DocumentStatus.InProgress|| Model.DocumentStatusCode == DocumentStatus.Revised|| Model.DocumentStatusCode == DocumentStatus.Rejected || Model.DocumentStatusCode == "initiate")) { *@
+@if(otherVersionExists && (Model.DocumentApprovalId == null || Model.DocumentApprovalId == Guid.Empty)) 
+{
+<div class="bd-callout bd-callout-warning bg-white mt-0">
+    <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+    <p>@Localizer["Tidak dapat membuat permohonan baru karena Annual Leave Planning untuk tahun "+ periodYear +" telah diinput sebelumnya."]</p>
+    <a href="@Url.Content("~/timemanagement/annualplanning")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+</div>
+    @section formActions{
+    }
+}else
+{
+    @section scripts {
+        <script type="text/javascript">
+            if('@Model.DocumentApprovalId'!=""){
+                $("#download-@Model.DocumentApprovalId").remove();
+            }
+            var annualLeavePlanningDetails = [];
+
+            var maxAbsentDays = 0,
+                leaveType = '',
+                absentId = '';
+
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/absence/getbynoreg"),
+                dataType: 'json',
+                data: {
+                    noreg: '@currentUser',
+                    iddoc: '@Model.Id'
+                },
+                success: function (result) {
+                    let $sisaCuti = $('#sisacuti'),
+                        $sisaCutiPanjang = $('#sisacutipanjang');
+
+
+                    if (result !== null || result !== undefined) {
+                        $sisaCuti.text(result.AnnualLeave);
+                        $sisaCutiPanjang.text(result.LongLeave);
+
+                        $.ajax({
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/employee-annual-leave/getsannualleave"),
+                            dataType: 'json',
+                            data: {
+                                noreg: '@currentUser',
+                                period: '@periodNextYear'
+                            },
+                            success: function (result2) {
+                                let $sisaCutiTahunDepan = $('#sisacutitahundepan');
+                                if (result2 !== null || result2 !== undefined) {
+                                    console.log(result2);
+                                    $sisaCutiTahunDepan.text(result2.AnnualLeave);
+                                } else {
+                                    $sisaCutiTahunDepan.text("");
+                                }
+                            }
+                         });
+
+                    } else {
+                        $sisaCuti.text("");
+                        $sisaCutiPanjang.text("");
+                    }
+                }
+            });
+
+
+            function onchangeStartDate() {
+                var $startDate = $("#StartDate").data("kendoDatePicker"),
+                    $endDate = $("#EndDate").data("kendoDatePicker"),
+                    $totalAbsence = $("#totalAbsence"),
+                    $sisaCutiPanjang = $('#sisacutipanjang'),
+                    $totalAnnualLeave = $('#totalAnnualLeave'),
+                    $totalLongLeave = $('#totalLongLeave'),
+                    startDate = $startDate.value();
+
+                   
+                var $sisaCuti;
+                if('@isCutOff' == 'True'){
+                    $sisaCuti = $('#sisacutitahundepan');
+                } else {
+                    $sisaCuti = $('#sisacuti');
+                }
+
+                if (startDate !== null) {
+                    $endDate.min(startDate);
+
+                    if (maxAbsentDays > 0) {
+                        $.ajax({
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/absence/get-absence-end-date"),
+                            dataType: 'json',
+                            data: {
+                                startDate: startDate.toUTCString(),
+                                maxAbsentDays: maxAbsentDays
+                            },
+                            success: function (result) {
+                                $endDate.max(kendo.parseDate(result));
+                            }
+                        });
+                    }
+
+                    $endDate.value('');
+                    $endDate.enable(true);
+                } else {
+                    $endDate.value('');
+                    $endDate.enable(false);
+                }
+
+                $totalAbsence.val(0);
+
+                var endDate = $endDate.value();
+                var total = 0;
+
+                if (startDate !== null && endDate !== null) {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/absence/getinfocalculationloan"),
+                        dataType: 'json',
+                        data: {
+                            strDate: startDate.toUTCString(),
+                            endDate: endDate.toUTCString()
+                        },
+                        success: function (result) {
+                            var offDays = $.grep(result.Data, function (element, index) {
+                                return element.Off;
+                            });
+
+                            total = Math.round((endDate - startDate) / 1000 / 60 / 60 / 24) + 1 - offDays.length; //Difference in days
+                        
+                            if (leaveType == 'cuti' && total + parseInt($totalAnnualLeave.val()) > parseInt($sisaCuti.text())) {
+                                $startDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total annnual leave is " + $sisaCuti.text() + " days.");
+                            } else if (leaveType == 'cutipanjang' && total + parseInt($totalLongLeave.val()) > parseInt($sisaCutiPanjang.text())) {
+                                $startDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total long leave is " + $sisaCutiPanjang.text() + " days.");
+                            } else
+                                $totalAbsence.val(total);
+                            @*else if (total > @maxLeaveDays && @maxLeaveDays > 0) {
+                                $startDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total absent is " + @maxLeaveDays + " days.");
+                            } else if (total > maxAbsentDays && maxAbsentDays > 0) {
+                                $startDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total absent is " + maxAbsentDays + " days.");
+                            }*@
+                        }
+                    });
+                }
+
+            }
+
+            function onchangeEndDate() {
+                let $startDate = $("#StartDate").data("kendoDatePicker"),
+                    $endDate = $("#EndDate").data("kendoDatePicker"),
+                    $totalAbsence = $("#totalAbsence"),
+                    $sisaCutiPanjang = $('#sisacutipanjang'),
+                    $totalAnnualLeave = $('#totalAnnualLeave'),
+                    $totalLongLeave = $('#totalLongLeave'),
+                    startDate = $startDate.value(),
+                    endDate = $endDate.value(),
+                    total = 0;
+
+                var $sisaCuti;
+                if('@isCutOff' == 'True'){
+                    $sisaCuti = $('#sisacutitahundepan');
+                } else {
+                    $sisaCuti = $('#sisacuti');
+                };
+
+                if (startDate !== null && endDate !== null) {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/absence/getinfocalculationloan"),
+                        dataType: 'json',
+                        data: {
+                            strDate: startDate.toUTCString(),
+                            endDate: endDate.toUTCString()
+                        },
+                        success: function (result) {
+                            var offDays = $.grep(result.Data, function (element, index) {
+                                return element.Off;
+                            });
+
+                            total = Math.round((endDate - startDate) / 1000 / 60 / 60 / 24) + 1 - offDays.length; //Difference in days
+
+                            if(leaveType == 'cuti' && total + parseInt($totalAnnualLeave.val()) > parseInt($sisaCuti.text())) {
+                                $endDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total annual leave is " + $sisaCuti.text() + " days.");
+                            } else if (leaveType == 'cutipanjang' && total + parseInt($totalLongLeave.val()) > parseInt($sisaCutiPanjang.text())) {
+                                $endDate.value('');
+                                $totalAbsence.val(0);
+
+                                app.warning("Max total long leave is " + $sisaCutiPanjang.text() + " days.");
+                            } else
+                                $totalAbsence.val(total);
+                        }
+                    });
+
+                }
+            }
+
+            function selectReason() {
+                let $startDate = $("#StartDate").data("kendoDatePicker"),
+                    $endDate = $("#EndDate").data("kendoDatePicker"),
+                    $totalAbsence = $("#totalAbsence"),
+                    $reason = $("#Reason"),
+                    value = this.value(),
+                    text = this.text();
+
+                maxAbsentDays = 0;
+
+                $startDate.value('');
+                $startDate.enable(true);
+                $endDate.value('');
+                $endDate.enable(false);
+
+                @if(mode.ToLower() == "edit" || otherVersionExists)
+                {
+                    @* If this is edit form, allow leave data input only for next month *@
+                    <text>
+                    $startDate.min(new Date(@minDate.Year, @(minDate.Month - 1), 1));
+                    $startDate.max(new Date(@maxDate.Year, @(maxDate.Month - 1), @maxDate.Day));
+                    $endDate.min(new Date(@minDate.Year, @(minDate.Month - 1), 1));
+                    $endDate.max(new Date(@maxDate.Year, @(maxDate.Month - 1), @maxDate.Day));
+                    </text>
+                }
+                else
+                {
+                    @* If this is a new data form, allow leave data input for the whole next calendar year *@
+                    <text>
+                    $startDate.min(new Date(@periodYear, 0, 1));
+                    $startDate.max(new Date(@periodYear, 11, 31));
+                    $endDate.min(new Date(@periodYear, 0, 1));
+                    $endDate.max(new Date(@periodYear, 11, 31));
+                    </text>
+                }
+
+                $totalAbsence.val(0);
+
+                if (value !== '' && value !== text) {
+                    $reason.val(text);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/masterdata/absence/getbyid"),
+                        dataType: 'json',
+                        data: { id: value },
+                        success: function (result) {
+                            maxAbsentDays = result.MaxAbsentDays == null ? 0 : result.MaxAbsentDays;
+                            leaveType = result.AbsenceType;
+                            absentId = result.Id;
+                        }
+                    });
+                }
+            }
+
+            function uuidv4() {
+                return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+                );
+            }
+
+            function refreshGrid(details) {
+                $.each(details,function(i,dt){
+                
+                    var today = new Date();
+                    var dd = String(today.getDate()).padStart(2, '0');
+                    var mm = String(today.getMonth() + 2).padStart(2, '0'); //January is 0!
+                
+                    var yyyy = today.getFullYear();
+
+                    if(mm>12){
+                        mm = '01';
+                        yyyy = yyyy + 1;
+                    }
+
+                    currentMonth = yyyy + "-" + mm;
+
+                    if(kendo.toString(kendo.parseDate(dt.StartDate), "yyyy-MM")>currentMonth && '@canEdit'){
+                        details[i].IsHidden = 1;
+                    }else{
+                        details[i].IsHidden = 0;
+                    }
+                });
+            
+                details.sort(function(a,b){
+                  // Turn your strings into dates, and then subtract them
+                  // to get a value that is either negative, positive, or zero.
+                  return new Date(a.StartDate) - new Date(b.StartDate);
+                });
+                // Define Annual Leave Planning Grid (bind to local data)
+                var dataSource = new kendo.data.DataSource({
+                    data: details,
+                    pageSize: 10,
+                    schema: {
+                        total: function () {
+                            return details.length;
+                        }
+                    }
+                });
+
+                var annualLeavePlanningDetailGrid = $("#annualLeavePlanningDetailGrid").data("kendoGrid");
+
+                if (annualLeavePlanningDetailGrid != null) {
+                    annualLeavePlanningDetailGrid.setDataSource(dataSource);
+                }
+
+                // Set total leave
+                var totalLeave = $("#totalLeave");
+                var totalAnnualLeave = $("#totalAnnualLeave");
+                var totalLongLeave = $("#totalLongLeave");
+
+                totalLeave.text(parseInt(totalAnnualLeave.val()) + parseInt(totalLongLeave.val()));
+            }
+
+            function clearForm() {
+                $startDate = $("#StartDate").data("kendoDatePicker");
+                $endDate = $("#EndDate").data("kendoDatePicker");
+                $reason = $("#Reason").data("kendoComboBox");
+                $totalAbsence = $("#totalAbsence");
+
+                $startDate.value('');
+                $startDate.enable(false);
+                $endDate.value('');
+                $endDate.enable(false);
+                $reason.value('');
+                $totalAbsence.val(0);
+            }
+
+            function setTotalAbsence() {
+                var totalAbsence = 0;
+
+                $each(annualLeavePlanningDetails, function (index, item) {
+                    totalAbsence += item.Days;
+                });
+
+                $totalAbsence = $("#totalAbsence");
+                $totalAbsence.val(totalAbsence);
+            }
+
+            function deleteRow(id) {
+                var removeIndex = annualLeavePlanningDetails.map(item => item.Id).indexOf(id);
+
+                if (removeIndex >= 0 && annualLeavePlanningDetails[removeIndex] != null) {
+                    if (annualLeavePlanningDetails[removeIndex].AbsenceType == 'cuti') {
+                        var totalAnnualLeave = $("#totalAnnualLeave");
+                        totalAnnualLeave.val(parseInt(totalAnnualLeave.val()) - annualLeavePlanningDetails[removeIndex].Days);
+                    } else if (annualLeavePlanningDetails[removeIndex].AbsenceType == 'cutipanjang') {
+                        var totalLongLeave = $("#totalLongLeave");
+                        totalLongLeave.val(parseInt(totalLongLeave.val()) - annualLeavePlanningDetails[removeIndex].Days);
+                    }
+                }
+
+                (removeIndex >= 0) && annualLeavePlanningDetails.splice(removeIndex, 1);
+
+                refreshGrid(annualLeavePlanningDetails);
+            }
+
+            function onDataBound(e) {
+                var startDateColumnIndex = this.wrapper.find(".k-grid-header [data-field=StartDate]").index();
+                var endDateColumnIndex = this.wrapper.find(".k-grid-header [data-field=EndDate]").index();
+
+                var rows = e.sender.tbody.children();
+                for (var i = 0; i < rows.length; i++) {
+                    var row = $(rows[i]);
+                    var dataItem = e.sender.dataItem(row);
+                    var startDate = dataItem.get("StartDate");
+                    var endDate = dataItem.get("EndDate");
+                    var startDateCell = row.children().eq(startDateColumnIndex);
+                    var endDateCell = row.children().eq(endDateColumnIndex);
+                    startDateCell.html("<div>" + kendo.toString(kendo.parseDate(startDate), "dd/MM/yyyy") + "</div><span class='invalid' data-validation-for='Object.AnnualLeavePlanningDetails[" + i + "].StartDate'></span>");
+                    endDateCell.html("<div>" + kendo.toString(kendo.parseDate(endDate), "dd/MM/yyyy") + "</div><span class='invalid' data-validation-for='Object.AnnualLeavePlanningDetails[" + i + "].EndDate'></span>");
+                }
+            }
+
+            function search() {
+                var startDate = $("#StartDateFilter").data("kendoDatePicker").value();
+                var endDate = $("#EndDateFilter").data("kendoDatePicker").value();
+                var reason = $("#ReasonFilter").data("kendoComboBox").value();
+
+                var grid = $("#annualLeavePlanningDetailGrid").data("kendoGrid");
+                var dataSource = grid.dataSource;
+                var filters = [];
+
+                if (startDate != undefined && startDate != null) {
+                    filters.push({
+                        field: "StartDate",
+                        operator: "gte",
+                        value: kendo.parseDate(startDate)
+                    });
+                }
+
+                if (endDate != undefined && endDate != null) {
+                    filters.push({
+                        field: "EndDate",
+                        operator: "lte",
+                        value: kendo.parseDate(endDate)
+                    });
+                }
+
+                if (reason != undefined && reason != null && reason != "") {
+                    filters.push({
+                        field: "AbsentId",
+                        operator: "eq",
+                        value: reason
+                    });
+                }
+
+                dataSource.filter(filters);
+            }
+
+            function validateAllUploadedData(result) {
+                var totalAnnualLeave = 0;
+                var totalLongLeave = 0;
+                $.each(result, function (index, item) {
+                    if (item.AbsenceType == "cuti")
+                        totalAnnualLeave = totalAnnualLeave + item.Days;
+                    else if (item.AbsenceType == "cutipanjang")
+                        totalLongLeave = totalLongLeave + item.Days;
+                });
+
+                $("#totalAnnualLeave").val(totalAnnualLeave);
+                $("#totalLongLeave").val(totalLongLeave);
+
+                if('@isCutOff' == 'True'){
+                    $sisaCuti = $('#sisacutitahundepan');
+                } else {
+                    $sisaCuti = $('#sisacuti');
+                }
+                var remainingAnnualLeave = parseInt($sisaCuti.text());
+
+                var remainingLongLeave = parseInt($("#sisacutipanjang").text());
+
+                if (totalAnnualLeave > remainingAnnualLeave)
+                    return "Total Annual Leave cannot be more than remaining Annual Leave.";
+                else if (totalLongLeave > remainingLongLeave)
+                    return "Total Long Leave cannot be more than remaining Long Leave.";
+
+                return "";
+            }
+
+            function validateUploadedData(result) {
+                var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+                var totalLongLeave = parseInt($("#totalLongLeave").val());
+                $.each(result, function (index, item) {
+                    if (item.AbsenceType == "cuti")
+                        totalAnnualLeave = totalAnnualLeave + item.Days;
+                    else if (item.AbsenceType == "cutipanjang")
+                        totalLongLeave = totalLongLeave + item.Days;
+                });
+
+                if('@isCutOff' == 'True'){
+                    $sisaCuti = $('#sisacutitahundepan');
+                } else {
+                    $sisaCuti = $('#sisacuti');
+                }
+                var remainingAnnualLeave = parseInt($sisaCuti.text());
+
+                var remainingLongLeave = parseInt($("#sisacutipanjang").text());
+
+                if (totalAnnualLeave > remainingAnnualLeave)
+                    return "Total Annual Leave cannot be more than remaining Annual Leave.";
+                else if (totalLongLeave > remainingLongLeave)
+                    return "Total Long Leave cannot be more than remaining Long Leave.";
+
+                return "";
+            }
+
+            function recalculateUploadedData(result) {
+                var errorMessage = validateAllUploadedData(result);
+
+                if (errorMessage == "") {
+                    annualLeavePlanningDetails = [];
+                    $.each(result, function (index, item) {
+                        // Format date
+                        item.StartDate = kendo.parseDate(item.StartDate);
+                        item.EndDate = kendo.parseDate(item.EndDate);
+                        item.IsNew = 1;
+                        if (item.IsUpdated == true)
+                            item.IsUpdated = 1;
+                        else
+                            item.IsUpdated = 0;
+                        annualLeavePlanningDetails.push(item);
+                    });
+
+                    var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+                    var totalLongLeave = parseInt($("#totalLongLeave").val());
+                    $("#totalLeave").text((totalAnnualLeave + totalLongLeave).toString());
+
+                    refreshGrid(annualLeavePlanningDetails);
+                } else {
+                    app.warning(errorMessage);
+                }
+            }
+
+            function recalculate(result) {
+                var errorMessage = validateUploadedData(result);
+
+                if (errorMessage == "") {
+                    var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+                    var totalLongLeave = parseInt($("#totalLongLeave").val());
+
+                    $.each(result, function (index, item) {
+                        // Format date
+                        item.StartDate = kendo.parseDate(item.StartDate);
+                        item.EndDate = kendo.parseDate(item.EndDate);
+                        item.IsNew = 0;
+                        if (item.AbsenceType == "cuti")
+                            totalAnnualLeave = totalAnnualLeave + item.Days;
+                        else if (item.AbsenceType == "cutipanjang")
+                            totalLongLeave = totalLongLeave + item.Days;
+
+                        if (item.IsUpdated == true)
+                            item.IsUpdated = 1;
+                        else
+                            item.IsUpdated = 0;
+                        annualLeavePlanningDetails.push(item);
+                    });
+
+                    $("#totalAnnualLeave").val(totalAnnualLeave);
+                    $("#totalLongLeave").val(totalLongLeave);
+                    $("#totalLeave").text((totalAnnualLeave + totalLongLeave).toString());
+
+                    refreshGrid(annualLeavePlanningDetails);
+                } else {
+                    app.warning(errorMessage);
+                }
+            }
+
+            function getObject() {
+                var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+                var totalLongLeave = parseInt($("#totalLongLeave").val());
+
+                if('@isCutOff' == 'True'){
+                    $sisaCuti = $('#sisacutitahundepan');
+                } else {
+                    $sisaCuti = $('#sisacuti');
+                }
+                var remainingAnnualLeave = parseInt($sisaCuti.text());
+                var remainingLongLeave = parseInt($("#sisacutipanjang").text());
+                var totalLeave = parseInt($("#totalLeave").text());
+
+                var annualLeavePlanning = {
+                    YearPeriod: '@periodYear',
+                    NoReg: '@currentUser'
+                };
+
+                // Parse Kendo Date to Date only (excluding time)
+                $.each(annualLeavePlanningDetails, function (index, item) {
+                    item.StartDate = kendo.toString(item.StartDate, "yyyy-MM-dd");
+                    item.EndDate = kendo.toString(item.EndDate, "yyyy-MM-dd");
+                });
+
+                return {
+                    AnnualLeavePlanning: annualLeavePlanning,
+                    AnnualLeavePlanningDetails: annualLeavePlanningDetails,
+                    TotalAnnualLeave: totalAnnualLeave,
+                    TotalLongLeave: totalLongLeave,
+                    RemainingAnnualLeave: remainingAnnualLeave,
+                    RemainingLongLeave: remainingLongLeave,
+                    TotalLeave: totalLeave,
+                    MaxLeaveDays: @maxLeaveDays,
+                };
+            }
+
+            function isDateValid(startDateToBeChecked, endDateToBeChecked, arrayOfObjects) {
+                var result = true;
+                $.each(arrayOfObjects, function (index, obj) {
+                    if ((startDateToBeChecked <= kendo.parseDate(obj.EndDate) && startDateToBeChecked >= kendo.parseDate(obj.StartDate)) ||
+                        (endDateToBeChecked <= kendo.parseDate(obj.EndDate) && endDateToBeChecked >= kendo.parseDate(obj.StartDate))) {
+                        result = false;
+                        return false;
+                    }
+                });
+                return result;
+            }
+
+            var module = (function ($, app) {
+                $("#btnAddLeavePlanning").on("click", function (e) {
+                    $startDate = $("#StartDate").data("kendoDatePicker");
+                    $endDate = $("#EndDate").data("kendoDatePicker");
+                    $reason = $("#Reason").data("kendoComboBox");
+                    var days = parseInt($("#totalAbsence").val());
+
+                    if ($reason.value() == undefined || $reason.value() == null || $reason.value() == '') {
+                        app.warning("@Localizer["Reason cannot be empty."]");
+                    } else if ($startDate.value() == undefined || $startDate.value() == null || $startDate.value() == '') {
+                        app.warning("@Localizer["Start Date cannot be empty."]");
+                    } else if ($endDate.value() == undefined || $endDate.value() == null || $endDate.value() == '') {
+                        app.warning("@Localizer["End Date cannot be empty."]");
+                    } else if (days <= 0) {
+                        app.warning("@Localizer["Leave date "]" + $startDate.value() + " - " + $endDate.value() + "@Localizer[" must be more than 0 days."]");
+                    } else if (!isDateValid(kendo.parseDate($startDate.value()), kendo.parseDate($endDate.value()), annualLeavePlanningDetails)) {
+                        app.warning("@Localizer["Leave date is already selected before."]");
+                    } else {
+                        var newLeave = {
+                            IsNew: 1,
+                            Version:1,
+                            AbsenceType: leaveType,
+                            Reason: $reason.text(),
+                            StartDate: kendo.toString(kendo.parseDate($startDate.value()), "yyyy-MM-dd"),
+                            EndDate: kendo.toString(kendo.parseDate($endDate.value()), "yyyy-MM-dd"),
+                            IsUpdated: false,
+                            NoReg: '@currentUser',
+                            Days: days
+                        };
+
+                        $.each(annualLeavePlanningDetails, function (index, item) {
+                            item.StartDate = kendo.toString(kendo.parseDate(item.StartDate), "yyyy-MM-dd");
+                            item.EndDate = kendo.toString(kendo.parseDate(item.EndDate), "yyyy-MM-dd");
+                            item.IsNew = 1;
+                        });
+
+                        var data = JSON.stringify({
+                            NewLeave: newLeave,
+                            Details: annualLeavePlanningDetails
+                        });
+
+                        $.ajax({
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/annual-leave-planning/count-consecutive-leave"),
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            data: data,
+                            success: function (data) {
+                                if (data > @maxLeaveDays && leaveType=="cuti") {
+                                    app.warning('@Localizer["Consecutive leave days cannot be more than " + maxLeaveDays + " days."]');
+                                } else {
+                                    var annualLeavePlanningDetail = {
+                                        Id: uuidv4(),
+                                        IsNew: 1,
+                                        Version:1,
+                                        StartDate: kendo.parseDate($startDate.value()),
+                                        EndDate: kendo.parseDate($endDate.value()),
+                                        Reason: $reason.text(),
+                                        AbsentId: absentId,
+                                        AbsenceType: leaveType,
+                                        Days: days,
+                                        IsUpdated: 0,
+                                        NoReg: '@currentUser'
+                                    };
+
+                                    if (leaveType == 'cuti') {
+                                        $totalAnnualLeave = $("#totalAnnualLeave");
+                                        $totalAnnualLeave.val(parseInt($totalAnnualLeave.val()) + parseInt($("#totalAbsence").val()));
+                                    } else if (leaveType == 'cutipanjang') {
+                                        $totalLongLeave = $("#totalLongLeave");
+                                        $totalLongLeave.val(parseInt($totalLongLeave.val()) + parseInt($("#totalAbsence").val()));
+                                    }
+
+                                    annualLeavePlanningDetails.push(annualLeavePlanningDetail);
+
+                                    refreshGrid(annualLeavePlanningDetails);
+                                        clearForm();
+
+                                    //setTimeout(function(){
+                                    
+                                    //},500
+                                    //);
+                                
+                                }
+                            },
+                            error: function (error) {
+                                console.error(error);
+                                app.error(error.statusText);
+                            }
+                        });
+                    }
+                });
+
+                $("#btnSearch").on("click", function () {
+                    search();
+                });
+
+                $("#btnClear").on("click", function () {
+                    $("#StartDateFilter").data("kendoDatePicker").value('');
+                    $("#EndDateFilter").data("kendoDatePicker").value('');
+                    $("#ReasonFilter").data("kendoComboBox").value('');
+                });
+
+                @if(Model.DocumentApprovalId != null && Model.DocumentApprovalId != default(Guid))
+                {
+                    <text>
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/annual-leave-planning/get-details/" + '@Model.DocumentApprovalId'),
+                    dataType: 'json',
+                    success: function (result) {
+                        recalculate(result);
+                    }
+                });
+                    </text>
+                }
+
+                app.registerHandler("dataInterceptor", function (d) {
+                
+                    var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+
+                    if('@isCutOff' == 'True'){
+                        $sisaCuti = $('#sisacutitahundepan');
+                    } else {
+                        $sisaCuti = $('#sisacuti');
+                    }
+                    var remainingAnnualLeave = parseInt($sisaCuti.text());
+                
+                    if (!d.Object.IsDraft) {
+                        //if (totalAnnualLeave < remainingAnnualLeave) {
+                        //    app.error("Annual Leave must be fully allocated.");
+                        //    return;
+                        //}
+                        if (totalAnnualLeave > remainingAnnualLeave) {
+                            app.error("Total Annual Leave cannot be more than remaining Annual Leave.");
+                            return;
+                        }
+                    }
+                
+                    d.Object = getObject();
+
+                    return d;
+                });
+
+                app.registerHandler("saveHandler", function (d) {
+                    swal({
+                        title: "Save Changes",
+                        text: "Annual Leave Planning Data saved successfully",
+                        type: "success"
+                    }).then(function () {
+                        window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                    });
+                });
+
+                let $form = $("#annual-leave-planning-upload-form"),
+                    $actionsWrapper = $form.next(".actions"),
+                    $uploadBtn = $actionsWrapper.find(".action-upload-merge"),
+                    oldText = $uploadBtn.text(),
+                    $actionsBtn = $actionsWrapper.find(".btn"),
+                    $file = $form.find("input[type='file']");
+
+                $file.on("change", function () {
+                    var $this = $(this),
+                        fileName = $this.val();
+
+                    $(this).data("autoUpload", false);
+
+                    if (fileName) {
+                        $this.next("label").text(fileName.substring(fileName.lastIndexOf("\\") + 1));
+                    }
+                });
+
+                $("#btn-edit-save").on("click", function (e) {
+                    e.preventDefault();
+
+                    app.confirm(app.translate("Save Changes"), app.translate("Save changes?"), function (d) {
+                        if (!d.value) return;
+
+                        var data = {
+                            DocumentApprovalId: '@Model.DocumentApprovalId',
+                            Object: getObject()
+                        };
+
+                        $.ajax({
+                            url: app.resolveUrl("~/api/annual-leave-planning/update-annual-leave-planning?action=save"),
+                            data: JSON.stringify(data),
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            success: function (resp) {
+                                swal({
+                                    title: "Save Changes",
+                                    text: "Annual Leave Planning Data saved successfully",
+                                    type: "success"
+                                }).then(function () {
+                                    window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                                });
+                            },
+                            fail: function (error) {
+                                console.error(error);
+                                app.error("Something went wrong when saving changes.");
+                            }
+                        });
+                    });
+                });
+
+                $("#btn-edit-submit").on("click", function (e) {
+                    e.preventDefault();
+
+                    var totalAnnualLeave = parseInt($("#totalAnnualLeave").val());
+
+                    if('@isCutOff' == 'True'){
+                        $sisaCuti = $('#sisacutitahundepan');
+                    } else {
+                        $sisaCuti = $('#sisacuti');
+                    }
+                    var remainingAnnualLeave = parseInt($sisaCuti.text());
+
+                    //if (totalAnnualLeave < remainingAnnualLeave) {
+                    //    app.error("Annual Leave must be fully allocated.");
+                    //    return;
+                    //}
+
+                    if (totalAnnualLeave > remainingAnnualLeave) {
+                        app.error("Total Annual Leave cannot be more than remaining Annual Leave.");
+                        return;
+                    }
+
+                    app.confirm(app.translate("Submit Data"), app.translate("Do you want to submit this document?"), function (d) {
+                        if (!d.value) return;
+
+                        var data = {
+                            DocumentApprovalId: '@Model.DocumentApprovalId',
+                            Object: getObject()
+                        };
+
+                        $.ajax({
+                            url: app.resolveUrl("~/api/annual-leave-planning/update-annual-leave-planning?action=submit"),
+                            data: JSON.stringify(data),
+                            type: 'POST',
+                            dataType: 'json',
+                            contentType: 'application/json',
+                            success: function (resp) {
+                                swal({
+                                    title: "Submit Changes",
+                                    text: "Annual Leave Planning Data submitted successfully",
+                                    type: "success"
+                                }).then(function () {
+                                    window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                                });
+                            },
+                            fail: function (error) {
+                                console.error(error);
+                                app.error("Something went wrong when submitting changes.");
+                            }
+                        });
+                    });
+                });
+
+                app.registerHandler("uploadDataHandler", function () {
+                    $.each(annualLeavePlanningDetails, function (index, item) {
+                        item.StartDate = kendo.toString(kendo.parseDate(item.StartDate), "yyyy-MM-dd");
+                        item.EndDate = kendo.toString(kendo.parseDate(item.EndDate), "yyyy-MM-dd");
+                    });
+
+                    let formData = new FormData();
+                    formData.append("file", $file[0].files[0]);
+                    formData.append("mode", "@mode");
+                    formData.append("yearPeriod", @periodYear);
+                    formData.append("details", JSON.stringify(annualLeavePlanningDetails));
+
+                    $actionsBtn.addClass("disabled");
+                    $uploadBtn.text("@Localizer["Uploading, please wait..."].Value");
+
+                    $.ajax({
+                        url: $form.attr("action"),
+                        data: formData,
+                        context: document.body,
+                        cache: false,
+                        contentType: false,
+                        processData: false,
+                        type: 'POST',
+                        success: function (data) {
+                            app.success(app.translate("Success upload and merge data"));
+                            $file.val("");
+                            $file.next("label").text(app.translate("Please choose a file"));
+                            $actionsBtn.removeClass("disabled");
+                            $uploadBtn.text(oldText);
+                            $("#annual-leave-planning-upload-modal").modal("hide");
+
+                            recalculateUploadedData(data);
+                        },
+                        error: function (error) {
+                            console.error(error);
+                            app.warning(error.Message);
+                            $file.val("");
+                            $file.next("label").text(app.translate("Please choose a file"));
+                            $actionsBtn.removeClass("disabled");
+                            $uploadBtn.text(oldText);
+                        }
+                    });
+                });
+
+            })(jQuery, app);
+
+            var dates = [];
+            $.ajax({
+                url: app.resolveUrl("~/api/annual-leave-planning/get-off-schedule"),
+                type: 'GET',
+                dataType: 'json',
+                contentType: 'application/json',
+                success: function (resp) {
+                    if(resp.length>0){
+                        $.each(resp, function(i,dt){
+                            var convDate= new Date(Date.parse(dt.Date));
+                            dates.push(convDate);
+                        });
+                    }
+                },
+                fail: function (error) {
+                    
+                    app.error("Something went wrong ");
+                }
+            });
+
+        
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/eventscalendar/gets"),
+                dataType: 'json',
+                data: {
+                    year: '@periodYear'
+                },
+                success: function (result) {
+                    if(result.Data.length>0){
+                        $.each(result.Data, function(i,data){
+                            var x = getDates(data.StartDate, data.EndDate);
+                            $.each(getDates(data.StartDate, data.EndDate), function(i, dt){
+                                dates.push(dt);
+                            });
+                        });
+                    }
+                }
+            });
+
+            function disableDates(date) {
+                if (date && compareDates(date, dates)) {
+                        return true;
+                    } else {
+                        return false;
+                    }
+
+            }
+
+            function compareDates(date, dates) {
+                for (var i = 0; i < dates.length; i++) {
+                    if (dates[i].getDate() == date.getDate() &&
+                      dates[i].getMonth() == date.getMonth() &&
+                        dates[i].getYear() == date.getYear()) {
+                        return true
+                    }
+                }
+            }
+
+            function getDates(startDate, stopDate) {
+                var dateArray = new Array();
+                var currentDate = startDate;
+                while (currentDate <= stopDate) {
+                    dateArray.push(new Date (currentDate));
+                    var dt = new Date(currentDate.valueOf());
+                    currentDate = dt.setDate(dt.getDate() + 1);
+                }
+                return dateArray;
+            }
+        </script>
+    }
+
+    <style type="text/css">
+        .k-calendar .k-weekend .k-link .k-disabled
+        { 
+          color: red;
+        }
+    </style>
+
+    @if (isRequester && (Model.Progress < 100 || mode.ToLower() == "edit") && canEdit)
+    {
+    @section pageToolbars {
+        <div class="toolbars" style="margin-left: 10px;">
+            <div class="dropdown">
+                <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown" style="width: 100%;">
+                        <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-right">
+                
+                    <li>
+                        <a href="/core/form/download?formKey=annual-leave-planning&amp;id=@Model.DocumentApprovalId" id="download-@Model.DocumentApprovalId" target="_blank">
+                            @Localizer["Download PDF"]
+                        </a>
+                    </li>
+                    @if (isApprover)
+                        {
+                             <li>
+                                @*<a href="~/api/annual-leave-planning/download-summary/@Model.DocumentApprovalId">
+                                    <i class="fa fa-file-excel-o" style="font-size: xx-large;"></i>
+                                </a>*@
+                                <a href="~/api/annual-leave-planning/download-summary/@Model.DocumentApprovalId" id="download-@Model.DocumentApprovalId" target="_blank">
+                            @Localizer["Download Excel"]
+                        </a>
+                            </li>
+                        }
+                    <li>
+                        <a href="~/api/annual-leave-planning/download-template?mode=@mode&docApprovalID=@Model.DocumentApprovalId">
+                            @Localizer["Download Template"]
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:;" data-trigger="modal" data-modal="annual-leave-planning-upload-modal">
+                            @Localizer["Upload"]
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    }
+    }
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Annual Leave Planning"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            @* Profile and Leave Information *@
+                            <div class="col-md-6 col-sm-12">
+                                <div class="row" style="margin-bottom: 10px;">
+                                    <div class="col-md-12 col-sm-12">
+                                        <div class="profpic">
+                                            <div class="profpic-wrapper">
+                                                <div class="profpic-avatar">
+                                                    <img src="@ConfigService.ResolveAvatar(currentUser)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                                </div>
+                                                <div class="profpic-body">
+                                                    <span class="profpic-title">@aos.Name</span>
+                                                    <span class="profpic-description">@aos.PostName</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                @Html.HiddenFor(x => x.Object.AnnualLeavePlanning.Id)
+                                @Html.HiddenFor(x => x.Object.AnnualLeavePlanning.DocumentApprovalId)
+                                <input type="hidden" id="totalAbsence" value="0" />
+                                <input type="hidden" id="totalAnnualLeave" value="0" />
+                                <input type="hidden" id="totalNextYearAnnualLeave" value="0" />
+                                <input type="hidden" id="totalLongLeave" value="0" />
+                                @if (isRequester)
+                                {
+                                    @if (isCutOff)
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-12 col-sm-12">
+                                                <fieldset>
+                                                    <div class="row d-flex" style="padding-top: 10px; padding-bottom: 10px; font-size: 22pt;">
+                                                        <div class="col-4 border-right d-flex justify-content-between flex-column">
+                                                            <span class="font-yellow-casablanca d-block text-center" style="font-size: 0.9rem; font-weight: bold">@Localizer["Annual Leave"] <br/> Jan - Des <br/> @periodYear</span>
+                                                            <div class="text-center">
+                                                                <h5 class="text-bold-300 d-inline font-red-mint"><span id="sisacuti"></span></h5>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4 border-right d-flex justify-content-between flex-column">
+                                                            <span class="font-green-haze d-block text-center" style="font-size: 0.9rem; font-weight: bold">@Localizer["Annual Leave"] <br/> Jan - Des <br/> @periodNextYear</span>
+                                                            <div class="text-center">
+                                                                <h5 class="text-bold-300 d-inline font-green-haze"><span id="sisacutitahundepan"></span></h5>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-4 border-right d-flex justify-content-between flex-column">
+                                                            <span class="font-yellow-casablanca d-block text-center" style="font-size: 0.9rem; font-weight: bold">@Localizer["Long Leave"]</span>
+                                                            <div class="text-center">
+                                                                <h5 class="text-bold-300 d-inline font-red-mint"><span id="sisacutipanjang"></span></h5>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                                    } else
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-12 col-sm-12">
+                                                <fieldset>
+                                                    <div class="row d-flex" style="padding-top: 10px; padding-bottom: 10px; font-size: 22pt;">
+                                                        <div class="col-6 border-right d-flex justify-content-between flex-column">
+                                                            <span class="font-yellow-casablanca d-block text-center" style="font-size: 0.9rem; font-weight: bold">@Localizer["Annual Leave"] <br/> Jan - Des <br/> @periodYear</span>
+                                                            <div class="text-center">
+                                                                <h5 class="text-bold-300 d-inline font-red-mint"><span id="sisacuti"></span></h5>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-6 border-right d-flex justify-content-between flex-column">
+                                                            <span class="font-yellow-casablanca d-block text-center" style="font-size: 0.9rem; font-weight: bold">@Localizer["Long Leave"]</span>
+                                                            <div class="text-center">
+                                                                <h5 class="text-bold-300 d-inline font-green-haze"><span id="sisacutipanjang"></span></h5>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </fieldset>
+                                            </div>
+                                        </div>
+                                    }
+                                }
+                            </div>
+                            @if (isRequester)
+                            {
+                                @* Add Leave Form *@
+                                <div class="col-md-6 col-sm-12">
+                                    <fieldset>
+                                        <div class="form-wrapper" style="padding: 15px 15px 0px 15px;">
+                                            <div class="form-group">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <label>@Localizer["Reason"]</label>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        @(Html.Kendo().ComboBox()
+                                                            .Name("Reason")
+                                                            .HtmlAttributes(new { @class = "form-control" })
+                                                            .Placeholder(Localizer["Select Reason2"].Value)
+                                                            .DataTextField("Name")
+                                                            .DataValueField("Id")
+                                                            .DataSource(dataSource => dataSource
+                                                                .Ajax()
+                                                                .Read(read => read
+                                                                .Url(Url.Content("~/api/annual-leave-planning/get-reason")))
+                                                            )
+                                                            .Enable(canEdit)
+                                                            .Events(e => e.Change("selectReason"))
+                                                            .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <label>@Localizer["Date From"]</label>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        @(Html
+                                                            .Kendo()
+                                                            .DatePicker()
+                                                            .Name("StartDate")
+                                                            .Format("dd/MM/yyyy")
+                                                            .Enable(false)
+                                                            .HtmlAttributes(new { style = "width: 100%;", placeholder = Localizer["Date From"].Value })
+                                                            .Events(e => e.Change("onchangeStartDate"))
+                                                            .DisableDates("disableDates")
+                                                            .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <label>@Localizer["Date To"]</label>
+                                                    </div>
+                                                    <div class="col-md-8">
+                                                        @(Html
+                                                            .Kendo()
+                                                            .DatePicker()
+                                                            .Name("EndDate")
+                                                            .Format("dd/MM/yyyy")
+                                                            .Enable(false)
+                                                            .HtmlAttributes(new { style = "width: 100%;", placeholder = Localizer["Date To"].Value })
+                                                            .Events(e => e.Change("onchangeEndDate"))
+                                                            .DisableDates("disableDates")
+                                                            .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group horizontal">
+                                                <button style="float:right;" type="button" id="btnAddLeavePlanning" @(canEdit ? "" : "disabled") class="btn btn-success">@Localizer["Add Leave List"]</button>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="col-md-6 col-sm-12">
+                                    <fieldset>
+                                        <div class="row d-flex" style="padding-top: 10px; padding-bottom: 10px; font-size: 22pt;">
+                                            <div class="col-4 border-right">
+                                                <span class="font-yellow-casablanca d-block" style="font-size: 1.0rem; font-weight: bold">Sisa Cuti @periodYear</span>
+                                                <div class="media d-flex p-2">
+                                                    <!--<a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Annual Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                                    
+                                                    </a>-->
+                                                    <i class="iconmoon-timemanagement font-large-1 font-red-mint mb-1"></i>
+                                                    <div class="media-body text-right">
+                                                        <h3 class="font-small-3 text-bold-300 d-inline font-red-mint"><span id="sisacuti"></span></h3>
+                                                        <span class="font-small-3 text-muted text-right d-block">@Localizer["Leave"]</span>
+                                                        <!--<span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>-->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4 border-right">
+                                                <span class="font-yellow-casablanca d-block" style="font-size: 1.0rem; font-weight: bold">Jatah Cuti @periodNextYear</span>
+                                                <div class="media d-flex p-2">
+                                                    <!--<a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Annual Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                                    
+                                                    </a>-->
+                                                    <i class="iconmoon-timemanagement font-large-1 font-red-mint mb-1"></i>
+                                                    <div class="media-body text-right">
+                                                        <h3 class="font-small-3 text-bold-300 d-inline font-red-mint"><span id="sisacutitahundepan"></span></h3>
+                                                        <span class="font-small-3 text-muted text-right d-block">@Localizer["Leave"]</span>
+                                                        <!--<span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>-->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <span class="font-yellow-casablanca d-block" style="font-size: 1.0rem; font-weight: bold">@Localizer["Long Leave"]</span>
+                                                <div class="media d-flex p-2">
+                                                    <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Long Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=long-leave">
+                                                        <i class="icon-plane font-large-1 font-green-haze mb-1"></i>
+                                                    </a>
+                                                    <div class="media-body text-right">
+                                                        <h3 class="font-small-3 text-bold-300 d-inline font-green-haze"><span id="sisacutipanjang"></span></h3>
+                                                        <span class="font-small-3 text-muted text-right d-block">@Localizer["Leave"]</span>
+                                                        <!--<span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>-->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            @(Html
+                                .Kendo()
+                                .DatePicker()
+                                .Name("StartDateFilter")
+                                .Format("dd/MM/yyyy")
+                                .Enable(true)
+                                .HtmlAttributes(new { style = "width: 100%;", placeholder = Localizer["Start Date"].Value })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            @(Html
+                                .Kendo()
+                                .DatePicker()
+                                .Name("EndDateFilter")
+                                .Format("dd/MM/yyyy")
+                                .Enable(true)
+                                .HtmlAttributes(new { style = "width: 100%;", placeholder = Localizer["End Date"].Value })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            @(Html.Kendo().ComboBox()
+                                .Name("ReasonFilter")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Select Reason2"].Value)
+                                .DataTextField("Name")
+                                .DataValueField("Id")
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read
+                                    .Url(Url.Content("~/api/annual-leave-planning/get-reason")))
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <div class="row">
+                                <div class="col-md-6 text-right">
+                                    <button type="button" style="width: 100%;" id="btnSearch" class="btn btn-primary">@Localizer["Search"].Value</button>
+                                </div>
+
+                                <div class="col-md-6 text-right">
+                                    <button type="button" style="width: 100%;" id="btnClear" class="btn btn-danger">@Localizer["Clear"].Value</button>
+                                </div>
+
+                                @*@if (isApprover)
+                                {
+                                    <div class="col-md-5" style="padding-top: 2px;">
+                                        <a href="~/api/annual-leave-planning/download-summary/@Model.DocumentApprovalId">
+                                            <i class="fa fa-file-excel-o" style="font-size: xx-large;"></i>
+                                        </a>
+                                    </div>
+                                }*@
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12 text-right">
+                            <h5 class="font-weight-bold">@Localizer["Leave Plan"]: <span id="totalLeave">0</span> @Localizer["Days"]</h5>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12 text-center" style="overflow:scroll">
+                            @(Html.Kendo()
+                                .Grid<AnnualLeavePlanningDetailView>()
+                                .Name("annualLeavePlanningDetailGrid")
+                                .Columns(col => {
+                                    col.Bound(c => c.StartDate).Title(Localizer["Date From"].Value).Width(150)
+                                        .HeaderHtmlAttributes(new { @class = "text-center text-bold" })
+                                        .HtmlAttributes(new { @class = "text-center" });
+                                    col.Bound(c => c.EndDate).Title(Localizer["Date To"].Value).Width(150)
+                                        .HeaderHtmlAttributes(new { @class = "text-center text-bold" })
+                                        .HtmlAttributes(new { @class = "text-center" });
+                                    col.Bound(c => c.Reason).Title(Localizer["Reason"].Value).Width(250)
+                                        .HeaderHtmlAttributes(new { @class = "text-bold text-center" });
+                                    col.Bound(c => c.Days).Title(Localizer["Days"].Value).Width(150)
+                                        .HeaderHtmlAttributes(new { @class = "text-center" })
+                                        .HtmlAttributes(new { @class = "text-center" })
+                                        .ClientTemplate("# if(IsUpdated == 1){ #" +
+                                        "<span style='background-color: yellow;'>#=Days#</span>" +
+                                        "#} else {#" +
+                                        "<span>#=Days#</span>" +
+                                        "#}#");
+                                    col.Bound(c => c.AbsentId).Hidden(true);
+                                    col.Bound(c => c.Id).Title(Localizer["Action"].Value).Width(150)
+                                        .HeaderHtmlAttributes(new { @class = "text-center text-bold" })
+                                        .HtmlAttributes(new { @class = "text-center" })
+                                        .ClientTemplate("#if (data.Period > data.periodYear){#"+
+                                            "<button type='button' onclick=\"deleteRow('#:Id#')\" class='btn btn-delete btn-danger' id='#:Id#'><i class='fa fa-trash'></i>$.toDefault(data.Period, '-')</button>"+
+                                        "#}#")
+                                        //.ClientTemplate("<button type='button' onclick=\"deleteRow('#:Id#')\" class='btn btn-delete btn-danger' id='#:Id#'><i class='fa fa-trash'></i></button>")
+                                        .Hidden(!canEdit || !isRequester);
+                                })
+                                .DataSource(d => d
+                                    .Custom()
+                                    .PageSize(10)
+                                    .Sort(s => s.Add("EndDate").Descending())
+                                )
+                                .Sortable(true)
+                                .Pageable()
+                                .Events(e => e.DataBound("onDataBound"))
+                                .Deferred(true)
+                            )
+                            <span class="invalid" data-validation-for="Object.AnnualLeavePlanningDetails.Count"></span>
+                            <span class="invalid" data-validation-for="Object.AnnualLeavePlanningDetails"></span>
+                            <span class="invalid" data-validation-for="Object.TotalAnnualLeave"></span>
+                            <span class="invalid" data-validation-for="Object.TotalLeave"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @section formActions
+    {
+        @if (canEdit)
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-9">
+                                        <div class="float-right">
+                                            @if (mode.ToLower() == "edit" && Model.Requester == User.GetClaim("NoReg"))
+                                            {
+                                                <button name="btnAction" class="btn-custom btn btn-info" id="btn-edit-save">
+                                                    <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                </button>
+                                                <button type="button" class="btn-custom btn btn-primary" id="btn-edit-submit">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                                <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                @if (AclHelper.CanEdit())
+                                                {
+                                                    <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true" data-parameters-redirecturl="~/timemanagement/annualplanning">
+                                                        <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                    </button>
+                                                }
+                                                @if (AclHelper.CanSubmit())
+                                                {
+                                                    <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                    </button>
+                                                }
+                                                @if (AclHelper.CanCancel())
+                                                {
+                                                    if (ApplicationHelper.IsDefault(Model.Id))
+                                                    {
+                                                        <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                            <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                            <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                        </a>
+                                                    }
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if(isApprover)
+        {
+            if(AclHelper.CanApprove()||AclHelper.CanReject()||AclHelper.CanRevise()){
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                        <div class="col-md-9 col-sm-8 col-8">
+                                            <div class="float-right">
+                                                @if (AclHelper.CanApprove())
+                                                {
+                                                    <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanReject())
+                                                {
+                                                    <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanRevise())
+                                                {
+                                                    <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                        <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                                    </a>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+    
+        }
+    }
+
+    @section pageFooter
+    {
+
+        @* Upload Modal *@
+        <div id="annual-leave-planning-upload-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                        <h4 class="modal-title">Upload Annual Leave Plan</h4>
+                    </div>
+                    <div class="modal-body">
+                        <form id="annual-leave-planning-upload-form" role="form" enctype="multipart/form-data" method="post" action="~/api/annual-leave-planning/upload">
+                            <div class="custom-file">
+                                <input type="file" class="custom-file-input" required="required" id="upload-field" autoUpload="false" />
+                                <label class="custom-file-label" style="text-overflow: ellipsis;">Choose file...</label>
+                            </div>
+                            <div class="list-group"></div>
+                        </form>
+                        <div class="actions modal-footer">
+                            <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+                            <button class="btn red-haze action-upload-merge" data-trigger="handler" data-handler="uploadDataHandler">@Localizer["Upload"]</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @* End of Upload Modal *@
+    }
+} 

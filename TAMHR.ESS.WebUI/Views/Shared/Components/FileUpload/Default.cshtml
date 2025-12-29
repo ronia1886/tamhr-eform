@@ -1,0 +1,22 @@
+﻿@model dynamic
+@{
+    var type = Model.GetType();
+
+    var propertyInfo = Model.GetType().GetProperty("docId");
+    var DocId = propertyInfo.GetValue(Model, null);
+
+    propertyInfo = Model.GetType().GetProperty("allowedTypes");
+    var AllowedTypes = propertyInfo.GetValue(Model, null);
+
+    propertyInfo = Model.GetType().GetProperty("fieldName");
+    var FieldName = propertyInfo.GetValue(Model, null);
+
+    //var AllowedTypes = "";
+
+    bool IS_MOBILE = Boolean.Parse(ViewData["IS_MOBILE"].ToString());
+    string DISABLE = !Boolean.Parse(ViewData["DISABLE"].ToString()) ? "div-disable" : "";
+
+    var id = FieldName.Replace("Object.", "");
+}
+<input type="hidden" name="@FieldName" id="@FieldName" data-validation-for="@FieldName"/>
+<div id="@id" class="file-upload file-@id @DISABLE" data-doc-id="@DocId.ToString()" name="@FieldName" data-name="@FieldName" data-is-mobile="@IS_MOBILE" data-types="@AllowedTypes">Upload</div>

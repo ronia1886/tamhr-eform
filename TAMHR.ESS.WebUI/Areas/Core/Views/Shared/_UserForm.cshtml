@@ -1,0 +1,118 @@
+﻿
+@model TAMHR.ESS.Domain.User
+<form method="put" action="~/api/user">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>No Reg.</label>
+                @Html.TextBoxFor(x => x.NoReg, new { @class = "form-control", @placeholder = Localizer["Please input noreg"].Value, @readonly = "readonly" })
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @placeholder = Localizer["Please input name"].Value, @readonly = "readonly" })
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Email"]</label>
+                @Html.TextBoxFor(x => x.Email, new { @class = "form-control", @placeholder = Localizer["Please input email"].Value, @readonly = "readonly" })
+            </div>
+        </div>
+    </div>
+    <hr />
+    <div class="row">
+        <div class="col">
+            @(Html.Kendo().Grid<TAMHR.ESS.Domain.Role>()
+                .Name("grid")
+                .HtmlAttributes(new { data_filter = "role-filter" })
+                .Columns(columns =>
+                {
+                    columns.Bound(c => c.Id).HtmlAttributes(new { @class = "text-center" })
+                        .HeaderHtmlAttributes(new { @class = "text-center" })
+                        .ClientHeaderTemplate(@"<input type=""checkbox"" />")
+                        .ClientTemplate(@"<input type=""checkbox"" name=""Roles[]"" value=""#:Id#"" #: Active ? 'checked' : '' # />")
+                        .Width(55);
+
+                    columns.Bound(c => c.Title).Title("Role").ClientTemplate(@"
+                        <div class=""media"">
+                            <div class=""media-body ml-2"">
+                                <h6 class=""mt-1 mb-0 bold"">#:Title#</h6>
+                                <small>#:Description#</small>
+                            </div>
+                        </div>
+                    ");
+                })
+                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/user/getroles")).Data(@<text>function() { return { id: "@Model.Id" } }</text>))
+                    .Filter(filter => filter.Add(x => x.RoleTypeCode).IsNotEqualTo("auto"))
+                    .Sort(sort => sort.Add("Description").Ascending())
+                )
+            )
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="dataInterceptor">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    app.registerHandler("dataInterceptor", function (d) {
+        var error = 0;
+
+        $.ajax({
+            type: 'POST',
+            url: app.resolveUrl("~/api/termination/validate-exitclearance-role"),
+            dataType: 'text',
+            async: false,
+            traditional: true,
+            data: {
+                roles: d.Roles.toString(),
+                userid: d.Id.toString()
+            },
+            success: function (result) {
+                if (result == 'success') {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/termination/update-termination-exitclearance-task"),
+                        dataType: 'text',
+                        async: false,
+                        traditional: true,
+                        data: {
+                            roles: d.Roles.toString(),
+                            noreg: d.NoReg.toString()
+                        },
+                        success: function (result) {
+                            if (result == 'success') {
+
+                            } else {
+                                app.error(result);
+                                error++;
+                            }
+                        },
+                        error: function (error) {
+                            app.error(error.statusText);
+                            error++;
+                        }
+                    });
+                } else {
+                    app.error(result);
+                    error++;
+                }
+            },
+            error: function (error) {
+                app.error(error.statusText);
+                error++;
+            }
+        });
+
+        if (error == 0) {
+            return d;
+        }
+    });
+</script>

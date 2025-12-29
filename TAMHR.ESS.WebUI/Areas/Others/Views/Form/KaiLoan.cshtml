@@ -1,0 +1,102 @@
+﻿@model DocumentRequestDetailViewModel<KaiLoanViewModel>
+@section scripts {
+<script type="text/javascript">
+        $(function () {
+            var initValue = @Math.Floor(Model.Object.Loan);
+
+            $("#idrWords").text((initValue == 0 ? "nol" : $.printWords(initValue)) + " rupiah");
+        });
+</script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["KAI Loan Request Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Request Detail"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Loan Type"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.LoanType, "KaiLoanType")
+                                        .Enable(AclHelper.CanEdit())
+                                        .Placeholder(Localizer["Please select loan type"].Value)
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.LoanType"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Loan"]</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text">Rp</span>
+                                        </div>
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.Loan)
+                                            .Value(Math.Floor(Model.Object.Loan))
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.Loan" })
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Min(0)
+                                            .Max(1000000000)
+                                            .Enable(AclHelper.CanEdit())
+                                            .Events(events =>
+                                            {
+                                                events.Change(@<text>function() {
+                                                     var val = Number(this.value());
+
+                                                     $("#idrWords").text($.printWords(val) + " rupiah");
+                                                }</text>);
+                                            })
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <small class="form-text text-muted">@Localizer["Spelled out"]: <span id="idrWords" class="font-red">Nol Rupiah</span></small>
+                                    <span class="invalid" data-validation-for="Object.Loan"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                                    @if (AclHelper.CanEdit())
+                                    {
+                                        @(await Component.InvokeAsync<FileUpload>(new { docId = Model.DocumentApprovalId, field = "Object.FilePath" }))
+                                        <span class="invalid" data-validation-for="Object.FilePath"></span>
+                                    }
+                                    else
+                                    {
+                                        <br />
+                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "FilePath" })
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group inline">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Remarks", placeholder = Localizer["Please input remarks"].Value, style = "height: 250px;" }, AclHelper.CanEdit()))
+                                    <span class="invalid" data-validation-for="Object.Remarks"></span>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

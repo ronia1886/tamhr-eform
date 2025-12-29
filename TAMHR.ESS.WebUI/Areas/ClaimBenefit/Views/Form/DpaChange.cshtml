@@ -1,0 +1,257 @@
+﻿@*@model TAMHR.ESS.Infrastructure.ViewModels.DpaRegisterViewModel
+@{
+    //parameter mandatory
+    var isNew = new Guid(ViewData["DocumentId"].ToString()) == default(Guid);
+    bool isReadonly = bool.Parse(ViewData["readOnly"].ToString());
+    bool isRequester = true;
+    bool isView = bool.Parse(ViewData["isView"].ToString());
+    string disabled = isReadonly ? "disabled" : "";
+
+    ScriptManager.RegisterReferences("datepicker", "combobox", "aspnetmvc");
+}
+
+@section scripts {
+    @Html.Kendo().DeferredScripts(true)
+    <script type="text/javascript">
+        app.registerHandler("submit-handler", function (d) {
+            window.location.href = d.returnUrl || "/?strmsg=Success%20Update";
+        });
+    </script>
+
+}
+@{
+    string User = "User";
+    string Kelas = "5";
+    string isreadonly = bool.Parse(ViewData["readOnly"].ToString()) ? "disabled" : "";
+}
+    <form class="form-horizontal" method="@(isNew ? "post" : "put")" action="/api/dpachange">
+
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Detail DPA</h4>
+                        <a class="heading-elements-toggle">
+                            <i class="ft-ellipsis-h font-medium-3"></i>
+                        </a>
+                        <div class="heading-elements">
+
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <fieldset class="border p-2">
+                                        <legend class="w-auto">Data DPA</legend>
+
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <div class="form-group">
+                                                    <label>Tujuan Transfer :</label>
+                                                    <div class="mt-radio-list">
+                                                        <label class="mt-radio">
+                                                            Rekening <label class="font-red">User</label>
+                                                            @Html.RadioButtonFor(x => x.data.AccountType, "pribadi", isReadonly ?
+                                                                          (object)new { @checked = false , @disabled = "disabled" } :
+                                                                          (object)new { @checked = false })
+                                                            <span></span>
+                                                        </label>
+                                                        <label class="mt-radio">
+                                                            Rekening Lain
+                                                            @Html.RadioButtonFor(x => x.data.AccountType, "rekening lain", isReadonly ?
+                                                                          (object)new { @checked = false , @disabled = "disabled" } :
+                                                                          (object)new { @checked = false })
+                                                            <span></span>
+                                                        </label>
+                                                    </div>
+                                                    <div class="col-md-12 form-inline">
+                                                        @(Html.Kendo().ComboBoxFor(x => x.data.BankCode).HtmlAttributes
+                                                                                                                         (new { @class = "form-control" }).Deferred()
+                                                        )
+
+                                                        @(Html.Kendo().ComboBoxFor(x => x.data.Branch).HtmlAttributes
+                                                                                                    (new { @class = "form-control" }).Deferred()
+                                                        )
+                                                    </div>
+
+
+                                                    <label class="col-md-3 control-label">No Rekening</label>
+                                                    <div class="col-md-9">
+                                                        @Html.TextBoxFor(x => x.data.AccountNumber, isReadonly ?
+                                                                  (object)new { @class = "form-control", @data_validation_for = "data.AccountNumber", @placeholder = "Masukkan Nomor Rekening", @disabled = "disabled" } :
+                                                                  (object)new { @class = "form-control", @data_validation_for = "data.AccountNumber", @placeholder = "Masukkan Nomor Rekening" })
+                                                    </div>
+
+                                                    <label class="col-md-3 control-label">Nama Rekening</label>
+                                                    <div class="col-md-9">
+                                                        @Html.TextBoxFor(x => x.data.AccountName, isReadonly ?
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.AccountName", @placeholder = "Masukkan Nama Rekening", @disabled = "disabled" } :
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.AccountName", @placeholder = "Masukkan Nama Rekening" })
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                            <div class="col-sm-12">
+                                                <div class="form-group">
+                                                    <label>Email Pribadi :</label>
+                                                    @Html.TextBoxFor(x => x.data.Email, isReadonly ?
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.Email", @placeholder = "Masukkan Email", @disabled = "disabled" } :
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.Email", @placeholder = "Masukkan Email" })
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-12">
+                                                <div class="row">
+                                                    <div class="col-md-6 form-group">
+                                                        <label>Telp Rumah</label>
+                                                        @Html.TextBoxFor(x => x.data.HouseNumber, isReadonly ?
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.HouseNumber", @placeholder = "Masukkan Telp Rumah", @disabled = "disabled" } :
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.HouseNumber", @placeholder = "Masukkan Telp Rumah" })
+                                                    </div>
+
+                                                    <div class="col-md-6 form-group">
+                                                        <label>Nomor HP</label>
+                                                        @Html.TextBoxFor(x => x.data.MobilePhoneNumber, isReadonly ?
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.MobilePhoneNumber", @placeholder = "Masukkan Nomor HP", @disabled = "disabled" } :
+                                                                   (object)new { @class = "form-control", @data_validation_for = "data.MobilePhoneNumber", @placeholder = "Masukkan Nomor HP" })
+                                                    </div>
+                                                </div>
+                                            </div>
+
+
+                                        </div>
+                                    </fieldset>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <fieldset class="border p-2">
+                                        <legend class="w-auto">Catatan</legend>
+                                        <div class="form-group">
+                                            <label>Detail Catatan</label>
+                                            <textarea class="form-control" rows="3"></textarea>
+                                        </div>
+                                    </fieldset>
+
+
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-7">
+                                    <fieldset>
+                                        <legend>Data Ahli Waris</legend>
+
+                                        <div class="col-sm-12 mt-2 mb-3">
+                                            <a class="btn btn-circle btn-icon-only btn-default" href="javascript:;">
+                                                <i class="icon-plus"></i>
+                                            </a>
+                                            Tambah Ahli Waris
+                                        </div>
+
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <label>Nama :</label>
+                                                @Html.TextBoxFor(x => x.data.Name, isReadonly ?
+                                                    (object)new { @class = "form-control", @data_validation_for = "data.Name", @placeholder = "Masukkan Nama", @disabled = "disabled" } :
+                                                    (object)new { @class = "form-control", @data_validation_for = "data.Name", @placeholder = "Masukkan Nama" })
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-12">
+                                            <div class="form-group">
+                                                <label>Tanggal Lahir :</label>
+                                                @(Html.Kendo().DatePickerFor(x => x.data.BrithDate)
+                                                          .HtmlAttributes(new { @class = "form-control" })
+                                                          .Deferred()
+                                                )
+                                            </div>
+                                        </div>
+
+                                        <div class="col-sm-6">
+                                            <div class="form-group">
+                                                @(Html.Kendo().ComboBoxFor(x => x.data.FamilyRelation).HtmlAttributes
+                                                          (new { @class = "form-control" }).Deferred()
+                                                )
+                                            </div>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-sm-12">
+                                                <table class="ml-3">
+                                                    <colgroup width="40" />
+                                                    <colgroup width="200" />
+                                                    <tr>
+                                                        <td>1</td>
+                                                        <td>Nama</td>
+                                                        <td><i class="fa fa-times"></i></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>01/01/1989</td>
+                                                        <td></td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td></td>
+                                                        <td>Ibu</td>
+                                                        <td></td>
+                                                    </tr>
+                                                </table>
+                                            </div>
+                                        </div>
+
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        @{
+            if (!isView)
+            {
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <input type="hidden" name="btnAction" />
+                                        @{
+                                            if (isRequester)
+                                            {
+                                                <label class="col-md-3 col-sm-3">Kirim Perubahan ?</label>
+                                                <div class="col-md-9 col-sm-9">
+                                                    <div class="float-right">
+                                                        <button name="btnAction" value="@EnumHelper.eDocumentAction.draft" class="btn btn-info" data-trigger="submit" data-callback="submit-handler" data-confirmation="true" data-confirmationmsg="Simpan Perubahan Data ?">Draft</button>
+                                                        <button name="btnAction" value="@EnumHelper.eDocumentAction.inprogress" class="btn btn-primary" data-trigger="submit" data-callback="submit-handler" data-confirmation="true" data-confirmationmsg="Simpan Perubahan Data ?">Submit</button>
+                                                        <button class="btn btn-danger" type="button">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="col-md-12 col-sm-12">
+                                                    <div class="float-right">
+                                                        <button name="btnAction" value="@EnumHelper.eDocumentAction.completed" class="btn btn-primary" data-trigger="submit" data-callback="create-handler" data-confirmation="true" data-confirmationmsg="Simpan Perubahan Data ?">Approve</button>
+                                                        <button name="btnAction" value="@EnumHelper.eDocumentAction.revised" class="btn btn-warning" data-trigger="submit" data-callback="create-handler" data-confirmation="true" data-confirmationmsg="Simpan Perubahan Data ?">Revise</button>
+                                                        <button name="btnAction" value="@EnumHelper.eDocumentAction.rejected" class="btn btn-danger" data-trigger="submit" data-callback="create-handler" data-confirmation="true" data-confirmationmsg="Simpan Perubahan Data ?">Reject</button>
+                                                        <button class="btn btn-outline-dark" type="button">Cancel</button>
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </form>*@

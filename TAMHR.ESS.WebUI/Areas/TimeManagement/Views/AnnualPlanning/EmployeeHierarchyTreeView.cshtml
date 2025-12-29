@@ -1,0 +1,69 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var NoReg = ViewBag.NoReg;
+    var data = (IEnumerable<TreeViewItemModel>)ViewBag.treeData;
+
+}
+
+@section scripts{
+    <script type="text/javascript">
+        function getEmployeeParameters() {
+                return {
+                    noreg: "@User.GetClaim("NoReg")",
+                    postcode: "@User.GetClaim("PostCode")"
+                };
+            }
+
+        function fetchHierarchy(noreg,postcode) {
+            var $loader = $(".hierarchy-widget").find(".loader");
+
+            $loader.load("@Url.Content("~/TimeManagement/AnnualPlanning/GetHierarchiest")", { noreg,postcode });
+        }
+
+        $(function () {
+            var parameters = getEmployeeParameters(),
+                noreg = parameters.noreg,
+                postcode = parameters.postcode
+            fetchHierarchy(noreg,postcode);
+        });
+    </script>
+}
+
+<div class="profile-sidebar column sortable">
+    <div class="portlet light profile-light">
+        <div class="portlet-body">
+            <div class="profpic">
+                <div class="profpic-wrapper">
+                    <div class="profpic-avatar">
+                        <img src="@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                    </div>
+                    <div class="profpic-body">
+                        <span class="profpic-title">@User.GetClaim("Name")</span>
+                        <span class="profpic-description">@User.GetClaim("PostName")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="portlet light bordered hierarchy-widget portlet-sortable">
+        <div class="portlet-title">
+            <div class="caption caption-md">
+                <i class="icon-globe theme-font hide"></i>
+                <span class="caption-subject font-blue-madison bold uppercase">Hierarchy</span>
+            </div>
+            <div class="tools">
+                <a class="collapse"></a>
+            </div>
+        </div>
+        <div class="portlet-body" style="margin: 0; padding: 0;">
+            @(
+                            Html.Kendo().TreeView()
+                                .Name("EmployeeHierarchy")
+                                .BindTo(data)
+                                .Template("<div onClick=\"$.onSearchForm('#=item.id#');\" style='font-size: 12px;'><i class='fa fa-user font-blue'></i> #=item.text#</div>")
+                                .Deferred()
+                        )
+        </div>
+    </div>
+    <div class="hidden-xs hidden-sm portlet portlet-sortable-empty"></div>
+</div>

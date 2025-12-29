@@ -1,0 +1,202 @@
+﻿@inject IScriptManager ScriptManager
+<script type="text/javascript" src="~/plugins/pdf.min.js"></script>
+<script type="text/javascript">
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+</script>
+<script type="text/javascript">
+    (function ($) {
+        let $pdfWrapper = $("#pdf-wrapper"),
+            $noResultWrapper = $(".no-result");
+
+        function serialize(obj) {
+            var str = [];
+
+            for (var p in obj) {
+                if (obj.hasOwnProperty(p)) {
+                    str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+                }
+            }
+
+            return str.join("&");
+        }
+
+        function getGrid() {
+            return $("#userActivityLogGrid");
+        }
+
+        app.registerHandler("downloadHandler", function () {
+            doAction(false);
+        });
+
+        app.registerHandler("viewHandler", function () {
+            doActionView(true);
+        });
+
+        app.registerHandler("updateHandler", function () {
+            app.close($(this));
+            app.success("Success change password");
+            app.refreshControl(getGrid());
+        });
+
+        app.registerHandler("changePasswordHandler", function () {
+            let $modal = $("#change-password-modal"),
+                $form = $modal.find("form");
+
+            app.clearValidation($form);
+            $form[0].reset();
+            $modal.modal("show");
+        });
+
+        function doAction(inline) {
+            swal({
+                title: "@Localizer["Please input your password"]",
+                input: 'password',
+                inputPlaceholder: "@Localizer["Type your password here"]",
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    return !value && app.translate('This field must be filled!')
+                },
+                preConfirm: (inputText) => {
+                    return $.post(app.resolveUrl('~/api/payslip/check-password'), { Value: inputText })
+                        .then(response => {
+                            if (!response.IsValid) {
+                                Swal.showValidationError(app.translate('You input the wrong password'));
+                            } else {
+                                return inputText;
+                            }
+                        });
+                }
+            }).then(function (result) {
+                if (!result.value) return;
+
+                let period = $("#Period").val(),
+                    data = {
+                        password: result.value,
+                        month: $("#Month").val(),
+                        period: period,
+                        isThr: $("#IsThr").val(),
+                        inline: inline,
+                        token: $("input[name='__RequestVerificationToken']").val()
+                    },
+                    monthName = $("#Month").data("kendoComboBox").text(),
+                    url = app.resolveUrl("~/api/payslip/download?" + serialize(data));
+
+                //if (inline) {
+                //    let $kendoPdfWrapper = $pdfWrapper.data("kendoPDFViewer");
+
+                //    if ($kendoPdfWrapper) {
+                //        console.log("success pdf");
+                //        $kendoPdfWrapper.fromFile(url);
+                //    }
+                //    else {
+                //        $pdfWrapper.kendoPDFViewer({
+                //            toolbar: false,
+                //            scale: 1,
+                //            pdfjsProcessing: {
+                //                file: url
+                //            },
+                //            width: "100%",
+                //            height: "100%",
+                //            render: function (e) {
+                //                app.refreshControl(getGrid());
+                //            },
+                //            error: function (e) {
+                //                e.preventDefault();
+
+                //                $noResultWrapper.show();
+                //                $noResultWrapper.find(".message").text(kendo.format(app.translate("Payslip document for period {0} {1} are not exist."), monthName, period));
+                //                $pdfWrapper.hide();
+                //            }
+                //        })
+                //    }
+
+                //    $noResultWrapper.hide();
+                //    $pdfWrapper.show();
+                //}
+                //else {
+                    window.open(url, "_blank");
+                //}
+            });
+        }
+
+        function doActionView(inline) {
+            swal({
+                title: "@Localizer["Please input your password"]",
+                input: 'password',
+                inputPlaceholder: "@Localizer["Type your password here"]",
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    return !value && app.translate('This field must be filled!')
+                },
+                preConfirm: (inputText) => {
+                    return $.post(app.resolveUrl('~/api/payslip/check-password'), { Value: inputText })
+                        .then(response => {
+                            if (!response.IsValid) {
+                                Swal.showValidationError(app.translate('You input the wrong password'));
+                            } else {
+                                return inputText;
+                            }
+                        });
+                }
+            }).then(function (result) {
+                if (!result.value) return;
+
+                let period = $("#Period").val(),
+                    data = {
+                        password: result.value,
+                        month: $("#Month").val(),
+                        period: period,
+                        isThr: $("#IsThr").val(),
+                        inline: inline,
+                        token: $("input[name='__RequestVerificationToken']").val()
+                    },
+                    monthName = $("#Month").data("kendoComboBox").text(),
+                    url = app.resolveUrl("~/api/payslip/download?" + serialize(data));
+                    //console.log(monthName);
+                    //console.log(url);
+                let kendoPdfViewer = $pdfWrapper.data("kendoPDFViewer");
+                    //console.log(kendoPdfViewer);
+                    if (kendoPdfViewer) {
+                        //console.log("destroy pdf");
+                        kendoPdfViewer.destroy();
+                        // Hapus data kendoPDFViewer agar benar-benar kosong
+                        $pdfWrapper.removeData("kendoPDFViewer");
+
+                        // Opsional: Kosongkan HTML elemen, supaya bersih sebelum init ulang
+                        $pdfWrapper.empty();
+                    }
+                    //else {
+                        //console.log("false pdf");
+                        //console.log(monthName);
+                    $pdfWrapper.kendoPDFViewer({
+                        toolbar: false,
+                        scale: 1,
+                        pdfjsProcessing: {
+                            file: url
+                        },
+                        width: "100%",
+                        height: "100%",
+                        render: function (e) {
+                            app.refreshControl(getGrid());
+                        },
+                        error: function (e) {
+                            e.preventDefault();
+
+                            $noResultWrapper.show();
+                            $noResultWrapper.find(".message").text(kendo.format(app.translate("Payslip document for period {0} {1} are not exist."), monthName, period));
+                            $pdfWrapper.hide();
+                        }
+                    })
+                    //}
+
+                    $noResultWrapper.hide();
+                    $pdfWrapper.show();
+                
+            });
+        }
+
+        $(document).on('click', '.k-link, li.k-item', function (e) {
+            e.stopPropagation();
+        });
+    })(jQuery);
+</script>

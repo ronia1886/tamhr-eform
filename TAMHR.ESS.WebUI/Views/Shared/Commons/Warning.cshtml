@@ -1,0 +1,7 @@
+﻿@model TAMHR.ESS.Infrastructure.ViewModels.CommonViewModel
+<div class="bd-callout bd-callout-warning bg-white mt-0">
+    <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer[Model.Title]</h4>
+    <p>@Localizer[Model.Message]</p>
+    <a href="@Url.Content(Model.Arguments.ToString())" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+</div>
+

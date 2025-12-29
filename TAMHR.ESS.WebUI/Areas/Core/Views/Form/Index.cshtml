@@ -1,0 +1,62 @@
+﻿
+@using System.IO
+@using System
+@inject TAMHR.ESS.Infrastructure.Web.Runtime.Providers.PathProvider PathProvider
+@using Microsoft.AspNetCore.Http;
+@using Microsoft.AspNetCore.Hosting;
+@using System.Web;
+
+@{
+    var formKey = this.Context.Request.Query["formKey"].ToString();
+    ScriptManager.RegisterReference("listview");
+    var urlContent = Context.Request.Host.Value;
+    var pathUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}";
+    //var fullUrl = pathUrl + "/core/form/create?formKey=" + formKey;
+}
+@section pageToolbars {
+    <ul class="page-toolbars">
+        <li>
+           @* <a class="btn btn-sm red" href="@Url.Content("~/core/form/create?formKey="+formKey)"> *@
+            <a class="btn btn-sm red btn-create">
+                <i class="fa fa-plus-square"></i> <span class="d-none d-md-inline">@Localizer["Create New Request"]</span><span class="d-inline d-md-none">@Localizer["New"]</span>
+            </a>
+        </li>
+    </ul>
+}
+@{ 
+    try
+    {
+        await Html.RenderPartialAsync(pathUrl+$"/Views/Shared/InfoSummary/{formKey.Replace("-", string.Empty)}Info.cshtml");
+    }
+    catch
+    {
+    }
+}
+@(await Component.InvokeAsync<RequestHistory>(new { formKey = formKey }))
+
+<script type="text/javascript" src="@pathUrl/plugins/jquery-3.7.1.min.js"></script>
+<script type="text/javascript">
+    
+    $(".btn-create").on("click", function () {
+        var objData = {
+            FormKey: "@formKey"
+        };
+        $.ajax({
+            method: "POST",
+            url: "@pathUrl/core/form/create",
+            //dataType: "json",
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            data: JSON.stringify(objData),
+                success: function (result) {
+                //     window.location.href = "@pathUrl/" + result.replace("~/", "");
+                // }
+                if (result.redirectUrl) {
+                    window.location.assign(result.redirectUrl);
+                }
+                }
+        });
+    });
+</script>

@@ -1,0 +1,202 @@
+﻿@model TAMHR.ESS.Domain.SafetyFacilityViewModel
+@{
+    var isNew = Model.Id == default(Guid);
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var maxDate = Model.CreatedOn;
+}
+
+<script>
+    //Fungsi untuk mendapatkan nilai parameter dari URL
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    function populateFilters() {
+        var divisionCode = getUrlParameter('DivisionCode');
+        var areaId = getUrlParameter('AreaId');
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+        var equipmentComboBox = $("#EquipmentId").data("kendoComboBox");
+
+        if (divisionCode && $("#DivisionCode").data("kendoComboBox")) {
+            $("#DivisionCode").data("kendoComboBox").value(divisionCode);
+            divisionComboBox.readonly(true);
+        }
+
+        if (areaId && areaComboBox) {
+            areaComboBox.dataSource.read(); // Load ulang data area
+            areaComboBox.value(areaId.toUpperCase());
+            areaComboBox.readonly(true);
+            equipmentComboBox.readonly(false);
+            equipmentComboBox.dataSource.read();
+        }
+    }
+</script>
+<script>
+    $(document).ready(function() {
+        // Ambil instance ComboBox
+        var divisionComboBox = $("#DivisionCode").data("kendoComboBox");
+        var areaComboBox = $("#AreaId").data("kendoComboBox");
+        var equipmentComboBox = $("#EquipmentId").data("kendoComboBox");
+
+        // Cek apakah ini mode edit atau tambah data
+        var isNew = @Json.Serialize(isNew);
+        var areaId = @Json.Serialize(Model.AreaId);
+        var divisionCode = @Json.Serialize(Model.DivisionCode);
+
+        if (!isNew && areaId) {
+            areaComboBox.readonly(false); // Aktifkan area jika ada nilai saat update
+            areaComboBox.dataSource.read(); // Muat ulang data agar NamaArea muncul
+        } else {
+            areaComboBox.readonly(true);
+        }
+
+        // Nonaktifkan Equipment jika Area belum dipilih
+        equipmentComboBox.readonly(areaId ? false : true);
+
+        // Event ketika Divisi berubah
+        divisionComboBox.bind("change", function() {
+            var divisionCode = this.value();
+
+            if (divisionCode) {
+                areaComboBox.readonly(false); // Aktifkan Area jika Divisi dipilih
+                areaComboBox.dataSource.read(); // Load ulang data area
+            } else {
+                areaComboBox.readonly(true);
+                areaComboBox.value(""); // Kosongkan pilihan area
+                equipmentComboBox.readonly(true);
+                equipmentComboBox.value("");
+            }
+        });
+
+        // Event ketika Area berubah
+        areaComboBox.bind("change", function() {
+            var areaId = this.value();
+
+            if (areaId) {
+                equipmentComboBox.readonly(false);
+                equipmentComboBox.dataSource.read();
+            } else {
+                equipmentComboBox.readonly(true);
+                equipmentComboBox.value("");
+            }
+        });
+
+        populateFilters();
+    });
+
+    // Function untuk filter area berdasarkan Divisi
+    function filterArea() {
+        return {
+            divisionCode: $("#DivisionCode").data("kendoComboBox").value(),
+        };
+    }
+
+    // Function untuk filter equipment berdasarkan Divisi dan Area
+    function filterEquipment() {
+        return {
+            divisionCode: $("#DivisionCode").data("kendoComboBox").value(),
+            areaId: $("#AreaId").data("kendoComboBox").value()
+        };
+    }
+</script>
+
+
+<form enctype="multipart/form-data" method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/ohs/area-activity/insertSafetyFacility" : "~/api/ohs/area-activity/updateSafetyFacility")">
+    @Html.HiddenFor(x => x.Id)
+
+        <div class="row">
+            <div class="col-md-6 col-6">
+                <div class="form-group">
+                    <label><span class="required" aria-required="true"> * </span>@Localizer["Divisi"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("DivisionCode")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisionCode", @required = "required" })
+                    .DataTextField("ObjectText")
+                    .DataValueField("ObjectCode")
+                    .Placeholder(Localizer["Please select Divisi"].Value)
+                    .Value(Model.DivisionCode ?? string.Empty)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-Divisi")))
+                    .Sort(sort => sort.Add("ObjectText"))
+                    )
+                    .SelectedIndex(-1)
+                    )
+                    <span class="invalid" data-validation-for="DivisiCode"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 col-6">
+                <div class="form-group">
+                    <label><span class="required" aria-required="true"> * </span>@Localizer["Area"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AreaId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "AreaId", @required = "required" })
+                    .DataTextField("NamaArea")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Area"].Value)
+                    .Value(Model.AreaId ?? string.Empty)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-AreaDropDown"))
+                    .Data("filterArea"))
+                    .Sort(sort => sort.Add("NamaArea"))
+                    )
+                    )
+                    <span class="invalid" data-validation-for="AreaId"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 col-6">
+                <div class="form-group">
+                    <label><span class="required" aria-required="true"> * </span>@Localizer["Equipment"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("EquipmentId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "EquipmentId", @required = "required" })
+                    .DataTextField("EquipmentName")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Equipment"].Value)
+                    .Value(Model.EquipmentId == Guid.Empty ? string.Empty : Model.EquipmentId.ToString())
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/gets-EquipmentDropDown"))
+                    .Data("filterEquipment"))
+                    .Sort(sort => sort.Add("EquipmentName"))
+                    )
+                    )
+                    <span class="invalid" data-validation-for="EquipmentId"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-12">
+                <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Total Actual"]</label>
+                @Html.TextBoxFor(x => x.TotalActual, new { @class = "form-control", @data_validation_for = "TotalActual", @placeholder = Localizer["Please input Total Actual"].Value })
+                    <span class="invalid"></span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 col-12">
+                <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Remark"]</label>
+                @Html.TextBoxFor(x => x.Remark, new { @class = "form-control", @data_validation_for = "Remark", @placeholder = Localizer["Please input Remark"].Value })
+                    <span class="invalid"></span>
+                </div>
+            </div>
+        </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

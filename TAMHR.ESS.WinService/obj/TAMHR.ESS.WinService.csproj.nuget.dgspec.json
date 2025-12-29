@@ -1,0 +1,304 @@
+{
+  "format": 1,
+  "restore": {
+    "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WinService\\TAMHR.ESS.WinService.csproj": {}
+  },
+  "projects": {
+    "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj",
+        "projectName": "TAMHR.ESS.Domain",
+        "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj",
+        "packagesPath": "C:\\Users\\ronia\\.nuget\\packages\\",
+        "outputPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\NuGet.Config",
+          "C:\\Users\\ronia\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files (x86)\\Progress\\Telerik UI for ASP.NET Core 2025 Q1\\": {},
+          "D:\\Code\\TAMHR.RMS-MASTER-REVAMP\\packages": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Agit.Common": {
+              "target": "Package",
+              "version": "[2.0.0.6, )"
+            },
+            "System.ComponentModel.Annotations": {
+              "target": "Package",
+              "version": "[6.0.0-preview.4.21253.7, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\TAMHR.ESS.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\TAMHR.ESS.Infrastructure.csproj",
+        "projectName": "TAMHR.ESS.Infrastructure",
+        "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\TAMHR.ESS.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\ronia\\.nuget\\packages\\",
+        "outputPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\NuGet.Config",
+          "C:\\Users\\ronia\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files (x86)\\Progress\\Telerik UI for ASP.NET Core 2025 Q1\\": {},
+          "D:\\Code\\TAMHR.RMS-MASTER-REVAMP\\packages": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj": {
+                "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Agit.Domain": {
+              "target": "Package",
+              "version": "[2.0.0.8, )"
+            },
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[9.0.0, )"
+            },
+            "AutoMapper.Extensions.Microsoft.DependencyInjection": {
+              "target": "Package",
+              "version": "[7.0.0, )"
+            },
+            "FluentFTP": {
+              "target": "Package",
+              "version": "[32.4.1, )"
+            },
+            "FluentValidation": {
+              "target": "Package",
+              "version": "[12.0.0, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[8.0.19, )"
+            },
+            "Microsoft.Extensions.Localization.Abstractions": {
+              "target": "Package",
+              "version": "[8.0.19, )"
+            },
+            "PdfSharp": {
+              "target": "Package",
+              "version": "[6.2.1, )"
+            },
+            "Scriban": {
+              "target": "Package",
+              "version": "[1.2.5, )"
+            },
+            "Telerik.UI.for.AspNet.Core": {
+              "target": "Package",
+              "version": "[2025.1.227, )"
+            },
+            "Z.EntityFramework.Plus.EFCore": {
+              "target": "Package",
+              "version": "[8.103.9.3, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WinService\\TAMHR.ESS.WinService.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WinService\\TAMHR.ESS.WinService.csproj",
+        "projectName": "TAMHR.ESS.WinService",
+        "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WinService\\TAMHR.ESS.WinService.csproj",
+        "packagesPath": "C:\\Users\\ronia\\.nuget\\packages\\",
+        "outputPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WinService\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages",
+          "C:\\Program Files\\dotnet\\sdk\\NuGetFallbackFolder"
+        ],
+        "configFilePaths": [
+          "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\NuGet.Config",
+          "C:\\Users\\ronia\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files (x86)\\Progress\\Telerik UI for ASP.NET Core 2025 Q1\\": {},
+          "D:\\Code\\TAMHR.RMS-MASTER-REVAMP\\packages": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj": {
+                "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Domain\\TAMHR.ESS.Domain.csproj"
+              },
+              "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\TAMHR.ESS.Infrastructure.csproj": {
+                "projectPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure\\TAMHR.ESS.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "Agit.Common": {
+              "target": "Package",
+              "version": "[2.0.0.6, )"
+            },
+            "Microsoft.Extensions.Configuration.Json": {
+              "target": "Package",
+              "version": "[8.0.1, )"
+            },
+            "Quartz": {
+              "target": "Package",
+              "version": "[3.0.6, )"
+            },
+            "Scrutor": {
+              "target": "Package",
+              "version": "[6.1.0, )"
+            },
+            "System.ServiceProcess.ServiceController": {
+              "target": "Package",
+              "version": "[4.5.0, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.100/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

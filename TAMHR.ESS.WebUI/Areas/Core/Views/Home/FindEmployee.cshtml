@@ -1,0 +1,54 @@
+﻿@section pageToolbars {
+    @await Html.PartialAsync("_FindEmployeeToolbars")
+}
+@{
+    ScriptManager.RegisterReference("listview");
+}
+@section scripts {
+    <script type="text/x-kendo-tmpl" id="template">
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="card">
+                <div class="text-center">
+                    <div class="card-body pb-0">
+                        <img src="#:app.resolveImageUrl(NoReg)#" class="rounded-circle height-150" alt="Card image">
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title font-small-3">#:Name#</h4>
+                        <span class="text-muted d-block text-truncate font-small-2">#:$.toDefault(NoReg, "-")#</span>
+                        <span title='#:$.toDefault(PostName, "")#' style="cursor: help" class="text-muted d-block text-truncate font-small-2 text-truncate">#:$.toDefault(PostName, "-")#</span>
+                        @*<span title="@Localizer["Class"]" class="text-muted d-block text-truncate font-small-2">@Localizer["Class"] #:EmployeeSubgroupText#</span>
+                        <span title="@Localizer["Entry Date"]" class="text-muted d-block text-truncate font-small-2">#:kendo.toString(EntryDate, 'dd/MM/yyyy')#</span>*@
+                        <span title="@Localizer["Extension Number"]" class="text-muted d-block text-truncate font-small-2">Ext. #:$.toDefault(Extension, '?')#</span>
+                    </div>
+                    <div class="card-footer text-muted">
+                        <span title='#:$.toDefault(Division, "")#' style="cursor: help" class="text-muted d-block text-truncate font-small-1 font-red-flamingo">#:$.toDefault(Division, "-")#</span>
+                        <span title='#:$.toDefault(Department, "")#' style="cursor: help" class="text-muted d-block text-truncate font-small-1 font-blue-sharp">#:$.toDefault(Department, "-")#</span>
+                        <span title='#:$.toDefault(Section, "")#' style="cursor: help" class="text-muted d-block text-truncate font-small-1 font-yellow-crusta">#:$.toDefault(Section, "-")#</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+}
+@(Html.Kendo().ListView<TAMHR.ESS.Domain.SubordinateStroredEntity>()
+    .Name("userListView")
+    .TagName("div")
+    .HtmlAttributes(new { @class = "row", data_filter = "user-filter" })
+    .Events(evt => evt.DataBinding(@<text>function() { this.element.removeClass("k-widget k-listview") }</text>))
+    .ClientTemplateId("template")
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/organization/all-employee")))
+        .PageSize(8)
+        .Sort(sort => sort.Add("Name"))
+    )
+    .Pageable(options =>
+    {
+        options.Input(true);
+        options.Numeric(false);
+    })
+    .Deferred()
+)
+<div class="row">
+    <div class="col-12">&nbsp;</div>
+</div>

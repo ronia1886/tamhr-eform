@@ -1,0 +1,28 @@
+﻿<ul id="news-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["FormKey", "Title"]' />
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle font-green-haze" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="FormKey">@Localizer["Key"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="Title">@Localizer["Title"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+</ul>

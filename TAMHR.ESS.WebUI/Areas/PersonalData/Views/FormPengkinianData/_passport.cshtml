@@ -1,0 +1,80 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataService;
+
+@model TAMHR.ESS.Domain.PersonalDataAttributeStroredEntity
+@{
+    var user = User.GetClaim("NoReg");
+}
+
+
+<div class="row">
+    <div class="col-sm-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    @{
+                        var identity = updatedataService.GetPersonalDataPassport(user).FirstOrDefault();
+                        if (identity != null)
+                        {
+                            <div class="col-md-8 col-sm-12 accordion">
+                                <fieldset class="card-header" data-toggle="collapse" href="#passport" role="button" aria-expanded="false" aria-controls="ktp">
+                                    <legend>Passport</legend>
+                                    <div class="collapse show" id="ktp">
+                                        <div class="row">
+                                            <label class="col-md-4">No Passport</label>
+                                            <span class="col-md-8">: @identity.PassportNumber</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Kode Negara</label>
+                                            <span class="col-md-8">: @identity.CountryCode</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Name</label>
+                                            <span class="col-md-8">: @identity.Name</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Tanggal Lahir</label>
+                                            <span class="col-md-8">: @identity.BirthDate</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Jenis Kelamin</label>
+                                            <span class="col-md-8">: @identity.GenderCode </span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Tempat Lahir</label>
+                                            <span class="col-md-8">: @identity.BirthPlace</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Tanggal Pengeluaran</label>
+                                            <span class="col-md-8">: @identity.StartDate</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Tanggal Habis Berlaku</label>
+                                            <span class="col-md-8">: @identity.EndDate</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">NoReg</label>
+                                            <span class="col-md-8">: @identity.NoReg</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Kantor yang mengeluarkan</label>
+                                            <span class="col-md-8">: @identity.Office</span>
+                                        </div>
+
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center col-md-12">
+                                <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                            </div>
+
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,80 @@
+﻿@model TAMHR.ESS.Domain.VaccineScheduleLimit
+
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineHospitalService vaccineHospitalService
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineScheduleService vaccineScheduleService
+@{ 
+    ScriptManager.RegisterReferences("combobox");
+    var VaccineSchedule = ViewBag.VaccineSchedule;
+    TAMHR.ESS.Domain.VaccineSchedule dataSchedule = new TAMHR.ESS.Domain.VaccineSchedule();
+    if (VaccineSchedule != null)
+    {
+        dataSchedule = VaccineSchedule;
+    }
+
+    var VaccineHospitalList = ViewBag.VaccineHospitalList;
+    List<TAMHR.ESS.Domain.VaccineHospital> dataSource = new List<TAMHR.ESS.Domain.VaccineHospital>();
+    if (VaccineHospitalList != null)
+    {
+        dataSource = VaccineHospitalList;
+    }
+
+    string strVaccineDate = "";
+    if (Model.VaccineDate != null)
+    {
+        strVaccineDate = Model.VaccineDate?.ToString("dd/MM/yyyy");
+    }
+}
+
+<form action="~/api/vaccineschedule/upsert-detail" method="@ApplicationHelper.Method(Model.Id)">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.VaccineScheduleId)
+    <div class="row">
+        <div class="form-group col-md-12">
+            <label>@Localizer["Hospital"]</label>
+            @*@{Html.Kendo().ComboBox().Name("VaccineHospitalId")
+            .HtmlAttributes(new { @class = "form-control", data_validation_for = "VaccineHospitalId" })
+            .DataValueField("Id")
+            .DataTextField("Name")
+            .BindTo(dataSource)
+            .AutoBind(true);
+            }*@
+             
+                @(Html.Kendo().ComboBox().Name("VaccineHospitalId")
+                   .HtmlAttributes(new { @class = "form-control", data_validation_for = "Name", @required="required" })
+                   .DataTextField("Name")
+                   .DataValueField("Id")
+                   .Placeholder(Localizer["Please select vaccine hospital"].Value)
+                   .Value(Model.VaccineHospitalId != Guid.Empty? Model.VaccineHospitalId.ToString() : "")
+                   .DataSource(x => x
+                       .Ajax()
+                       .Read(read => read.Url(Url.Content("~/api/vaccineschedule/get-vaccine-hospital")))
+                       .Sort(sort => sort.Add("Name"))
+                   )
+                )
+                <span class="invalid" data-validation-for="VaccineHospitalId"></span>
+        </div>
+        <div class="form-group col-md-12">
+            <label>@Localizer["Date"]</label>
+                @*@{Html.Kendo().DatePickerFor(x => x.VaccineDate)
+                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "VaccineDate" })
+                    .Min(dataSchedule.StartDateTime?.ToString())
+                    .Max(dataSchedule.EndDateTime?.ToString());
+                }*@
+                <input type="text" name="VaccineDate" id="VaccineDate" value="@strVaccineDate" class="form-control" />
+
+            <span class="invalid" data-validation-for="VaccineDate"></span>
+        </div>
+        <div class="form-group col-md-12">
+            <label>@Localizer["Quota"]</label>
+            @Html.Kendo().NumericTextBoxFor(x => x.Qty).HtmlAttributes(new { @class = "form-control",@placeholder="Please enter quota" }).Min(1).Decimals(0).Format("#")
+            <span class="invalid" data-validation-for="Qty"></span>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-dismiss-modal="modal2" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script>
+    
+    var VaccineDate = $("#VaccineDate").kendoDatePicker({ format: "dd/MM/yyyy", min: "@dataSchedule.StartDateTime.ToString()",max:"@dataSchedule.EndDateTime.ToString()"}).data("kendoDatePicker");
+</script>

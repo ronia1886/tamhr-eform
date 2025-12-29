@@ -1,0 +1,34 @@
+﻿<ul id="shift-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["ShiftCode" , "ShiftName", "ShiftDesc"]' />
+    </li>
+    <li class="dropdown dropdown-arrow">
+        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="ShiftCode">@Localizer["Shift Code"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="ShiftName">@Localizer["Shift Name"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="NormalTimeIN">@Localizer["Normal Time IN"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="NormalTimeOut">@Localizer["Normal Time OUT"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+</ul>

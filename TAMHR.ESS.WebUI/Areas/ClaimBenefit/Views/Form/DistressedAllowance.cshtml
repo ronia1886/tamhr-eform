@@ -1,0 +1,136 @@
+﻿@model DocumentRequestDetailViewModel<DistressedAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+}
+
+@section scripts {
+    <script type="text/javascript">
+
+            $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'distressedallownce', subtype: '' 
+                },
+                    success: function (result) {
+                        
+                        $('#User').text(result.Name);
+                        $('#Kelas').text(result.Kelas);
+                        $('#Tunjangan').text('Rp. ' + app.formatNumber(result.Ammount));
+                        $('#Object_AmountAllowance').val(result.Ammount);
+                }
+            });
+        
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+        }
+    </script>
+}
+<div class="row" id="divHeader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">
+                        @Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>."]
+                        <br /> @Localizer["Calamity Allowance that will be obtained is worth <b class='font-red' id='Tunjangan'></b>"]
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Calamity Allowance Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Calamity Allowance Data"]</legend>
+                                @Html.HiddenFor(x => x.Object.AmountAllowance)
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Calamity Description"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Description, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Description", placeholder= Localizer["Input Calamity Description"].Value }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Calamity Date"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.DateDistressed)
+                                                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.DateDistressed", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                                            .Enable(isCanEdit)
+                                                                            .Format("dd/MM/yyyy")
+                                                                            .Max(DateTime.Now)
+                                                                            .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group inline">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Supporting Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportingAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportingAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

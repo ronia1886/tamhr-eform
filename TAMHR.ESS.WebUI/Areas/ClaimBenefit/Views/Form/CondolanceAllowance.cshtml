@@ -1,0 +1,322 @@
+﻿@model DocumentRequestDetailViewModel<MisseryAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+}
+
+@section scripts {
+    <script type="text/javascript">
+        $("#frm-NonFamilyRelationship").hide();
+
+        if ('@Model.Object.IsMainFamily' == 'ya') {
+            $("#frm-FamilyRelationship").show();
+            $("#frm-NonFamilyRelationship").hide();
+        }
+        else if ('@Model.Object.IsMainFamily' == 'tidak'){
+            $("#frm-FamilyRelationship").hide();
+            $("#frm-NonFamilyRelationship").show();
+        }
+        else {
+            $("#frm-FamilyRelationship").show();
+            $("#frm-NonFamilyRelationship").hide();
+            $('#Object_IsMainFamily').prop('checked', true);
+        }
+
+        $('input[type=radio][id=Object_IsMainFamily]').change(function () {
+            if (this.value == "ya") {
+                $("#frm-FamilyRelationship").show();
+                $("#frm-NonFamilyRelationship").hide();
+                $("#Object_FamilyName").val("");
+                $("#Object_OtherFamilyName").val("");
+                $("#Object_OtherFamilyId").data("kendoComboBox").value("");
+                $("#Object_NonFamilyRelationship").data("kendoComboBox").value("");
+
+                changeFamilyType('MainFamily');
+            }
+            if (this.value == "tidak") {
+                $("#frm-FamilyRelationship").hide();
+                $("#frm-NonFamilyRelationship").show();
+                $("#Object_FamilyName").val("");
+                $("#Object_OtherFamilyName").val("");
+                $("#Object_OtherFamilyId").data("kendoComboBox").value("");
+                $("#Object_NonFamilyRelationship").data("kendoComboBox").value("");
+
+                changeFamilyType('NonMainFamily');
+            }
+        });
+
+        function onChange() {
+            $("#Object_OtherFamilyName").val(this.text());
+            var ismainfamily = $("input[name='Object.IsMainFamily']:checked").val();
+            var famMember = $("#Object_OtherFamilyId").data("kendoComboBox").value();
+            var aa = "";
+            //console.log(this.value())
+            if (ismainfamily == "ya") {
+                if (famMember != '') {
+                    //cek fam member fam type code anak ato bukan
+                    var famTypeCode = '';
+                    $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl('~/api/personaldata/getinfofamtypecode'),
+                            dataType: 'json',
+                            data: { FamilyMemberId: famMember },
+                            success: function (data) {
+                                famTypeCode = data.Data[0].FamilyTypeCode;
+                                if (famTypeCode.toLowerCase().includes('anak')) {
+                                    if (famTypeCode.toLowerCase() == "anakkandung")
+                                        $("#Object_FamilyRelation").val('Anak Kandung')
+                                    else
+                                        $("#Object_FamilyRelation").val('Anak Angkat')
+                                }
+                                else if (famTypeCode.toLowerCase().includes('pasangan')) {
+                                    if (data.Data[0].GenderCode == 'perempuan')
+                                        $("#Object_FamilyRelation").val("Istri")
+                                    else 
+                                        $("#Object_FamilyRelation").val('Suami')
+                                }
+                            }
+                        });
+                }
+                else {
+                    hideInfo();
+                }
+            }
+        }
+
+        function onChangeNonFamily() {
+            $("#Object_NonFamilyRelationshipName").val(this.text());
+        }
+
+
+        if ('@Model.Object.IsMainFamily' == 'ya') {
+            changeFamilyType('MainFamily');
+        } else if ('@Model.Object.IsMainFamily' == 'tidak') {
+            changeFamilyType('NonMainFamily');
+        } else {
+            changeFamilyType('MainFamily');
+        }
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+        }
+
+        function changeFamilyType(subtype) {
+            $('#id_labelmaksimal').hide();
+            $('#id_labelminimal').hide();
+            $.ajax(
+            {
+                type: 'POST',
+                    url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'miseryallowance', subtype: subtype
+                },
+                    success: function (result) {
+                        
+                        $('#User').text(result.Name);
+                        $('#Kelas').text(result.Kelas);
+                        $('#Tunjangan').text('Rp. ' + app.formatNumber(result.Ammount));
+                        $('#Object_AllowancesAmount').val(result.Ammount);
+
+                        var kelas = result.NP;
+                        if (kelas >= 3 && kelas <= 6) {
+                            if (subtype == 'MainFamily') {
+                                $('#id_labelmaksimal').show();
+                                $('#id_labelminimal').show();
+                            }
+                            else {
+                                $('#id_labelmaksimal').hide();
+                                $('#id_labelminimal').hide();
+                            }
+                        }
+                }
+            });
+        }
+        
+    </script>
+}
+<div class="row" id="divHeader">
+    <div class="col">
+        @Html.HiddenFor(x => x.Object.AllowancesAmount)
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">
+                        @Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>."]<br />
+                        @Localizer["Condolence Allowance that will be obtained is worth"] <label id="id_labelminimal"> Maximal&nbsp;</label><b class="font-red" id="Tunjangan"></b>  <label id="id_labelmaksimal"> @Localizer["or Minimal 150% Basic Salary"]</label><br />
+                    </span>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Condolence Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["Condolence Data"]</legend>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Condolence Date"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.MisseryDate)
+                                                                                                .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.MisseryDate" , placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value})
+                                                                                                .Enable(isCanEdit)
+                                                                                                .Format("dd/MM/yyyy")
+                                                                                                .Max(DateTime.Now)
+                                                                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Main Family"]</label>
+                                            <div class="mt-radio-inline">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Yes"]
+                                                    @Html.RadioButtonFor(x => x.Object.IsMainFamily, "ya", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.IsMainFamily" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["No"]
+                                                    @Html.RadioButtonFor(x => x.Object.IsMainFamily, "tidak", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.IsMainFamily" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div id="frm-FamilyRelationship" class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Name"]</label>
+                                            <div>
+                                                @Html.HiddenFor(x => x.Object.FamilyRelation)
+                                                @if (isCanEdit)
+                                                {
+                                                    @(Html.KendoComboBoxFor(x => x.Object.OtherFamilyId, "OtherFamilyId")
+                                                                           .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.OtherFamilyId" })
+                                                                           .Placeholder(Localizer["Select Family Name"].Value)
+                                                                           .DataTextField("FullName")
+                                                                           .DataValueField("FamilyMemberId")
+                                                                           .DataSource(dataSource => dataSource
+                                                                           .Ajax()
+                                                                           .Read(read => read.Url(Url.Content("~/api/personaldata/getfamilymember")))
+                                                                           )
+                                                                           .Events(e =>
+                                                                           {
+                                                                               e.Change("onChange");
+                                                                           })
+                                                                           .SelectedIndex(-1)
+                                                                           .Enable(isCanEdit)
+                                                                           .Deferred()
+                                                    )
+
+                                                    @Html.HiddenFor(x => x.Object.OtherFamilyName, ApplicationHelper.Enable(new
+                                               {
+                                                   @class = "form-control",
+                                                   data_validation_for = "Object.OtherFamilyName",
+                                                   placeholder = Localizer["Input Family Name"].Value
+                                               }, isCanEdit))
+                                                }
+                                                else
+                                                {
+                                                    @Html.HiddenFor(x => x.Object.OtherFamilyId)
+                                                    @Html.HiddenFor(x => x.Object.OtherFamilyName)
+                                                    <br /><label>@Model.Object.OtherFamilyName</label>
+                                                }
+                                            </div>
+                                        </div>
+                                        <div id="frm-NonFamilyRelationship" class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Relationship"]</label>
+                                            <div class="form-group">
+                                                @(Html.KendoComboBoxFor(x => x.Object.NonFamilyRelationship, "NonFamilyRelationship")
+                                                               .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.NonFamilyRelationship" })
+                                                               .Placeholder(Localizer["Select Family Relationship"].Value)
+                                                               .DataTextField("Name")
+                                                               .DataValueField("Code")
+                                                               .DataSource(dataSource => dataSource
+                                                               .Ajax()
+                                                               .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=NonMainFamily")))
+                                                               )
+                                                               .Events(e =>
+                                                               {
+                                                                   e.Change("onChangeNonFamily");
+                                                               })
+                                                               .SelectedIndex(-1)
+                                                               .Enable(isCanEdit)
+                                                               .Deferred()
+                                                )
+                                            </div>
+
+                                            <div class="form-group">
+                                                @Html.HiddenFor(x => x.Object.NonFamilyRelationshipName)
+                                                @Html.TextBoxFor(x => x.Object.FamilyName, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.FamilyName", placeholder = Localizer["Input Family Name"].Value }, isCanEdit))
+                                            </div>
+
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Death Certificate Attachment"]</label>
+                                            @{
+                                                if (isCanEdit)
+                                                {
+                                                    @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.FamilyCardPath" })
+                                                }
+                                                else
+                                                {
+                                                    <br />
+                                                    @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "FamilyCardPath" })
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

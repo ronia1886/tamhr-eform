@@ -1,0 +1,104 @@
+﻿@{
+    ScriptManager.RegisterReferences("numeric");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="news-modal" data-modal-type="xl" data-modal-title="Create new News" data-modal-ajax="true" data-ajax-url="~/core/news/load">
+                    @Localizer["Create News"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/news/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload News" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/news">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section styles {
+    <link rel="stylesheet" type="text/css" href="~/plugins/croppic/css/croppic.css" />
+    <link href="~/lib/summernote/summernote-lite.min.css" rel="stylesheet">
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/croppic/js/croppic.js"></script>
+    <script type="text/javascript" src="~/lib/summernote/summernote-lite.min.js"></script>
+    <script type="text/javascript">
+        (function ($, app) {
+            app.registerHandler("dataInterceptor", function (d) {
+                //d.BodyHtml = tinyMCE.get('BodyHtml').getContent();
+                d.BodyHtml = $('#BodyHtml').summernote('code');
+
+                return d;
+            });
+        })(jQuery, app);
+
+        $(document).on('focusin', function (e) {
+            if ($(event.target).closest(".note-dialog, .note-modal").length) {
+                e.stopImmediatePropagation();
+            }
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of News"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("~/Areas/Core/Views/News/_Toolbars.cshtml")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.News>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "news-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("News").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-2"">
+                                    <h6 class=""mt-1 mb-0 bold""><a href=""#:app.resolveUrl(kendo.format('~/news/{0}', SlugUrl))#"">#:Title#</a></h6>
+                                    <small class=""d-block"">#:ShortDescription#</small>
+                                    <small class=""d-block""><b>Created at</b> - #:kendo.toString(CreatedOn, ""dd/MM/yyyy HH:mm tt"")#</small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""news-modal"" data-modal-type=""xl"" data-modal-title=""Edit News"" data-modal-ajax=""true"" data-ajax-url=""~/core/news/load"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/news"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width("8rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/news/gets")))
+                        .Sort(sort => sort.Add("OrderIndex"))
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

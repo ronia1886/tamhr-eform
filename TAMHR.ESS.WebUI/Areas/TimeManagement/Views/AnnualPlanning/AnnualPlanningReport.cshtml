@@ -1,0 +1,410 @@
+﻿@inject IScriptManager ScriptManager
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var NoReg = ViewBag.NoReg;
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+
+    var now = DateTime.Now;
+    // If this is a new request form, then use next year as the default period. Otherwise, use the submitted period.
+    int periodYear = (now.Month != 12 ? now.Year : now.Year + 1);
+
+    DateTime minDate = new DateTime(periodYear, 1, 1);
+    DateTime maxDate = new DateTime(periodYear, 12, 31);
+}
+
+@section styles{
+    <style>
+        #gridReport table {
+            width: auto;
+        }
+    </style>
+
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title" id="titleSummary">@Localizer["Annual Planning Summary"] @periodYear</h4>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                                    @Localizer["Download"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+
+                <div class="col-md-12">
+                    <div class="row">
+                        <input id="SelectedNoReg" hidden/>
+                        <div class="col-md-3">
+                            <label>@Localizer["Employee"]</label>
+                            @*@(Html.Kendo().TextBox()
+                            .Name("employeeName")
+                            .Deferred()
+                            )*@
+                            @(Html.Kendo().AutoComplete()
+                            .Name("employeeName")
+                            .DataTextField("Name")
+                            .Filter("contains")
+                            .Placeholder(Localizer["Find user..."].Value)
+                            .MinLength(3)
+                            .Delay(500)
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataSource(source =>
+                            {
+                                source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/daily-reconciliation/getactives"))))
+                                    .PageSize(30)
+                                    .Sort(sort => sort.Add("Name"))
+                                    .Schema(config => config.Data("Data").Total("Total"));
+                            })
+                            .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                            .Events(events => events.Select("EmployeeSelect"))
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Directorate"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("directorate selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDirectorate");
+                                    })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Division"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("division selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDivision");
+                                    })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("department selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDepartment");
+                                    })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("section selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeSection");
+                                    })
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Line"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("line")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("line selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeLine");
+                                    })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select line"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Group"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("group")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("group selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select group"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Class"]</label>
+                            @(Html.Kendo().ComboBox()
+                        .Name("class")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("Class")
+                        .DataValueField("Class")
+                        .Placeholder(Localizer["Please select class"].Value)
+                        //.ClearButton(true)
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/daily-reconciliation/get-class")))
+                        .Sort(s => s.Add("Class"))
+                        )
+                        .SelectedIndex(-1)
+                        .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date From"]</label>
+                            @(Html.Kendo().DatePicker()
+                            .Name("dateFrom")
+                            .Value(minDate)
+                            .Format("dd/MM/yyyy")
+                            .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date To"]</label>
+                            @(Html.Kendo().DatePicker()
+                            .Name("dateTo")
+                            .Value(maxDate)
+                            .Format("dd/MM/yyyy")
+                            .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-6" style="text-align:right">
+                            <label>&nbsp;</label>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="$.onSearch();"><span class="ft-search"></span> Search</button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">&nbsp;</div>
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.AnnualPlanningReportStoredEntity>()
+                    .Name("gridReport")
+                    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header", @style= "height: 1200px" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title(Localizer["Employee"].Value).ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(JobName, '-')#</span>
+                                </div>
+                            </div>
+                        ").Width(250)
+                        .HtmlAttributes(new { @class = "Test" })
+                        .Locked(true);
+                        columns.Bound(c => c.Title).Title(Localizer["Item"].Value).ClientTemplate
+                        (
+                            @"<div>#:$.toDefault(Title, '-')# <br> (#:$.toDefault(Unit, '-')#)</div>"
+                        ).Width(100)
+                        .Locked(true);
+                        columns.Group(group => group
+                            .Title(Localizer["January"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.JanPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.JanAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["February"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.FebPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.FebAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["March"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.MarPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.MarAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["April"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.AprPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.AprAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["May"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.MayPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.MayAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["June"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.JunPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.JunAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["July"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.JulPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.JulAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["August"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.AugPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.AugAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["September"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.SepPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.SepAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["October"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.OctPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.OctAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["November"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.NovPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.NovAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title(Localizer["December"].Value)
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.DecPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.DecAct).Title("Actual").Width(70);
+                            })
+                        );
+                        columns.Group(group => group
+                            .Title("Total")
+                            .Columns(info =>
+                            {
+                                info.Bound(x => x.TotPlan).Title("Plan").Width(70);
+                                info.Bound(x => x.TotAct).Title("Actual").Width(70);
+                            })
+                        );
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/annual-planning/get-reports"))
+                        .Data("$.getDataReport")
+                        )
+                        .PageSize(20)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                    })
+                    .Resizable(resizable => resizable.Columns(true))
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Events(events =>
+                    {
+                        events.DataBound("$.OnDataBound");
+                    })
+                    .Scrollable(scr=>scr.Height("auto"))
+                    .Deferred()
+                    )
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,54 @@
+﻿<div class="form-group">
+    <label>Search</label>
+    <input type="search" id="search" class="form-control" />
+</div>
+<div style="overflow:auto">
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.Bank>()
+                          .Name("bankGrid")
+                          .HtmlAttributes(new { style = "min-width:max-content" })
+                          .Columns(columns =>
+                          {
+                              columns.Bound(c => c.BankKey).Filterable(true).Title("Bank Key");
+                              columns.Bound(c => c.BankName).Filterable(true).Title("Bank Name");
+                              columns.Bound(c => c.Address).Filterable(true).Title("Bank Adress");
+                              columns.Bound(c => c.Branch).Filterable(true).Title("Bank Cabang");
+                              columns.Bound(c => c.Id).Width(50).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+<a class=""btn"" data-trigger=""handler"" data-handler=""selectBank"" data-parameters-code=""#:BankKey#"" data-parameters-name=""#:BankName#"" data-parameters-address=""#:Address#"" data-parameters-branch=""#:Branch#"">Select</a>").Width(170);
+                          })
+                          .Pageable(p => p.AlwaysVisible(false))
+                          .DataSource(dataSource => dataSource
+                          .Ajax()
+                          .PageSize(10)
+                          .Read(read => read.Url(Url.Content("~/api/bank/gets")))
+                          ))
+</div>
+<script type="text/javascript">
+    $("#search").keyup(function () {
+        var val = $('#search').val();
+        $("#bankGrid").data("kendoGrid").dataSource.filter({
+            logic: "or",
+            filters: [
+                {
+                    field: "BankKey",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "BankName",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "Address",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "Branch",
+                    operator: "contains",
+                    value: val
+                }
+            ]
+        });
+    });
+</script>

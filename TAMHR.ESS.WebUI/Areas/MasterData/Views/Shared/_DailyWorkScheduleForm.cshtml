@@ -1,0 +1,22 @@
+﻿@model TAMHR.ESS.Domain.DailyWorkSchedule
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/daily-work-schedule">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>@Localizer["Color"]</label>
+                <br/>
+                @(Html.Kendo().ColorPickerFor(x => x.ColorClass)
+                    .HtmlAttributes(new { @class = "form-control" })
+                )
+                <span class="invalid" data-validation-for="ColorClass"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

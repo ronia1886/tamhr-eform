@@ -1,0 +1,65 @@
+﻿@model TAMHR.ESS.Domain.AreaView
+@{
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/master-data/ohs/insertArea" : "~/api/master-data/ohs/updateArea")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Nama Area"]</label>
+                @Html.TextBoxFor(x => x.NamaArea, new { @class = "form-control", @data_validation_for = "NamaArea", @placeholder = Localizer["Please input Nama Area"].Value })
+                <span class="invalid" data-validation-for="NamaArea"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Divisi"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("DivisiCode")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisiCode", @required = "required" })
+                    .DataTextField("ObjectText")
+                    .DataValueField("ObjectCode")
+                    .Placeholder(Localizer["Please select Divisi"].Value)
+                    .Value(Model.DivisiCode == default(string) ? string.Empty : Model.DivisiCode)
+                    //.Value(Model.DivisiCode.ToString())
+                    @*.Events(events =>
+                {
+                events.Change("onchangeHospital");
+                })*@ 
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Divisi")))
+                    .Sort(sort => sort.Add("ObjectText"))
+
+                    )
+                    .SelectedIndex(-1)
+                    //.Deferred()
+                    //.Deferred()
+                    @*.Template("<span class=\"k-state-default\">#: data.ProviderType# #: data.Name # </span>")*@
+                    //.ValueTemplate("<span class=\"selected-value\" style=\"background-image: url(" + Url.Content("~/shared/web/Customers/") + "#:data.CustomerID#.jpg"+ ");\" ></span>" + "<span>#:data.ContactName#</span>")
+                    )
+                <span class="invalid" data-validation-for="DivisiCode"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Alamat"]</label>
+                @Html.TextBoxFor(x => x.Alamat, new { @class = "form-control", @data_validation_for = "Alamat", @placeholder = Localizer["Please input Alamat"].Value })
+                <span class="invalid" data-validation-for="Alamat"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

@@ -1,0 +1,660 @@
+﻿@model TAMHR.ESS.Infrastructure.ViewModels.DashboardHomeViewModel
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService ;
+
+@{
+    var isExternalUser = User.GetClaim("NoReg").StartsWith("ext_");
+    var NoReg = User.GetClaim("NoReg");
+    var maxReset = ConfigService.GetConfig("TimeManagement.ResetTimer").ConfigValue;
+
+    var CookieKeyAbnormality = "PopUpAbnormality";
+}
+@if (isExternalUser)
+{
+    <div class="row d-flex d-md-none">
+        <div class="col-12">
+            <div class="row">
+                <div class="col-6 pl-2">
+                    <a href="~/core/home/tasks">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="fa fa-file-text-o font-large-1 font-blue mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="font-medium-1 text-bold-300 font-blue-sharp d-block">@Model.TotalTask</span>
+                                            <span class="text-muted text-right font-small-3">@Localizer["My Tasks"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 pr-2">
+                    <a href="~/core/home/notices">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="icon-bell font-large-1 font-yellow mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="font-medium-1 text-bold-300 font-red-mint d-block">@Model.TotalNotice</span>
+                                            <span class="text-muted text-right font-small-3">@Localizer["My Notice"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row d-none d-md-flex">
+        <div class="col-6">
+            <a href="~/core/home/tasks">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-file-text-o font-blue font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.75rem;">
+                                    <h3 class="font-blue">@Model.TotalTask</h3>
+                                    <span class="font-dark font-small-3">@Localizer["New Tasks"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6">
+            <a href="~/core/home/notices">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="icon-bell font-yellow font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.75rem;">
+                                    <h3 class="font-yellow">@Model.TotalNotice</h3>
+                                    <span class="font-dark font-small-3">@Localizer["New Notices"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row d-flex d-md-none">
+        <div class="col-12">
+            <div class="row">
+                <div class="col-6 pr-2">
+                    <a href="~/core/home/profile">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="icon-user font-large-1 font-blue mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="text-muted text-right font-small-3">@Localizer["My<br/>Profile"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 pl-2">
+                    <a href="~/core/home/tasks">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="fa fa-file-text-o font-large-1 font-blue mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="font-medium-1 text-bold-300 font-blue-sharp d-block">@Model.TotalTask</span>
+                                            <span class="text-muted text-right font-small-3">@Localizer["My Tasks"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-6 pr-2">
+                    <a href="~/core/home/notices">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="icon-bell font-large-1 font-yellow mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="font-medium-1 text-bold-300 font-red-mint d-block">@Model.TotalNotice</span>
+                                            <span class="text-muted text-right font-small-3">@Localizer["My Notice"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                <div class="col-6 pl-2">
+                    <a href="~/timemanagement/monitoringreport/index?mode=daily">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="icon-clock font-large-1 font-red mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="text-muted text-right font-small-3 d-inline-block border-bottom" style="padding-bottom: 0.125rem"><span class="font-green">&rarr;</span> @Model.ClockIn</span>
+                                            <span class="text-muted text-right font-small-3 d-block"><span class="font-red">&larr;</span> @Model.ClockOut</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="media d-flex">
+                                        <div class="align-self-center">
+                                            <i class="moon-icon-timer font-large-1 font-blue mb-1"></i>
+                                        </div>
+                                        <div class="media-body text-right" style="line-height: 1rem;">
+                                            <span class="text-muted text-right font-small-3 " >
+                                            <span id="stopwatch-mobile" class="time font-blue font-medium-2 mb-3">00:00:00</span></span><br />
+                                            <span class="text-muted text-right font-small-2" >@Localizer["Total Working Hour"]</span><br />
+                                            <span class="font-red font-small-1" >@Localizer["Pastikan total working hour Anda 8 jam diluar jam istirahat"]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row d-none d-md-flex">
+        <div class="col-4">
+            <a href="~/core/home/profile">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="icon-user font-blue font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 1.65rem;">
+                                    <span class="font-dark font-small-3">@Localizer["My<br/>Profile"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-4">
+            <a href="~/core/home/tasks">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-file-text-o font-blue font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.75rem;">
+                                    <h3 class="font-blue">@Model.TotalTask</h3>
+                                    <span class="font-dark font-small-3">@Localizer["New Tasks"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-4">
+            <a href="~/core/home/notices">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="icon-bell font-yellow font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.75rem;">
+                                    <h3 class="font-yellow">@Model.TotalNotice</h3>
+                                    <span class="font-dark font-small-3">@Localizer["New Notices"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @*<div class="col-3">
+            <a href="~/timemanagement/monitoringreport/index?mode=daily">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="icon-clock font-red font-large-2 float-left d-md-none d-lg-block"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.875rem;">
+                                    <h3 class="font-red font-medium-2 mb-3">@Model.ClockIn - @Model.ClockOut</h3>
+                                    <span class="font-dark font-small-3">@Localizer["Clock In/Out"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-3">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <i class="icon-clock font-red font-large-2 float-left d-md-none d-lg-block"></i>
+                            </div>
+                            <div class="media-body text-right" style="line-height: 0.875rem;">
+                                <div id="stopwatch" class="time">00:00:00</div>
+                                <span class="font-dark font-small-3">@Localizer["Time"]</span>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>*@
+    </div>
+    <div class="row d-none d-md-flex">
+        <div class="col-6">
+            <a href="~/timemanagement/monitoringreport/index?mode=daily">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="icon-clock font-red font-large-2 float-left d-md-none d-lg-block"></i>
+                                </div>
+                                <div class="media-body text-right" style="line-height: 0.875rem;">
+                                    <h3 class="font-red font-medium-2 mb-3">@Model.ClockIn - @Model.ClockOut</h3>
+                                    <span class="font-dark font-small-3">@Localizer["Clock In/Out"]</span><br />
+                                    <span class="font-dark font-small-3"> </span><br />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-6">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <i class="moon-icon-timer font-blue font-large-2 float-left d-md-none d-lg-block"></i>
+                            </div>
+                            <div class="media-body text-right" style="line-height: 0.875rem;">
+                                <h3 id="stopwatch" class="time font-blue font-medium-2 mb-3">00:00:00</h3>
+                                <span class="font-dark font-small-3 ">@Localizer["Total Working Hour"]</span><br />
+                                <span class="font-red font-small-2 ">@Localizer["Pastikan total working hour Anda 8 jam diluar jam istirahat"]</span>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+@if (!isExternalUser)
+{
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row d-flex d-md-none">
+                            <div class="col-6 border-right">
+                                <div class="media d-flex p-2">
+                                    <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Annual Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                        <i class="iconmoon-timemanagement font-large-1 font-red-mint mb-1"></i>
+                                    </a>
+                                    <div class="media-body text-right">
+                                        <h3 class="font-small-3 text-bold-300 d-inline font-red-mint">@Model.AnnualLeave</h3>
+                                        <span class="font-small-3 text-muted text-right d-block">@Localizer["Annual Leave"]</span>
+                                        <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="media d-flex p-2">
+                                    <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Long Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=long-leave">
+                                        <i class="icon-plane font-large-1 font-green-haze mb-1"></i>
+                                    </a>
+                                    <div class="media-body text-right">
+                                        <h3 class="font-small-3 text-bold-300 d-inline font-green-haze">@Model.LongLeave</h3>
+                                        <span class="font-small-3 text-muted text-right d-block">@Localizer["Long Leave"]</span>
+                                        <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="media d-flex p-2">
+                                            <a href="~/timemanagement/monitoringreport/index?mode=monthly" class="align-self-center">
+                                                <i class="iconmoon-overtimetransaction font-large-2 font-yellow-crusta mb-1"></i>
+                                            </a>
+                                            <div class="media-body text-right font-small-2">
+                                                <table class="table-borderless float-right">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>&nbsp;</th>
+                                                            <th class="pl-2 pr-2">@DateTime.Now.ToString("MMM")</th>
+                                                            <th class="pl-2 pr-2">@DateTime.Now.Year</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var item in Model.TimeManagementDashboard)
+                                                        {
+                                                            <tr>
+                                                                <td>@Localizer[item.Title]</td>
+                                                                <td class="pl-2 pr-2">@item.TotalMonth</td>
+                                                                <td class="pl-2 pr-2">@item.Total</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row d-none d-md-flex">
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-6 border-right">
+                                <div class="d-flex h-100">
+                                    <div class="media align-items-center p-2 w-100">
+                                        <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Annual Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                            <i class="iconmoon-timemanagement font-large-2 font-red-mint d-none d-md-block mb-1"></i>
+                                            <i class="iconmoon-timemanagement font-large-1 font-red-mint d-block d-md-none mb-1"></i>
+                                        </a>
+                                        <div class="media-body text-right">
+                                            <h3 class="text-bold-300 d-none d-lg-inline font-red-mint">@Model.AnnualLeave</h3>
+                                            <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-red-mint">@Model.AnnualLeave</h3>
+                                            <span class="font-small-3 text-muted text-right d-none d-md-block">@Localizer["Annual Leave"]</span>
+                                            <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                            <span class="font-yellow-casablanca text-right d-block d-md-none" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-3 col-md-3 col-sm-3 col-6 border-right">
+                                <div class="d-flex h-100">
+                                    <div class="media p-2 align-items-center w-100">
+                                        <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer["Long Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=long-leave">
+                                            <i class="icon-plane font-large-2 font-green-haze d-none d-md-block mb-1"></i>
+                                            <i class="icon-plane font-large-1 font-green-haze d-block d-md-none mb-1"></i>
+                                        </a>
+                                        <div class="media-body text-right">
+                                            <h3 class="text-bold-300 d-none d-lg-inline font-green-haze">@Model.LongLeave</h3>
+                                            <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-green-haze">@Model.LongLeave</h3>
+                                            <span class="font-small-3 text-muted text-right d-none d-md-block">@Localizer["Long Leave"]</span>
+                                            <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                            <span class="font-yellow-casablanca text-right d-block d-md-none" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-6 col-sm-6 col-6">
+                                <div class="media d-flex p-2">
+                                    <a href="~/timemanagement/monitoringreport/index?mode=monthly" class="align-self-center">
+                                        <i class="iconmoon-overtimetransaction font-large-2 font-yellow-crusta d-none d-md-block mb-1"></i>
+                                    </a>
+                                    <div class="media-body text-right font-small-3">
+                                        <table class="table-borderless float-right">
+                                            <thead>
+                                                <tr>
+                                                    <th>&nbsp;</th>
+                                                    <th class="pl-2 pr-2">@DateTime.Now.ToString("MMM")</th>
+                                                    <th class="pl-2 pr-2">@DateTime.Now.Year</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in Model.TimeManagementDashboard)
+                                                {
+                                                    <tr>
+                                                        <td>@Localizer[item.Title]</td>
+                                                        <td class="pl-2 pr-2">@item.TotalMonth</td>
+                                                        <td class="pl-2 pr-2">@item.Total</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div id="abnormal-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                <h4 class="modal-title">Warning</h4>
+            </div>
+            @{
+                //var curDate = DateTime.Today.AddDays(-1);
+                //string strMinDate = curDate.ToString("dd/MM/yyyy");
+                DateTime abnormalityDateFrom = DateTime.Parse(ConfigService.GetConfig("Abnormality.StartDate").ConfigValue);
+                DateTime abnormalityDateTo = DateTime.Parse(ConfigService.GetConfig("Abnormality.EndDate").ConfigValue);
+
+                string strAbnormalityDateFrom = abnormalityDateFrom.ToString("dd/MM/yyyy");
+                string strAbnormalityDateTo = abnormalityDateTo.ToString("dd/MM/yyyy");
+            }
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12 text-center">
+                        You have <span id="totalAbnormality"></span> abnormality from @strAbnormalityDateFrom to @strAbnormalityDateTo
+                    </div>
+                    <div class="col-md-12">&nbsp;</div>
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div class="col-md-6 text-center">
+                                <div href="" class="btn btn-sm red-flamingo" onclick="CloseModalAbnormality();" style="width:200px">@Localizer["Update Later"]</div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <a href="~/timemanagement/monitoringreport/index?mode=monthly" class="btn btn-sm green-jungle" style="width:200px">@Localizer["Propose Update"]</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    function checkAbnormality(){
+        $.post(app.resolveUrl("~/api/monitoring-report/get-abnormality"),{
+
+        },function(data){
+            if(data.Data.length>0){
+                var totalAbnormality = 0;
+                data.Data.forEach((x) => {
+                    totalAbnormality += x.TotalAbnormality;
+                })
+
+                if(totalAbnormality > 0){
+                    $('#totalAbnormality').html(totalAbnormality);
+                    $("#abnormal-modal").modal();
+                }
+            }
+        });
+    }
+    function CloseModalAbnormality(){
+        $("#abnormal-modal").modal("hide");
+    }
+
+    function get_cookie(name){
+        return document.cookie.split(';').some(c => {
+            return c.trim().startsWith(name + '=');
+        });
+    }
+
+    //    function erase_cookie(name) {
+    //     document.cookie = name + "=; Max-Age=0; path=/; secure; samesite=strict";
+    // }
+
+    //#ABNORMALITYLOCK
+    //setTimeout(function(){
+    //    if(get_cookie("@CookieKeyAbnormality")){
+    //        checkAbnormality();
+    //        erase_cookie("@CookieKeyAbnormality");
+    //    }
+    //},1000
+    //);
+
+       // === Nilai check-in diambil dari Model Razor ===
+    // Model.CheckIn diasumsikan bertipe DateTime? (nullable). Jika null, akan diperlakukan sebagai tidak ada check-in.
+    // Kita menghasilkan string "HH:mm" atau null dari server dan baca di JS.
+    const __checkInFromServer = "@Model.ClockIn" != "?" ? "@Model.ClockIn" : null;
+    const __checkOutFromServer = "@Model.ClockOut" != "?" ? "@Model.ClockOut" : null;
+    const __ShiftCodeFromServer = "@Model.ShiftCode";
+    //console.log("checkin", __checkInFromServer);
+    const checkIn = __checkInFromServer; // contoh: "07:30" atau null
+    const checkOut = __checkOutFromServer;
+    const shiftCode = __ShiftCodeFromServer;
+    const MAX_DURATION_MS = parseInt("@maxReset") * 60 * 60 * 1000;
+    console.log(MAX_DURATION_MS);
+    const pad = n => n < 10 ? '0' + n : '' + n;
+    const el = id => document.getElementById(id);
+    let intervalHandle = null;
+    let scheduledTimeout = null;
+
+    function formatDuration(ms) {
+      if (ms < 0) ms = 0;
+      const s = Math.floor(ms / 1000);
+      const hh = Math.floor(s / 3600);
+      const mm = Math.floor((s % 3600) / 60);
+      const ss = s % 60;
+      return `${pad(hh)}:${pad(mm)}:${pad(ss)}`;
+    }
+
+    function parseTimeToToday(timeStr) {
+        if (!timeStr) return null;
+        const now = new Date();
+        const [h, m] = timeStr.split(':').map(Number);
+        return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    }
+
+    /** Reset timer ke 00:00:00 dan mulai kembali dari "sekarang" */
+    function resetTimer(dateObj) {
+        //console.log('⏳ Reset timer karena sudah > 15 jam');
+        const chkOut = parseTimeToToday(checkOut);
+        clearInterval(intervalHandle);
+        el('stopwatch').textContent = formatDuration(chkOut - dateObj);
+        el('stopwatch-mobile').textContent = formatDuration(chkOut - dateObj);
+    }
+
+    function startFrom(dateObj) {
+      clearInterval(intervalHandle);
+      intervalHandle = setInterval(() => {
+          const now = new Date();
+          const elapsed = now - dateObj;    
+          // milidetik yang sudah lewat
+          //console.log("elapsed", elapsed);
+          if (elapsed >= MAX_DURATION_MS ) {
+              // lebih dari 15 jam → reset
+              resetTimer(dateObj);
+              return;                                   // hentikan eksekusi current tick
+          }
+          console.log(formatDuration(now - dateObj));
+          el('stopwatch').textContent = formatDuration(now - dateObj);
+          el('stopwatch-mobile').textContent = formatDuration(now - dateObj);
+      }, 250);
+        console.log("run 2");
+        el('stopwatch').textContent = formatDuration(new Date() - dateObj);
+        el('stopwatch-mobile').textContent = formatDuration(new Date() - dateObj);
+      //el('info').textContent = `Counting from ${dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+    }
+
+
+    function initStopwatch() {
+      const now = new Date();
+      const eight = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 0, 0);
+        const chk = parseTimeToToday(checkIn);
+        const flexibleList = ["1NS8", "1NJ8"];
+        let isFlexible = flexibleList.includes(shiftCode);
+        console.log(shiftCode, isFlexible);
+        //console.log("check in", checkIn);
+        //console.log("test",chk);
+      // baseStart = max(check-in, 08:00) jika check-in ada, ellers 08:00
+        const baseStart = chk ? (chk < eight && isFlexible ? eight : chk) : eight;
+        console.log("test 2", baseStart);
+        if (now < baseStart) {
+            el('stopwatch').textContent = '00:00:00';
+            el('stopwatch-mobile').textContent = '00:00:00';
+            //el('info').textContent = `Will start at ${baseStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const delay = baseStart - now;
+            if (scheduledTimeout) clearTimeout(scheduledTimeout);
+            scheduledTimeout = setTimeout(() => {
+                startFrom(baseStart);
+                scheduledTimeout = null;
+            }, delay);
+            return;
+        } else if (checkIn !== null) {
+            console.log("else if");
+            startFrom(baseStart);
+        } else {
+            el('stopwatch').textContent = '00:00:00';
+            el('stopwatch-mobile').textContent = '00:00:00';
+        }
+
+
+    }
+
+    document.addEventListener('DOMContentLoaded', initStopwatch);
+
+</script>
+

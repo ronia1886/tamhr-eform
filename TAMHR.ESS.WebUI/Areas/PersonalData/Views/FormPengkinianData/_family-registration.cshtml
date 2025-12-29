@@ -1,0 +1,299 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataService;
+@{
+    var user = User.GetClaim("NoReg");
+    var fm = updatedataService.GetPersonalDataFamilyRegistration(user).ToList();
+  //  var data = updatedataService.GetPersonalDataFamilyRegistration(user).FirstOrDefault();
+}
+
+
+<div class="card-body">
+    <div class="row">
+        <div class="col-md-8 col-sm-12">
+            <div class="">
+                <fieldset>
+                    <legend>Family Registrasion</legend>
+                    @if (fm != null)
+                    {
+                        var ank = @fm.Where(x => x.FamilyTypeCode.Contains("anak")).ToList();
+                        var cn = 0;
+                        if (ank != null)
+                        {
+
+                            foreach (var item in ank.OrderByDescending(x => x.BirthDate))
+                            {
+                                <div>
+                                    <fieldset>
+                                        <legend>
+                                            <a class="btn btn-sm btn-secondary" style="color:white" href="#" onclick="loadfamily('FamilyRegistration','@item.Id')">
+                                                <i class=" ft-edit"> &nbsp; Data CN++ </i>
+                                            </a>
+                                        </legend>
+                                        @*<legend>Anak cn++</legend>*@
+                                        <div class="row">
+                                            <label class="col-md-4">Nama</label>
+                                            <span class="col-md-8">: @item.Name</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Tempat / Tanggal Lahir</label>
+                                            <span class="col-md-8">: @item.BirthPlace / @item.BirthDate.ToString("dd-MMM-yyyy")</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Jenis Kelamin</label>
+                                            <span class="col-md-8">: @item.Gender</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Golongan Darah</label>
+                                            <span class="col-md-8">: @item.BloodTypeCode</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Alamat</label>
+                                            <span class="col-md-8">: @item.Address</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">RT / RW</label>
+                                            <span class="col-md-8">: @item.RT / @item.RW</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Kelurahan / Desa</label>
+                                            <span class="col-md-8">: @item.Kelurahan</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Kecamatan</label>
+                                            <span class="col-md-8">: @item.Kecamatan</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Agama</label>
+                                            <span class="col-md-8">: @item.ReligionCode</span>
+                                        </div>
+
+                                        <div class="row">
+                                            <label class="col-md-4">Status Anak</label>
+                                            <span class="col-md-8">: @item.FamilyType</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+                        }
+                        var bpk = @fm.Where(x => x.FamilyTypeCode == "ayahkandung").FirstOrDefault();
+                        if (bpk != null)
+                        {
+                            <div>
+                                <fieldset>
+                                    <legend>Orang Tua - Ayah Kandung</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Nama</label>
+                                        <span class="col-md-8">: @bpk.Name</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Alamat</label>
+                                        <span class="col-md-8">: @bpk.Address</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">RT / RW</label>
+                                        <span class="col-md-8">: @bpk.RT / @bpk.RW</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kelurahan / Desa</label>
+                                        <span class="col-md-8">: @bpk.Kelurahan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kecamatan</label>
+                                        <span class="col-md-8">: @bpk.Kecamatan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No Telepon</label>
+                                        <span class="col-md-8">: @bpk.PhoneNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        var ibu = @fm.Where(x => x.FamilyTypeCode == "ibukandung").FirstOrDefault();
+                        if (ibu != null)
+                        {
+                            <div>
+                                <fieldset>
+                                    <legend>Orang Tua - Ibu Kandung</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Nama</label>
+                                        <span class="col-md-8">: @ibu.Name</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Alamat</label>
+                                        <span class="col-md-8">: @ibu.Address</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">RT / RW</label>
+                                        <span class="col-md-8">: @ibu.RT / @bpk.RW</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kelurahan / Desa</label>
+                                        <span class="col-md-8">: @ibu.Kelurahan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kecamatan</label>
+                                        <span class="col-md-8">: @ibu.Kecamatan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No Telepon</label>
+                                        <span class="col-md-8">: @ibu.PhoneNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        var ayahmrt = @fm.Where(x => x.FamilyTypeCode == "ayahmertua").FirstOrDefault();
+                        if (ayahmrt != null)
+                        {
+                            <div>
+                                <fieldset>
+                                    <legend>Orang Tua - Ayah Mertua</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Nama</label>
+                                        <span class="col-md-8">: @ayahmrt.Name</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Alamat</label>
+                                        <span class="col-md-8">: @ayahmrt.Address</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">RT / RW</label>
+                                        <span class="col-md-8">: @ayahmrt.RT / @bpk.RW</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kelurahan / Desa</label>
+                                        <span class="col-md-8">: @ayahmrt.Kelurahan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kecamatan</label>
+                                        <span class="col-md-8">: @ayahmrt.Kecamatan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No Telepon</label>
+                                        <span class="col-md-8">: @ayahmrt.PhoneNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        var ibuhmrt = @fm.Where(x => x.FamilyTypeCode == "ibumertua").FirstOrDefault();
+                        if (ibuhmrt != null)
+                        {
+                            <div>
+                                <fieldset>
+                                    <legend>Orang Tua - Ayah Mertua</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Nama</label>
+                                        <span class="col-md-8">: @ibuhmrt.Name</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Alamat</label>
+                                        <span class="col-md-8">: @ibuhmrt.Address</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">RT / RW</label>
+                                        <span class="col-md-8">: @ibuhmrt.RT / @bpk.RW</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kelurahan / Desa</label>
+                                        <span class="col-md-8">: @ibuhmrt.Kelurahan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Kecamatan</label>
+                                        <span class="col-md-8">: @ibuhmrt.Kecamatan</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No Telepon</label>
+                                        <span class="col-md-8">: @ibuhmrt.PhoneNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                    }
+
+                </fieldset>
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <fieldset>
+                <legend>Document</legend>
+                @if (fm != null)
+                {
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Kutipan Akte Kelahiran</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Surat Adopsi Anak</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Surat Keterangan Merawat Anak Tiri</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Surat Hak Wali Asuh Anak Anak</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                }
+            </fieldset>
+        </div>
+    </div>
+</div>
+
+
+<hr />
+
+<script>
+    function loadfamily(key, id) {
+        window.location.href = app.resolveUrl("/personaldata/formpengkiniandata/form?formKey=" + key + "&entity=" + JSON.stringify(paramfamily(id)));
+    };
+
+    function paramfamily(id) {
+        var entity = {
+            Id: id,
+        }
+        return entity;
+    };
+
+
+
+    // function deletekk(id) {
+
+    //    app.confirm(kendo.format(app.translate("Are you sure to delete this data?"), app.translate(true)), function (d) {
+    //        var entity = {Id: id};
+    //        if (d.value) {
+    //            $.post(app.resolveUrl("~/api/form-pengkinian-data/submit-kk"), entity, function (
+    //                result) {
+    //                if (result) {
+    //                    swal('success', 'Delete data successed', 'success');
+    //                    setTimeout(
+    //                        location.reload(), 4000);
+    //                }
+    //            });
+    //        }
+    //    });
+    //};
+</script>

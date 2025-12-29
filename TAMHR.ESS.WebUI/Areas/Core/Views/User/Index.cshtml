@@ -1,0 +1,45 @@
+﻿@section pageToolbars {
+    @await Html.PartialAsync("_Toolbars")
+}
+@{
+    ScriptManager.RegisterReference("listview");
+}
+@section scripts {
+    <script type="text/x-kendo-tmpl" id="template">
+        <div class="col-xl-3 col-md-6 col-12">
+            <div class="card">
+                <div class="text-center">
+                    <div class="card-body pb-0">
+                        <img src="#:app.resolveImageUrl(NoReg)#" class="rounded-circle height-150" alt="Card image">
+                    </div>
+                    <div class="card-body">
+                        <h4 class="card-title font-small-3">#:Name#</h4>
+                        <h6 class="card-subtitle text-muted font-small-2">#:$.toDefault(PostName, "-")#</h6>
+                        <div class="btn-group">
+                            <a class="btn btn-xs red" data-trigger="modal" data-modal="user-modal" data-modal-title="Edit User - #:Name#" data-modal-ajax="true" data-ajax-url="~/core/user/load" data-parameters-id="#:Id#">edit</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </script>
+}
+@(Html.Kendo().ListView<TAMHR.ESS.Domain.UserPositionView>()
+    .Name("userListView")
+    .TagName("div")
+    .HtmlAttributes(new { @class = "row", data_filter = "user-filter" })
+    .Events(evt => evt.DataBinding(@<text>function() { this.element.removeClass("k-widget k-listview") }</text>))
+    .ClientTemplateId("template")
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/user/gets")))
+        .PageSize(8)
+        .Sort(sort => sort.Add("Name"))
+    )
+    .Pageable(options =>
+    {
+        options.Input(true);
+        options.Numeric(false);
+    })
+    .Deferred()
+)

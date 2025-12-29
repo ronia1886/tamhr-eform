@@ -1,0 +1,617 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //List<string> data = new List<string> { "abc", "csd", "akd", "adasdasdasda asdasdda" };
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+    var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+    var classData = (IEnumerable<DropDownTreeItemModel>)ViewBag.classData;
+
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />
+    @*<partial name="~/Areas/TimeManagement/Views/EmployeeProfile/_Script.cshtml" />*@
+}
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>
+        .legend-item {
+            font: 12px 'Noto Sans';
+            margin: 2px;
+            cursor: pointer;
+        }
+
+            .legend-item .legend-marker {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+            }
+
+        .k-grid-header .k-grid-header-wrap th.k-header {
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow: visible;
+            white-space: normal;
+        }
+
+        .btn-grey {
+            color: #fff;
+            background-color: #9e9e9e;
+            border-color: #9e9e9e
+        }
+
+        #role-modal .modal-footer {
+            display: none;
+        }
+
+    </style>
+}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title" id="titleSummary" style="padding-top:6px;">@Localizer["EMPLOYEE PROFILE"]</h4>
+                <button type="button" class="btn btn-primary btn-sm p-2" onclick="uploadprofiles()" style="float:right; margin-top:3px;">
+                    <i class="fa fa-upload"></i> UPLOAD
+                </button>
+
+                <script type="text/javascript">
+                    // Ensure the function is defined after the document is ready
+                    $(document).ready(function () {
+                        // Function to open the modal for editing
+                        window.uploadprofiles = function () {
+                            // Open the modal
+                            $('#uploadViewProfile').modal('show');
+                        };
+                    });
+
+                </script>
+
+                <style>
+                    .btn-close {
+                        display: inline-block;
+                        width: 1.8em; /* Increase size */
+                        height: 1.8em; /* Increase size */
+                        background: transparent url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='white' d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/></svg>") center/1.8em auto no-repeat;
+                        opacity: 1; /* Make sure it is fully visible */
+                    }
+
+                        .btn-close:hover {
+                            opacity: 0.8; /* Add a slight hover effect */
+                        }
+
+                </style>
+                <div class="modal fade" id="uploadViewProfile" tabindex="-1" aria-hidden="true" role="dialog">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <!-- Modal Header -->
+                            <div class="modal-header">
+                                <h5 class="modal-title">Upload Edit</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+
+                            <!-- Modal Body -->
+                            <div class="modal-body">
+                                <form id="uploadForm">
+                                    <div class="mb-3 d-flex align-items-center">
+                                        <div class="form-control d-flex justify-content-between align-items-center"
+                                             style="cursor: pointer;"
+                                             onclick="document.getElementById('fileUpload').click()">
+                                            <span id="fileName">Choose file...</span>
+                                            <button type="button" class="btn btn-primary" style="left:12px;">Browse</button>
+                                        </div>
+                                        <input type="file" class="d-none" id="fileUpload" onchange="updateFileName(this)" required>
+                                    </div>
+
+                                    <script>
+                                        function updateFileName(input) {
+                                            const fileName = input.files.length > 0 ? input.files[0].name : "Choose file...";
+                                            document.getElementById('fileName').textContent = fileName;
+                                        }
+                                    </script>
+                                </form>
+                            </div>
+
+                            <!-- Modal Footer -->
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-success" onclick="downloadTemplate()">DOWNLOAD TEMPLATE</button>
+                                <button type="button" class="btn btn-danger" id="uploadBtn" onclick="uploadFile()">UPLOAD & MERGE</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">CLOSE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                @{
+                    var downloadUrl = Url.Content("~/api/employe-profile/download-templateupload");
+                }
+
+                <script>
+                    var downloadUrl = '@downloadUrl';
+
+                    function downloadTemplate() {
+                        window.location.href = downloadUrl;
+                    }
+                </script>
+
+                <script>
+                    function updateFileName(input) {
+                        const fileName = input.files.length > 0 ? input.files[0].name : "Choose file...";
+                        document.getElementById('fileName').textContent = fileName;
+                    }
+
+                    function uploadFile() {
+                        let fileInput = document.getElementById('fileUpload');
+                        let uploadBtn = document.getElementById('uploadBtn');
+
+                        // Check if a file is selected
+                        if (fileInput.files.length === 0) {
+                            app.error("Please select a file first!");
+                            fileInput.classList.add("is-invalid"); // Add Bootstrap validation class
+                            return;
+                        } else {
+                            fileInput.classList.remove("is-invalid"); // Remove validation error if file exists
+                        }
+
+                        let formData = new FormData();
+                        formData.append("file", fileInput.files[0]);
+
+                        var uploadUrl = '@Url.Content("~/api/employe-profile/uploadprofiles")';
+
+                        // Disable the button to prevent multiple clicks
+                        uploadBtn.disabled = true;
+                        uploadBtn.textContent = "Uploading..."; // Show loading text
+
+                        $.ajax({
+                            url: uploadUrl,
+                            type: "POST",
+                            data: formData,
+                            processData: false,  // Prevents jQuery from converting FormData to a string
+                            contentType: false,  // Prevents jQuery from adding default content type
+                            success: function (response) {
+                                Swal.fire({
+                                    title: "Upload successful!",
+                                    text: "Your file has been uploaded and merged successfully.",
+                                    type: "success", 
+                                    confirmButtonText: "OK"
+                                }).then((result) => {
+                                    if (result.value) {
+                                        location.reload();
+                                    }
+                                });
+                            },
+                            error: function (xhr, status, error) {
+                                console.error("Upload error:", xhr.responseText);
+                                app.error("Upload failed: " + (xhr.responseText || "Unknown error"));
+                            },
+                            complete: function () {
+                                // Re-enable the button after completion
+                                uploadBtn.disabled = false;
+                                uploadBtn.textContent = "UPLOAD & MERGE";
+                            }
+                        });
+                    }
+                </script>
+
+
+                <hr>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        @*<div class="col-md-3 form-group">
+                            <label>@Localizer["Directorate"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("directorate selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDirectorate");
+                                })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .Deferred()
+                                )
+                        </div>*@
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Division"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("division selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                                .BindTo(divisiData)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDivision");
+                                })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                                .Name("Divisi")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-division"))));
+                                })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                                )*@
+                            @*<input type="text" class="form-control" id="Divisi" data-placeholder="@Localizer["Select Division"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("department selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDepartment");
+                                })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                                .Name("Department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-department"))));
+                                })
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Deferred()
+                                )*@
+                            @*<input type="text" class="form-control" id="Department" data-placeholder="@Localizer["Select Deparment"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("section selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .Enable(false)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                                .Name("Section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-section"))));
+                                })
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .Deferred()
+                                )*@
+                            @*<input type="text" class="form-control" id="Section" data-placeholder="@Localizer["Select Section"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Class"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("class1")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("class selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                                .BindTo(classData)
+                                .Placeholder(Localizer["Please select class"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                                .Name("Divisi")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-division"))));
+                                })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                                )*@
+                            @*<input type="text" class="form-control" id="Divisi" data-placeholder="@Localizer["Select Division"]" />*@
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:20px;">
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["No Reg"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("NoReg")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-noreg"))));
+                                })
+                                .Placeholder(Localizer["Please select noreg"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="NoReg" data-placeholder="@Localizer["Select NoReg"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Employee Name"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("Name")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-name"))));
+                                })
+                                .Placeholder(Localizer["Please select name"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="Name" data-placeholder="@Localizer["Select Name"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Employee Category"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("Category")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-status"))));
+                                })
+                                .Placeholder(Localizer["Please select category"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="Status" data-placeholder="@Localizer["Select Status"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Employee Status"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("Status")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-contract"))));
+                                })
+                                .Placeholder(Localizer["Please select status"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="Status" data-placeholder="@Localizer["Select Status"]" />*@
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6" style="margin-top:20px;">
+                            <a class="btn btn-primary" id="btnSearch" style="color: #fff;">
+                                <i class="ft-search"></i> &nbsp;@Localizer["Search"]
+                            </a>
+                            <a class="btn btn-grey" id="btnClear" style="color: #fff;">
+                                <i class="ft-refresh-cw"></i> &nbsp;@Localizer["Clear"]
+                            </a>
+                        </div>
+                        <div class="col-md-6 text-right" style="margin-top:20px;">
+                            <a class="btn btn-default green-turquoise" id="btnDownload">
+                                <i class="fa fa-file-excel-o"></i> &nbsp;@Localizer["Download"]
+                            </a>
+                        </div>
+                    </div>
+                    <hr>
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<EmployeProfileView>()
+                        .Name("gridEmployeeProfile")
+                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                        .Pageable(options =>
+                        {
+                            options.Input(true);
+                            options.Numeric(false);
+                            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                        })
+                        .HtmlAttributes(new { style = "height:600px;" })
+                        .Sortable()
+                        .Resizable(resizable => resizable.Columns(true))
+                        .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                        .Scrollable()
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/employe-profile/get-employee"))
+                        .Data("$.getDataReport")
+                        )
+                        .PageSize(20)
+                        .Filter(filters => filters.Add(model => model.Expr1).IsEqualTo("Active Employee"))
+                        )
+                        .Columns(columns =>
+                        {
+                            columns.Group(groupAll => groupAll
+                            .Title(Localizer["Employee Profile"].Value)
+                            .Columns(infoAll =>
+                            {
+                                infoAll.Bound(c => c.Noreg).Title("Noreg").Width(100);
+                                @*.ClientTemplate(@"
+                                <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                <h6 class=""mb-0"">#:Name#</h6>
+                                <span class=""d-block"">#:$.toDefault(JobName, '-')#</span>
+                                </div>
+                                </div>
+                            ")
+                            .Width(250);*@
+                                infoAll.Bound(x => x.Name).Title("Employee").Width(150);
+                                infoAll.Bound(x => x.Expr1).Title("Employee Category").Width(150);
+                                infoAll.Bound(x => x.WorkContractText).Title("Employee Status").Width(150);
+                                infoAll.Bound(x => x.Directorate).Title("Directorate").Width(250);
+                                infoAll.Bound(x => x.Divisi).Title("Division").Width(200);
+                                infoAll.Bound(x => x.Department).Title("Department").Width(200);
+                                infoAll.Bound(x => x.Section).Title("Section").Width(150);
+                                infoAll.Bound(x => x.EmployeeSubGroupText).Title("Class").Width(100).HtmlAttributes(new { @class = "text-center" });
+                                @infoAll.Bound(x => x.Noreg)
+                                    .Title("Action")
+                                    .HtmlAttributes(new { @class = "text-center" })
+                                    .ClientTemplate(@"
+                    <button type='button' class='btn btn-sm purple'
+                    onclick=""window.location.href=app.resolveUrl('~/reporting/employeeprofile/ProfileEdit?noreg=#:Noreg#')""
+                    title='Edit'>
+                    <i class='ft-settings'></i>
+                    </button>
+                    ").Width(100);
+
+                            })
+                            );
+                        })
+                        @*.Events(events =>
+                        {
+                            events.DataBound("$.OnDataBound");
+                        })*@
+                        .Deferred()
+                        )
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@* <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    // Call the API to check if the user can edit
+    function checkEditPermission() {
+        $.ajax({
+            url: '@Url.Content("~/api/employe-profile/GetEmployeeProfile")', // Dynamically generate the correct API URL
+            type: 'GET',
+            success: function (response) {
+                if (!response.canEdit) {
+                    // Hide the Edit button if canEdit is false
+                    $('.edit-btn').hide();
+                }
+            },
+            error: function () {
+                console.error('Error fetching edit permissions.');
+                // Optionally hide the Edit button on error
+                $('.edit-btn').hide();
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        checkEditPermission();
+    });
+</script>
+
+<script>
+    $(document).on("click", "[data-trigger='modal']", function (e) {
+        e.preventDefault();
+
+        var modalId = $(this).data("modal"); // Get modal ID
+        var modalTitle = $(this).data("modal-title"); // Get modal title
+        var ajaxUrl = $(this).data("ajax-url"); // Get the URL to fetch the modal content
+        var noreg = $(this).data("parameters-noreg"); // Get the NoReg value from the data attribute
+
+        console.log("NoReg Value: ", noreg); // Check the NoReg value in the console
+
+        // Clear existing content and show loading spinner
+        var modalBody = $("#" + modalId).find(".modal-body");
+        modalBody.html('<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading...</div>'); // Show loading indicator
+
+        // Make AJAX call to fetch the modal content
+        $.ajax({
+            url: ajaxUrl,
+            type: 'GET',
+            data: { noreg: noreg }, // Send the NoReg value in the request
+            success: function (data) {
+                // Inject the content into the modal and set the title
+                $("#" + modalId).find(".modal-title").text(modalTitle);
+                    modalBody.text(data); // ✅ Aman dari XSS — tampilkan sebagai teks biasa
+
+                // Initialize and show the modal with fresh content
+                $("#" + modalId).modal({
+                    backdrop: 'static',  // Prevent closing on clicking outside the modal
+                    keyboard: false      // Prevent closing when pressing the escape key
+                }).modal('show');
+            },
+            error: function (xhr, status, error) {
+                console.error("Error loading modal content: " + error);
+                modalBody.html('<div class="text-center text-danger">Error loading content. Please try again later.</div>');
+            }
+        });
+    });
+</script>
+ *@
+
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div id="wrapper"></div>
+    </div>
+</div>

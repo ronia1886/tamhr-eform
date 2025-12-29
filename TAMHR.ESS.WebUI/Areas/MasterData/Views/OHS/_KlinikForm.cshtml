@@ -1,0 +1,139 @@
+﻿@model TAMHR.ESS.Domain.KlinikView
+@{
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/master-data/ohs/insertKlinik" : "~/api/master-data/ohs/updateKlinik")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Area"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AreaIdKlinik")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "AreaIdKlinik", @required = "required" })
+                    .DataTextField("NamaArea")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Area"].Value)
+                    .Value(Model.AreaId == default(string) ? string.Empty : Model.AreaId)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-AreaDropDown")))
+                    .Sort(sort => sort.Add("NamaArea"))
+                    ))
+                <span class="invalid" data-validation-for="AreaIdKlinik"></span>
+
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["UPKK"]</label>
+                @Html.TextBoxFor(x => x.Klinik, new { @class = "form-control", @data_validation_for = "Klinik", @placeholder = Localizer["Please input UPKK"].Value })
+                <span class="invalid" data-validation-for="Klinik"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("CategoryCode")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "CategoryCode", @required = "required" })
+                    .DataTextField("Name")
+                    .DataValueField("Code")
+                    .Placeholder(Localizer["Please select Category"].Value)
+                    .Value(Model.CategoryCode == default(string) ? string.Empty : Model.CategoryCode)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/get-category-name")))
+                    .Sort(sort => sort.Add("Name"))
+                    ))
+                <span class="invalid" data-validation-for="CategoryCode"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["From"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("FromHours", Model.FromHours, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "FromHours" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="FromHours"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["To"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("ToHours", Model.ToHours, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "ToHours" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="ToHours"></span>
+        </div>
+    </div>
+    <div class="row">
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["PIC"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("PIC")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "PIC", @required = "required" })
+                    .DataTextField("Name")
+                    .DataValueField("Name")
+                    .Placeholder(Localizer["Please select PIC"].Value)
+                    .Value(Model.PIC == default(string) ? string.Empty : Model.PIC)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/get-unique-column-values-name")))
+                    .Sort(sort => sort.Add("Name"))
+                    ))
+
+                @*@(Html.Kendo().MultiSelect()
+                .Name("Name")
+                .HtmlAttributes(new { @class = "form-control" })
+                .AutoClose(false)
+                .TagMode(MultiSelectTagMode.Single)
+                .DataSource(source =>
+                {
+                source.ServerFiltering(true)
+                .Custom()
+                .Type("aspnetmvc-ajax")
+                .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/master-data/ohs/get-unique-column-values-name"))));
+                })
+                .Placeholder(Localizer["Please select name"].Value)
+                .Deferred()
+                )*@
+                <span class="invalid" data-validation-for="PIC"></span>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+
+<script type="text/javascript">
+    $(function () {
+        window.setTimeout(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done'
+            });
+        }, 1000);
+    });
+
+
+</script>

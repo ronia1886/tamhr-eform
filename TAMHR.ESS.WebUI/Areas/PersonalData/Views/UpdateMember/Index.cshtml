@@ -1,0 +1,310 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist","grid");
+}
+
+<style>
+    .k-grid,
+    .k-grid-header-wrap,
+    .k-grid-header th,
+    .k-grid-content > table > tbody > tr > td {
+        border: 0 !important;
+        /*border-width: 1px 0 0 0 !important;*/
+        /*background-color: transparent !important;*/
+    }
+
+        .k-grid td {
+            border-width: 1px 0 0 0 !important;
+        }
+
+        .k-grid tr {
+            background-color: transparent !important;
+        }
+
+        .k-grid .k-alt {
+            background-color: transparent !important;
+        }
+</style>
+@section scripts {
+    <script type="text/javascript">
+
+        function s2ab(s) {
+            var buf = new ArrayBuffer(s.length);
+            var view = new Uint8Array(buf);
+            for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
+
+        function download(url, data, filename) {
+            var formData = new FormData();
+            Object.keys(data).forEach(function (key) {
+                var value = data[key];
+                if (value instanceof Array) {
+                    value.forEach(function (v) {
+                        formData.append(key, v);
+                    });
+                } else {
+                    formData.append(key, value);
+                }
+
+            });
+
+
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url);
+            //xhr.send(formData);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.setRequestHeader("RequestVerificationToken", REQUEST_VERIFICATION_TOKEN);
+            xhr.send(JSON.stringify(data));
+            xhr.onload = function (event) {
+                if (this.status == 200) {
+                    console.log(this.status)
+                    var bin = atob(xhr.response);
+                    var ab = s2ab(bin);
+                    var blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;' });
+
+
+                    let a = document.createElement("a");
+                    a.style = "display: none";
+                    document.body.appendChild(a);
+                    let url = window.URL.createObjectURL(blob);
+                    a.href = url;
+                    a.download = filename + '.xlsx';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                } else {
+                }
+            };
+
+        };
+
+
+        app.registerHandler("complete-handler", function (parameters) {
+            var grid = $("#grid").data("kendoGrid");
+            //console.log( grid.selectedKeyNames())
+            if (grid.tbody.find("input:checked").closest("tr").length === 0) {
+                app.warning("Harap pilih data Update Member.");
+            } else {
+                app.confirm("Anda yakin merubah data Update Member?", "", function (d) {
+                    if (!d.value) return;
+
+                    var ListIdBpjs = [];
+                    var ListIdInsurance = [];
+                    grid.tbody.find("input:checked").closest("tr").each(function (idx, row) {
+                        var data = grid.dataItem(row);
+                        if (data.Type === 'BPJS') {
+                            ListIdBpjs.push(data.CommonnId);
+                        }
+                        else {
+                            ListIdInsurance.push(data.CommonnId);
+                        }
+
+                    });
+
+                    $.post('~/api/she/complete', { listIdBpjs: ListIdBpjs, listIdInsurance: ListIdInsurance }, function (d) {
+                        window.sessionStorage.setItem("flashMessage", "Success");
+                        window.location.reload();
+                    });
+                });
+            }
+        });
+
+        app.registerHandler("excel-handler", function (parameters) {
+            var grid = $("#grid").data("kendoGrid");
+
+            if (grid.tbody.find("input:checked").closest("tr").length === 0) {
+                app.warning("Harap pilih data Update Member.");
+            } else {
+                var ListIdBpjs = [];
+                var ListIdInsurance = [];
+                grid.tbody.find("input:checked").closest("tr").each(function (idx, row) {
+                    var data = grid.dataItem(row);
+                    if (data.Type === 'BPJS') {
+                        ListIdBpjs.push(data.CommonnId);
+                    }
+                    else {
+                        ListIdInsurance.push(data.CommonnId);
+                    }
+
+                });
+
+                if (ListIdBpjs.length > 0) {
+                    download("@Url.Content("~/api/she/download")", { DocIds: ListIdBpjs, Type: 'BPJS' }, "BPJS");
+                }
+                setTimeout(function () {
+                    if (ListIdInsurance.length > 0) {
+                        download("@Url.Content("~/api/she/download")", { DocIds: ListIdInsurance, Type: 'INSURANCE' }, "INSURANCE");
+                    }
+                }, 2000);
+
+
+            }
+        });
+
+        var oldPageSize = 0;
+        function checkall() {
+            var grid = $("#grid").data("kendoGrid");
+
+            oldPageSize = grid.dataSource.pageSize();
+            grid.dataSource.pageSize(grid.dataSource.data().length);
+
+            if (grid.dataSource.data().length === grid.select().length) {
+                grid.clearSelection();
+            } else {
+                grid.select("tr");
+            };
+
+            grid.dataSource.pageSize(oldPageSize);
+        };
+
+        function filterGridShe() {
+            $("#grid").data("kendoGrid").dataSource.filter({
+                logic: "and",
+                filters: [
+                    {
+                        field: "Type",
+                        operator: "startswith",
+                        MemberType: typeof (String),
+                        value: $("#cb-type").val()
+                    },
+                    {
+                        field: "ActionType",
+                        operator: "startswith",
+                        MemberType: typeof (String),
+                        value: $("#cb-action").val()
+                    },
+                    {
+                        field: "Status",
+                        operator: "eq",
+                        MemberType: typeof (String),
+                        value: $("#cb-status").val()
+                    },
+                    {
+                        logic: "or",
+                        filters: [
+                            {
+                                field: "Name",
+                                operator: "contains",
+                                MemberType: typeof (String),
+                                value: $("#emp-name").val()
+                            },
+                            {
+                                field: "NoReg",
+                                operator: "contains",
+                                MemberType: typeof (String),
+                                value: $("#emp-name").val()
+                            }
+                        ]
+                    }
+                    
+                ]
+            });
+        }
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-header bordered">
+                    <ul id="request-history-filter" class="page-toolbars" data-role="filter" style="padding: 0 !important;">
+                        <li>
+                            <select id="cb-type" class="form-control" onchange="filterGridShe()">
+                                <option value="">@Localizer["All"]</option>
+                                <option value="BPJS">BPJS</option>
+                                <option value="ASURANSI">ASURANSI</option>
+                            </select>
+                        </li>
+                        <li>
+                            <select id="cb-action" class="form-control" onchange="filterGridShe()">
+                                <option value="">@Localizer["All"]</option>
+                                <option value="pendaftaran">Pendaftaran Member</option>
+                                <option value="nonactive">Non Aktif Member</option>
+                            </select>
+                        </li>
+                        <li>
+                            <select id="cb-status" class="form-control" onchange="filterGridShe()">
+                                <option value="Pending">@Localizer["Pending"]</option>
+                                <option value="Complete">@Localizer["Complete"]</option>
+                            </select>
+                        </li>
+                        <li>
+                            <input id="emp-name" type="text" placeholder= @Localizer["NoReg or Employee Name"] class="form-control" onchange="filterGridShe()" />
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body ">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<SHEViewModel>()
+                                        .Name("grid")
+                                        .HtmlAttributes(new { data_filter = "request-history-filter" })
+                                        .Columns(columns =>
+                                        {
+                                            columns.Select().Width(10).ClientHeaderTemplate(@"<input class='k-checkbox' data-role='checkbox' id='cb-all' aria-label='Select row' aria-checked='false' type='checkbox'>
+                                                                            <label for='cb-all' class='k-checkbox-label' >All</label>")
+                                            .HtmlAttributes(new { @style = "vertical-align: middle" });
+                                            columns.Bound(c => c.Noreg).ClientTemplate(@"
+                                                <span class='#= Type == 'BPJS' ? 'font-green-jungle' : 'font-blue-steel' # bold'>#:Type#</span>
+                                                <div class='row'>
+                                                <div class='col-md-1'>#:Noreg#</div>
+                                                <div class='col-md-3'>#:Name#</div>
+                                                <div class='col-md-3'>#:ActionType == 'pendaftaran' ? 'Pendaftaran Member' : 'Non Aktif Member'#</div>
+                                                <div class='col-md-3'>#:FamilyRelation#</div>
+                                                <div class='col-md-2'>#:Status#</div>
+                                                </div>
+                                                ").Title(" ");
+                                            //columns.Bound(c => c.Noreg).ClientTemplate(@"
+
+                                            //    <span class='#= Type == 'BPJS' ? 'font-green-jungle' : 'font-blue-steel' # bold'>#:Type#</span>
+                                            //    <table>
+                                            //    <tr>
+                                            //    <td style='border: none;padding:0px'>#:Noreg#</td>
+                                            //    <td style='border: none;min-width: 100px;max-width: 100px;'>#:Name#</td>
+                                            //    <td style='border: none;'>#:ActionType == 'pendaftaran' ? 'Pendaftaran Member' : 'Non Aktif Member'#</td>
+                                            //    <td style='border: none;'>#:FamilyRelation#</td>
+                                            //    <td style='border: none;'>#:Status#</td>
+                                            //    </tr>
+                                            //    </table>
+
+                                            //    ").Title(" ");
+                                        })
+                                        .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />No List SHE found</div>"))
+                                        .Pageable(options =>
+                                        {
+                                            options.Input(true);
+                                            options.Numeric(false);
+                                            options.AlwaysVisible(false);
+                                            options.PageSizes(new int[] { 10, 50, 100 });
+                                        })
+                                        .PersistSelection(true)
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .PageSize(10)
+                                        .Filter(f => f.Add(x => x.Status == "Pending"))
+                                        .Read(read => read.Url(Url.Content("~/api/she/getlistshe")))
+                                        .Model(m => m.Id(x => x.CommonnId))
+                                        )
+                                        .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bordered">
+                    <div class="float-right" style="margin-bottom:10px">
+                        <a class="btn btn-sm blue-sharp" style="margin-bottom:20px" data-trigger="handler" data-handler="complete-handler">
+                            <span class="d-none d-sm-inline">Complete</span>
+                        </a>
+                        <a class="btn btn-sm blue-sharp" style="margin-bottom:20px" data-trigger="handler" data-handler="excel-handler">
+                            <span class="d-none d-sm-inline">Download</span>
+                        </a>
+                        @*<a class="" data-trigger="handler" data-handler="excel-handler">
+                            <span class="fa fa-3x fa-file-excel-o d-none d-sm-inline"></span>
+                        </a>*@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

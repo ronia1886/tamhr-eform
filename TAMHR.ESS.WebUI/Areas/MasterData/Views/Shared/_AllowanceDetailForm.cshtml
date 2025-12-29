@@ -1,0 +1,95 @@
+﻿@model TAMHR.ESS.Domain.AllowanceDetail
+@{ 
+    var isNew = (Model?.Id ?? Guid.Empty) == Guid.Empty;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/allowancedetail">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Type"]</label>
+                @Html.TextBoxFor(x => x.Type, new { @class = "form-control", @data_validation_for = "Type", @placeholder = Localizer["Please input type"].Value })
+                <span class="invalid" data-validation-for="Type"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Sub Type"]</label>
+                @Html.TextBoxFor(x => x.SubType, new { @class = "form-control", @data_validation_for = "SubType", @placeholder = Localizer["Please input sub type if any"].Value })
+                <span class="invalid" data-validation-for="SubType"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Class From"]</label>
+                @Html.TextBoxFor(x => x.ClassFrom, new { @class = "form-control", @data_validation_for = "ClassFrom", @placeholder = Localizer["Please input class from"].Value })
+                <span class="invalid" data-validation-for="ClassFrom"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Class To"]</label>
+                @Html.TextBoxFor(x => x.ClassTo, new { @class = "form-control", @data_validation_for = "ClassTo", @placeholder = Localizer["Please input class to"].Value })
+                <span class="invalid" data-validation-for="ClassTo"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Ammount"]</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Rp</span>
+                    </div>
+                    @{
+                        var amount = Model?.Ammount ?? 0m; // aman saat Model null
+                    }
+                    @(Html.Kendo().NumericTextBoxFor(x => x.Ammount)
+                        .Value(Math.Floor(amount))
+                        .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Ammount" })
+                        .Format("##,#")
+                        .Decimals(0)
+                        .Min(0)
+                        .Max(1000000000)
+                        )
+                </div>
+                <span class="invalid" data-validation-for="Ammount"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.Description, new { @class = "form-control", @data_validation_for = "Description", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

@@ -1,0 +1,315 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@{
+
+    ScriptManager.RegisterReferences("colorpicker", "datepicker", "dropdownlist", "listview");
+    var isAdmin = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("HR_ADMIN"));
+    var currentUser = User.GetClaim("NoReg");
+}
+
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/master-data/ohs/downloadKp">
+                    @Localizer["Download Kategori Penyakit"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/master-data/ohs/downloadArea">
+                    @Localizer["Download Area"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/master-data/ohs/downloadEquipment">
+                    @Localizer["Download Equipment"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/master-data/ohs/downloadKlinik">
+                    @Localizer["Download UPKK"]
+                </a>
+            </li>
+
+        </ul>
+    </div>
+}
+    @section scripts {
+    <script type="text/javascript">
+
+        $(function () {
+            $(document).on('focusin', function (e) {
+                e.stopImmediatePropagation();
+            });
+
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+    </script>
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    }
+    @section styles {
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+    <style type="text/css">
+                .k-grid-header th {
+            text-align: center !important;
+        }
+    </style>
+}
+
+
+
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" id="area-tab" data-toggle="tab" href="#area" role="tab" aria-controls="area" aria-selected="false">Area</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="equipment-tab" data-toggle="tab" href="#equipment" role="tab" aria-controls="equipment" aria-selected="false">Equipment</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="klinik-tab" data-toggle="tab" href="#klinik" role="tab" aria-controls="klinik" aria-selected="false">UPKK</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="kp-tab" data-toggle="tab" href="#kp" role="tab" aria-controls="kp" aria-selected="true">Kategori Penyakit</a>
+        </li>
+
+
+    </ul>
+    <div class="tab-content">
+        <div class="tab-pane fade" id="kp" role="tabpanel" aria-labelledby="kp-tab">
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-header bordered">
+                            <h3 class="card-title">@Localizer["List of Kategori Penyakit"]</h3>
+                            <div class="heading-elements">
+                                @await Html.PartialAsync("_KpToolbars")
+                            </div>
+                        </div>
+                        <div class="card-body p-0 table-wrap">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.Kategori_PenyakitVIEW>()
+                            .Name("KategoriPenyakit")
+                            .HtmlAttributes(new { data_filter = "kp-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RowNum).Title("No");
+                                columns.Bound(c => c.Id).Title("ID").Hidden(true);
+                                columns.Bound(c => c.Name).Title("Tingkat Sakit");
+                                columns.Bound(c => c.KategoriPenyakit).Title("Kategori Penyakit");
+                                columns.Bound(c => c.Penyakit).Title("Penyakit desc");
+                                // Menambahkan kolom Created Date
+                                columns.Bound(c => c.CreatedOn).Title("Created Date")
+                                .Format("{0:dd/MM/yyyy}"); // Format tanggal sesuai keinginan
+                                columns.Bound(c => c.CreatedBy).Title("Created By");
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""kp-rule-modal"" data-modal-title=""Edit Kategori Penyakit"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/ohs/LoadKategoriPenyakit"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/ohs/deleteKp"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+                            })
+
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets")))
+                            .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                            )
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade show active" id="area" role="tabpanel" aria-labelledby="area-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Area"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_AreaToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AreaView>()
+                            .Name("AreaGrid")
+                            .HtmlAttributes(new { data_filter = "area-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RowNum).Title("No");
+                                columns.Bound(c => c.Id).Title("ID").Hidden(true);
+                                columns.Bound(c => c.NamaArea).Title("Nama Area");
+                                columns.Bound(c => c.DivisiName).Title("Nama Divisi");
+                                columns.Bound(c => c.Alamat).Title("Alamat");
+                                columns.Bound(c => c.CreatedOn).Title("Created Date")
+                                .Format("{0:dd/MM/yyyy}"); // Format tanggal sesuai keinginan
+                                columns.Bound(c => c.CreatedBy).Title("Created By");
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""area-rule-modal"" data-modal-title=""Edit Area"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/ohs/LoadArea"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/ohs/deleteArea"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+                            })
+
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Grid-Area")))
+                            .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                            )
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="equipment" role="tabpanel" aria-labelledby="equipment-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Equipment"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_EquipmentToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.EquipmentView>()
+                            .Name("EquipmentGrid")
+                            .HtmlAttributes(new { data_filter = "equipment-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RowNum).Title("No");
+                                columns.Bound(c => c.Id).Title("ID").Hidden(true);
+                                columns.Bound(c => c.DivisiName).Title("Division");
+                                columns.Bound(c => c.NamaArea).Title("Area");
+                                columns.Bound(c => c.EquipmentName).Title("Equipment");
+                                columns.Bound(c => c.Quantity).Title("Quantity");
+                                columns.Bound(c => c.CreatedOn).Title("Created Date")
+                                .Format("{0:dd/MM/yyyy}"); // Format tanggal sesuai keinginan
+                                columns.Bound(c => c.CreatedBy).Title("Created By");
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""equipment-rule-modal"" data-modal-title=""Edit Equipment"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/ohs/LoadEquipment"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/ohs/deleteEquipment"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+                            })
+
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Grid-Equipment")))
+                            .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                            )
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="klinik" role="tabpanel" aria-labelledby="klinik-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of UPKK"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_KlinikToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.KlinikView>()
+                            .Name("KlinikGrid")
+                            .HtmlAttributes(new { data_filter = "klinik-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RowNum).Title("No");
+                                columns.Bound(c => c.Id).Title("ID").Hidden(true);
+                                columns.Bound(c => c.Klinik).Title("UPKK");
+                                columns.Bound(c => c.NamaArea).Title("Area");
+                                columns.Bound(c => c.FromHours).Title(Localizer["Start"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" });
+                                columns.Bound(c => c.ToHours).Title(Localizer["End"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" });
+                                columns.Bound(c => c.CategoryName).Title("Category Name");
+                                columns.Bound(c => c.PIC).Title("PIC");
+                                columns.Bound(c => c.CreatedOn).Title("Created Date")
+                                .Format("{0:dd/MM/yyyy}"); // Format tanggal sesuai keinginan
+                                columns.Bound(c => c.CreatedBy).Title("Created By");
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""klinik-rule-modal"" data-modal-title=""Edit UPKK"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/ohs/LoadKlinik"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/ohs/deleteKlinik"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+                            })
+
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Grid-Klinik")))
+                            .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                            )
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+
+

@@ -1,0 +1,39 @@
+﻿@model List<TAMHR.ESS.Domain.DocumentApproval>;
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="card-header bordered">
+            <h4 class="card-title">Reference Link</h4>
+            <a class="heading-elements-toggle">
+                <i class="ft-ellipsis-h font-medium-3"></i>
+            </a>
+            <div class="heading-elements">
+                <ul class="list-inline mb-0">
+                    <li>
+                        <a data-action="collapse">
+                            <i class="ft-minus"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <ul class="dropdown-menu-list pl-0" data-height="363" data-handle-color="#A7B3C1">
+                @foreach (var link in Model)
+                {
+                    <li class="list-unstyled">
+                        <div class="user-notification-item user-notification-item-unread" style="padding: 10px; font-size: 15px; color: #888; border-bottom: 1px solid #EFF2F6 !important;">
+                            <div class="details">
+                                <a class="flex-icon-item font-dark" data-trigger="handler" data-handler="redirectHandler" data-url="~/core/form/view?formKey=@link.FormKey&amp;id=@link.Id">
+                                    <i class="fa fa-file"></i>
+                                    <b>@link.Form?.Title</b> with document number <b>@link.DocumentNumber</b>
+                                </a>
+                            </div>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+   
+}

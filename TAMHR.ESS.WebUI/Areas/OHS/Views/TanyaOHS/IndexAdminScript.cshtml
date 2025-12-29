@@ -1,0 +1,453 @@
+﻿<script type="text/javascript">
+    var Dashboard = () => {
+        var Bar = (chartId, data, categories, height = 200, title, colorChart) => {
+            // Validasi bahwa `data` adalah array
+            if (!Array.isArray(data) || data.length === 0) {
+                console.error("Data tidak valid atau kosong:", data);
+                return;
+            }
+
+            console.log('Categories (sebelum diproses) >>', categories);
+
+            // Daftar nama bulan dalam setahun
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agt", "Sep", "Okt", "Nov", "Des"];
+
+            // Konversi periode dari format "YYYY-MM" menjadi nama bulan
+            categories = categories.map(period => {
+                const monthIndex = parseInt(period.split("-")[1], 10) - 1; // Ambil bulan (02 -> 1 untuk indeks array)
+                return monthNames[monthIndex] || period; // Jika tidak valid, tetap tampilkan aslinya
+            });
+
+            // Konversi data ke format series untuk Kendo Chart
+            const seriesData = data.map(item => ({
+                name: item.name,   // Misalnya: "Internal", "Outsourcing"
+                data: item.data,   // Array nilai dari API
+                axis: item.axis || "Total"
+            }));
+
+            console.log('Series Data:', seriesData);
+
+            var maxFrequency = 0;
+            data.forEach(e => {
+                e.data.forEach(e2 => {
+                    if(e2 > maxFrequency) maxFrequency = e2;
+                });
+            });
+            let majorUnitFR = maxFrequency < 10 ? 1 :
+                          maxFrequency < 100 ? 10 :
+                          maxFrequency < 1000 ? 100 : 1000;
+
+            // Render Chart
+            $("#" + chartId).kendoChart({
+                title: {
+                    text: title,
+                    font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+                    color: "#000000",
+                    align: "center",
+                },
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        font: "12px 'Open Sans', Inter, 'Noto Sans'"
+                    }
+                },
+                seriesColors: colorChart,
+                series: seriesData,
+                tooltip: {
+                    visible: true,
+                    template: "#= series.name #: #= value #", // Menampilkan kategori dan nilai di tooltip
+                    font: "14px 'Open Sans', Inter, 'Noto Sans'"
+                },
+                chartArea: {
+                    height: height
+                },
+                categoryAxis: {
+                    categories: categories, // Gunakan hasil kategori yang sudah diproses
+                    title: { text: "Periode", font: "12px 'Open Sans', Inter, 'Noto Sans'", },
+                    labels: {
+                        font: "bold 12px 'Open Sans', Inter, 'Noto Sans'", // **Buat nama bulan bold**
+                        rotation: 0, // Pastikan label tidak miring
+                        color: "#000" // Warna teks hitam untuk kontras
+                    }
+
+                },
+                valueAxis: [{
+                    name: "Total",
+                    labels: {
+                        format: "{0}"
+                    },
+                    majorUnit: majorUnitFR
+                    // title: { text: "Total" }
+                }]
+            });
+        }
+        var Donut = (chartId, data, height = 200, title) => {
+            $("#" + chartId).kendoChart({
+                title: {
+                    text: title,
+                    font: "bold 12px 'Open Sans', Inter, 'Noto Sans'",
+                    color: "#000000",
+                    align: "center",
+                },
+                legend: {
+                    position: "bottom",
+                    labels: {
+                        font: "12px 'Open Sans', Inter, 'Noto Sans'"
+                    }
+                },
+                seriesColors: [
+                    "#FF8C00", "#8B0000", "#E9967A", "#8FBC8F", "#483D8B", "#2F4F4F",
+                    "#E74C3C", "#3498DB", "#1ABC9C", "#9B59B6", "#34495E", "#16A085",
+                    "#FFEBCD", "#5F9EA0", "#B8860B", "#006400", "#BDB76B", "#8B008B",
+                    "#00CED1", "#696969", "#1E90FF", "#FFFAF0", "#B22222", "#228B22"
+                ],
+                series: [{
+                    type: "donut",
+                    data: data,
+                    field: "value",
+                    categoryField: "category",
+                    labels: {
+                        visible: true, // Tampilkan label
+                        position: "center", // Posisi label di dalam segmen
+                        template: "#= value #", // Menampilkan kategori dan nilai asli
+                        font: "10px 'Open Sans', Inter, 'Noto Sans'",
+                        color: "#000000"
+                    }
+                }],
+                tooltip: {
+                    visible: true,
+                    template: "#= category #: #= value #", // Menampilkan kategori & nilai asli di tooltip
+                    font: "14px 'Open Sans', Inter, 'Noto Sans'"
+                },
+                chartArea: {
+                    height: height
+                }
+            });
+        }
+        var renderBar = (data) => {
+                // [{"name":"Sangat Tidak Puas","data":[17,8,1],"axis":"Total"},{"name":"Tidak Puas","data":[7,4,1],"axis":"Total"},{"name":"Biasa","data":[6,4,1],"axis":"Total"},{"name":"Puas","data":[6,4,1],"axis":"Total"},{"name":"Sangat Puas","data":[6,4,1],"axis":"Total"}], ["2025-01","2025-02","2025-03"]
+            var barChart = {};
+            var barCategory = [];
+            data.forEach( e => {
+                if(e.Rating != ''){
+                    var createdOn = moment(e.CreatedOn).format('YYYY-MM');
+                    if(barCategory.indexOf(createdOn) === -1) barCategory.push(createdOn);
+                    if(barChart[createdOn] == null) barChart[createdOn] = {
+                        "Sangat Tidak Puas" : [0],
+                        "Tidak Puas" : [0],
+                        "Biasa" : [0],
+                        "Puas" : [0],
+                        "Sangat Puas" : [0]
+                    };
+                    barChart[createdOn][e.Rating]++;
+                }
+            });
+            var byRating = {};
+            for (var key1 in barChart) {
+                for (var key2 in barChart[key1]) {
+                    if(byRating[key2] == null) byRating[key2] = [barChart[key1][key2]]
+                    else byRating[key2].push(barChart[key1][key2])
+                }
+            }
+            var series = [];
+            for (var key1 in byRating) {
+                series.push({"name":key1, "data":byRating[key1], "axis":"Total"});
+            }
+            var colorChart = [
+                        "#E74C3C", "#3498DB", "#1ABC9C", "#9B59B6", "#34495E", "#16A085"];
+            if(barCategory.length == 0){
+                series.push({"name":"Biasa", "data": [0], "axis":"Total"})
+                series.push({"name":"Puas", "data": [0], "axis":"Total"})
+                series.push({"name":"Sangat Puas", "data": [0], "axis":"Total"})
+                series.push({"name":"Sangat Tidak Puas", "data": [0], "axis":"Total"})
+                series.push({"name":"Tidak Puas", "data": [0], "axis":"Total"})
+                barCategory.push(moment().format("YYYY-MM"))
+            }
+            console.log('barSeries',series);
+            console.log('barCategory',barCategory);
+            Bar("IncidentAccidentChart", series, barCategory, 400, 'Rating Chart',colorChart);
+        }
+        var renderDonut = (data) => {
+            var seriesObj = {
+                Solved : 0,
+                Unsolved : 0,
+                "Not Submitted" : 0
+            };
+            var series = [];
+            data.forEach( e => {
+                if(e.Solve == "Sudah") seriesObj.Solved++
+                if(e.Solve == "Belum") seriesObj.Unsolved++
+                if(e.Solve == "") seriesObj["Not Submitted"]++
+            });
+            for (var key1 in seriesObj) {
+                series.push({
+                    "category": key1,
+                    "value": seriesObj[key1],
+                    "periode": "2025-01"
+                });
+            }
+            console.log("donutSeries", series);
+            Donut("DistrubutionWorkingChart", series, 500, 'Total Feedback');
+        }
+        var getData = () => {
+            var mStart = moment($('#FeedbackStartDate').val(),"DD/MM/YYYY");
+            var mEnd = moment($('#FeedbackEndDate').val(),"DD/MM/YYYY");
+            console.log("mStart", $('#FeedbackStartDate').val());
+            console.log("mStart", mStart);
+            console.log("mStart", mStart.format('YYYY-MM-DD'));
+            var solve = "";
+            if(FeedbackFilter)solve=FeedbackFilter;
+            axios.post('../../api/tanyaohs/getDashboard', {
+                "start": mStart.isValid() ? mStart.format('YYYY-MM-DD') : moment().add(-1, 'M').format('YYYY-MM-DD'),
+                "end": mEnd.isValid() ? mEnd.format('YYYY-MM-DD') : moment().format('YYYY-MM-DD'),
+                "KategoriLayanan" : $("#FeedbackCategory").val(),
+                "Solve" : solve
+            }, {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            })
+            .then((res) => {
+                var data = res.data.result;
+                renderBar(data);
+                renderDonut(data);
+            })
+            .catch((error) => {
+                console.log(error);
+            });
+        }
+        return {
+            Bar,
+            Donut,
+            getData
+        }
+    };
+    var dashboard = Dashboard();
+    var FeedbackFilter = null;
+    var FeedbackSort = null;
+    var FeedbackGetFilter = () => {
+        if (FeedbackFilter == null) return [];
+        else {
+            return [{
+                field: 'Solve',
+                operator: 'contains',
+                value: FeedbackFilter,
+            }];
+        }
+    }
+    var FeedbackGetPeriod = () => {
+        var startDate = $("#FeedbackStartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1);
+        var endDate = $("#FeedbackEndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31);
+        return [
+            {
+                field: 'CreatedOnSearch',
+                value: kendo.toString(startDate, "yyyy-MM-dd"),
+                operator: 'gte'
+            },
+            {
+                field: 'CreatedOnSearch',
+                value: kendo.toString(endDate, "yyyy-MM-dd"),
+                operator: 'lte'
+            }];
+    };
+    var FeedbackGetSort = () => {
+        if (FeedbackSort == null) return [];
+        else {
+            if (FeedbackSort == 'Kategori Layanan') {
+                return [{
+                    field: 'KategoriLayanan',
+                    dir: 'asc'
+                }];
+            }
+            if (FeedbackSort == 'Newest Data') {
+                return [{
+                    field: 'CreatedOn',
+                    dir: 'desc'
+                }];
+            }
+            if (FeedbackSort == 'Oldest Data') {
+                return [{
+                    field: 'CreatedOn',
+                    dir: 'asc'
+                }];
+            }
+        }
+    }
+    var FeedbackSearch = () => {
+        var $grid = $("#GridFeedback").data("kendoGrid");
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+        var dataSource = $grid.dataSource;
+        var filters = [...[{
+            field: 'KategoriLayanan',
+            operator: 'contains',
+            value: $("#FeedbackCategory").val()
+        }], ...FeedbackGetFilter(), ...FeedbackGetPeriod()];
+        var sort = FeedbackGetSort();
+        dataSource.filter(filters);
+        dataSource.sort(sort);
+        dashboard.getData();
+    };
+    var FeedbackClearFilter = () => {
+        FeedbackFilter = null;
+        FeedbackSearch();
+    };
+    var FeedbackClearSort = () => {
+        FeedbackSort = null;
+        FeedbackSearch();
+    };
+    var FeedbackKategoriLayanan = () => {
+        FeedbackSort = 'Kategori Layanan';
+        FeedbackSearch();
+    };
+    var FeedbackNewestData = () => {
+        FeedbackSort = 'Newest Data';
+        FeedbackSearch();
+    };
+    var FeedbackOldestData = () => {
+        FeedbackSort = 'Oldest Data';
+        FeedbackSearch();
+    };
+    var FeedbackSolved = () => {
+        FeedbackFilter = 'Sudah';
+        FeedbackSearch();
+    };
+    var FeedbackUnsolved = () => {
+        FeedbackFilter = 'Belum';
+        FeedbackSearch();
+    };
+    var KonsultasiFilter = null;
+    var KonsultasiSort = null;
+    var KonsultasiGetFilter = () => {
+        if (KonsultasiFilter == null) return [];
+        else {
+            return [{
+                field: 'Status',
+                operator: 'contains',
+                value: KonsultasiFilter,
+            }];
+        }
+    }
+    var KonsultasiGetPeriod = () => {
+        var startDate = $("#KonsultasiStartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1);
+        var endDate = $("#KonsultasiEndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31);
+        return [
+            {
+                field: 'CreatedOnSearch',
+                value: kendo.toString(startDate, "yyyy-MM-dd"),
+                operator: 'gte'
+            },
+            {
+                field: 'CreatedOnSearch',
+                value: kendo.toString(endDate, "yyyy-MM-dd"),
+                operator: 'lte'
+            }];
+    };
+    var KonsultasiGetSort = () => {
+        if (KonsultasiSort == null) return [];
+        else {
+            if (KonsultasiSort == 'Kategori Layanan') {
+                return [{
+                    field: 'KategoriLayanan',
+                    dir: 'asc'
+                }];
+            }
+            if (KonsultasiSort == 'Newest Data') {
+                return [{
+                    field: 'CreatedOn',
+                    dir: 'desc'
+                }];
+            }
+            if (KonsultasiSort == 'Oldest Data') {
+                return [{
+                    field: 'CreatedOn',
+                    dir: 'asc'
+                }];
+            }
+        }
+    }
+    var KonsultasiSearch = () => {
+        var $grid = $("#GridKonsultasi").data("kendoGrid");
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+        var dataSource = $grid.dataSource;
+        var filterKategori = [{
+            field: 'KategoriLayanan',
+            operator: 'contains',
+            value: $("#KonsultasiCategory").val()
+        }];
+        //if ($("#KonsultasiCategory").val() == "") {
+        //    filterKategori = [{
+        //        field: 'KategoriLayanan',
+        //        operator: 'contains',
+        //        value: "Konsultasi"
+        //    }]
+        //}
+        var filters = [
+            ...filterKategori,
+            ...KonsultasiGetFilter(),
+            ...KonsultasiGetPeriod()
+        ];
+        var sort = KonsultasiGetSort();
+        dataSource.filter(filters);
+        dataSource.sort(sort);
+    };
+    var KonsultasiClearFilter = () => {
+        KonsultasiFilter = null;
+        KonsultasiSearch();
+    };
+    var KonsultasiClearSort = () => {
+        KonsultasiSort = null;
+        KonsultasiSearch();
+    };
+    var KonsultasiKategoriLayanan = () => {
+        KonsultasiSort = 'Kategori Layanan';
+        KonsultasiSearch();
+    };
+    var KonsultasiNewestData = () => {
+        KonsultasiSort = 'Newest Data';
+        KonsultasiSearch();
+    };
+    var KonsultasiOldestData = () => {
+        KonsultasiSort = 'Oldest Data';
+        KonsultasiSearch();
+    };
+    var KonsultasiOnGoing = () => {
+        KonsultasiFilter = 'On-Going';
+        KonsultasiSearch();
+    };
+    var KonsultasiClosed = () => {
+        KonsultasiFilter = 'Closed';
+        KonsultasiSearch();
+    };
+    var RedLine = () => {
+        $('#GridFeedback tr:contains("Belum")').attr('style', 'background-color:maroon !important;color:white');
+    };
+    var SetupFilterCategory = () => {
+        var data = [
+            "Konsultasi Kesehatan",
+            "Konsultasi Asuransi",
+            "Kebijakan Kesehatan",
+            "Kebijakan Keselamatan (Safety)"
+        ];
+        var option = '<option value="">All</option>'
+        data.forEach(e => {
+            option += `<option value='${e}'>${e}</option>`;
+        });
+        var optionKonsultasi = '<option value="Konsultasi ">All</option>'
+        data.forEach(e => {
+            if (e.includes("Konsultasi")) optionKonsultasi += `<option value='${e}'>${e}</option>`;
+        });
+        $("#FeedbackCategory").html(option);
+        $("#KonsultasiCategory").html(optionKonsultasi);
+    };
+    document.addEventListener("DOMContentLoaded", (event) => {
+        RedLine();
+        SetupFilterCategory();
+
+        var KonsultasiTabClick = 0;
+        $("#konsultasi-tab").click(() => {
+            $('#GridKonsultasi').data('kendoGrid').dataSource.read();
+        });
+        dashboard.Donut("DistrubutionWorkingChart", "", 500, 'Total Feedback');
+        dashboard.getData();
+    });
+</script>

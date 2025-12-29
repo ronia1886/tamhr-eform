@@ -1,0 +1,524 @@
+﻿@using TAMHR.ESS.Infrastructure
+@using TAMHR.ESS.Domain
+@inject ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.TerminationService terminationService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService mdmService;
+@model PdfViewModel
+@{
+
+    Layout = null;
+    var year = Model.DocumentApproval.CreatedOn.Year;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as TerminationViewModel;
+    var terminationtypeid = obj.TerminationTypeId;
+    var leadTime = 5;
+    var leadTimeConfig = ConfigService.GetConfig("Termination.ExitClearanceLeadTime");
+    var employeeInformation = terminationService.GetTerminationPdfEmployeeInfo(obj.NoReg).ToList();
+    var name = employeeInformation.FirstOrDefault().Name;
+    var kelas = employeeInformation.FirstOrDefault().Class;
+    var email = employeeInformation.FirstOrDefault().Email;
+    var datetimenow = DateTime.Now.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"));
+    if (email == null || email == "")
+    {
+        email = "-";
+    }
+    var phonenumber = "-";
+    if (employeeInformation.FirstOrDefault().PhoneNumber != null)
+    {
+        phonenumber = "+62" + employeeInformation.FirstOrDefault().PhoneNumber;
+    }
+    var noreg = employeeInformation.FirstOrDefault().NoReg;
+    var divisionData = employeeInformation.Where(x => x.ObjectDescription == "Division").FirstOrDefault();
+    var division = divisionData == null ? "-" : divisionData.ObjectText;
+    var sectionData = employeeInformation.Where(x => x.ObjectDescription == "Section").FirstOrDefault();
+    var section = sectionData == null ? "-" : sectionData.ObjectText;
+    var departmentData = employeeInformation.Where(x => x.ObjectDescription == "Department").FirstOrDefault();
+    var department = departmentData == null ? "-" : departmentData.ObjectText;
+    var terminationtype = terminationService.GetTerminationTypeById(terminationtypeid).Name;
+    IEnumerable<TerminationExitClearanceStoredEntity> summary = terminationService.GetTerminationExitClearancePdfData(Model.DocumentApproval.Id).ToList();
+
+    if (leadTimeConfig != null)
+    {
+        leadTime = int.Parse(leadTimeConfig.ConfigValue);
+    }
+
+
+
+
+}
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px dotted black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+    .breakhere {
+        page-break-after: always
+    }
+    .capitalize {
+        text-transform: capitalize;
+    }
+</style>
+<hr style="margin-bottom:10px; margin-top: 0;" />
+<div style="text-align:center; width:100%;">
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%; margin-right: 5%;" border="0" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 15%;" />
+            <col style="width: 25%;" />
+            <col style="width: 15%;" />
+            <col style="width: 12%;" />
+            <col style="width: 10%;" />
+            <col style="width: 20%;" />
+
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td class="bold" style="font-size: 18px; font-weight: bold; border-top: 0px !important;" colspan="6" align="center">
+                    SURAT KETERANGAN
+                    <br />
+                    Exit Clearance / Check List Employee Out (Internal)
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            @*<tr>
+                    <td>Name<label style="float: right;">:</label></td>
+                    <td colspan="2">@Model.DocumentApproval.DocumentNumber</td>
+                </tr>*@
+            <tr style="height:30px">
+                <td></td>
+            </tr>
+            <tr>
+                <td>Nama<label style="float: right;">:</label></td>
+                <td>@name</td>
+                <td>Kelas<label style="float: right;">:</label></td>
+                <td>@kelas</td>
+                <td>Email (pribadi)<label style="float: right;">:</label></td>
+                <td>@email</td>
+            </tr>
+            <tr>
+                <td>Noreg<label style="float: right;">:</label></td>
+                <td>@noreg</td>
+                <td>No. Handphone<label style="float: right;">:</label></td>
+                <td>@phonenumber</td>
+            </tr>
+            <tr>
+                <td style="vertical-align:top">Devisi<label style="float: right;">:</label></td>
+                <td class="capitalize" style="vertical-align:top">@division.ToLower()</td>
+                <td>Tgl. Exit<label style="float: right;">:</label></td>
+                <td>@obj.EndDate.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</td>
+            </tr>
+            <tr>
+                <td style="vertical-align:top">Dept ./Seksi<label style="float: right;">:</label></td>
+                <td class="capitalize">@(department.ToLower() + " / " + section.ToLower())</td>
+                <td style="vertical-align:top">Alasan Exit<label style="float: right;">:</label></td>
+                @if (terminationtype == "Resignation")
+                {
+                    <td style="vertical-align:top" colspan="3"><b>Mengundurkan Diri /<span style="text-decoration: line-through;"> Kontrak Berakhir / Pensiun / Meninggal*</span> </b></td>
+                }
+                else if (terminationtype == "Passed Away")
+                {
+                    <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri / Kontrak Berakhir / Pensiun </span> / Meninggal* </b></td>
+                }
+                else if (terminationtype == "Contract Ended")
+                {
+                    <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri </span> / Kontrak Berakhir / <span style="text-decoration: line-through;"> Pensiun / Meninggal*</span> </b></td>
+                }
+                else if (terminationtype == "Retirement")
+                {
+                    <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri / Kontrak Berakhir </span>/ Pensiun /<span style="text-decoration: line-through;"> Meninggal*</span> </b></td>
+                }
+                else
+                {
+                    <td style="vertical-align:top" colspan="3"><b>Mengundurkan Diri / Kontrak Berakhir / Pensiun / Meninggal*</b></td>
+                }
+
+
+            </tr>
+        </tbody>
+        <tr>
+            <td colspan="11" height="20px"></td>
+        </tr>
+        @*<tr class="tableizer-firstrow">
+                <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="11" align="left"><h3 style="text-align:left !important"></h3></td>
+            </tr>*@
+    </table>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 20%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow" style="background-color:darkgray">
+                <td style="text-align: center;">NO</td>
+                <td style="text-align: center;">PERIHAL</td>
+                <td style="text-align: center;">PIC</td>
+                <td style="text-align: center;">TOTAL LEAD TIME</td>
+                <td style="text-align: center;">TANGGAL PENYELESAIAN / PENGAMBILAN</td>
+                <td style="text-align: center;">TANDA TANGAN & NAMA PETUGAS PENERIMA</td>
+                <td style="text-align: center;">REMARK</td>
+
+            </tr>
+        </thead>
+        <tbody>
+            @{ var index = 1;}
+            @foreach (var item in summary.Where(x => x.Code != "EXIT_CLEARANCE_KOPM"))
+            {
+            <tr class="tableizer-firstrow" style="height:50px">
+                <td style="text-align: center;">@index</td>
+                <td class="capitalize" style="text-align: left;">@item.About.ToLower() </td>
+                @if (item.Place != "")
+                {
+                    <td style="text-align: center;">@(item.Salutation + ". " + item.PICName) <br /><span class="capitalize">(@item.Division.ToLower())</span> <br /> di @item.Place <br /> email : @item.Email</td>
+                }
+                else
+                {
+                    <td style="text-align: center;">@(item.Salutation + ". " + item.PICName) <br /><span class="capitalize">(@item.Division.ToLower())</span><br /> email : @item.Email</td>
+                }
+                @if (index == 1)
+                {
+                    <td rowspan="@summary.Count()" style="text-align: center;">@item.LeadTime</td>
+                }
+                @if (item.CompleteDate != null)
+                {
+                    <td style="text-align: center;">@item.CompleteDate.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</td>
+                }
+                else
+                {
+                    <td style="text-align: center;"></td>
+
+                }
+                <td style="text-align: center;"></td>
+                <td style="text-align: center;">@item.Remarks</td>
+            </tr>
+                index++;
+            }
+        </tbody>
+    </table>
+    <br />
+
+
+    <table width: 100%; class="tableizer-table">
+        <tr>
+            <td width="20%">
+                <table style="font-family:'Segoe UI'; font-size:12px">
+                    <tr>
+                        <td colspan="2" style="width:200px;text-align:center;">Jakarta, @datetimenow</td>
+
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="height:100px"></td>
+
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;" colspan="2">(@name)</td>
+
+                    </tr>
+                    <tr>
+                        <td style="text-align: center;" colspan="2">Tanda Tangan & Nama Jelas</td>
+                    </tr>
+                </table>
+            </td>
+            <td width="50%"></td>
+            @*<td  width="50%"></td>*@
+            <td>
+                <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+
+                    <colgroup>
+                        <col style="width: 10%;" />
+                    </colgroup>
+                    <thead>
+                        <tr class="tableizer-firstrow" style="background-color:darkgray">
+                            <td style="text-align: center;">Acknowledged by</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="tableizer-firstrow" style="background-color:darkgray">
+                            <td style="text-align: center;">Industrial Relations & HR Service</td>
+                        </tr>
+                        <tr class="tableizer-firstrow" style="height:60px">
+                            <td style="text-align: center;"></td>
+                        </tr>
+                        <tr class="tableizer-firstrow" style="background-color:darkgray">
+                            <td style="text-align: left;">tgl :  @datetimenow</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+
+    </table>
+
+    <br />
+    <br />
+
+    <table style="font-family:'Segoe UI'; font-size:12px">
+        <tr>
+            <td><u><b>Keterangan :</b></u></td>
+        </tr>
+        <tr>
+            <td>*CORET YANG TIDAK PERLU</td>
+        </tr>
+        <tr>
+            <td>
+            </td>
+        </tr>
+    </table>
+
+
+
+</div>
+<P CLASS="breakhere">
+    <hr style="margin-bottom:10px; margin-top: 0;" />
+    <div style="text-align:center; width:100%;">
+        <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%; margin-right: 5%;" border="0" cellspacing="0" cellpadding="0">
+            <colgroup>
+                <col style="width: 15%;" />
+                <col style="width: 25%;" />
+                <col style="width: 15%;" />
+                <col style="width: 12%;" />
+                <col style="width: 10%;" />
+                <col style="width: 20%;" />
+
+            </colgroup>
+            <thead>
+                <tr class="tableizer-firstrow" style="height:60px">
+                    <td class="bold" style="font-size: 18px; font-weight: bold; border-top: 0px !important;" colspan="6" align="center">
+                        SURAT KETERANGAN
+                        <br />
+                        Exit Clearance / Check List Employee Out (Internal)
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                @*<tr>
+                    <td>Name<label style="float: right;">:</label></td>
+                    <td colspan="2">@Model.DocumentApproval.DocumentNumber</td>
+                </tr>*@
+                <tr style="height:30px">
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Nama<label style="float: right;">:</label></td>
+                    <td>@name</td>
+                    <td>Kelas<label style="float: right;">:</label></td>
+                    <td>@kelas</td>
+                    <td>Email (pribadi)<label style="float: right;">:</label></td>
+                    <td>@email</td>
+                </tr>
+                <tr>
+                    <td>Noreg<label style="float: right;">:</label></td>
+                    <td>@noreg</td>
+                    <td>No. Handphone<label style="float: right;">:</label></td>
+                    <td>@phonenumber</td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:top">Devisi<label style="float: right;">:</label></td>
+                    <td class="capitalize" style="vertical-align:top">@division.ToLower()</td>
+                    <td>Tgl. Exit<label style="float: right;">:</label></td>
+                    <td>@obj.EndDate.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</td>
+                </tr>
+                <tr>
+                    <td style="vertical-align:top">Dept ./Seksi<label style="float: right;">:</label></td>
+                    <td class="capitalize">@(department.ToLower() + " / " + section.ToLower())</td>
+                    <td style="vertical-align:top">Alasan Exit<label style="float: right;">:</label></td>
+                    @if (terminationtype == "Resignation")
+                    {
+                        <td style="vertical-align:top" colspan="3"><b>Mengundurkan Diri /<span style="text-decoration: line-through;"> Kontrak Berakhir / Pensiun / Meninggal*</span> </b></td>
+                    }
+                    else if (terminationtype == "Passed Away")
+                    {
+                        <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri / Kontrak Berakhir / Pensiun </span> / Meninggal* </b></td>
+                    }
+                    else if (terminationtype == "Contract Ended")
+                    {
+                        <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri </span> / Kontrak Berakhir / <span style="text-decoration: line-through;"> Pensiun / Meninggal*</span> </b></td>
+                    }
+                    else if (terminationtype == "Retirement")
+                    {
+                        <td style="vertical-align:top" colspan="3"><b><span style="text-decoration: line-through;">Mengundurkan Diri / Kontrak Berakhir </span>/ Pensiun /<span style="text-decoration: line-through;"> Meninggal*</span> </b></td>
+                    }
+                    else
+                    {
+                        <td style="vertical-align:top" colspan="3"><b>Mengundurkan Diri / Kontrak Berakhir / Pensiun / Meninggal*</b></td>
+                    }
+
+
+                </tr>
+            </tbody>
+            <tr>
+                <td colspan="11" height="20px"></td>
+            </tr>
+            @*<tr class="tableizer-firstrow">
+                <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="11" align="left"><h3 style="text-align:left !important"></h3></td>
+            </tr>*@
+        </table>
+
+        <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+            <colgroup>
+                <col style="width: 5%;" />
+                <col style="width: 20%;" />
+                <col style="width: 25%;" />
+                <col style="width: 5%;" />
+                <col style="width: 5%;" />
+                <col style="width: 5%;" />
+                <col style="width: 10%;" />
+
+            </colgroup>
+            <thead>
+                <tr class="tableizer-firstrow" style="background-color:darkgray">
+                    <td style="text-align: center;">NO</td>
+                    <td style="text-align: center;">PERIHAL</td>
+                    <td style="text-align: center;">PIC</td>
+                    <td style="text-align: center;">TOTAL LEAD TIME</td>
+                    <td style="text-align: center;">TANGGAL PENYELESAIAN / PENGAMBILAN</td>
+                    <td style="text-align: center;">TANDA TANGAN & NAMA PETUGAS PENERIMA</td>
+                    <td style="text-align: center;">REMARK</td>
+
+                </tr>
+            </thead>
+            <tbody>
+                @{ var indexNumber = 1;}
+                @foreach (var item in summary.Where(x => x.Code == "EXIT_CLEARANCE_KOPM"))
+                {
+                <tr class="tableizer-firstrow" style="height:50px">
+                    <td style="text-align: center;">@indexNumber</td>
+                    <td class="capitalize" style="text-align: left;">@item.About.ToLower() </td>
+                    @if (item.Place != "")
+                    {
+                        <td style="text-align: center;">@(item.Salutation + ". " + item.PICName) <br /><span class="capitalize">(@item.Division.ToLower())</span> <br /> di @item.Place <br /> email : @item.Email</td>
+                    }
+                    else
+                    {
+                        <td style="text-align: center;">@(item.Salutation + ". " + item.PICName) <br /><span class="capitalize">(@item.Division.ToLower())</span><br /> email : @item.Email</td>
+                    }                        @if (indexNumber == 1)
+                    {
+                        <td rowspan="@summary.Count()" style="text-align: center;">@item.LeadTime</td>
+                    }
+                    @if (item.CompleteDate != null)
+                    {
+                        <td style="text-align: center;">@item.CompleteDate.Value.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</td>
+                    }
+                    else
+                    {
+                        <td style="text-align: center;"></td>
+
+                    }
+                    <td style="text-align: center;"></td>
+                    <td style="text-align: center;">@item.Remarks</td>
+                </tr>
+                    indexNumber++;
+                }
+            </tbody>
+        </table>
+        <br />
+
+
+        <table width: 100%; class="tableizer-table">
+            <tr>
+                <td width="20%">
+                    <table style="font-family:'Segoe UI'; font-size:12px">
+                        <tr>
+                            <td colspan="2" style="width:200px;text-align:center;">Jakarta, @datetimenow</td>
+
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="height:100px"></td>
+
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;" colspan="2">(@name)</td>
+
+                        </tr>
+                        <tr>
+                            <td style="text-align: center;" colspan="2">Tanda Tangan & Nama Jelas</td>
+                        </tr>
+                    </table>
+                </td>
+                <td width="50%"></td>
+                @*<td  width="50%"></td>*@
+                <td>
+                    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+
+                        <colgroup>
+                            <col style="width: 10%;" />
+                        </colgroup>
+                        <thead>
+                            <tr class="tableizer-firstrow" style="background-color:darkgray">
+                                <td style="text-align: center;">Acknowledged by</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="tableizer-firstrow" style="background-color:darkgray">
+                                <td style="text-align: center;">Industrial Relations & HR Service</td>
+                            </tr>
+                            <tr class="tableizer-firstrow" style="height:60px">
+                                <td style="text-align: center;"></td>
+                            </tr>
+                            <tr class="tableizer-firstrow" style="background-color:darkgray">
+                                <td style="text-align: left;">tgl :  @datetimenow</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+
+        </table>
+
+        <br />
+        <br />
+
+        <table style="font-family:'Segoe UI'; font-size:12px">
+            <tr>
+                <td><u><b>Keterangan :</b></u></td>
+            </tr>
+            <tr>
+                <td>*CORET YANG TIDAK PERLU</td>
+            </tr>
+            <tr>
+                <td>
+                </td>
+            </tr>
+        </table>
+
+
+
+    </div>

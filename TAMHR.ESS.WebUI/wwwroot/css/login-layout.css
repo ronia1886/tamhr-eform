@@ -1,0 +1,140 @@
+.login-layout {
+  height: 100%;
+  background-color: #F3F3F3;
+  direction: ltr;
+  font-family: "Open Sans";
+}
+
+.btn.btn-rounded {
+    border-radius: 50px !important;
+}
+
+.flexbox-container .card-footer {
+  background-color: #fff;
+  padding: 1.5rem 1.5rem;
+  font-size: 0.9rem;
+}
+
+.flexbox-container form input[type="text"] {
+  margin-bottom: -1px;
+}
+
+.form-control:focus {
+  color: #4E5154;
+  background-color: #fff;
+  border-color: #3BAFDA;
+  outline: 0;
+  box-shadow: none;
+}
+
+.flexbox-container form input[type="password"] {
+  margin-bottom: 10px;
+}
+
+.line-on-side {
+  border-bottom: 1px solid #dadada;
+  line-height: 0.1em;
+  margin: 10px 0 20px;
+}
+
+.line-on-side span {
+  background: #fff;
+  padding: 0 10px;
+}
+
+.input-rounded {
+    border-radius: 50px;
+    color: #495057;
+    border: 1px solid #ddd;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.1);
+}
+
+.input-rounded.is-invalid,
+.input-rounded:invalid {
+    background-position: center right calc(.375em + .6875rem);
+}
+
+.form-control-position {
+  position: absolute;
+  top: 1px;
+  right: 0;
+  z-index: 2;
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 3.2rem;
+  text-align: center;
+}
+
+select.form-control:not([size]):not([multiple]).input-lg,
+input.form-control.input-lg {
+  height: 3rem;
+  padding: 0.75rem 0.75rem;
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.has-icon-left .form-control {
+  padding-left: 2.5rem;
+}
+
+.position-relative .form-control {
+  padding-right: calc(2.75rem + 2px);
+}
+
+.has-icon-left .form-control {
+  padding-right: 1rem;
+  padding-left: calc(2.75rem + 2px);
+}
+
+.position-relative .form-control.input-lg {
+  padding-right: calc(3.075rem + 2px);
+}
+
+.has-icon-left .form-control.input-lg {
+  padding-right: 2.592rem;
+  padding-left: calc(2.9rem + 2px);
+}
+
+select.form-control:not([size]):not([multiple]).input-lg + .form-control-position,
+select.form-control:not([size]):not([multiple]).form-group-lg > .form-control-position,
+input.form-control.input-lg + .form-control-position,
+input.form-control.form-group-lg > .form-control-position {
+  width: 3.6rem;
+  height: 3rem;
+  line-height: 3rem;
+}
+
+.has-icon-left .form-control-position {
+  right: auto;
+  left: inherit;
+}
+
+input::-webkit-input-placeholder {
+  color: #2C303B;
+  opacity: 0.9 !important;
+}
+
+input:-moz-placeholder {
+  color: #2C303B;
+  opacity: 0.9 !important;
+}
+
+input::-moz-placeholder {
+  color: #2C303B;
+  opacity: 0.9 !important;
+}
+
+input:-ms-input-placeholder {
+  color: #2C303B;
+  opacity: 0.9 !important;
+}
+
+input::placeholder {
+  color: #2C303B !important;
+  opacity: 0.9 !important;
+}
+
+.tam-sso.btn:hover {
+    color: #fff !important;
+}

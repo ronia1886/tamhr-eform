@@ -1,0 +1,165 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    // Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+}
+@section styles {
+    <style type="text/css">
+        .k-grid th {
+        white-space: nowrap;
+        text-align: center !important;
+        vertical-align: middle !important;
+        }
+
+        td {
+        white-space: nowrap;
+        }
+
+        .adjustment {
+        width: 40px;
+        text-align: center;
+        }
+
+        .fixed-header {
+        top: 50px;
+        position: fixed;
+        width: auto;
+        z-index: 1;
+        }
+
+        .k-grid-header {
+        width: auto !important;
+        padding-right: 0 !important;
+        border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+        overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+        border-right: 1px solid #ddd;
+        height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+        left: -1.13rem;
+        }
+
+        .nav-item {
+        margin-right: 15px; /* Sesuaikan dengan kebutuhan Anda */
+        }
+    </style>
+}
+
+<div class="col-md-12"></div>
+<div class="col-md-12">
+	<div class="card-header bordered">
+		<h3 class="card-title">@Localizer["List of Total Worker"]</h3>
+		<div class="heading-elements">
+            <ul id="TotalWorker-filter" class="page-toolbars" data-role="filter">
+                <li>
+                    <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+                        <i class="icon-magnifier"></i>
+                    </a>
+                    <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["AreaName" , "DivisionCode", "DivisionName", "TotalForSearch", "TotalEmployeeForSearch", "TotalEmployeeOutsourcingForSearch", "TotalWorkDayForSearch", "TotalOvertimeForSearch"]' />
+                </li>
+                <li class="dropdown dropdown-arrow">
+                    <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                        <i class="fa fa-sort-amount-desc"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="Total">@Localizer["Total"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="TotalEmployee">@Localizer["Total Employee"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="TotalEmployeeOutsourcing">@Localizer["Total Employee Outsourcing"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="TotalWorkDay">@Localizer["Total Work Day"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="TotalOvertime">@Localizer["Total Overtime"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Divisi Name"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="AreaName">@Localizer["Nama Area"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+                        </li>
+                        <li class="dropdown-divider"></li>
+                        <li class="p-2">
+                            <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="javascript:;" class="font-green-haze" data-target="grid_total_worker" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Total Worker" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadTotalWorker">
+                        <i class="fa fa-plus-circle"></i>
+                    </a>
+                </li>
+            </ul>
+		</div>
+	</div>
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.TotalEmployeeViewModel>()
+        .Name("grid_total_worker")
+        .HtmlAttributes(new { data_filter = "TotalWorker-filter" })
+        .Columns(columns =>
+        {
+            columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+            columns.Bound(o => o.Total).Title("Total").HtmlAttributes(new { @class = "text-center" }).Width(100);
+            columns.Bound(o => o.TotalEmployee).Title("Total Employee").HtmlAttributes(new { @class = "text-center" }).Width(120);
+            columns.Bound(o => o.TotalEmployeeOutsourcing).Title("Total Outsourced Employee").HtmlAttributes(new { @class = "text-center" }).Width(150);
+            columns.Bound(o => o.TotalWorkDay).Title("Total Work Days").HtmlAttributes(new { @class = "text-center" }).Width(120);
+            columns.Bound(o => o.TotalOvertime).Title("Total Overtime").HtmlAttributes(new { @class = "text-center" }).Width(120);
+            columns.Bound(o => o.DivisionName).HtmlAttributes(new { @class = "text-center" }).Title("Division").Width(180);
+            columns.Bound(o => o.NamaArea).HtmlAttributes(new { @class = "text-center" }).Title("Area").Width(180);
+
+            // Action column
+            columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+            .ClientTemplate(@"
+            <div class=""btn-group"">
+            <a class="" btn btn-sm blue-sharp"" data-target=""grid_total_worker"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Total Worker"" data-modal-ajax="" true"" data-ajax-url=""~/ohs/areaactivity/LoadTotalWorker"" data-parameters-id="" #:Id#"">
+            <i class=""ft-edit""></i>
+            </a>
+            </div>
+            <div class=""btn-group"">
+    <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteTotalEmployee"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+            <i class=""ft-trash""></i>
+            </a>
+            </div>").Width(150);
+        })
+        .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/totalEmployee/gets"))
+        .Data("filterGridByUrlParameters"))
+        .PageSize(20)
+        .Sort(sort =>
+        {
+            sort.Add("RowNum");
+        })
+        )
+        .Resizable(resize => resize.Columns(true))
+        .Pageable(options =>
+        {
+            options.Input(true);
+            options.Numeric(false);
+            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+        })
+        .Scrollable(scrollable => scrollable.Height("auto"))
+        .Deferred()
+        )
+</div>

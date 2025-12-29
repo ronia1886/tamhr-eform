@@ -1,0 +1,51 @@
+﻿@{
+    var groups = new[]
+    {
+        new { Text = "SickGroup", Value = "SickGroup" }
+    };
+}
+<form action="~/api/form-question/upsert-rules" method="post">
+    <div class="row">
+        <div class="form-group col-md-12">
+            <label>@Localizer["Category"]</label>
+            @(Html.Kendo().ComboBox()
+                .Name("CategoryCb")
+                .DataTextField("Text")
+                .DataValueField("Value")
+                .HtmlAttributes(new { @class = "form-control" })
+                .BindTo(groups)
+                .Events(events => events.Change("$.categoryChange"))
+            )
+            <span class="invalid" data-validation-for="Category"></span>
+        </div>
+    </div>
+    <hr />
+    @(Html.Kendo().Grid<FormQuestionGroupStoredEntity>()
+        .Name("questionGroupAnswerGrid")
+        .Columns(columns =>
+        {
+            columns.Bound(o => o.ParentTitle)
+                .Hidden()
+                .ClientGroupHeaderTemplate("#:value#");
+
+            columns.Bound(o => o.Checked)
+                .Title("&nbsp;")
+                .ClientTemplate(@"<input type=""checkbox"" name=""SelectedIds[]"" #:Checked ? 'checked' : ''# value=""#:Id#"" />");
+
+            columns.Bound(o => o.Title)
+                .Title(Localizer["Question"].Value)
+                .ClientTemplate(@"#:Title#");
+        })
+        .AutoBind(false)
+        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Read(read => read.Url(Url.Content("~/api/form-question/get-groups")).Data("$.gridGroupData"))
+            .Group(group => group.Add(x => x.ParentTitle))
+            .Sort(sort => sort.Add(x => x.OrderSequence))
+        )
+    )
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="questionGroupInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

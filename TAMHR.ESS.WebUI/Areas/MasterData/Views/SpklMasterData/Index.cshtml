@@ -1,0 +1,340 @@
+﻿@{
+    ScriptManager.RegisterReferences("datepicker", "dropdownlist", "numeric");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                @* <a id="downloadBtn" href="~/api/master-data/spkl/download-data">
+                    @Localizer["Download"]
+                </a> *@
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Multiple LKL Master Data" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/spkl/multiple">
+                    @Localizer["Upload Multiple"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-single-modal" data-modal-title="Upload Single LKL Master Data" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/spkl/single">
+                    @Localizer["Upload Single"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section styles  {
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+    </style>
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    <script type="text/javascript">
+        app.registerHandler("dataInterceptor", function (d) {
+            var date = kendo.parseDate(d.OvertimeDate, 'dd/MM/yyyy'),
+                dateStr = kendo.toString(date, 'yyyy-MM-dd'),
+                nextDateStr = kendo.toString(date.addDays(1), 'yyyy-MM-dd'),
+                overtimeInPlan = dateStr + ' ' + d.OvertimeInPlan,
+                overtimeInAdjust = dateStr + ' ' + d.OvertimeInAdjust,
+                overtimeInPlanNumber = parseInt(d.OvertimeInPlan.replace(":", "")),
+                overtimeOutPlanNumber = parseInt(d.OvertimeOutPlan.replace(":", "")),
+                overtimeInAdjustNumber = parseInt(d.OvertimeInAdjust.replace(":", "")),
+                overtimeOutAdjustNumber = parseInt(d.OvertimeOutAdjust.replace(":", "")),
+                overtimeOutPlan = (overtimeOutPlanNumber < overtimeInPlanNumber ? nextDateStr : dateStr) + ' ' + d.OvertimeOutPlan,
+                overtimeOutAdjust = (overtimeOutAdjustNumber < overtimeInAdjustNumber ? nextDateStr : dateStr) + ' ' + d.OvertimeOutAdjust;
+
+            d.OvertimeDate = dateStr;
+            d.OvertimeInPlan = overtimeInPlan;
+            d.OvertimeInAdjust = overtimeInAdjust;
+            d.OvertimeOutPlan = overtimeOutPlan;
+            d.OvertimeOutAdjust = overtimeOutAdjust;
+
+            return d;
+        });
+
+        app.registerHandler("searchHandler", function () {
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                query = $filterWrapper.data("query") || {},
+                startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                name = $("#Name").val(),
+                noreg = $("#NoReg").val();
+            
+            query.filter = [{
+                field: 'OvertimeDate',
+                value: startDate,
+                operator: 'gte'
+            }, {
+                field: 'OvertimeDate',
+                value: endDate,
+                operator: 'lte'
+            }, {
+                field: 'Name',
+                value: name,
+                operator: 'contains'
+            }, {
+                field: 'NoReg',
+                value: noreg,
+                operator: 'contains'
+            }];
+            
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                let $el = $(el),
+                    ds = $el.data("kendoGrid").dataSource;
+
+                let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                ds.query(executeQuery);
+            });
+            //Tidak dipakai
+                    // $("#downloadBtn").attr(
+                    //   "href",
+                    //   app.resolveUrl("~/api/master-data/spkl/download-data")
+                    //   + "?sd="   + encodeURIComponent(startDateStr)
+                    //   + "&ed="   + encodeURIComponent(endDateStr)
+                    //   + "&name=" + encodeURIComponent(name ?? "")
+                    //   + "&noreg="+ encodeURIComponent(noreg ?? "")
+                    // );
+        //                     (function () {
+        //   const enc = encodeURIComponent;
+        //   const base = app.resolveUrl("~/api/master-data/spkl/download-data");
+
+        //   if (/^[a-zA-Z][a-zA-Z0-9+.\-]*:/.test(base)) {
+        //     console.warn("Unsafe base URL for download, aborting");
+        //     return;
+        //   }
+
+        //   // sanitize / limit lengths to avoid abuse
+        //   const sd = String(startDateStr ?? "").trim();
+        //   const ed = String(endDateStr ?? "").trim();
+        //   let nm = String(name ?? "").trim();
+        //   let nr = String(noreg ?? "").trim();
+        //   if (nm.length > 200) nm = nm.slice(0, 200);
+        //   if (nr.length > 50)  nr = nr.slice(0, 50);
+
+        //   const params = new URLSearchParams({
+        //     sd: sd,
+        //     ed: ed,
+        //     name: nm,
+        //     noreg: nr
+        //   });
+
+        //   $("#downloadBtn").attr("href", base + "?" + params.toString());
+        // })();
+
+        });
+
+        app.registerHandler("downloadReportHandler", function () {
+           var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                name = $("#Name").val(),
+                noreg = $("#NoReg").val();
+                    {
+                      const base = app.resolveUrl("~/api/master-data/spkl/download-data");
+                      const params = new URLSearchParams({
+                        sd:    String(startDateStr ?? "").trim(),
+                        ed:    String(endDateStr  ?? "").trim(),
+                        name:  String(name        ?? "").trim(),
+                        noreg: String(noreg       ?? "").trim()
+                      });
+                      const url = base + "?" + params.toString();
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }
+
+        });
+
+        $(function () {
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of LKL Master Data"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.SpklMasterDataView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "spkl-data-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(o => o.Id).Title(Localizer["Name"].Value).Width(250).ClientTemplate(@"
+                            <div class=""text-left"">
+                                #:NoReg# - #:Name#
+                            </div>
+                        ").Locked(true).MinScreenWidth(768);
+
+                        columns.Bound(o => o.OvertimeDate).Title(Localizer["Date"].Value).Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(115).Locked(true).MinScreenWidth(768);
+                        columns.Bound(o => o.ShiftCode).Title(Localizer["Shift"].Value).HtmlAttributes(new { @class = "text-center" }).Width(100).MinScreenWidth(768);
+
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["OT In"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.OvertimeInPlan).Title(Localizer["Plan"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                col.Bound(o => o.WorkingTimeIn).Title(Localizer["Proxy"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                col.Bound(o => o.OvertimeInAdjust).Title(Localizer["Adjust"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                            });
+                        });
+
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["OT Out"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.OvertimeOutPlan).Title(Localizer["Plan"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                col.Bound(o => o.WorkingTimeOut).Title(Localizer["Proxy"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                col.Bound(o => o.OvertimeOutAdjust).Title(Localizer["Adjust"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                            });
+                        });
+
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Break<br/>(in minutes)"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.OvertimeBreakPlan).HtmlAttributes(new { @class = "text-center" }).Title(Localizer["Plan"].Value).Width(100);
+                                col.Bound(o => o.OvertimeBreakAdjust).HtmlAttributes(new { @class = "text-center" }).Title(Localizer["Adjust"].Value).Width(100);
+                            });
+                        });
+
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Duration<br/>(in hours)"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.DurationPlan).Title(Localizer["Plan"].Value).HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                col.Bound(o => o.DurationAdjust).Title(Localizer["Adjust"].Value).HtmlAttributes(new { @class = "text-center" }).Width(100);
+                            });
+                        });
+
+                        columns.Bound(o => o.OvertimeCategory).Title(Localizer["Category"].Value).Width(250);
+                        columns.Bound(o => o.OvertimeReason).Title(Localizer["Reason"].Value).Width(280);
+
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""spkl-modal"" data-modal-title=""Edit SPKL - #:Name# (#:kendo.toString(OvertimeDate, 'dd/MM/yyyy')#)"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/spklmasterdata/load"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-edit""></i>
+                            </a>
+                            <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/spkl"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-trash""></i>
+                            </a>
+                        ").Width(140);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/spkl/get-views")))
+                        .PageSize(20)
+                        .Sort(sort =>
+                        {
+                            sort.Add("Name");
+                            sort.Add("OvertimeDate");
+                        })
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                    })
+                    .Events(events =>
+                    {
+                    events.DataBound(@<text>
+                            function() {
+                                var wrapper = this.wrapper,
+                                    header = wrapper.find(".k-grid-header"),
+                                    root = wrapper.closest(".k-grid"),
+                                    contentLocked = root.find(".k-grid-content-locked"),
+                                    content = root.find(".k-grid-content");
+
+                                function resizeFixed() {
+                                    var paddingRight = parseInt(header.css("padding-right"));
+                                    header.css("width", wrapper.width() - paddingRight);
+                                }
+
+                                function scrollFixed() {
+                                    var offset = $(this).scrollTop() + 50,
+                                        tableOffsetTop = wrapper.offset().top,
+                                        tableOffsetBottom = tableOffsetTop + wrapper.height() - header.height();
+
+                                    if(offset < tableOffsetTop || offset > tableOffsetBottom) {
+                                        header.removeClass("fixed-header");
+                                        contentLocked.css("margin-top", 0);
+                                        content.css("margin-top", 0);
+                                    } else if(offset >= tableOffsetTop && offset @Html.Raw("<=") tableOffsetBottom && !header.hasClass("fixed")) {
+                                        header.addClass("fixed-header");
+                                        contentLocked.css("margin-top", "121px");
+                                        content.css("margin-top", "121px");
+                                    }
+                                }
+
+                                resizeFixed();
+
+                                $(window).resize(resizeFixed);
+                                $(window).scroll(scrollFixed);
+                            }
+                        </text>);
+                    })
+                    .Scrollable(scrollable => scrollable.Height("auto"))
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

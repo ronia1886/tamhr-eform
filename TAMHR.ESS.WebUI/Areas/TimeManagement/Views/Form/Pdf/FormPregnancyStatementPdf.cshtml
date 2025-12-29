@@ -1,0 +1,213 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var doc = Model.DocumentApproval;
+    var obj = Model.Object as MaternityLeaveViewModel;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    var DepartmentHead = "";
+    var HRAdmin = "";
+    var HRDivisionHead = "";
+    var IR = "";
+    var Requester = "";
+    var SectionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRAdmin")
+        {
+            HRAdmin = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRDivisionHead")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "IR")
+        {
+            IR = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+@*HRDivisionHead*@
+
+<style type="text/css">
+    * {
+        font-family: 'Segoe UI';
+        font-size: 14px
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+
+<hr style="margin-bottom:20px" />
+
+<label>Kepada Yth</label><br />
+
+<label>Bapak / Ibu Kepala Divisi</label><br />
+<label>@HRDivisionHead</label><br />
+
+<div style="align-content:center;text-align:center;width:100%; margin-left: auto;
+    margin-right: auto;">
+    <h5 style="margin-left:30%;margin-right:30%; text-align:center;padding:10px;border:1px solid black">FORMULIR PERNYATAAN HAMIL</h5>
+</div>
+
+<label>Pada hari ini tanggal @doc.CreatedOn.Day bulan @doc.CreatedOn.Month tahun @doc.CreatedOn.Year, saya yang bertanda tangan dibawah ini :</label>
+
+<div style="align-content:center;text-align:center;width:80%; margin-left: auto;
+    margin-right: auto;margin-top:20px">
+
+    <table cellpadding="0" cellspacing="0" style="width:70%;padding:10px;margin-left:10%;margin-right:20%;">
+        <tbody>
+            <tr>
+                <td style="width:150px" class="bold">Nama <span style="float:right">:</span></td>
+                <td class="border-bottom">@org.Name</td>
+            </tr>
+            <tr>
+                <td class="bold">No Reg <span style="float:right">:</span></td>
+                <td class="border-bottom">@org.NoReg</td>
+            </tr>
+            <tr>
+                <td class="bold">Departemen <span style="float:right">:</span></td>
+                <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+            </tr>
+            <tr>
+                <td class="bold">Divisi <span style="float:right">:</span></td>
+                <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            </tr>
+        </tbody>
+    </table>
+
+
+</div>
+
+<label style="margin-top:20px">Menyatakan diri dalam keadaan hamil, dengan kondisi sebagai berikut:</label>
+
+<table cellpadding="0" cellspacing="0" style="width:100%;margin-top:20px">
+    <tbody>
+        <tr>
+            <td style="width:200px">1. Usia kehamilan</td>
+            <td>@obj.GestationalAge minggu, per tgl @DateTime.Now.ToString("dd MMM yyyy")</td>
+        </tr>
+        <tr>
+            <td>2. Perkiraan kelahiran menurut dokter (HPL) *</td>
+            <td>@obj.EstimatedDayOfBirth?.ToString("dd MMM yyyy")</td>
+        </tr>
+        <tr>
+            <td>3. Memulai Serah Terima Pekerjaan</td>
+            <td>@obj.StartHandoverOfWork?.ToString("dd MMM yyyy")</td>
+        </tr>
+
+        <tr>
+            <td>4. Mulai Cuti Melahirkan **</td>
+            <td>@obj.StartMaternityLeave?.ToString("dd MMM yyyy")</td>
+        </tr>
+
+        <tr>
+            <td>5. Kembali Bekerja</td>
+            <td>@obj.BackToWork?.ToString("dd MMM yyyy")</td>
+        </tr>
+    </tbody>
+</table>
+<br>
+<br>
+<label class="bold">
+    Ket: <br>
+    * 	melampirkan surat keterangan dokter <br>
+    **	melampirkan Formulir Permohonan Cuti Melahirkan yang sudah ditandatangani <br>
+    *** 1,5 bulan adalah 45 hari kalender (Sabtu, minggu dan tanggal merah masuk hitungan)
+</label>
+<br><br>
+Demikian pernyataan ini saya buat dengan sebenarnya, untuk dilakukan proses selanjutnya.
+
+<br /><br /><br />
+
+<table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse">
+    <colgroup>
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+    </colgroup>
+    <tbody>
+        <tr>
+            <td style="text-align:center;width:100px">Div. H</td>
+            <td style="text-align:center;width:100px">Dept. H</td>
+            <td style="text-align:center;width:100px">Sect. H</td>
+            <td style="text-align:center;width:100px">Karyawan</td>
+        </tr>
+        <tr style="height:70px">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>@HRDivisionHead</td>
+            <td>@DepartmentHead</td>
+            <td>@SectionHead</td>
+            <td>@Requester</td>
+        </tr>
+        <tr>
+            <td>Tgl</td>
+            <td>Tgl</td>
+            <td>Tgl</td>
+            <td>Tgl</td>
+        </tr>
+    </tbody>
+</table>
+
+<br /><br />
+<label class="bold">Validasi HR</label>
+<br />
+<table border="1" cellpadding="5" cellspacing="0" style="width:75%;border-collapse:collapse">
+    <colgroup>
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+        <col style="width: 25%;" />
+    </colgroup>
+    <tbody>
+        <tr>
+            <td style="text-align:center;width:100px">HR-Data Centre</td>
+            <td style="text-align:center;width:100px">Industrial Relations</td>
+            <td style="text-align:center;width:100px">Admin Divisi</td>
+        </tr>
+        <tr style="height:70px">
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>@HRAdmin</td>
+            <td>@IR</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Tgl</td>
+            <td>Tgl</td>
+            <td>Tgl</td>
+        </tr>
+    </tbody>
+</table>

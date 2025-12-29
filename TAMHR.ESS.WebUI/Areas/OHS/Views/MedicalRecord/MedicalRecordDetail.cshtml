@@ -1,0 +1,668 @@
+﻿@inject IScriptManager ScriptManager
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+
+
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    //var now = DateTime.Now;
+    //var year = now.Year;
+    var start = ViewBag.startDate;
+    var end = ViewBag.endDate;
+    var noreg = ViewBag.noreg;
+    var namekaryawan = ViewBag.name;
+    var Gender = ViewBag.Gender;
+    var Divisi = ViewBag.Division;
+    var ClassNp = ViewBag.ClassNp;
+    var formatgllahir = ViewBag.formatgllahir;
+    ScriptManager.RegisterReferences("dropdownlist", "datepicker", "grid", "combobox", "multiselect", "numeric");
+
+
+
+    //var isAdmin = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("HR_ADMIN"));
+    //var currentUser = User.GetClaim("NoReg");
+    bool isOHS_ADMIN = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_ADMIN"));
+    var isOHS_KLINIK = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_KLINIK"));
+
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+
+    <script type="text/javascript">
+
+
+        //app.registerHandler("searchHandler", function () {
+        //    app.refreshControl("grid");
+
+        //});
+        $(function () {
+            $(document).on('focusin', function (e) {
+                e.stopImmediatePropagation();
+            });
+
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+
+            $('#AddMcu').on('click', function () {
+                //$("#McuModal").modal("show");
+                // $("#McuModal").modal("toggle");
+                // alert("ddd");
+                $.ajax({
+                    type: 'POST',
+                    //url: '@Url.Action("LoadMCU", "/OHS/MedicalRecord")',
+                    //url: '@Url.Action("LoadMCU", "~/OHS/MedicalRecord")',
+                    //url: '~/OHS/MedicalRecord/LoadMCU', // URL action
+                    //url: '/OHS/MedicalRecord/LoadMCU', // URL action
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadMCU")",
+                    //url: "@Url.Content("/OHS/MedicalRecord/LoadMCU")",
+                    dataType: 'html',
+                    data: {
+                        id: '00000000-0000-0000-0000-000000000000'
+
+                    },
+                    success: function (data) {
+                        $('#McuModal').find("div.modal-content").html(data);
+                        $("#McuModal").modal("show");
+                        $("#NoregMcu").val("@noreg");
+                        $("#namaMcu").val("@namekaryawan");
+                        $("#genderMcu").val("@Gender");
+
+                    }
+                });
+            });
+            $('#AddUpkk').on('click', function () {
+                $.ajax({
+                    type: 'POST',
+
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadUpkk")",
+
+                    dataType: 'html',
+                    data: {
+                        id: '00000000-0000-0000-0000-000000000000'
+
+                    },
+                    success: function (data) {
+                        $('#UpkkModal').find("div.modal-content").html(data);
+                        $("#UpkkModal").modal("show");
+                        $("#NoregUpkk").val("@noreg");
+                        $("#namaUpkk").val("@namekaryawan");
+                        $("#genderUpkk").val("@Gender");
+                        $("#DivisiUpkk").val("@Divisi");
+                    }
+                });
+            });
+            $('#AddPatient').on('click', function () {
+                $.ajax({
+                    type: 'POST',
+
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadPatient")",
+
+                    dataType: 'html',
+                    data: {
+                        id: '00000000-0000-0000-0000-000000000000'
+
+                    },
+                    success: function (data) {
+                        $('#PatientModal').find("div.modal-content").html(data);
+                        $("#PatientModal").modal("show");
+                        $("#noregPatient").val("@noreg");
+                        $("#namaPatient").val("@namekaryawan");
+                        $("#GenderPatient").val("@Gender");
+                        $("#TglLahir").val("@formatgllahir");
+                    }
+                });
+            });
+
+            $("#McuGrid").on("click", ".Edit-Row", function () {
+                var id = $(this).data("id");
+
+                // alert("ddd");
+                $.ajax({
+                    type: 'POST',
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadMCU")",
+                    //url: "@Url.Content("/OHS/MedicalRecord/LoadMCU")",
+                    dataType: 'html',
+                    data: {
+                        id: id
+
+                    },
+                    success: function (data) {
+                        $('#McuModal').find("div.modal-content").html(data);
+                        $("#McuModal").modal("show");
+                        $("#NoregMcu").val("@noreg");
+                        $("#namaMcu").val("@namekaryawan");
+                        $("#genderMcu").val("@Gender");
+                    }
+                });
+            });
+            $("#UpkkGrid").on("click", ".EditUpkk-Row", function () {
+                var id = $(this).data("id");
+
+                // alert("ddd");
+                $.ajax({
+                    type: 'POST',
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadUpkk")",
+                    //url: "@Url.Content("/OHS/MedicalRecord/LoadUpkk")",
+                    dataType: 'html',
+                    data: {
+                        id: id
+
+                    },
+                    success: function (data) {
+                        $('#UpkkModal').find("div.modal-content").html(data);
+                        $("#UpkkModal").modal("show");
+                        $("#NoregUpkk").val("@noreg");
+                        $("#namaUpkk").val("@namekaryawan");
+                        $("#genderUpkk").val("@Gender");
+                        $("#DivisiUpkk").val("@Divisi");
+                    }
+                });
+            });
+            $("#PatientGrid").on("click", ".EditPatient-Row", function () {
+                var id = $(this).data("id");
+
+                // alert("ddd");
+                $.ajax({
+                    type: 'POST',
+                    url: "@Url.Content("~/OHS/MedicalRecord/LoadPatient")",
+
+                    dataType: 'html',
+                    data: {
+                        id: id
+
+                    },
+                    success: function (data) {
+                        $('#PatientModal').find("div.modal-content").html(data);
+                        $("#PatientModal").modal("show");
+                        $("#noregPatient").val("@noreg");
+                        $("#namaPatient").val("@namekaryawan");
+                        $("#GenderPatient").val("@Gender");
+                        $("#TglLahir").val("@formatgllahir");
+                    }
+                });
+            });
+
+        });
+
+
+        $(document).ready(function () {
+
+
+        });
+
+        function onchangeLokasiKerja() {
+            var entity = $("#AreaId").data("kendoComboBox").text()
+
+            $("#LokasiKerja").val(entity)
+
+        }
+
+        function onchangeNoreg() {
+            var entity = $("#Noreg").data("kendoComboBox").value()
+
+            $.post(app.resolveUrl("~/api/ohs/medical-record/get-name-bynoreg"), entity, function (result) {
+                //$.post(app.resolveUrl("~/api/vaccinehospital/get-hospital-byid"), entity, function (result) {
+                $("#nama").val(result.Data[0].Name)
+                //$("#genderMcu").val(result.Data[0].Gender)
+
+            });
+        }
+        function onchangeNoregUpkk() {
+            //$("#namaUpkk").val("reyza");
+            var entity = $("#NoregUpkk").data("kendoComboBox").value()
+
+            $.post(app.resolveUrl("~/api/ohs/medical-record/get-name-bynoreg"), entity, function (result) {
+                //$.post(app.resolveUrl("~/api/vaccinehospital/get-hospital-byid"), entity, function (result) {
+                $("#namaUpkk").val(result.Data[0].Name)
+                //$("#genderMcu").val(result.Data[0].Gender)
+
+            });
+        }
+        function onchangeNoregPatient() {
+            //$("#namaUpkk").val("reyza");
+            var entity = $("#NoregPatient").data("kendoComboBox").value()
+
+            $.post(app.resolveUrl("~/api/ohs/medical-record/get-name-bynoreg"), entity, function (result) {
+                //$.post(app.resolveUrl("~/api/vaccinehospital/get-hospital-byid"), entity, function (result) {
+                $("#namaPatient").val(result.Data[0].Name)
+                //$("#genderMcu").val(result.Data[0].Gender)
+
+            });
+        }
+        function getParameters2() {
+            var startDate = "@start",
+                endDate = "@end";
+            //return { noreg: "@noreg" };
+            return { noreg: "@noreg", startDate: startDate, endDate: endDate, namekaryawan: "@namekaryawan", };
+        }
+        function onDataBound(e) {
+            var grid = $("#McuGrid").data("kendoGrid");
+            var data = grid.dataSource.data();
+
+            //if (data.length > 0) {
+                var classKaryawan = "@ClassNp"; // Ambil Class karyawan dari data pertama
+
+                // Tampilkan kolom berdasarkan Class
+                if (classKaryawan >= 3 && classKaryawan <= 6) {
+                    grid.showColumn("HasilPapsmear");
+
+                }
+                if (classKaryawan >= 7 && classKaryawan <= 8) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("Ca125");
+                    grid.showColumn("PSA");
+                }
+                if (classKaryawan >= 9 && classKaryawan <= 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+                if (classKaryawan > 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("CEA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+           // }
+        }
+
+
+    </script>
+
+    @*<partial name="_Script" />*@
+    @* <partial name="_McuModal1" />*@
+
+}
+    @section styles {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+
+    @* <style type="text/css">
+        .k-grid-header th {
+            background-color: darkblue;
+            color: white;
+            font-weight: bold;
+        }
+
+    </style>*@
+    }
+
+    <h5 class="card-title" style="color: blue;">@Localizer["Noreg: "] @noreg @Localizer[" - Name: "] @namekaryawan </h5>
+    <ul class="nav nav-tabs" role="tablist">
+
+        <li class="nav-item mx-2 mt-3 mb-3">
+            <a class="btn btn-primary btn-lg active" id="Mcu-tab" data-toggle="tab" href="#Mcu" role="tab" aria-controls="Mcu" aria-selected="true">Medical Check Up</a>
+        </li>
+        <li class="nav-item mx-2 mt-3 mb-3">
+            <a class="btn btn-primary btn-lg" id="Upkk-tab" data-toggle="tab" href="#Upkk" role="tab" aria-controls="Upkk" aria-selected="false">UPKK</a>
+        </li>
+        <li class="nav-item mx-2 mt-3 mb-3">
+            <a class="btn btn-primary btn-lg" id="SickLeave-tab" data-toggle="tab" href="#SickLeave" role="tab" aria-controls="SickLeave" aria-selected="false">Sick Leave</a>
+        </li>
+        <li class="nav-item mx-2 mt-3 mb-3">
+            <a class="btn btn-primary btn-lg" id="Patient-tab" data-toggle="tab" href="#Patient" role="tab" aria-controls="Patient" aria-selected="false">In & Out Patient</a>
+        </li>
+        <li class="nav-item mx-2 mt-3 mb-3">
+            <a class="btn btn-primary btn-lg" id="TanyaOhs-tab" data-toggle="tab" href="#TanyaOhs" role="tab" aria-controls="TanyaOhs" aria-selected="false">Report Tanya OHS</a>
+        </li>
+
+    </ul>
+
+    <div class="tab-content">
+        <div class="tab-pane fade show active" id="Mcu" role="tabpanel" aria-labelledby="Mcu-tab">
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-header bordered">
+                            <h3 class="card-title">@Localizer["Detail Medical Check Up"]</h3>
+                            <div class="heading-elements">
+                                @await Html.PartialAsync("_McuToolbars")
+                            </div>
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.McuDetailStoredEntity>()
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Name("McuGrid")
+                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                            .HtmlAttributes(new { data_filter = "mcu-filter" })
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")).Data("getParameters2"))
+                            @*.Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")))*@
+
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable.Columns(true))
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.NoReg).Title("NoReg").Width(100);
+                                columns.Bound(c => c.Id).Title("Name").Hidden(true);
+                                columns.Bound(c => c.Usia).Title("Usia").Width(70);
+                                columns.Bound(c => c.YearPeriod).Title("Tahun MCU").Width(115);
+                                columns.Bound(c => c.LokasiMCU).Title("Lokasi MCU").Width(170);
+                                columns.Bound(c => c.Berat).Title("BB (KG)").Width(100);
+                                columns.Bound(c => c.Tinggi).Title("TB (CM)").Width(100);
+                                columns.Bound(c => c.StatusBMI).Title("BMI").Width(100);
+                                columns.Bound(c => c.TekananDarah).Title("TD").Width(120);
+                                columns.Bound(c => c.KolesterolTotal).Title("Cholesterol").Width(120);
+                                columns.Bound(c => c.LDL).Title("LDL").Width(120);
+                                columns.Bound(c => c.HDL).Title("HDL").Width(120);
+                                columns.Bound(c => c.Triglyceride).Title("TRYGLICERID").Width(120);
+                                columns.Bound(c => c.GlukosaPuasa).Title("GDP").Width(120);
+                                columns.Bound(c => c.HbA1c).Title("HBA1C").Width(120);
+                                columns.Bound(c => c.SGOT).Title("SGOT").Width(120).Hidden(true);
+                                columns.Bound(c => c.SGPT).Title("SGPT").Width(120).Hidden(true);
+                                columns.Bound(c => c.GammaGT).Title("GGT").Width(120).Hidden(true);
+                                columns.Bound(c => c.Ureum).Title("UREUM").Width(120);
+                                columns.Bound(c => c.Kreatinin).Title("CREATININ").Width(120);
+                                columns.Bound(c => c.GFR).Title("GFR").Width(120);
+                                columns.Bound(c => c.AsamUrat).Title("URID ACID").Width(120);
+                                columns.Bound(c => c.HBsAg).Title("HBSAG").Width(120);
+                                columns.Bound(c => c.HasilEKG).Title("EKG").Width(120);
+                                columns.Bound(c => c.HasilRontgen).Title("PARU").Width(120);
+                                columns.Bound(c => c.HasilPapsmear).Title("PAPSMEAR (WANITA)").Width(170).Hidden(true);
+                                columns.Bound(c => c.KesimpulanTreadmill).Title("TREADMIL").Width(120).Hidden(true);
+                                columns.Bound(c => c.VitD25OH).Title("VIT D-25 OH").Width(120).Hidden(true);
+                                columns.Bound(c => c.HasilUsgMammae).Title("USG").Width(120).Hidden(true);
+                                columns.Bound(c => c.CEA).Title("CEA").Width(120).Hidden(true);
+                                columns.Bound(c => c.PSA).Title("PSA (PRIA)").Width(130).Hidden(true);
+                                columns.Bound(c => c.Ca125).Title("Ca-125 (WANITA)").Width(170).Hidden(true);
+
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp Edit-Row"" data-id=""#= Id #"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/medical-record/deleteMcu"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+
+
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .Events(e => e.DataBound("onDataBound"))
+                            //.AutoBind(true)
+                            .Deferred()
+                            )
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="Upkk" role="tabpanel" aria-labelledby="Upkk-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["Detail UPKK"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_UpkkToolbars")
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.UpkkDetailStoredEntity>()
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Name("UpkkGrid")
+                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                            .HtmlAttributes(new { data_filter = "upkk-filter" })
+
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            @*.Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")).Data("getParameters2"))*@
+                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-upkk-detail")).Data("getParameters2"))
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable.Columns(true))
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.LokasiUPKK).Title("Lokasi UPKK").Width(200);
+                                columns.Bound(c => c.KategoriKunjungan).Title("KategoriKunjungan").Width(190);
+                                columns.Bound(c => c.TanggalKunjungan).Title("TanggalKunjungan").Width(185).Format("{0:dd/MM/yyyy}");
+                                columns.Bound(c => c.Divisi).Title("Divisi").Width(180);
+                                columns.Bound(c => c.Usia).Title("Umur").Width(70);
+                                columns.Bound(c => c.JenisPekerjaan).Title("JenisPekerjaan").Width(150);
+                                columns.Bound(c => c.LokasiKerja).Title("LokasiKerja").Width(200);
+                                columns.Bound(c => c.Keluhan).Title("Keluhan").Width(200);
+                                columns.Bound(c => c.TDSistole).Title("TD Sistole").Width(150);
+                                columns.Bound(c => c.TDDiastole).Title("TD Diastole").Width(150);
+                                columns.Bound(c => c.Nadi).Title("Nadi").Width(150);
+                                columns.Bound(c => c.Respirasi).Title("Respirasi").Width(150);
+                                columns.Bound(c => c.Suhu).Title("Suhu").Width(150);
+                                columns.Bound(c => c.Diagnosa).Title("Diagnosa").Width(150);
+                                columns.Bound(c => c.KategoriPenyakit).Title("KategoriPenyakit").Width(250);
+                                columns.Bound(c => c.SpesifikPenyakit).Title("SpesifikPenyakit").Width(250);
+                                columns.Bound(c => c.JenisKasus).Title("JenisKasus").Width(150);
+                                columns.Bound(c => c.Treatment).Title("Treatment").Width(150);
+                                columns.Bound(c => c.Pemeriksa).Title("Pemeriksa").Width(150);
+                                columns.Bound(c => c.NamaPemeriksa).Title("NamaPemeriksa").Width(150);
+                                columns.Bound(c => c.HasilAkhir).Title("HasilAkhir").Width(200); ;
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp EditUpkk-Row"" data-id=""#= Id #"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/medical-record/deleteUpkk"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(140);
+
+
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No Data Found"].Value + "</div>"))
+                            .Deferred()
+
+                            )
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="SickLeave" role="tabpanel" aria-labelledby="SickLeave-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["Detail Sick Leave"]</h3>
+                        <div class="heading-elements">
+                            @* @await Html.PartialAsync("_PatientToolbars")*@
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.SickLeaveDetailStoredEntity>()
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Name("SickLeaveGrid")
+                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                            @*.HtmlAttributes(new { data_filter = "upkk-filter" })*@
+
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            @*.Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")).Data("getParameters2"))*@
+                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-sickleave-detail")).Data("getParameters2"))
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable.Columns(true))
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.StartDate).Title("Start Date").Width(70);
+                                columns.Bound(c => c.EndDate).Title("End Date").Width(70);
+                                columns.Bound(c => c.Type).Title("Type").Width(100);
+                                columns.Bound(c => c.KategoriPenyakit).Title("Kategori Penyakit").Width(120);
+                                columns.Bound(c => c.Penyakit).Title("Penyakit").Width(200);
+                                columns.Bound(c => c.TotalAbsen).Title("Total Absent").Width(70);
+                                columns.Bound(c => c.Diagnosa).Title("Diagnosa").Width(80);
+
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No Data Found"].Value + "</div>"))
+                            .Deferred()
+
+                            )
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="Patient" role="tabpanel" aria-labelledby="Patient-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["Detail In & Out Patient"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_PatientToolbars")
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.PatientDetailStoredEntity>()
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Name("PatientGrid")
+                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                            .HtmlAttributes(new { data_filter = "patient-filter" })
+
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            @*.Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")).Data("getParameters2"))*@
+                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-patient-detail")).Data("getParameters2"))
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable.Columns(true))
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Provider).Title("Provider").Width(115);
+                                columns.Bound(c => c.AdmissionDate).Title("Admission Date").Width(70).Format("{0:dd/MM/yyyy}");
+                                columns.Bound(c => c.DisChargeAbleDate).Title("DisChargeAble Date").Width(70).Format("{0:dd/MM/yyyy}");
+                                columns.Bound(c => c.DiagnosisDesc).Title("Diagnosis").Width(150);
+
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-sm blue-sharp EditPatient-Row"" data-id=""#= Id #"">
+                        <i class=""ft-edit""></i>
+                        </a>
+                        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/medical-record/deletePatient"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        <i class=""ft-trash""></i>
+                        </a>
+                        ").Width(100);
+
+
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No Data Found"].Value + "</div>"))
+                            .Deferred()
+
+                            )
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="TanyaOhs" role="tabpanel" aria-labelledby="TanyaOhs-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["Detail Tanya OHS"]</h3>
+                        <div class="heading-elements">
+                            @* @await Html.PartialAsync("_PatientToolbars")*@
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.TanyaOhsDetailStoredEntity>()
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Name("TanyaOhsGrid")
+                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                            @*.HtmlAttributes(new { data_filter = "upkk-filter" })*@
+
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            @*.Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-mcu-detail")).Data("getParameters2"))*@
+                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-tanyaohs-detail")).Data("getParameters2"))
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                            .Resizable(resizable => resizable.Columns(true))
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.CreatedOn).Title("Tanggal Mulai").Width(80).Format("{0:dd/MM/yyyy HH:mm}");
+                                columns.Bound(c => c.ModifiedOn).Title("Tanggal Selesai").Width(80).Format("{0:dd/MM/yyyy HH:mm}");
+                                columns.Bound(c => c.Keluhan).Title("Keluhan").Width(115);
+                                columns.Bound(c => c.KategoriLayanan).Title("Category").Width(100);
+                                columns.Bound(c => c.Status).Title("Status").Width(70);
+                                columns.Bound(c => c.Rating).Title("Rating").Width(70);
+
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No Data Found"].Value + "</div>"))
+                            .Deferred()
+
+                            )
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    setTimeout(function () {
+
+        // Simulasi peran user (gantilah ini dengan metode validasi user sesungguhnya)
+        var isAdmin = "@isOHS_ADMIN"; // Ubah ini menjadi `false` jika bukan admin
+
+        if (isAdmin == "True") {
+            // Jika user adalah admin, tampilkan semua tab
+            $("#Mcu-tab, #Upkk-tab, #SickLeave-tab, #Patient-tab, #TanyaOhs-tab").show();
+        }
+        else {
+            // Jika user bukan admin, sembunyikan semua kecuali UPKK
+            $("#Mcu-tab, #SickLeave-tab, #Patient-tab, #TanyaOhs-tab").hide();
+            $("#Upkk-tab").show();
+
+            // Pastikan tab UPKK yang aktif jika user bukan admin
+            $("#Upkk-tab").addClass("active");
+            $("#Upkk").addClass("show active");
+
+            // Matikan tab lain
+            $("#Mcu").removeClass("show active");
+        }
+    }, 500); // Delay 500ms untuk memastikan elemen sudah termuat
+
+</script>

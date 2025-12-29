@@ -1,0 +1,76 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.CommonConversation>
+@inject AclHelper AclHelper
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    TAMHR.ESS.Domain.CommonConversation temp;
+    var enumerator = Model.GetEnumerator();
+    var hasNext = enumerator.MoveNext();
+    var now = DateTime.Now.Date;
+    var format = "yyyyMMdd";
+    var shortDateString = now.ToString(format);
+    var walker = hasNext ? enumerator.Current : null;
+}
+@if (Model.Count() == 0)
+{
+    <div class="text-center p-3 text-muted no-record">
+        <i class="fa fa-clipboard font-large-1"></i><br />@Localizer["No conversation history"]
+    </div>
+}
+<div class="chat-application">
+    <section class="chat-app-window @(Model.Count() == 0 ? "hidden" : string.Empty)">
+        <div class="chats">
+            @while (walker != null)
+            {
+                temp = walker;
+                <div class="chat @(walker.NoReg == User.GetClaim("NoReg") ? "chat-left" : string.Empty)">
+                    <div class="chat-avatar">
+                        <a class="avatar" data-toggle="tooltip" href="#" data-placement="right" title="@walker.Name" style="cursor: default;">
+                            <img class="rounded" src="@ConfigService.ResolveAvatar(walker.NoReg)" alt="avatar" style="width: 2.25rem; height: 2.5rem;">
+                        </a>
+                    </div>
+                    <div class="chat-body">
+                        <div class="chat-content">
+                            <p>@Html.Raw(walker.Message)</p>
+                            <span class="d-block mt-2 font-small-1">at @walker.CreatedOn.ToString(walker.CreatedOn.ToString(format) == shortDateString ? "HH:mm" : "dd-MM-yyyy HH:mm")</span>
+                        </div>
+                        @while (hasNext = enumerator.MoveNext())
+                        {
+                            walker = enumerator.Current;
+
+                            if (walker.NoReg == temp.NoReg)
+                            {
+                                <div class="chat-content">
+                                    <p>@Html.Raw(walker.Message)</p>
+                                    <span class="d-block mt-2 font-small-1">at @walker.CreatedOn.ToString(walker.CreatedOn.ToString(format) == shortDateString ? "HH:mm" : "dd-MM-yyyy HH:mm")</span>
+                                </div>
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    </div>
+                </div>
+                if (!hasNext)
+                {
+                    break;
+                }
+            }
+        </div>
+    </section>
+    @if (AclHelper.CanCreateConversation())
+    {
+        <section class="chat-app-form">
+            <form class="chat-app-input mb-3" method="post" action="~/api/common-conversation">
+                <div class="form-group">
+                    <div class="input-group">
+                        <input data-role="chat-input" type="text" autocomplete="off" class="form-control" onkeydown="if (event.keyCode === 13) { $(this).next().find('a').trigger('click'); event.preventDefault(); }" name="Message" data-validation-for="Message" placeholder="@Localizer["Use '@' to mention related pic"]" aria-label="Conversation message">
+                        <div class="input-group-append">
+                            <a class="btn btn-outline-secondary" data-trigger="submit" data-interceptor="conversationInterceptor" data-callback="conversationHandler">Send</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </section>
+    }
+</div>

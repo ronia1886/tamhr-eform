@@ -1,0 +1,120 @@
+﻿@using TAMHR.ESS.Domain
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.TerminationService terminationServices;
+@model DocumentRequestDetailViewModel<List<TerminationExitClearanceStoredEntity>>
+@{
+    //var mode = ViewBag.Mode;
+    var summary = Model.Object;
+    var datetimenow = DateTime.Now.ToString("dd/MM/yyyy - hh.mm");
+
+}
+<style>
+    .capitalize {
+        text-transform: capitalize;
+    }
+
+</style>
+<div class="row" id="divContent">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Monitoring Exit Clearance"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <table class="table">
+                            <colgroup>
+                                <col style="width: 12%;" />
+                                <col style="width: 20%;" />
+                                <col style="width: 25%;" />
+                                <col style="width: 15%;" />
+                                <col style="width: 20%;" />
+                                <col style="width: 20%;" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th scope="col">@Localizer["Role PIC"]</th>
+                                    <th scope="col">@Localizer["PIC Exit Clearance"]</th>
+                                    <th scope="col">Item</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col">@Localizer["Time"]</th>
+                                    <th scope="col">@Localizer["Remark"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in summary)
+                                {
+                                    <tr>
+                                        <td>@item.RolePIC.Replace("Exit Clearance PIC -", "")</td>
+                                        <td>@item.PICName</td>
+                                        <td class="capitalize">@item.About.ToLower()</td>
+                                        @if (item.ApprovalActionCode == "approve")
+                                        {
+                                    <td class="text-info">@Localizer["Approve"]</td>
+                                        }
+                                        else
+                                        {
+                                    <td class="text-warning">@Localizer["In Progress"]</td>
+                                        }
+
+
+                                        @if (@item.CompleteDate == null)
+                                        {
+                                            <td>@item.CompleteDate</td>
+                                        }
+                                        else
+                                        {
+                                            <td>@item.CompleteDate.Value.ToString("dd/MM/yyyy - hh.mm")</td>
+                                        }
+
+                                        <td>@item.Remarks</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-12 col-md-7">
+    </div>
+    <div class="col-12 col-md-5">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Conversation"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @(await Component.InvokeAsync<Conversation>(new { id = Model.DocumentApprovalId }))
+            </div>
+        </div>
+    </div>
+</div>

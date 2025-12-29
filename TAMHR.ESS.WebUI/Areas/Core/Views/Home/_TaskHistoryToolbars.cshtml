@@ -1,0 +1,60 @@
+﻿<ul id="task-history-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["DocumentNumber", "Title", "DocumentStatusCode"]' />
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle font-green-haze" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a data-trigger="filter" data-sort="DocumentNumber">@Localizer["Document Number"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-sort="DocumentStatusCode">@Localizer["Status"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+    <li>
+        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-filter"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "draft" }'>@Localizer["Draft"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "inprogress" }'>@Localizer["In Progress"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "completed" }'>@Localizer["Completed"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "rejected" }'>@Localizer["Rejected"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "revised" }'>@Localizer["Revised"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "cancelled" }'>@Localizer["Dropped"]</a>
+            </li>
+            <li>
+                <a data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "expired" }'>@Localizer["Expired"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a class="btn red" data-trigger="filter" data-clear="filter">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+</ul>

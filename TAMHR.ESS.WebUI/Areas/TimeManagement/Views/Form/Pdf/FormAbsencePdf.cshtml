@@ -1,0 +1,274 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    var Disetujui = "";
+    var Requester = "";
+    var Diketahui = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver" || getApproverLocation == "Superior1")
+        {
+            Disetujui = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Known" || getApproverLocation == "Superior2")
+        {
+            Diketahui = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 15%;" />
+        <col style="width: 75%;" />
+    </colgroup>
+    <thead>
+        <tr class="tableizer-firstrow">
+            <td class="bold" align="center" style="font-size:14px;border-top:0px !important" colspan="2">FORMULIR PERMOHONAN / PEMBERITAHUAN TIDAK HADIR BEKERJA</td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td height="20px"></td>
+        </tr>
+        <tr>
+            <td style="text-align: left;" colspan="2">Yang bertanda tangan dibawah ini : </td>
+        </tr>
+        <tr>
+            <td height="10px"></td>
+        </tr>
+        <tr>
+            <td>Nama<label style="float:right">:</label></td>
+            <td class="border">@org.Name</td>
+        </tr>
+        <tr>
+            <td>No. Registrasi<label style="float:right">:</label></td>
+            <td class="border">@org.NoReg</td>
+        </tr>
+        <tr>
+            <td>Kelas<label style="float:right">:</label></td>
+            <td class="border">@org.EmployeeSubgroupText</td>
+        </tr>
+        <tr>
+            <td>Divisi<label style="float:right">:</label></td>
+            <td class="border">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td>Department<label style="float:right">:</label></td>
+            <td class="border">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td>Seksi<label style="float:right">:</label></td>
+            <td class="border">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td>No. Extension<label style="float:right">:</label></td>
+            <td class="border"></td>
+        </tr>
+    </tbody>
+</table>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 30%;" />
+        <col style="width: 20%;" />
+        <col style="width: 30%;" />
+        <col style="width: 20%;" />
+    </colgroup>
+    <tbody>
+        <tr>
+            <td height="20px" colspan="4"></td>
+        </tr>
+        <tr>
+            <td>Menerangkan bahwa pada tanggal</td>
+            <td class="border" align="center">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var absence = (obj as AbsenceViewModel);
+                    string formated_date = absence.StartDate.HasValue ? absence.StartDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+            <td align="center">s/d tanggal</td>
+            <td class="border" align="center">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var absence = (obj as AbsenceViewModel);
+                    string formated_date = absence.EndDate.HasValue ? absence.EndDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 15%;" />
+        <col style="width: 30%;" />
+        <col style="width: 20%;" />
+        <col style="width: 25%;" />
+    </colgroup>
+    <tbody>
+        <tr>
+            <td height="10px"></td>
+        </tr>
+        <tr>
+            <td>Jumlah Hari<label style="float:right">:</label></td>
+            <td class="border">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    <span>@eye.TotalAbsence</span>
+                }
+            </td>
+            <td align="center">Planning<label style="float:right">:</label></td>
+            <td class="border">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    if (eye.IsPlanning == true)
+                    {
+                        <span>Yes</span>
+                    }
+                    else
+                    {
+                        <span>No</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td> Alasan<label style="float:right">:</label></td>
+            <td colspan="3" class="border">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    <span>@eye.Reason</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td valign="top"> Keterangan<label style="float:right">:</label></td>
+            <td colspan="3" class="border" height="50px" valign="top">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    <label>@eye.Description</label>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td> Sisa Cuti Tahunan<label style="float:right">:</label></td>
+            <td class="border">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    <span>@eye.RemainingDaysOff</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td>Sisa Cuti Besar<label style="float:right">:</label></td>
+            <td class="border">
+                @if (typeof(AbsenceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as AbsenceViewModel);
+                    <span>@eye.RemainingLongLeave</span>
+                }
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 25%;" />
+        <col style="width: 10%;" />
+        <col style="width: 25%;" />
+        <col style="width: 10%;" />
+        <col style="width: 25%;" />
+    </colgroup>
+    <tbody>
+        <tr>
+            <td height="80px"></td>
+        </tr>
+        <tr>
+            <td class="border-bottom">@DateTime.Now.ToString("dd MMM yyyy")</td>
+        </tr>
+        <tr>
+            <td height="120px"></td>
+            <td height="120px"></td>
+            <td height="120px"></td>
+            <td height="120px"></td>
+            <td height="120px"></td>
+        </tr>
+        <tr>
+            <td><strong>@Requester</strong></td>
+            <td></td>
+            <td><strong>@Disetujui</strong></td>
+            <td></td>
+            <td><strong>@Diketahui</strong></td>
+        </tr>
+        <tr>
+            <td class="border-top"><strong>Pemohon</strong></td>
+            <td></td>
+            <td class="border-top"><strong>Disetujui</strong></td>
+            <td></td>
+            <td class="border-top"><strong>Diketahui</strong></td>
+        </tr>
+    </tbody>
+</table>

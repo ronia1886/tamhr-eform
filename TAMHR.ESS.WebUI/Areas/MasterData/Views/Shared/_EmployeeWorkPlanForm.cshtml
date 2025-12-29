@@ -1,0 +1,69 @@
+﻿@model TAMHR.ESS.Domain.GeneralCategory
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/employee-work-plan">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Plan Key"]</label>
+                @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @data_validation_for = "code", @placeholder = Localizer["key"].Value ,@readonly = "readonly"})
+                <span class="invalid" data-validation-for="Code"></span>
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @data_validation_for = "Name", @placeholder = Localizer["title"].Value ,@readonly = "readonly" })
+                <span class="invalid" data-validation-for="Name"></span>
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                @Html.TextBoxFor(x => x.Category, new { @class = "form-control", @data_validation_for = "Category", @placeholder = Localizer["Category"].Value ,@readonly = "readonly" })
+                <span class="invalid" data-validation-for="Category"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", @rows = "3", @data_validation_for = "Description", placeholder = Localizer["description"].Value, @readonly = "readonly"  })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">    
+                
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Divisions"]</label>
+                <br />
+                <div class="custom-checkbox">
+                    @(Html.Kendo().CheckBox().Name("select-all").HtmlAttributes(new { onchange = "CheckAll(this);",@class="custom-checkbox"}))
+                    <label >@Localizer["Select All"]</label>
+                    <span class="invalid" data-validation-for="Divisions"></span>
+                </div>
+ 
+                @(Html.Kendo().ListView<TAMHR.ESS.Domain.WorkDivisionPlanStoredEntity>()
+                    .Name("divisionPlanListView")
+                    .TagName("div")
+                    .HtmlAttributes(new { @class = "row" })
+                    .Events(evt => evt.DataBinding(@<text>function() { this.element.removeClass("k-widget k-listview") }</text>))               
+                    .ClientTemplateId("template")
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/employee-work-plan/get-divisions")).Data(@<text>function() { return { "planId": "@Model.Id" }; }</text>))
+                    )
+                )
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">Save</a>
+    </div>
+</form>

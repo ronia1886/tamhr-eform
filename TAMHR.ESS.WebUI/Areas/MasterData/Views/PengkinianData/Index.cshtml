@@ -1,0 +1,48 @@
+﻿@{
+    ViewData["Title"] = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Pengkinian Data"]</h3>
+                <div class="heading-elements">
+                    @*@await Html.PartialAsync("_Toolbars")*@
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.PersonalDataAllStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "pengkiniandata-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("NoReg").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:NoReg#</h6>
+                                    <small>#:NoReg#</small>
+                                </div>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/pengkinian-data/get-data")))
+
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

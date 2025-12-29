@@ -1,0 +1,353 @@
+﻿@model DocumentRequestDetailViewModel<MealAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("grid");
+    string formKey = @Url.Content(ApplicationHelper.Api(Model.FormKey));
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    string btnDelete = isCanEdit ? @"<div class='col-md-2 col-sm-1'>
+                                        <button type='button'  onclick='deleteSummary(this)' class='btn btn-outline-danger btn-circle offset-md-4 offset-sm-2'>
+                                                <i class='fa fa-times'></i>
+                                        </button>" : "";
+}
+
+@section scripts {
+    <script type="text/javascript">
+        var mealAmount = 0;
+            $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'mealallowance', subtype: ''
+                },
+                    success: function (result) {
+                        if (result !== undefined) {
+                            $('#User').text(result.Name);
+                            $('#Kelas').text(result.Kelas);
+                            $('#UangMakan').text('Rp. ' + app.formatNumber(result.Ammount));
+                            mealAmount = result.Ammount;
+                            $("#Amount").val(result.Ammount);
+
+                        }
+                }
+            });
+        
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+        }
+
+        function calculateAmount() {
+            var total = 0;
+            var grid = $("#grid").data("kendoGrid");
+            $.each(grid.dataSource.data(), function (i, o) {
+                total += parseFloat(o.Amount);
+            });
+
+
+            $("#TxtTotal").text(app.formatNumber(total));
+            $("#Object_AmountTotal").val(total);
+        }
+
+        //function dataBound() {
+        //    calculateAmount();
+        //}
+        // Add summary
+        function addSummary(e) {
+            var isValid = true;
+            var isDate = true;
+            var dataSupportingAttachmentPath = $(".SupportingAttachmentPath").data();
+            
+            if (dataSupportingAttachmentPath == undefined) {
+                app.warning("Attachment cannot null");
+                isValid = false;
+            }
+
+            if ($("#EndHour").data("kendoTimePicker").value() == null) {
+                app.warning("End Hour cannot null");
+                isValid = false;
+            }
+
+            if ($("#StartHour").data("kendoTimePicker").value() == null) {
+                app.warning("Start Hour cannot null");
+                isValid = false;
+            }
+
+            if ($("#Date").data("kendoDatePicker").value() == null) {
+                app.warning("Date cannot null");
+                isValid = false;
+            }
+
+            if ($("#Object_Period").data("kendoDatePicker").value() == null) {
+                app.warning("Period cannot null");
+                isValid = false;
+            }
+
+            var date = kendo.toString($("#Date").data("kendoDatePicker")._value, "yyyy-MM-dd")
+            var grid = $("#grid").data("kendoGrid");
+            var data = grid.dataSource.data();
+            for (var i = 0; i < data.length; i++) {
+                if (data[i].Date == date) {
+                    isValid = false;
+                    isDate = false;
+                }
+            }
+
+            if (!isDate) {
+                app.warning("This Date already claimed");
+                isValid = false;
+            }
+
+            if (isValid) {
+                var grid = $("#grid").data("kendoGrid");
+
+
+                grid.dataSource.add({
+                    StartHour: $("#StartHour").val(),
+                    EndHour: $("#EndHour").val(),
+                    Amount: $("#Amount").val(),
+                    AmountTotal: $("#AmountTotal").val(),
+                    IdSupportingAttachmentPath: dataSupportingAttachmentPath.id,
+                    SupportingAttachmentPath: dataSupportingAttachmentPath.filename,
+                    Date: kendo.toString($("#Date").data("kendoDatePicker")._value, "yyyy-MM-dd")
+                });
+
+                $("#StartHour").data("kendoTimePicker").value(null);
+                $("#EndHour").data("kendoTimePicker").value(null);
+                $("#AmountTotal").val('');
+                $("#TxtTotal").text('');
+                $("#Date").data("kendoDatePicker").value('');
+
+                $(".file-SupportingAttachmentPath").data("uploadFile").clearFiles();
+
+                $("#Object_Period").data("kendoDatePicker").readonly(true);
+
+                calculateAmount();
+            }
+        }
+        //delete summary
+        function deleteSummary(e) {
+            if ('@isCanEdit' === 'True') {
+                var tr = $(e).closest("tr");
+                var grid = $("#grid").data("kendoGrid");
+                grid.removeRow(tr);
+
+                if (grid.dataSource.view().length == 0) {
+                    $("#Object_Period").data("kendoDatePicker").readonly(false);
+                } else {
+                    $("#Object_Period").data("kendoDatePicker").readonly(true);
+                }
+
+                calculateAmount();
+            }
+        }
+
+        function changePeriod(e) {
+            var grid = $("#grid").data("kendoGrid");
+
+            if (grid.dataSource.view().length == 0 && $("#Object_Period").data("kendoDatePicker").value !== null) {
+                $("#Object_Period").data("kendoDatePicker").readonly(false);
+                var startDate = this.value();
+                var date = new Date(startDate);
+                var firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+                var lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                $("#Date").data("kendoDatePicker").value('');
+                if (this.value() === null)
+                    $("#Date").data("kendoDatePicker").enable(false);
+                else
+                    $("#Date").data("kendoDatePicker").enable(true);
+                $("#Date").data("kendoDatePicker").min(firstDay);
+                $("#Date").data("kendoDatePicker").max(lastDay);
+            } else {
+                $("#Object_Period").data("kendoDatePicker").readonly(true);
+                console.log(this)
+                e.preventDefault();
+            }
+        }
+
+        function OpenCalendar(e) {
+            var grid = $("#grid").data("kendoGrid");
+
+            if (grid.dataSource.view().length == 0 && $("#Object_Period").data("kendoDatePicker").value !== null) {
+                $("#Object_Period").data("kendoDatePicker").readonly(false);
+            } else {
+                $("#Object_Period").data("kendoDatePicker").readonly(true);
+                e.preventDefault();
+            }
+        }
+
+        $("#TxtTotal").text(app.formatNumber('@Model.Object.AmountTotal'));
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Information</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">
+                        @Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>"].
+                        @Localizer["Meal Allowance that will be obtained is worth <b class='font-red' id='UangMakan'></b> / day"]
+                    </span>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Meal Allowance Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        @if (isCanEdit)
+                        {
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>Period</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Period"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.Period)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Select Period"].Value })
+                                            .Enable(isCanEdit)
+                                            .Start(CalendarView.Year)
+                                            .Depth(CalendarView.Year)
+                                            .Format("MMMM yyyy")
+                                            .Footer(false)
+                                            .Events(e => e.Change("changePeriod").Open("OpenCalendar"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>@Localizer["Claim Data"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Date"]</label>
+                                        @(Html.Kendo().DatePicker().Name("Date")
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                            .Format("dd/MM/yyyy")
+                                            .Enable(isCanEdit && Model.Object.Period != null)
+                                            .Min(Model.Object.Period.HasValue ? new DateTime(Model.Object.Period.Value.Year, Model.Object.Period.Value.Month, 1) : default(DateTime))
+                                            .Max(Model.Object.Period.HasValue ? new DateTime(Model.Object.Period.Value.Year, Model.Object.Period.Value.Month, 1).AddMonths(1).AddDays(-1) : default(DateTime))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-md-6">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["From (In HH/MM)"]</label>
+                                            @(Html.Kendo().TimePicker().Name("StartHour")
+                                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["hours:minutes"].Value })
+                                                .Format("HH:mm")
+                                                .DateInput()
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["To (In HH/MM)"]</label>
+                                            @(Html.Kendo().TimePicker().Name("EndHour")
+                                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["hours:minutes"].Value })
+                                                .Format("HH:mm")
+                                                .DateInput()
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Supporting Attachment"]</label>
+                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "SupportingAttachmentPath" })
+                                    </div>
+                                    <div class="form-group pull-right">
+                                        <button type="button" onclick="addSummary()" class="btn btn-info"><i class="ft-plus"></i> <span class="d-none d-md-inline">@Localizer["Add"]</span></button>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        <div class="col-md-6 col-sm-12 no-table-header">
+                            <fieldset>
+                                <legend>Data Claim</legend>
+                                <br />
+                                @(Html.Kendo().Grid(Model.Object.data)
+                                    .Name("grid")
+                                    .HtmlAttributes(new { data_filter = "request-history-filter" })
+                                    .Columns(columns =>
+                                    {
+                                        columns.Template(
+                                            @"<div class='row' style='font-size:smaller; '>
+                                                <div class='col-md-8 col-sm-6'>
+                                                    <label>Tanggal #: kendo.toString(kendo.parseDate(Date), 'dd/MM/yyyy') #</label><br />
+                                                    <label>From #:kendo.toString(kendo.parseDate(StartHour), 'HH:mm')# To #:kendo.toString(kendo.parseDate(EndHour), 'HH:mm')#</label><br />
+                                                    <a class='font-blue' href='../../api/files/download?id=#:IdSupportingAttachmentPath#'>  #:SupportingAttachmentPath#</a>
+                                                    <input type='hidden' name='Object.data[][StartHour]' value='#:StartHour#'></input>
+                                                    <input type='hidden' name='Object.data[][EndHour]' value='#:EndHour#'></input>
+                                                    <input type='hidden' name='Object.data[][Amount]' value='#:Amount#'></input>
+                                                    <input type='hidden' name='Object.data[][IdSupportingAttachmentPath]' value='#:IdSupportingAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][SupportingAttachmentPath]' value='#:SupportingAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][Date]' value='#:kendo.toString(kendo.parseDate(Date), 'yyyy-MM-dd')#'></input>
+                                                </div>" + btnDelete + @"</div>
+                                            </div>").Title(" ");
+                                    })
+                                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["Claim Data Not Found"].Value + "</div>"))
+                                    .Deferred()
+                                )
+                                <br />
+                                <div class="form-group">
+                                    <span class="description">
+                                        @Html.Hidden("Amount")
+                                        @Html.HiddenFor(x => x.Object.AmountTotal)
+                                        <label>@Localizer["Total Meal Allowance"]&nbsp; <b class="font-red" id="TxtTotal"></b></label>
+                                    </span>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

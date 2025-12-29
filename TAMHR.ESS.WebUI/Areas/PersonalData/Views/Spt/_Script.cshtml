@@ -1,0 +1,107 @@
+﻿@inject IScriptManager ScriptManager
+<script type="text/javascript" src="~/plugins/pdf.min.js"></script>
+<script type="text/javascript">
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+</script>
+<script type="text/javascript">
+    (function ($) {
+        let $pdfWrapper = $("#pdf-wrapper"),
+            $noResultWrapper = $(".no-result");
+
+        function serialize(obj) {
+            var str = [];
+
+            for (var p in obj) {
+                if (obj.hasOwnProperty(p)) {
+                    str.push(encodeURIComponent(p) + "=" + encodeURIComponent(obj[p]));
+                }
+            }
+
+            return str.join("&");
+        }
+
+        function getGrid() {
+            return $("#userActivityLogGrid");
+        }
+
+        app.registerHandler("downloadHandler", function () {
+            doAction(false);
+        });
+
+        app.registerHandler("viewHandler", function () {
+            doAction(true);
+        });
+
+        function doAction(inline) {
+            swal({
+                title: "@Localizer["Please input your password"]",
+                input: 'password',
+                inputPlaceholder: "@Localizer["Type your password here"]",
+                showCancelButton: true,
+                inputValidator: (value) => {
+                    return !value && app.translate('This field must be filled!')
+                },
+                preConfirm: (inputText) => {
+                    return $.post(app.resolveUrl('~/api/spt/check-password'), { Value: inputText })
+                        .then(response => {
+                            if (!response.IsValid) {
+                                Swal.showValidationError(app.translate('You input the wrong password'));
+                            } else {
+                                return inputText;
+                            }
+                        });
+                }
+            }).then(function (result) {
+                if (!result.value) return;
+
+                let period = $("#Period").val(),
+                    data = {
+                        password: result.value,
+                        period: period,
+                        inline: inline,
+                        token: $("input[name='__RequestVerificationToken']").val()
+                    },
+                    url = app.resolveUrl("~/api/spt/download?" + serialize(data));
+
+                if (inline) {
+                    let $kendoPdfWrapper = $pdfWrapper.data("kendoPDFViewer");
+
+                    if ($kendoPdfWrapper) {
+                        $kendoPdfWrapper.fromFile(url);
+                    }
+                    else {
+                        $pdfWrapper.kendoPDFViewer({
+                            toolbar: false,
+                            scale: 1,
+                            pdfjsProcessing: {
+                                file: url
+                            },
+                            width: "100%",
+                            height: "100%",
+                            render: function (e) {
+                                app.refreshControl(getGrid());
+                            },
+                            error: function (e) {
+                                e.preventDefault();
+
+                                $noResultWrapper.show();
+                                $noResultWrapper.find(".message").text(kendo.format(app.translate("SPT document for period {0} are not exist."), period));
+                                $pdfWrapper.hide();
+                            }
+                        })
+                    }
+
+                    $noResultWrapper.hide();
+                    $pdfWrapper.show();
+                }
+                else {
+                    window.open(url, "_blank");
+                }
+            });
+        }
+
+        $(document).on('click', '.k-link, li.k-item', function (e) {
+            e.stopPropagation();
+        });
+    })(jQuery);
+</script>

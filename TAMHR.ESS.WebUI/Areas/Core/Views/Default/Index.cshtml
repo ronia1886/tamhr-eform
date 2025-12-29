@@ -1,0 +1,65 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    ViewBag.Title = Localizer["Welcome to e-Form"];
+    ScriptManager.ClearReferences();
+    ScriptManager.RegisterReferences("autocomplete", "grid");
+    var userClaim = new TAMHR.ESS.Infrastructure.Web.ContextPrincipal.UserClaim(User);
+    var roles = userClaim.Roles;
+    var parameters = new { noreg = userClaim.NoReg };
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var maxFavouriteItems = ConfigService.GetConfig("Menu.FavouriteMenuCount")?.ConfigValue;
+    ViewBag.ContainerCssClass = "container mt-4";
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap.swipe.min.js"></script>
+    <script type="text/javascript">
+        app.set("maxFavouriteItems", @maxFavouriteItems);
+
+        $(function () {
+        $('.carousel').swipe({ threshold: 50 });
+        });
+    </script>
+    <script type="text/javascript" src="~/js/pages/home.js"></script>
+}
+@(await Component.InvokeAsync<Carousel>())
+@if (User.GetClaim("Type") == "Default")
+{
+    @await Component.InvokeAsync("MainDashboard", parameters);
+}
+@*<div class="row mb-2">
+        <div class="col">
+            <div class="input-group input-group-icon mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text font-red">
+                        <i class="fa fa-search"></i>
+                    </span>
+                </div>
+                @(Html.Kendo().AutoComplete()
+                    .Name("menus")
+                    .DataTextField("Title")
+                    .Filter("contains")
+                    .Placeholder(Localizer["Find form..."].Value)
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataSource(source =>
+                    {
+                        source
+                            .ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/menu/role-filter"))))
+                            .PageSize(10)
+                            .Sort(sort => sort.Add("Title"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><i class=""#:IconClass# font-normal""></i> <span class=""font-normal"">#= app.formatValue(data.Title, $('\\#menus').val()) #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+                        window.location.href = app.resolveUrl(dataItem.Url || '');
+                    }</text>))
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>*@
+@(await Component.InvokeAsync<TAMHR.ESS.Infrastructure.Web.ViewComponents.Menu>(new { noreg = parameters.noreg, roles = roles }))

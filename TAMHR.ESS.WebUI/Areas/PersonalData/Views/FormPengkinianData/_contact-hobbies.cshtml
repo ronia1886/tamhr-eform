@@ -1,0 +1,86 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService service;
+@{
+    var user = User.GetClaim("NoReg");
+    var data = service.GetPersonalDataContactHobbies(user).FirstOrDefault();
+    var transportationType = service.GetGeneralCategories("transportationType").ToList();
+}
+@if (data != null)
+{
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset class="card-header" data-toggle="collapse" href="#ijazah" role="button" aria-expanded="false" aria-controls="ijazah">
+                        <legend>Persoal Data</legend>
+                        <div class="collapse show" id="ijazah">
+                            <div class="row">
+                                <label class="col-md-4">Nomor Telephone Rumah Pribadi</label>
+                                <span class="col-md-8">: @data.HomePhoneNumber</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Nomor Handphone Pribadi</label>
+                                <span class="col-md-8">: @data.PhoneNumber1</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Hobi</label>
+                                <span class="col-md-8">: @data.Hobbies</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Transportasi Menuju Kantor</label>
+                                @{
+                                    var cn = 0;
+                                    var ng = ":";
+                                }
+                                @foreach (var item in transportationType)
+                                {
+                                    @if (cn > 0) { ng = "-"; }
+                                    
+                                    <span class="col-md-8">@ng  @item.Name </span>
+                                }
+                            </div>
+                            <div>
+                                <fieldset>
+                                    <legend>Contact Emergency</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Nama</label>
+                                        <span class="col-md-8">: @data.EmergencyCallName</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No Telephone</label>
+                                        <span class="col-md-8">: @data.EmergencyCallPhoneNumber</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Hubungan</label>
+                                        <span class="col-md-8">: @data.EmergencyCallRelationshipCode</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset class="card-header" data-toggle="collapse" href="#ijazahdoc" role="button" aria-expanded="false" aria-controls="ijazahdoc">
+                    <legend>Document</legend>
+                    <div class="form-group collapse show" id="ijazahdoc">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Ijasah</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(data?.NoReg)">
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+
+
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+
+<hr />

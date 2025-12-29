@@ -1,0 +1,35 @@
+﻿@model TAMHR.ESS.Domain.Permission
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/permission">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Permission Key"]</label>
+                @Html.TextBoxFor(x => x.PermissionKey, new { @class = "form-control", @data_validation_for = "PermissionKey", @placeholder = Localizer["Please input key"].Value })
+                <span class="invalid" data-validation-for="PermissionKey"></span>
+            </div>
+        </div>
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Type"]</label>
+                @Html.KendoComboBoxFor(x => x.PermissionTypeCode, "PermissionType").Placeholder(Localizer["Please select permission type"].Value)
+                <span class="invalid" data-validation-for="PermissionTypeCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", @data_validation_for = "Description", placeholder = Localizer["Please input description"].Value, @rows = "3" })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

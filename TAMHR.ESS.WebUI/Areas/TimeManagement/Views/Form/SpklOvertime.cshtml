@@ -1,0 +1,528 @@
+﻿@model DocumentRequestDetailViewModel<SpklOvertimeViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualOTPlanningService AnnualOTPlanningService
+@{
+    var isCanEdit = AclHelper.CanEdit();
+    var isDefault = ApplicationHelper.IsDefault(Model.Id);
+    var createdOn = isDefault ? DateTime.Now.Date : Model.CreateOn;
+    var orgCode = string.Empty;
+    var tempId = isDefault ? Guid.NewGuid() : Model.Object.TempId;
+    var canViewAction = isCanEdit || AclHelper.CanSubmit();
+
+    if (isDefault)
+    {
+        var actualOrganization = MdmService.GetActualOrganizationStructure(User.GetClaim("NoReg"), User.GetClaim("PostCode"));
+        orgCode = actualOrganization.OrgCode;
+    }
+    else
+    {
+        orgCode = Model.Object.OrgCode;
+    }
+
+    var org = ViewData["OrganizationInfo"] as IEnumerable<EmployeeeOrganizationObjectStoredEntity>;
+    var division = org.FirstOrDefault(x => x.ObjectDescription == "Division");
+    var department = org.FirstOrDefault(x => x.ObjectDescription == "Department");
+    var section = org.FirstOrDefault(x => x.ObjectDescription == "Section");
+
+    var divisionName = isDefault ? division?.ObjectText : Model.Object.DivisionName;
+    var divisionCode = isDefault ? division?.ObjectID : Model.Object.DivisionCode;
+
+    var departmentName = isDefault ? department?.ObjectText : Model.Object.DepartmentName;
+    var departmentCode = isDefault ? department?.ObjectID : Model.Object.DepartmentCode;
+
+    var sectionName = isDefault ? section?.ObjectText : Model.Object.SectionName;
+    var sectionCode = isDefault ? section?.ObjectID : Model.Object.SectionCode;
+    var minDate = DateTime.Now.Date;
+    var maxDate = minDate.AddYears(1);
+    //var minDate = new DateTime(DateTime.Now.Month == 1 ? DateTime.Now.Year - 1 : DateTime.Now.Year, DateTime.Now.Month == 1 ? 12 : DateTime.Now.Month - 1, 1);
+
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+
+    // Get OT Plan vs Actual Comparison
+    var monthlyOvertimePlanVsActual = AnnualOTPlanningService.GetMonthlyOvertimePlanVsActual(DateTime.Today.Year, DateTime.Today.Month, User.GetClaim("NoReg"));
+
+    ScriptManager.RegisterReference("grid");
+}
+@section styles {
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+    <style type="text/css">
+        input.file {
+            bottom: 0;
+            cursor: pointer;
+        }
+
+        table tbody td {
+            padding: 15px;
+        }
+    </style>
+}
+@section scripts {
+    <script id="detail-template" type="text/kendo-tmpl">
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.SpklRequestDetailView>()
+            .Name("sub-grid-#=Id#")
+            .HtmlAttributes(new { @class = "header-center" })
+            .Columns(columns =>
+            {
+                var progressWrapper = !isDefault && Model.DocumentStatusCode != "draft"
+                    ? @"<a href=""javascript:;"" data-trigger=""modal"" data-modal-title=""Tracking Approval - \\#:DocumentNumber\\#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""\\#:DocumentApprovalId\\#""><div class=""clearfix mb-1""><div class=""pull-left"">\\#:app.translate(DocumentStatusTitle)\\#</div><div class=""pull-right"">\\#:Progress\\#%</div></div><div class=""progress"" style=""height: 4px;""><div class=""progress-bar progress-bar-striped \\#: css('DocumentApproval', DocumentStatusCode) \\#"" role=""progressbar"" aria-valuenow=""\\#:Progress\\#"" aria-valuemin=""\\#:Progress\\#"" aria-valuemax=""\\#:Progress\\#"" style=""width:\\#:Progress\\#%;""></div></div></a>"
+                    : string.Empty;
+
+                columns.Bound(o => o.OvertimeDate).Title(Localizer["Date"].Value).ClientHeaderTemplate(@"<div class=""d-block d-md-none"">Detail</div><div class=""d-none d-md-block"">Date</div>").ClientTemplate(@"<div class=""d-md-none d-block""><div class=""row""><div class=""col-6""><h6 class=""bold mb-0"">Date</h6><span class=""small mb-2 d-block"">\\#:kendo.toString(OvertimeDate, 'dd/MM/yyyy')\\#</span><h6 class=""bold mb-0"">Time</h6><span class=""d-block small mb-2"">\\#:kendo.toString(OvertimeIn, 'HH:mm')\\# - \\#: OvertimeOut.getDate() > OvertimeIn.getDate() ? 'N' : '' \\# \\#:kendo.toString(OvertimeOut, 'HH:mm')\\#</span><h6 class=""bold mb-0"">Category</h6><span class=""d-block small mb-2"">\\#:OvertimeCategory\\#</span></div><div class=""col-6""><h6 class=""bold mb-0"">Break</h6><span class=""d-block small mb-2"">\\#:OvertimeBreak\\#</span><h6 class=""bold mb-0"">Duration</h6><span class=""d-block small mb-2"">\\#:Duration\\#</span><h6 class=""bold mb-0"">Reason</h6><span class=""d-block small mb-2"">\\#:OvertimeReason\\#</span></div></div><div class=""row""><div class=""col-12"">" + progressWrapper + @"<a class=""btn btn-sm red-haze w-100 mt-3"" href=""javascript:;"" data-trigger=""handler"" data-url=""~/api/spkl-overtime"" data-handler=""deleteHandler"" data-parameters-id=""\\#:Id\\#"">Delete</a></div></div></div><div class=""d-none d-md-block text-center"">\#:kendo.toString(OvertimeDate, 'dd/MM/yyyy')\#</div>");
+                columns.Bound(o => o.OvertimeBreak).Title(Localizer["Break"].Value).HtmlAttributes(new { @class = "text-right" }).Width(90).MinScreenWidth(780);
+                columns.Bound(o => o.OvertimeIn).Title(Localizer["Time"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate("\\#:kendo.toString(OvertimeIn, 'HH:mm')\\# - \\#: OvertimeOut.getDate() > OvertimeIn.getDate() ? 'N' : '' \\# \\#:kendo.toString(OvertimeOut, 'HH:mm')\\#").Width(175).MinScreenWidth(780);
+                columns.Bound(o => o.Duration).Title(Localizer["Duration"].Value).HtmlAttributes(new { @class = "text-right" }).Width(90).MinScreenWidth(780);
+                columns.Bound(o => o.OvertimeCategory).Title("Category").MinScreenWidth(780);
+
+                if (!isDefault && Model.DocumentStatusCode != "draft")
+                {
+                    columns.Bound(o => o.Id).Title("Progress").ClientTemplate(progressWrapper).Width(210).MinScreenWidth(780);
+                }
+
+                if (isCanEdit)
+                {
+                    columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<a class=""btn btn-sm red-haze"" href=""javascript:;"" data-trigger=""handler"" data-url=""~/api/spkl-overtime"" data-handler=""deleteHandler"" data-parameters-id=""\\#:Id\\#""><i class=""ft-trash""></i></a>").Width(25);
+                }
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .PageSize(20)
+                .Read(read => read.Url(Url.Content("~/api/spkl-overtime/gets")).Data(@<text>function() { return { "tempId": "@tempId", "noreg": "#:NoReg#" } }</text>))
+                .Sort(sort =>
+                {
+                    sort.Add("OvertimeDate");
+                    sort.Add("OvertimeIn");
+                })
+            )
+            .Pageable()
+            .ToClientTemplate()
+        )
+    </script>
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    <script type="text/javascript">
+        app.set("tempId", '@tempId.ToString()');
+        app.set("documentApprovalId", '@Model.DocumentApprovalId');
+        app.set("filterType", '@(Model.Object.OvertimeType ?? "form")');
+
+        $(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done'
+            });
+        });
+    </script>
+    <script type="text/javascript" src="~/js/pages/spkl-planning.js"></script>
+}
+<input type="hidden" name="Object.TempId" value="@tempId" />
+<input type="hidden" name="Object.OrgCode" value="@orgCode" />
+<input type="hidden" name="Object.DivisionName" value="@divisionName" />
+<input type="hidden" name="Object.DivisionCode" value="@divisionCode" />
+<input type="hidden" name="Object.DepartmentName" value="@departmentName" />
+<input type="hidden" name="Object.DepartmentCode" value="@departmentCode" />
+<input type="hidden" name="Object.SectionName" value="@sectionName" />
+<input type="hidden" name="Object.SectionCode" value="@sectionCode" />
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["SPKL Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        @if (isCanEdit)
+                        {
+                            <div class="col-md-7 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Overtime Planning"]</legend>
+                                    <div class="form-group">
+                                        <div class="mt-radio-inline">
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Input Form"]
+                                                @Html.RadioButtonFor(x => x.Object.OvertimeType, "form", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OvertimeType" }, isCanEdit))
+                                                <span></span>
+                                            </label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Upload Overtime"]
+                                                @Html.RadioButtonFor(x => x.Object.OvertimeType, "upload", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OvertimeType" }, isCanEdit))
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div data-role="view" data-value="form" style="display: none;">
+                                        <div class="row">
+                                            <div class="form-group col-md-6 col-6" id="DivOvertimeDate">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["OT In Date"]</label>
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.OvertimeDate)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.OvertimeDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                    .Enable(isCanEdit)
+                                                    .Format("dd/MM/yyyy")
+                                                    .Min(minDate)
+                                                    .Deferred()
+                                                )
+                                                <span class="invalid" data-validation-for="Object.OvertimeDate"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-6" id="DivOvertimeHourIn">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["OT In (in HH:MM)"]</span><span class="d-inline d-md-none">@Localizer["OT In"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.Object.OvertimeHourIn, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "Object.OvertimeHourIn" }, isCanEdit))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                @*@(Html.Kendo().ComboBoxFor(x => x.Object.OvertimeHourIn)
+                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.OvertimeHourIn" })
+                                                        .Placeholder(Localizer["Select Time (HH:MM)"].Value)
+                                                        .DataTextField("Value")
+                                                        .DataValueField("Value")
+                                                        .DataSource(dataSource => dataSource
+                                                            .Ajax()
+                                                            .Read(read => read.Url(Url.Content("~/api/spkl-overtime/times")))
+                                                        )
+                                                        .SelectedIndex(-1)
+                                                        .Enable(isCanEdit)
+                                                        .Deferred()
+                                                    )*@
+                                                <span class="invalid" data-validation-for="Object.OvertimeHourIn"></span>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="form-group col-md-6 col-6" id="DivOvertimeDateOut">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["OT Out Date"]</label>
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.OvertimeDateOut)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.OvertimeDateOut", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                    .Enable(isCanEdit)
+                                                    .Format("dd/MM/yyyy")
+                                                    .Min(minDate)
+                                                    .Max(maxDate)
+                                                    .Deferred()
+                                                )
+                                                <span class="invalid" data-validation-for="Object.OvertimeDateOut"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-6" id="DivOvertimeHourOut">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["OT Out (in HH:MM)"]</span><span class="d-inline d-md-none">@Localizer["OT Out"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.Object.OvertimeHourOut, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "Object.OvertimeHourOut" }, isCanEdit))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                @*@(Html.Kendo().ComboBoxFor(x => x.Object.OvertimeHourOut)
+                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.OvertimeHourOut" })
+                                                        .Placeholder(Localizer["Select Time (HH:MM)"].Value)
+                                                        .DataTextField("Value")
+                                                        .DataValueField("Value")
+                                                        .DataSource(dataSource => dataSource
+                                                            .Ajax()
+                                                            .Read(read => read.Url(Url.Content("~/api/spkl-overtime/times")))
+                                                        )
+                                                        .SelectedIndex(-1)
+                                                        .Enable(isCanEdit)
+                                                        .Deferred()
+                                                    )*@
+                                                <span class="invalid" data-validation-for="Object.OvertimeHourOut"></span>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="form-group col-md-6 col-6" id="DivOvertimeTimeBreak">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["OT Break (in Minute)"]</span><span class="d-inline d-md-none">@Localizer["OT Break"]</span></label>
+                                                @(Html.Kendo().NumericTextBoxFor(x => x.Object.OvertimeTimeBreak)
+                                                    .Value(Math.Floor(Model.Object.OvertimeTimeBreak))
+                                                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.OvertimeTimeBreak" })
+                                                    .Format("##,#")
+                                                    .Decimals(0)
+                                                    .Min(0)
+                                                    .Max(1000)
+                                                    .Enable(AclHelper.CanEdit())
+                                                    .Deferred()
+                                                )
+                                                <span class="invalid" data-validation-for="Object.OvertimeTimeBreak"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-6" id="DivCategory">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                                                @(Html.KendoComboBoxFor(x => x.Object.Category, "CategorySPKL")
+                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Category" })
+                                                    .Placeholder(Localizer["Select Category"].Value)
+                                                    .SelectedIndex(-1)
+                                                    .Enable(isCanEdit)
+                                                    .Deferred()
+                                                )
+                                                <span class="invalid" data-validation-for="Object.Category"></span>
+                                            </div>
+                                        </div>
+                                        <div class="form-group" id="DivReason">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["OT Reason"]</label>
+                                            @Html.TextBoxFor(x => x.Object.Reason, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Reason", placeholder = Localizer["Input Reason"].Value }, isCanEdit))
+                                            <span class="invalid" data-validation-for="Object.Reason"></span>
+                                            <hr />
+                                            <a href="javascript:;" class="btn red-flamingo update-item" data-trigger="handler" data-handler="updateSpklHandler">@Localizer["Update"]</a>
+                                        </div>
+                                    </div>
+                                    <div data-role="view" data-value="upload" style="display: none;">
+                                        <div class="form-group">
+                                            <label>@Localizer["Upload OT"]</label>
+                                            <form method="post" enctype="multipart/form-data">
+                                                <div class="file-group">
+                                                    <div class="input-group-area">
+                                                        <input asp-for="Object.UploadExcelPath" onfocus="this.blur()" onclick="$('.file').click();" readonly="readonly" placeholder="Nama File" />
+                                                    </div>
+                                                    <div class="input-group-icon">
+                                                        <div class="file btn">
+                                                            @Localizer["Browse"]
+                                                            <input class="file" type="file" id="fUpload" data-auto-upload="false" name="Object.UploadExcelPath" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                                        </div>
+                                                    </div>
+                                                    <div class="input-group-icon">
+                                                        <div class="file btn">
+                                                            @Localizer["Upload"]
+                                                            <input class="file" type="button" value="Upload" data-trigger="handler" data-handler="uploadHandler" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                            <div class="mt-3">
+                                                <a class="btn green-haze btn-sm" href="~/api/spkl-overtime/download?orgCode=@orgCode">
+                                                    <i class="ft-download"></i> Download Template
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="col-md-5 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Notes"]</legend>
+                                    <div class="form-group">
+                                        <label>@Localizer["Notes Detail"]</label>
+                                        @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Remarks", style = "height: 85px;", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                    </div>
+                                </fieldset>
+
+                                @*@if(monthlyOvertimePlanVsActual != null && monthlyOvertimePlanVsActual.Count() > 0)
+                                {*@
+                                <fieldset>
+                                    <legend>@Localizer["Overtime Planning"]</legend>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <div style="overflow-x: auto;">
+                                                <table class="table-bordered table-striped" >
+                                                    <thead>
+                                                        <tr>
+                                                    
+                                                            <th class="col-md-2 text-center">@Localizer["MP"]</th>
+                                                            <th class="col-md-3 text-center">@Localizer["Annual Plan"]</th>
+                                                            <th class="col-md-2 text-center">@Localizer["Used"]</th>
+                                                            <th class="col-md-3 text-center">@Localizer["Remaining"]</th>
+                                                            @if(monthlyOvertimePlanVsActual.FirstOrDefault() != null)
+                                                            {
+                                                                if(monthlyOvertimePlanVsActual.FirstOrDefault().Division.ToUpper() == "DL")
+                                                                {
+                                                                    <th class="col-md-2">@Localizer["Index"]</th> 
+                                                                }
+                                                            }
+                                                        </tr>
+                                                    </thead>
+
+                                                    <tbody>
+                                                    @foreach(MonthlyOvertimePlanVsActualStoredEntity item in monthlyOvertimePlanVsActual)
+                                                    {
+                                                    <tr>
+                                                        <td>
+                                                            @item.Division
+                                                            <input type="hidden" class="hfDivision" value="@item.Division" />
+                                                        </td>
+                                                        <td class="text-right">
+                                                            @(string.Format("{0:n0}", item.AnnualPlan))
+                                                            <input type="hidden" class="hfAnnualPlan" value="@item.AnnualPlan" />
+                                                        </td>
+                                                        <td class="text-right">
+                                                            <div id="usedPlanning_@item.OTIndex">@(string.Format("{0:n2}", item.Used))</div>
+                                                            <input type="hidden" class="hfUsed" value="@item.Used" />
+                                                        </td>
+                                                        <td class="text-right">
+                                                            @(string.Format("{0:n2}", item.Remaining))
+                                                            <input type="hidden" class="hfRemaining" value="@item.Remaining" />
+                                                        </td>
+                                                        @if(item.Division.ToUpper() == "DL" || monthlyOvertimePlanVsActual.Count() > 1)
+                                                        {
+                                                        <td class="text-right">
+                                                            @(string.Format("{0:n2}", item.OTIndex))
+                                                            <input type="hidden" class="hfOTIndex" value="@item.OTIndex" />
+                                                        </td> 
+                                                        }
+                                                    </tr> 
+                                                    }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset> 
+                                @*}*@
+                            </div>
+                        }
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset>
+                                <legend class="list-ot-header">@Localizer["Employee"]</legend>
+                                <div class="form-group">
+                                    <table cellspacing="5">
+                                        <tr>
+                                            <td width="100">Divisi</td>
+                                            <td>@divisionName</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Department</td>
+                                            <td>@departmentName</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Section</td>
+                                            <td>@sectionName</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="form-group d-flex">
+                                    <div class="input-group input-group-icon mb-3 col-sm-9 col-md-10 col-7">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text font-red">
+                                                <i class="fa fa-search"></i>
+                                            </span>
+                                        </div>
+                                        <input type="text" id="search" class="form-control" placeholder="@Localizer["Employee"]" />
+                                    </div>
+                                    <div class="col-md-2 col-sm-3 col-5 pr-0">
+                                        @(Html.Kendo().ComboBox()
+                                            .Name("HasPlan")
+                                            .HtmlAttributes(new { style = "width: 100%;" })
+                                            .DataTextField("Text")
+                                            .DataValueField("Value")
+                                            .AutoWidth(true)
+                                            .BindTo(new[] {
+                                                new { Text = "All", Value = string.Empty },
+                                                new { Text = "Has Plan", Value = "true" },
+                                                new { Text = "No Plan", Value = "false" },
+                                            })
+                                            .Value(!canViewAction ? "true" : string.Empty)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.SpklRequestClassRangeStoredEntity>()
+                                        .Name("grid")
+                                        .Columns(columns =>
+                                        {
+                                            if (isCanEdit)
+                                            {
+                                                columns.Bound(o => o.Id).ClientHeaderTemplate(@"<input id=""check-all"" type=""checkbox"" />").HeaderHtmlAttributes(new { @class = "text-center" }).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                                    <input id=""cb#:Id#"" type=""checkbox"" name=""ids[]"" value=""#:NoReg#"" />
+                                                ").Width(50);
+                                            }
+
+                                            columns.Bound(o => o.Name).Title(@Localizer["Employee"].Value).ClientTemplate(@"
+                                                <div class=""media pull-left"">
+                                                    <div class=""media-img mr-2"">
+                                                        <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                                    </div>
+                                                    <div class=""media-body"">
+                                                        <h6 class=""mb-0"">#:Name#</h6>
+                                                        <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                                    </div>
+                                                </div>
+                                                # if (Total != null) { #
+                                                <div class=""pull-right"">
+                                                    <span class=""d-block"">#:Total# Plans</span>
+                                                    <span class=""d-block"">#:MinDateStr# - #:MaxDateStr#</span>
+                                                </div>
+                                                # } #
+                                            ");
+                                        })
+                                        .NoRecords(config => config.Template(@"<div class=""text-center p-1"">" + Localizer["No Request"].Value + "</div>"))
+                                        .ClientDetailTemplateId("detail-template")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/spkl-overtime/gets-by-class")).Data(@<text>function() { return { tempId: "@tempId", orgCode: "@orgCode", keyDate: "@createdOn.ToString("yyyy-MM-dd")" } }</text>))
+                                            .Sort(sort =>
+                                            {
+                                                sort.Add("Name");
+                                            })
+                                            .PageSize(20)
+                                            .Filter(filter =>
+                                            {
+                                                if (!canViewAction)
+                                                {
+                                                    filter.Add(x => x.Total).IsNotNull().And().IsGreaterThan(0);
+                                                }
+                                            })
+                                        )
+                                        .Pageable(options =>
+                                        {
+                                            options.Input(true);
+                                            options.Numeric(false);
+                                            options.AlwaysVisible(false);
+                                        })
+                                        .Deferred()
+                                    )
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions {
+    @if (canViewAction)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-8 col-8">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanEdit())
+                                        {
+                                            <button name="btnAction" class="btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanSubmit())
+                                        {
+                                            <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

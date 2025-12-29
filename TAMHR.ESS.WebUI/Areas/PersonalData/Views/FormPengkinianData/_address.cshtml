@@ -1,0 +1,603 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataService;
+@{
+    var user = User.GetClaim("NoReg");
+}
+
+<div class="card-body">
+    <div class="row">
+        @{
+            var identity = updatedataService.GetPersonalDataIdentity(user).FirstOrDefault();
+            if (identity != null)
+            {
+                <div class="col-md-8 col-sm-12 accordion">
+                    <fieldset class="card-header" data-toggle="collapse" href="#ktp" role="button" aria-expanded="false" aria-controls="ktp">
+                        <legend>Kartu Tanda Penduduk (KTP)</legend>
+                        <div class="collapse show" id="ktp">
+                            <div class="row">
+                                <label class="col-md-4">NIK</label>
+                                <span class="col-md-8">: @identity.No_KTP</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Nama</label>
+                                <span class="col-md-8">: @identity.Name</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tempat/Tanggal Lahir</label>
+                                <span class="col-md-8">: @identity.Tanggal_Lahir.Value.ToString("dd MMM yyyy")</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Jenis Kelamin</label>
+                                <span class="col-md-8">: @identity.Jenis_Kelamin</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Golongan Darah</label>
+                                <span class="col-md-8">: @identity.GolonganDarah </span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Alamat</label>
+                                <span class="col-md-8">: @identity.Alamat</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">RT/RW</label>
+                                <span class="col-md-8">: @identity.Rt / @identity.Rw</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kelurahan/Desa</label>
+                                <span class="col-md-8">: @identity.Kelurahan</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kecamatan</label>
+                                <span class="col-md-8">: @identity.Kecamatan</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Agama</label>
+                                <span class="col-md-8">: @identity.Agama</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Status Perkawinan</label>
+                                <span class="col-md-8">: @identity.Status_Nikah</span>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+                <div class="col-md-4 col-sm-12 accordion">
+                    <fieldset class="card-header" data-toggle="collapse" href="#ktpdoc" role="button" aria-expanded="false" aria-controls="ktpdoc">
+                        <legend>Document</legend>
+                        <div class="collapse show" id="ktpdoc">
+                            <div class="col-sm-12 text-center align-items-center">
+                                <div>
+                                    <small>KTP</small>
+                                </div>
+                                <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+            }
+        }
+
+    </div>
+</div>
+
+
+<div class="card-body">
+    <div class="row accordion">
+        <div class="col-md-8 col-sm-12">
+            <div class="">
+                @if (identity != null)
+                {
+                    <fieldset class="card-header" data-toggle="collapse" href="#kk" role="button" aria-expanded="false" aria-controls="kk">
+                        <legend>
+                            Kartu Keluarga (KK) &nbsp; &nbsp; &nbsp; &nbsp;
+                            <a class="btn btn-sm btn-info pull-right" style="color:white" href="#" onclick="load('FamilyCardMember')">
+                                <i class=" ft-plus-circle">  Add data keluarga </i>
+                            </a>
+                        </legend>
+                        <div class="collapse show" id="kk">
+                            <div class="row">
+                                <label class="col-md-4">No KK</label>
+                                <span class="col-md-8">: @identity.No_KK</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Nama Kepala Keluarga</label>
+                                <span class="col-md-8">: @identity.KKHeadName</span>
+                            </div>
+
+                            <div class="row">
+                                <label class="col-md-4">Alamat</label>
+                                <span class="col-md-8">: @identity.Alamat</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">RT/RW</label>
+                                <span class="col-md-8">: @identity.Rt / @identity.Rw</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kode Pos</label>
+                                <span class="col-md-8">: @identity.Kode_Pos</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kelurahan/Desa</label>
+                                <span class="col-md-8">: @identity.Kelurahan</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kecamatan</label>
+                                <span class="col-md-8">: @identity.Kecamatan</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kabupaten Kota</label>
+                                <span class="col-md-8">: @identity.Kota</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Provinsi</label>
+                                <span class="col-md-8">: @identity.Provinsi</span>
+                            </div>
+                        </div>
+                    </fieldset>
+
+
+                    var kk = updatedataService.GetPersonalDataKK(identity.No_KK).ToList();
+                    var kepalaKeluarga = new TAMHR.ESS.Domain.PersonalDataKKView();
+                    var pasangan = new TAMHR.ESS.Domain.PersonalDataKKView();
+                    var anak = new List<TAMHR.ESS.Domain.PersonalDataKKView>();
+                    if (kk.Count > 0)
+                    {
+                        kepalaKeluarga = kk.Where(x => x.KKStatusCode == "suami").FirstOrDefault();
+                        pasangan = kk.Where(x => x.KKStatusCode == "istri").FirstOrDefault();
+                        anak = kk.Where(x => x.KKStatusCode == "anak").ToList();
+                    }
+
+                    <fieldset class="card-header" data-toggle="collapse" href="#dkk" role="button" aria-expanded="false" aria-controls="dkk">
+                        <legend>
+                            <a class="btn btn-sm btn-secondary" style="color:white" href="#" onclick="load('FamilyCardMember','@kepalaKeluarga.Nik')">
+                                <i class=" ft-edit"> &nbsp; Data Kepala Keluarga </i>
+                            </a>
+                            
+                        </legend>
+                        <div class="collapse show" id="dkk">
+                            <div class="row">
+                                <label class="col-md-4">Nama Lengkap</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Name</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">NIK</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Nik</span>
+                            </div>
+
+                            <div class="row">
+                                <label class="col-md-4">Jenis Kelamin</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Gender</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tempat Lahir</label>
+                                <span class="col-md-8">: @kepalaKeluarga.BirthPlace</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tanggal Lahir</label>
+                                <span class="col-md-8">
+                                    : @if (@kepalaKeluarga.BirthDate.HasValue)
+                                    { @kepalaKeluarga.BirthDate.Value.ToString("dd MMM yyyy")}
+                                    else
+                                    {@kepalaKeluarga.BirthDate}
+                                </span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Agama</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Religion</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Pendidikan</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Education</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Jenis Pekerjaan</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Work</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Golongan Darah</label>
+                                <span class="col-md-8">: @kepalaKeluarga.BloodTypeCode</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Status Perkawinan</label>
+                                <span class="col-md-8">: @kepalaKeluarga.MaritalStatus</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tanggal Perkawinan</label>
+                                <span class="col-md-8">
+                                    : @if (kepalaKeluarga.MaritalDate.HasValue)
+                                    {@kepalaKeluarga.MaritalDate.Value.ToString("dd MMM yyyy")}
+                                else
+                                {@kepalaKeluarga.MaritalDate}e
+                                </span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Status Hubungan Keluarga</label>
+                                <span class="col-md-8">: @kepalaKeluarga.KKStatus</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kewarganegaraan</label>
+                                <span class="col-md-8">: @kepalaKeluarga.Nationality</span>
+                            </div>
+                            <div>
+                                <fieldset>
+                                    <legend>Document Imigrasi</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">No Passpor</label>
+                                        <span class="col-md-8">: @kepalaKeluarga.PassportNumber</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No KITAP</label>
+                                        <span class="col-md-8">: @kepalaKeluarga.KitapNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div>
+                                <fieldset>
+                                    <legend>Nama Orang Tua</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Ayah</label>
+                                        <span class="col-md-8">: @kepalaKeluarga.FatherName</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Ibu</label>
+                                        <span class="col-md-8">: @kepalaKeluarga.MatherName</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="card-header" data-toggle="collapse" href="#dp" role="button" aria-expanded="false" aria-controls="dp">
+                        <legend>
+                            <a class="btn btn-sm btn-secondary" style="color:white" href="#" onclick="load('FamilyCardMember','@pasangan.Nik')">
+                                <i class=" ft-edit"> &nbsp; Data Pasangan (Suami/Istri)</i>
+                            </a>
+                            <a class="btn btn-sm btn-danger" style="color:white" href="#" onclick="deletekk('@pasangan.Id')">
+                                <i class=" ft-delete"> &nbsp; Delete </i>
+                            </a>
+                        </legend>
+                        <div class="collapse show" id="dp">
+                            <div class="row">
+                                <label class="col-md-4">Nama Lengkap</label>
+                                <span class="col-md-8">: @pasangan.Name</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">NIK</label>
+                                <span class="col-md-8">: @pasangan.Nik</span>
+                            </div>
+
+                            <div class="row">
+                                <label class="col-md-4">Jenis Kelamin</label>
+                                <span class="col-md-8">: @pasangan.Gender</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tempat Lahir</label>
+                                <span class="col-md-8">: @pasangan.BirthPlace</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tanggal Lahir</label>
+                                <span class="col-md-8">
+                                    : @if (pasangan.BirthDate.HasValue)
+                                    {@pasangan.BirthDate.Value.ToString("dd MMM yyyy")}
+                                else
+                                {@pasangan.BirthDate}
+                                </span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Agama</label>
+                                <span class="col-md-8">: @pasangan.Religion</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Pendidikan</label>
+                                <span class="col-md-8">: @pasangan.Education</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Jenis Pekerjaan</label>
+                                <span class="col-md-8">: @pasangan.Work</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Golongan Darah</label>
+                                <span class="col-md-8">: @pasangan.BloodTypeCode</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Status Perkawinan</label>
+                                <span class="col-md-8">: @pasangan.MaritalStatus</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tanggal Perkawinan</label>
+                                <span class="col-md-8">
+                                    : @if (pasangan.MaritalDate.HasValue)
+                                    {@pasangan.MaritalDate.Value.ToString("dd MMM yyyy")}
+                                else
+                                {@pasangan.MaritalDate}
+                                </span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Status Hubungan Keluarga</label>
+                                <span class="col-md-8">: @pasangan.KKStatus</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kewarganegaraan</label>
+                                <span class="col-md-8">: @pasangan.Nationality</span>
+                            </div>
+                            <div>
+                                <fieldset>
+                                    <legend>Document Imigrasi</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">No Passpor</label>
+                                        <span class="col-md-8">: @pasangan.PassportNumber</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">No KITAP</label>
+                                        <span class="col-md-8">: @pasangan.KitapNumber</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div>
+                                <fieldset>
+                                    <legend>Nama Orang Tua</legend>
+                                    <div class="row">
+                                        <label class="col-md-4">Ayah</label>
+                                        <span class="col-md-8">: @pasangan.FatherName</span>
+                                    </div>
+                                    <div class="row">
+                                        <label class="col-md-4">Ibu</label>
+                                        <span class="col-md-8">: @pasangan.MatherName</span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    var no = 0;
+                    foreach (var item in anak.OrderBy(x => x.BirthDate))
+                    {
+                        var da = "da" + no++;
+
+                        <fieldset class="card-header" data-toggle="collapse" href="#@da" role="button" aria-expanded="false" aria-controls="da">
+                            <legend>
+                                <a class="btn btn-sm btn-secondary" style="color:white" href="#" onclick="load('FamilyCardMember','@item.Nik')">
+                                    <i class=" ft-edit"> &nbsp;  Data Anak @no</i>
+                                </a>
+                                <a class="btn btn-sm btn-danger" style="color:white" href="#" onclick="deletekk('@item.Id')">
+                                    <i class=" ft-delete"> &nbsp; Delete </i>
+                                </a>
+                            </legend>
+                            <div class="collapse show" id="@da">
+                                <div class="row">
+                                    <label class="col-md-4">Nama Lengkap</label>
+                                    <span class="col-md-8">: @item.Name</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">NIK</label>
+                                    <span class="col-md-8">: @item.Nik</span>
+                                </div>
+
+                                <div class="row">
+                                    <label class="col-md-4">Jenis Kelamin</label>
+                                    <span class="col-md-8">: @item.Gender</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Tempat Lahir</label>
+                                    <span class="col-md-8">: @item.BirthPlace</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Tanggal Lahir</label>
+                                    <span class="col-md-8">
+                                        : @if (item.BirthDate.HasValue)
+                                        {@item.BirthDate.Value.ToString("dd MMM yyyy")}
+                                    else
+                                    {@item.BirthDate}
+                                    </span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Agama</label>
+                                    <span class="col-md-8">: @item.Religion</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Pendidikan</label>
+                                    <span class="col-md-8">: @item.Education</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Jenis Pekerjaan</label>
+                                    <span class="col-md-8">: @item.Work</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Golongan Darah</label>
+                                    <span class="col-md-8">: @item.BloodTypeCode</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Status Perkawinan</label>
+                                    <span class="col-md-8">: @item.MaritalStatus</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Tanggal Perkawinan</label>
+                                    <span class="col-md-8">
+                                        : @if (item.MaritalDate.HasValue)
+                                        {@item.MaritalDate.Value.ToString("dd MMM yyyy")}
+                                    else
+                                    {@item.MaritalDate}
+                                    </span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Status Hubungan Keluarga</label>
+                                    <span class="col-md-8">: @item.KKStatus</span>
+                                </div>
+                                <div class="row">
+                                    <label class="col-md-4">Kewarganegaraan</label>
+                                    <span class="col-md-8">: @item.Nationality</span>
+                                </div>
+                                <div>
+                                    <fieldset>
+                                        <legend>Document Imigrasi</legend>
+                                        <div class="row">
+                                            <label class="col-md-4">No Passpor</label>
+                                            <span class="col-md-8">: @item.PassportNumber</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">No KITAP</label>
+                                            <span class="col-md-8">: @item.KitapNumber</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                                <div>
+                                    <fieldset>
+                                        <legend>Nama Orang Tua</legend>
+                                        <div class="row">
+                                            <label class="col-md-4">Ayah</label>
+                                            <span class="col-md-8">: @item.FatherName</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4">Ibu</label>
+                                            <span class="col-md-8">: @item.MatherName</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            </div>
+                        </fieldset>
+                    }
+
+                }
+                else
+                {
+                    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                }
+
+            </div>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <fieldset class="card-header" data-toggle="collapse" href="#kkdoc" role="button" aria-expanded="false" aria-controls="kkdoc">
+                <legend>Document</legend>
+                <div class="collapse show" id="kkdoc">
+                    @if (identity != null)
+                    {
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Kartu Keluarga</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                    }
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</div>
+
+@if (identity != null)
+{
+    <div class="card-body">
+        <div class="row accordion">
+            <div class="col-md-8 col-sm-1">
+                <fieldset class="card-header" data-toggle="collapse" href="#skd" role="button" aria-expanded="false" aria-controls="skd">
+                    @{
+                        var dm = updatedataService.GetPersonalDataDomicile(user).FirstOrDefault();
+                    }
+                    <legend>Surat Keterangan Domisili</legend>
+                    <div class="collapse show" id="skd">
+                        @if (dm != null)
+                        {
+                            <div class="row">
+                                <label class="col-md-4">Status Domisili</label>
+                                <span class="col-md-8">: @dm.DomicileStatus</span>
+                            </div>
+
+                            <div class="row">
+                                <label class="col-md-4">Alamat</label>
+                                <span class="col-md-8">: @dm.AddressDetail</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">RT/RW</label>
+                                <span class="col-md-8">: @dm.RT/@dm.RW</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kelurahan/Desa</label>
+                                <span class="col-md-8">: @dm.SubDistrict</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Kecamatan</label>
+                                <span class="col-md-8">: @dm.District</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">No Telepon</label>
+                                <span class="col-md-8">: @dm.PhoneNumber</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                        }
+                    </div>
+                </fieldset>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset class="card-header" data-toggle="collapse" href="#skddoc" role="button" aria-expanded="false" aria-controls="skddoc">
+                    <legend>Document</legend>
+                    <div class="collapse show" id="skddoc">
+                        @if (dm != null)
+                        {
+                            <div class="col-sm-12 text-center align-items-center">
+                                <div>
+                                    <small>Surat Keterangan Domisili</small>
+                                </div>
+                                <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                        }
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+<hr />
+
+@*script _address*@
+<script>
+    function load(key, nik) {
+        window.location.href = app.resolveUrl("/personaldata/formpengkiniandata/form?formKey=" + key + "&entity=" + JSON.stringify(param(nik)));
+    };
+
+    function deletekk(id) {
+
+        app.confirm(kendo.format(app.translate("Are you sure to delete this data?"), app.translate(true)), function (d) {
+            var entity = {Id: id};
+            if (d.value) {
+                $.post(app.resolveUrl("~/api/form-pengkinian-data/submit-kk"), entity, function (
+                    result) {
+                    if (result) {
+                        swal('success', 'Delete data successed', 'success');
+                        setTimeout(
+                            location.reload(), 4000);
+                    }
+                });
+            }
+        });
+    };
+
+    function param(nik) {
+        var entity = {
+            KKNumber: '@identity.No_KK',
+            Nik : nik
+        }
+        return entity;
+    };
+
+</script>

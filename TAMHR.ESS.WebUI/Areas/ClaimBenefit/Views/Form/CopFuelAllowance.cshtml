@@ -1,0 +1,268 @@
+﻿@model DocumentRequestDetailViewModel<CopFuelAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("grid");
+}
+@section scripts {
+    <script type="text/javascript">
+        // Add summary
+        function addSummary() {
+            var isValid = true;
+
+            if ($("#tanggal").data("kendoDatePicker").value() === null || $("#tujuan").val() === '' || $("#berangkat").val() === '' || $("#kembali").val() === '' ||
+                $("#keperluan").val() === '')
+                isValid = false;
+            if (parseInt($("#kembali").val()) <= parseInt($("#berangkat").val()) ) {
+                app.warning("KM berangkat tidak boleh lebih besar dari KM Kembali.");
+                isValid = false;
+            }
+
+            if (isValid) {
+                var grid = $("#grid").data("kendoGrid");
+                var dataStartAttachmentPath = $(".StartAttachmentPath").data();
+                var dataBackAttachmentPath = $(".BackAttachmentPath").data();
+                grid.dataSource.add({
+                    Date: kendo.toString($("#tanggal").data("kendoDatePicker")._value, "yyyy-MM-dd"),
+                    //Date: $("#tanggal").val(),
+                    Destination: $("#tujuan").val(),
+                    Start: $("#berangkat").val(),
+                    IdStartAttachmentPath: dataStartAttachmentPath.id,
+                    StartAttachmentPath: dataStartAttachmentPath.filename,
+                    Back: $("#kembali").val(),
+                    IdBackAttachmentPath: dataBackAttachmentPath.id,
+                    BackAttachmentPath: dataBackAttachmentPath.filename,
+                    Necessity: $("#keperluan").val()
+                });
+                var currTotal = $("#totalclaim").text();
+                $("#totalclaim").text(parseInt(currTotal));
+
+                $("#tanggal").data("kendoDatePicker").value('');
+                $("#tujuan").val('');
+                $("#berangkat").data("kendoNumericTextBox").value(null);
+                $("#kembali").data("kendoNumericTextBox").value(null);
+                $("#keperluan").data("kendoComboBox").value("");
+
+                $(".file-StartAttachmentPath").data("uploadFile").clearFiles();
+                $(".file-BackAttachmentPath").data("uploadFile").clearFiles();
+                 
+            }
+        }
+
+        function deleteSummary(e) {
+            if ('@isCanEdit' == 'True') {
+                var tr = $(e).closest("tr");
+                var data = $("#grid").data("kendoGrid").dataItem(tr);
+                var grid = $("#grid").data("kendoGrid");
+
+                grid.removeRow(tr);
+            }
+        }
+        
+        function s2ab(s) {
+            var buf = new ArrayBuffer(s.length);
+            var view = new Uint8Array(buf);
+            for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+            return buf;
+        }
+
+        function download(url, data, filename) {
+            var formData = new FormData();
+            Object.keys(data).forEach(function (key) {
+                var value = data[key];
+                if (value instanceof Array) {
+                    value.forEach(function (v) {
+                        formData.append(key, v);
+                    });
+                } else {
+                    formData.append(key, value);
+                }
+            });
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", url);
+            xhr.setRequestHeader("RequestVerificationToken", REQUEST_VERIFICATION_TOKEN);
+            xhr.send(formData);
+
+            xhr.onload = function (event) {
+                if (this.status === 200) {
+
+                    var bin = atob(xhr.response);
+                    var ab = s2ab(bin);
+                    var blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;' });
+                    
+                    let a = document.createElement("a");
+                    a.style = "display: none";
+                    document.body.appendChild(a);
+                    let url = window.URL.createObjectURL(blob);
+                    a.href = url;
+                    a.download = filename + '.xlsx';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                }
+            };
+        };
+
+        app.registerHandler("excel-handler", function (parameters) {
+            var grid = $("#grid").data("kendoGrid");
+
+            download("@Url.Content("~/api/cop-fuel-allowance/download")", { id: '@Model.DocumentApprovalId' }, "klaim bensin");
+        });
+
+        function calculateTotal() {
+            var total = 0;
+            var data = $("#grid").data("kendoGrid").dataSource.view();
+            for (var i = 0; i < data.length; i++) {
+                total += parseInt(data[i].Back) - parseInt(data[i].Start);
+            }
+
+            $("#totalclaim").text(total);
+        }
+
+        function dataBound() {
+            calculateTotal();
+        }
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["COP Fuel Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        @if (isCanEdit)
+                        {
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["COP Fuel Data"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Date"]</label>
+                                        @(Html.Kendo().DatePicker().Name("tanggal")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Date" , placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value})
+                                            .Enable(isCanEdit)
+                                            .Format("dd/MM/yyyy")
+                                            .Max(DateTime.Now)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Destination"]</label>
+                                        <input id="tujuan" class="form-control" placeholder="@Localizer["Input Destination"].Value" />
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Start KM"]</label>
+                                        @(Html.Kendo().NumericTextBox<int>().Name("berangkat").Format("### KM")
+                                            .HtmlAttributes(new { @class = "form-control text-right" })
+                                            .Spinners(false)
+                                            .Placeholder(Localizer["Input Start KM"].Value)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment for KM Start"]</label>
+                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "StartAttachmentPath" })
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["End KM"]</label>
+                                        @(Html.Kendo().NumericTextBox<int>().Name("kembali").Format("### KM")
+                                            .HtmlAttributes(new { @class = "form-control text-right" })
+                                            .Placeholder(Localizer["Input End KM"].Value)
+                                            .Spinners(false)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment for KM End"]</label>
+                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "BackAttachmentPath" })
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Needs"]</label>
+                                        @(Html.KendoComboBox("keperluan", "", "", "Name", "Name")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .Placeholder(Localizer["Select Needs"].Value)
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=ClaimBensinCOP")))
+                                            )
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group pull-right">
+                                        <button type="button" onclick="addSummary()" class="btn btn-info"><i class="ft-plus"></i> <span class="d-none d-md-inline">@Localizer["Add"]</span></button>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        }
+                        <div class="col-md-6 col-sm-12 no-table-header">
+                            <fieldset>
+                                <legend>@Localizer["Claim Data"]</legend>
+                                <br />
+                                @(Html.Kendo().Grid(Model.Object.data)
+                                    .Name("grid")
+                                    .HtmlAttributes(new { data_filter = "request-history-filter" })
+                                    .Columns(columns =>
+                                    {
+                                        columns.Template(
+                                            @"<div class='row' style='font-size:smaller; '>
+                                                <div class='col-md-8 col-sm-6'>
+                                                    <label>Tanggal #: kendo.toString(kendo.parseDate(Date), 'dd/MM/yyyy')#</label><br />
+                                                    <label>Tujuan #: Destination #</label><br />
+                                                    <label>KM Berangkat #: Start # KM </label><a class='font-blue' href='../../api/files/download?id=#:IdStartAttachmentPath#'>  #:StartAttachmentPath#</a><br />
+                                                    <label>KM Kembali #: Back # KM </label><a class='font-blue' href='../../api/files/download?id=#:IdBackAttachmentPath#' >  #:BackAttachmentPath#</a><br />
+                                                    <label>Total Pemakaian #: Back - Start # KM</label><br />
+                                                    <label>Keperluan #: Necessity#</label>
+                                                    <input type='hidden' name='Object.data[][Date]' value='#: kendo.toString(kendo.parseDate(Date), 'yyyy-MM-dd') #'></input>
+                                                    <input type='hidden' name='Object.data[][Destination]' value='#:Destination#'></input>
+                                                    <input type='hidden' name='Object.data[][Start]' value='#:Start#'></input>
+                                                    <input type='hidden' name='Object.data[][StartAttachmentPath]' value='#:StartAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][IdStartAttachmentPath]' value='#:IdStartAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][Back]' value='#:Back#'></input>
+                                                    <input type='hidden' name='Object.data[][BackAttachmentPath]' value='#:BackAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][IdBackAttachmentPath]' value='#:IdBackAttachmentPath#'></input>
+                                                    <input type='hidden' name='Object.data[][Necessity]' value='#:Necessity#'></input>
+                                                </div>" +
+                                                    ( isCanEdit ? @"<div class='col-md-2 col-sm-1'>
+                                                    <button type='button'  onclick='deleteSummary(this)' class='btn btn-outline-danger btn-circle offset-md-4 offset-sm-2'>
+                                                        <i class='fa fa-times'></i>
+                                                    </button>
+                                                </div>" : "") +
+                                            "</div>").Title(" ");
+                                    })
+                                    .Events(e => e.DataBound("dataBound"))
+                                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["Claim Data Not Found"].Value + "</div>"))
+                                    .Deferred()
+                                )
+                                <br />
+                                <p>Total Claim : <span id="totalclaim">0</span> KM</p>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

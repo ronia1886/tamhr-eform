@@ -1,0 +1,1342 @@
+﻿@model DocumentRequestDetailViewModel<VacationAllowanceViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService;
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    var noreg = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var departments = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Object.Departments);
+    var date = DateTime.Now.Date;
+    var formData = coreService.Query<TAMHR.ESS.Domain.Form>(x => x.FormKey == Model.FormKey).FirstOrDefault();
+    int isApproveHRAdmin = 0;
+    int isApproveSelfEmployee = 0;
+
+    if(formData != null)
+    {
+        string approverHRAdmin = configService.GetConfigValue("VacationAllowance.HRAdminRole","HR_ADMIN");
+        var HRAdminMatrixData = coreService.Query<TAMHR.ESS.Domain.ApprovalMatrix>(x => x.FormId == formData.Id && x.Approver == approverHRAdmin).FirstOrDefault();
+        if(HRAdminMatrixData != null)
+        {
+            isApproveHRAdmin = coreService.Query<TAMHR.ESS.Domain.TrackingApproval>
+            (x => x.DocumentApprovalId == Model.DocumentApprovalId && x.RowStatus && x.ApprovalActionCode=="approve" && x.ApprovalMatrixId==HRAdminMatrixData.Id)
+            .Count();        
+        }
+
+        var selfEmployeeMatrixData = coreService.Query<TAMHR.ESS.Domain.ApprovalMatrix>(x => x.FormId == formData.Id && x.Approver == "Self").FirstOrDefault();
+        if(selfEmployeeMatrixData != null)
+        {
+            isApproveSelfEmployee = coreService.Query<TAMHR.ESS.Domain.TrackingApproval>
+            (x => x.DocumentApprovalId == Model.DocumentApprovalId && x.RowStatus && x.ApprovalActionCode == "approve" && x.ApprovalMatrixId == selfEmployeeMatrixData.Id)
+            .Count();        
+        }
+    }
+
+    bool isCanEditReport = true;
+    if (isApproveSelfEmployee > 0)
+    {
+        isCanEditReport = false;
+    }
+
+}
+
+@section scripts {
+
+    @{if(isApproveHRAdmin>0 && isApproveSelfEmployee==0){
+        <script type="text/javascript">
+        (function ($, app) {
+            app.interceptHandler("postHandler", x => x.action == "approve", function (parameters, callback) {
+                let $form = $("#mainForm"),
+                    formData = $form.serializeObject(),
+                    data = { DocumentApprovalId: formData.DocumentApprovalId, LocationActual: formData.Object.LocationActual, 
+                        VacationDateActual: formData.Object.VacationDateActual,SummariesActual: formData.Object.SummariesActual, 
+                        AttachmentFilePath: formData.AttachmentFilePath,TotalParticipant: formData.Object.TotalParticipant
+                    };
+                $.post("@ApplicationHelper.Api(Model.FormKey)/update-report", data, function (d) {
+                    callback();
+                    //upload attachment report
+                    $.post("@ApplicationHelper.Api(Model.FormKey)/upload-attachment", formData, function (d) {
+                        callback();
+                    }).fail(function (xhr, status, error) {
+                        $form.validate(xhr.responseJSON);
+                    });
+                }).fail(function (xhr) {
+                    var newJSON = {},
+                        oldJSON = xhr.responseJSON || {};
+
+                    for (var key in oldJSON) {
+                        newJSON["Object." + key] = oldJSON[key];
+                    }
+
+                    $form.validate(newJSON);
+                });
+
+                        
+            });
+        })(jQuery, app);
+    </script>
+    }
+
+    }
+    
+    <script type="text/javascript">
+        var allowances = [];
+         if ('@isCanEdit' == 'True') {
+            $.ajax(
+                {
+        type: 'POST',
+                    url: app.resolveUrl('~/api/claimbenefit/getinfo'),
+                    dataType: 'json',
+                    success: function (data) {
+                        $('#User').text(data.Data[0].Name);
+                        $('#Object_User').val(data.Data[0].Name)
+                    }
+                });
+        }
+        if ('@isCanEdit' == 'False') {
+            $("#User").text('@Model.Object.User');
+        }
+
+        function PrepareData() {
+            var options = @Html.Raw(departments);
+            if (options === null) {
+                return;
+            }
+
+            $.each(options, function (i, o) {
+                parsingObject(o.ObjectID, o.Employees);
+            });
+        }
+
+        function GetDepartments(date) {
+            $.ajax(
+                {
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/departments-noreg-vacation?noreg=' + '@noreg' + '&vacationDate=' + date + '&isActual=false'),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            $(".department-list").html('');
+                            let container = $(".department-list");
+
+                            $("#cb_Division").removeAttr("checked");
+                            $.each(data, function (i, o) {
+                                var item = $('<label id="' + o.ObjectID +'" class="mt-checkbox mt-checkbox-outline">' +
+                                    o.ObjectText + ' - ' + o.ObjectDescription +
+                                    '<input class="cb-department" onChange="calculate(this);" name="Departments[]" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                    '<span></span><br/>' +
+                                    '<a href="javascript:void(0)" data-trigger="modal" data-modal-type="md" data-modal-title="Data Peserta" data-modal-ajax="true" data-ajax-url="~/core/lookup/EmployeeByDepartmentVacation?orgCode=' + o.ObjectID + '&keyDate=' + date + '"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                    '</label>').appendTo(container);
+                            });
+
+                            var options = @Html.Raw(departments);
+                            if (options !== null) {
+                                $(".cb-department").each(function (index, obj) {
+                                    if ('@isCanEdit'  !== 'True') {
+                                            $(this).attr("disabled", "disabled");
+                                    }
+                                    var code = $(obj).data("code").toString();
+                                    var pos = options.map(function (e) { return e.ObjectID.toString(); }).indexOf(code);
+                                    if (pos >= 0) {
+                                        $(this).attr("checked", true);
+                                    } else {
+                                        $("#" + code).hide();
+                                    }
+                                });
+                            }
+                        }
+
+                    }
+                });
+        }
+
+        function GetDivisions(date) {
+            $.ajax(
+                {
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/divisions-noreg-vacation?noreg=' + '@noreg' + '&vacationDate=' + date),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            $(".division-list").html('');
+                            let container = $(".division-list");
+
+                            $.each(data, function (i, o) {
+                                var item = $('<label id="' + o.ObjectID +'" class="mt-checkbox mt-checkbox-outline">' +
+                                    o.ObjectText + ' - ' + o.ObjectDescription +
+                                    '<input class="cb-division" onChange="calculateDivision(this);" name="Division[]" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                    '<span></span><br/>' +
+                                    '<a href="javascript:void(0)" data-trigger="modal" data-modal-type="md" data-modal-title="Data Peserta" data-modal-ajax="true" data-ajax-url="~/core/lookup/EmployeeByDivisionVacation?orgCode=' + o.ObjectID + '&keyDate=' + date + '"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                    '</label>').appendTo(container);
+                            });
+                            
+                            var options = @Html.Raw(departments);
+                            if (options !== null) {
+                                $(".cb-division").each(function (index, obj) {
+                                    if ('@isCanEdit'  !== 'True') {
+                                            $(this).attr("disabled", "disabled");
+                                    }
+                                    var code = $(obj).data("code").toString();
+                                    var pos = options.map(function (e) { return e.ObjectID.toString(); }).indexOf(code);
+
+                                    if (pos >= 0) {
+                                        $(this).attr("checked", true);
+                                    } else {
+                                        $("#" + code).hide();
+                                    }
+                                });
+                            }
+                        }
+
+                    }
+                });
+        }
+
+        function capitalizeFirstLetter(string) {
+            return string[0].toUpperCase() + string.slice(1);
+        }
+
+        function GetDepartmentSelected() {
+            
+            var keyDateStr = "@(Model.Object.VacationDate.HasValue ? Model.Object.VacationDate.Value.ToString("yyyy-MM-dd") : string.Empty)";
+            
+            if (keyDateStr == null) return;
+
+            $.ajax(
+                {
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/departments-noreg-vacation-selected?docId=' + '@Model.DocumentApprovalId' + '&noreg=' + '@noreg'),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            $(".department-list").html('');
+                            let container = $(".department-list");
+                            
+                            $("#cb_Division").removeAttr("checked");
+                            
+                            var departmentName = "Departments";
+                            var calculateName = "calculate";
+                            
+                            $.each(data, function (i, o) {    
+                                var item = $('<label id="' + o.ObjectID +'" class="mt-checkbox mt-checkbox-outline">' +
+                                    o.ObjectText + ' - ' + o.ObjectDescription +
+                                    '<input class="cb-department" onChange="' + calculateName + '(this);" name="' + departmentName + '[]" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                    '<span></span><br/>' +
+                                    '<a href="javascript:void(0)" data-trigger="modal" data-modal-type="md" data-modal-title="Data Peserta" data-modal-ajax="true" data-ajax-url="~/core/lookup/EmployeeByDepartmentVacation?orgCode=' + o.ObjectID + '&keyDate=' + keyDateStr + '"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                    '</label>').appendTo(container);
+                            });
+
+                            var options = "";
+                            
+                            options = @Html.Raw(departments);
+                            
+                            if (options !== null) {
+                                
+                                $(".cb-department").each(function (index, obj) {
+                                    if ('@isCanEdit'  !== 'True') {
+                                            $(this).attr("disabled", "disabled");
+                                    }
+                                    var code = $(obj).data("code").toString();
+                                    var pos = options.map(function (e) { return e.ObjectID.toString(); }).indexOf(code);
+                                    if (pos >= 0) {
+                                        $(this).attr("checked", true);
+                                    } else {
+                                        $("#" + code).hide();
+                                    }
+                                });
+                            }
+                        }
+
+                    }
+                });
+        }
+
+        function GetDivisionSelected() {
+            
+            
+            var keyDateStr = "@(Model.Object.VacationDate.HasValue ? Model.Object.VacationDate.Value.ToString("yyyy-MM-dd") : string.Empty)";
+            
+            if (keyDateStr == null) return;
+
+            $.ajax(
+                {
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/divisions-noreg-vacation-selected?docId='+ '@Model.DocumentApprovalId'  + '&noreg=' + '@noreg'),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            $(".division-list").html('');
+                            let container = $(".division-list");
+                            var calculateName = "calculateDivision";
+                            var divisionName = "Division";
+                            $.each(data, function (i, o) {
+                                var item = $('<label id="' + o.ObjectID +'" class="mt-checkbox mt-checkbox-outline">' +
+                                    o.ObjectText + ' - ' + o.ObjectDescription +
+                                    '<input class="cb-division" onChange="' + calculateName + '(this);" name="' + divisionName + '[]" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                    '<span></span><br/>' +
+                                    '<a href="javascript:void(0)" data-trigger="modal" data-modal-type="md" data-modal-title="Data Peserta" data-modal-ajax="true" data-ajax-url="~/core/lookup/EmployeeByDivisionVacation?orgCode=' + o.ObjectID + '&keyDate=' + keyDateStr + '"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                    '</label>').appendTo(container);
+                            });
+
+                            var options = @Html.Raw(departments);
+                            
+                            if (options !== null) {
+                                $(".cb-division").each(function (index, obj) {
+                                    if ('@isCanEdit'  !== 'True') {
+                                            $(this).attr("disabled", "disabled");
+                                    }
+                                    var code = $(obj).data("code").toString();
+                                    var pos = options.map(function (e) { return e.ObjectID.toString(); }).indexOf(code);
+
+                                    if (pos >= 0) {
+                                        $(this).attr("checked", true);
+                                    } else {
+                                        $("#" + code).hide();
+                                    }
+                                });
+                            }
+                        }
+
+                    }
+                });
+        }
+
+        var summaries = [];
+
+        function calculate(source) {
+            var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                source.checked = false;
+                return;
+            }
+
+            app.blockUI();
+            var code = $(source).data("code") || "",
+                keyDateStr = kendo.toString(keyDate, 'yyyy-MM-dd');
+
+            if (source.checked) {
+                $.ajax(
+                    {
+                        type: 'GET',
+                        url: app.resolveUrl('~/api/organization/employee-by-dept-all?orgCode=' + code + '&keyDate=' + keyDateStr),
+                        dataType: 'json',
+                        success: function (data) {
+                            if (data !== undefined && data !== null) {
+                                parsingObject(code, data);
+                            }
+                        }
+                    });
+
+            } else {
+                summaries = jQuery.grep(summaries, function (value) {
+                    return value.Code != code;
+                });
+
+                summarize(summaries);
+
+                $(".select-all").each(function () {
+                    $(this).prop("checked", false);
+                });
+            }
+
+        }
+
+        function calculateActual(source) {
+            var keyDate = $("#Object_VacationDateActual").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                source.checked = false;
+                return;
+            }
+
+            app.blockUI();
+            var code = $(source).data("code") || "",
+                keyDateStr = kendo.toString(keyDate, 'yyyy-MM-dd');
+                
+            if (source.checked) {
+                $.ajax(
+                    {
+                        type: 'GET',
+                        url: app.resolveUrl('~/api/organization/employee-by-dept-all?orgCode=' + code + '&keyDate=' + keyDateStr),
+                        dataType: 'json',
+                        success: function (data) {
+                            if (data !== undefined && data !== null) {
+                                parsingObjectActual(code, data);
+                            }
+                        }
+                    });
+
+            } else {
+                summariesActual = jQuery.grep(summariesActual, function (value) {
+                    return value.Code != code;
+                });
+
+                summarizeActual(summariesActual);
+
+                $(".select-all-actual").each(function () {
+                    $(this).prop("checked", false);
+                });
+            }
+
+        }
+
+        function calculateDivision(source) {
+            var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                source.checked = false;
+                return;
+            }
+
+            app.blockUI();
+            var code = $(source).data("code") || "",
+                keyDateStr = kendo.toString(keyDate, 'yyyy-MM-dd');
+
+            if (source.checked) {
+                $.ajax(
+                    {
+                        type: 'GET',
+                        url: app.resolveUrl('~/api/organization/employee-by-div?orgCode=' + code + '&keyDate=' + keyDateStr),
+                        dataType: 'json',
+                        success: function (data) {
+                            if (data !== undefined && data !== null) {
+                                parsingObject(code, data);
+
+                                $(".cb-department").each(function () {
+                                    if (!this.checked) {
+                                        $(this).click();
+                                    }
+                                });
+
+                                $(".select-all").each(function () {
+                                    $(this).prop("checked", true);
+                                });
+                            }
+                        }
+                    });
+
+            } else {
+                summaries = jQuery.grep(summaries, function (value) {
+                    return value.Code != code;
+                });
+
+                summarize(summaries);
+
+                $(".select-all-div").each(function () {
+                    $(this).prop("checked", false);
+                });
+
+                $(".select-all").each(function () {
+                    $(this).prop("checked", false);
+                });
+
+                $(".cb-department").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+
+        }
+
+        function calculateDivisionActual(source) {
+            var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                source.checked = false;
+                return;
+            }
+
+            app.blockUI();
+            var code = $(source).data("code") || "",
+                keyDateStr = kendo.toString(keyDate, 'yyyy-MM-dd');
+
+            if (source.checked) {
+                $.ajax(
+                    {
+                        type: 'GET',
+                        url: app.resolveUrl('~/api/organization/employee-by-div?orgCode=' + code + '&keyDate=' + keyDateStr),
+                        dataType: 'json',
+                        success: function (data) {
+                            if (data !== undefined && data !== null) {
+                                parsingObject(code, data);
+
+                                $(".cb-department-actual").each(function () {
+                                    if (!this.checked) {
+                                        $(this).click();
+                                    }
+                                });
+
+                                $(".select-all-actual").each(function () {
+                                    $(this).prop("checked", true);
+                                });
+                            }
+                        }
+                    });
+
+            } else {
+                summaries = jQuery.grep(summaries, function (value) {
+                    return value.Code != code;
+                });
+
+                summarize(summaries);
+
+                $(".select-all-div-actual").each(function () {
+                    $(this).prop("checked", false);
+                });
+
+                $(".select-all-actual").each(function () {
+                    $(this).prop("checked", false);
+                });
+
+                $(".cb-department-actual").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+
+        }
+
+        function parsingObject(code, data) {
+
+            var rangeItem = {
+                Code: code,
+                Range13: 0,
+                Range46: 0,
+                Range78: 0,
+                Range910: 0,
+                Range1112: 0,
+                Employees: data
+            };
+
+            var result = [];
+
+            if(data != null){
+                data.reduce(function (res, value) {
+                    if (!res[value.Classification]) {
+                        res[value.Classification] = {
+                            Classification: value.Classification,
+                            Qty: 0
+                        };
+                        result.push(res[value.Classification])
+                    }
+
+                    if (!value.HasVacation) {
+                        res[value.Classification].Qty += 1;
+                    }
+
+                    return res;
+                }, {});
+            }
+
+            $.each(result, function (i, o) {
+                if (o.Classification.isBetween(1, 3)) {
+                    rangeItem.Range13 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(4, 6)) {
+                    rangeItem.Range46 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(7, 8)) {
+                    rangeItem.Range78 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(9, 10)) {
+                    rangeItem.Range910 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(11, 12)) {
+                    rangeItem.Range1112 += o.Qty;
+                }
+            });
+
+            summaries.push(rangeItem);
+            summarize(summaries);
+        }
+
+        function parsingObjectActual(code, data) {
+            var rangeItem = {
+                Code: code,
+                Range13: 0,
+                Range46: 0,
+                Range78: 0,
+                Range910: 0,
+                Range1112: 0,
+                Employees: data
+            };
+
+            var result = [];
+
+            if(data != null){
+                data.reduce(function (res, value) {
+                    if (!res[value.Classification]) {
+                        res[value.Classification] = {
+                            Classification: value.Classification,
+                            Qty: 0
+                        };
+                        result.push(res[value.Classification])
+                    }
+
+                    //if (!value.HasVacation) {
+                        res[value.Classification].Qty += 1;
+                    //}
+
+                    return res;
+                }, {});
+            }
+
+            $.each(result, function (i, o) {
+                if (o.Classification.isBetween(1, 3)) {
+                    rangeItem.Range13 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(4, 6)) {
+                    rangeItem.Range46 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(7, 8)) {
+                    rangeItem.Range78 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(9, 10)) {
+                    rangeItem.Range910 += o.Qty;
+                }
+
+                if (o.Classification.isBetween(11, 12)) {
+                    rangeItem.Range1112 += o.Qty;
+                }
+
+            });
+            
+            summariesActual.push(rangeItem);
+            summarizeActual(summariesActual);
+        }
+
+        function summarize(data) {
+            $(".detail-vacation").html("");
+
+            $.each(data, function (i, o) {
+
+                $(".detail-vacation").append("<input type='hidden' name='Object.Departments["+ i +"][ObjectID]' value='" + o.Code + "'/>");
+
+                $.each(o.Employees, function (ii, oo) {
+
+                    $(".detail-vacation").append(
+                        "<input type='hidden' name='Object.Departments[" + i + "][Employees][" + ii + "][Id]' value='" + oo.Id + "'/>" +
+                        "<input type='hidden' name='Object.Departments[" + i + "][Employees][" + ii + "][NoReg]' value='" + oo.NoReg + "'/>" +
+                        "<input type='hidden' name='Object.Departments[" + i + "][Employees][" + ii + "][Name]' value='" + oo.Name + "'/>" +
+                        "<input type='hidden' name='Object.Departments[" + i + "][Employees][" + ii + "][HasVacation]' value='" + (typeof oo.HasVacation === 'undefined' ? false : oo.HasVacation) + "'/>" +
+                        "<input type='hidden' name='Object.Departments[" + i + "][Employees][" + ii + "][Classification]' value='" + oo.Classification + "'/>"
+                    );
+
+                });
+
+            });
+
+            var sum13 = data.reduce(function (s, a) {
+                return (s + a.Range13);
+            }, 0);
+
+            var sum46 = data.reduce(function (s, a) {
+                return s + a.Range46;
+            }, 0);
+
+            var sum78 = data.reduce(function (s, a) {
+                return s + a.Range78;
+            }, 0);
+
+            var sum910 = data.reduce(function (s, a) {
+                return s + a.Range910;
+            }, 0);
+
+            var sum1112 = data.reduce(function (s, a) {
+                return s + a.Range1112;
+            }, 0);
+
+
+            var amt1 = $.grep(allowances, function (x) { return x.ClassFrom >= 1 && x.ClassTo <= 6 })[0];
+            var amt2 = $.grep(allowances, function (x) { return x.ClassFrom >= 7 && x.ClassTo <= 8 })[0];
+            var amt3 = $.grep(allowances, function (x) { return x.ClassFrom >= 9 && x.ClassTo <= 12 })[0];
+
+            amt1 = amt1 === undefined || amt1 === null ? 0 : amt1.Ammount;
+            amt2 = amt2 === undefined || amt2 === null ? 0 : amt2.Ammount;
+            amt3 = amt3 === undefined || amt3 === null ? 0 : amt3.Ammount;
+
+            $("#qty_range13").html(sum13);
+            $("#sum_range13").html(kendo.toString(sum13 * amt1,"n0"));
+            $("#input_qty_range13").val(sum13);
+            $("#input_total_range13").val(sum13 * amt1);
+
+
+            $("#qty_range46").html(sum46);
+            $("#sum_range46").html(kendo.toString(sum46 * amt1, "n0"));
+            $("#input_qty_range46").val(sum46);
+            $("#input_total_range46").val(sum46 * amt1);
+
+
+            $("#qty_range78").html(sum78);
+            $("#sum_range78").html(kendo.toString(sum78 * amt2, "n0"));
+            $("#input_qty_range78").val(sum78);
+            $("#input_total_range78").val(sum78 * amt2);
+
+            $("#qty_range910").html(sum910);
+            $("#sum_range910").html(kendo.toString(sum910 * amt3, "n0"));
+            $("#input_qty_range910").val(sum910);
+            $("#input_total_range910").val(sum910 * amt3);
+
+            $("#qty_range1112").html(sum1112);
+            $("#sum_range1112").html(kendo.toString(sum1112 * amt3, "n0"));
+            $("#input_qty_range1112").val(sum1112);
+            $("#input_total_range1112").val(sum1112 * amt3);
+
+
+            $("#total_qty").html(sum13 + sum46 + sum78 + sum910 + sum1112 );
+            $("#total_sum").html(kendo.toString((sum13 * amt1) + (sum46 * amt1) + (sum78 * amt2) + (sum910 * amt3) + (sum1112 * amt3) , "n0"));
+
+            app.unblockUI();
+        }
+
+        function summarizeActual(data) {
+            $(".detail-vacation-actual").html("");
+
+            $.each(data, function (i, o) {
+
+                $(".detail-vacation-actual").append("<input type='hidden' name='Object.DepartmentActuals["+ i +"][ObjectID]' value='" + o.Code + "'/>");
+
+                $.each(o.Employees, function (ii, oo) {
+
+                    $(".detail-vacation-actual").append(
+                        "<input type='hidden' name='Object.DepartmentActuals[" + i + "][Employees][" + ii + "][Id]' value='" + oo.Id + "'/>" +
+                        "<input type='hidden' name='Object.DepartmentActuals[" + i + "][Employees][" + ii + "][NoReg]' value='" + oo.NoReg + "'/>" +
+                        "<input type='hidden' name='Object.DepartmentActuals[" + i + "][Employees][" + ii + "][Name]' value='" + oo.Name + "'/>" +
+                        "<input type='hidden' name='Object.DepartmentActuals[" + i + "][Employees][" + ii + "][HasVacation]' value='" + (typeof oo.HasVacation === 'undefined' ? false : oo.HasVacation) + "'/>" +
+                        "<input type='hidden' name='Object.DepartmentActuals[" + i + "][Employees][" + ii + "][Classification]' value='" + oo.Classification + "'/>"
+                    );
+
+                });
+
+            });
+
+            var sum13 = data.reduce(function (s, a) {
+                return (s + a.Range13);
+            }, 0);
+
+            var sum46 = data.reduce(function (s, a) {
+                return s + a.Range46;
+            }, 0);
+
+            var sum78 = data.reduce(function (s, a) {
+                return s + a.Range78;
+            }, 0);
+
+            var sum910 = data.reduce(function (s, a) {
+                return s + a.Range910;
+            }, 0);
+
+            var sum1112 = data.reduce(function (s, a) {
+                return s + a.Range1112;
+            }, 0);
+
+            var amt1 = $.grep(allowances, function (x) { return x.ClassFrom >= 1 && x.ClassTo <= 6 })[0];
+            var amt2 = $.grep(allowances, function (x) { return x.ClassFrom >= 7 && x.ClassTo <= 8 })[0];
+            var amt3 = $.grep(allowances, function (x) { return x.ClassFrom >= 9 && x.ClassTo <= 12 })[0];
+
+            amt1 = amt1 === undefined || amt1 === null ? 0 : amt1.Ammount;
+            amt2 = amt2 === undefined || amt2 === null ? 0 : amt2.Ammount;
+            amt3 = amt3 === undefined || amt3 === null ? 0 : amt3.Ammount;
+
+            $("#qty_range_actual13").html(sum13);
+            $("#sum_range_actual13").html(kendo.toString(sum13 * amt1,"n0"));
+            $("#input_qty_range_actual13").val(sum13);
+            $("#input_total_range_actual13").val(sum13 * amt1);
+
+
+            $("#qty_range_actual46").html(sum46);
+            $("#sum_range_actual46").html(kendo.toString(sum46 * amt1, "n0"));
+            $("#input_qty_range_actual46").val(sum46);
+            $("#input_total_range_actual46").val(sum46 * amt1);
+
+
+            $("#qty_range_actual78").html(sum78);
+            $("#sum_range_actual78").html(kendo.toString(sum78 * amt2, "n0"));
+            $("#input_qty_range_actual78").val(sum78);
+            $("#input_total_range_actual78").val(sum78 * amt2);
+
+            $("#qty_range_actual910").html(sum910);
+            $("#sum_range_actual910").html(kendo.toString(sum910 * amt3, "n0"));
+            $("#input_qty_range_actual910").val(sum910);
+            $("#input_total_range_actual910").val(sum910 * amt3);
+
+            $("#qty_range_actual1112").html(sum1112);
+            $("#sum_range_actual1112").html(kendo.toString(sum1112 * amt3, "n0"));
+            $("#input_qty_range_actual1112").val(sum1112);
+            $("#input_total_range_actual1112").val(sum1112 * amt3);
+
+
+            $("#total_qty_actual").html(sum13 + sum46 + sum78 + sum910 + sum1112 );
+            $("#total_sum_actual").html(kendo.toString((sum13 * amt1) + (sum46 * amt1) + (sum78 * amt2) + (sum910 * amt3) + (sum1112 * amt3) , "n0"));
+
+            app.unblockUI();
+        }
+
+        function loadFirst() {
+            var vacationDate = "@date.ToString("yyyy-MM-dd")";
+            app.blockUI();
+
+            $.ajax({
+                type: 'GET',
+                url: app.resolveUrl('~/api/organization/get-allowances?type=recreation'),
+                dataType: 'json',
+                success: function (data) {
+                    if (data !== undefined && data !== null) {
+                        allowances = data;
+                        GetDepartments(vacationDate);
+                        GetDivisions(vacationDate);
+                        PrepareData();
+                    }
+
+                    app.unblockUI();
+                }
+            });
+        }
+
+        function dateChange(e) {
+            var vacationDate = kendo.toString(kendo.parseDate(this.value()), 'yyyy-MM-dd');
+            resetData(vacationDate);
+        }
+
+        function resetData(vacationDate) {
+            summaries = [];
+            $("input[type='checkbox']").prop("checked", false);
+            summarize([]);
+            GetDepartments(vacationDate);
+            GetDivisions(vacationDate);
+        }
+
+        function dateChangeActual(e) {
+            var vacationDate = kendo.toString(kendo.parseDate(this.value()), 'yyyy-MM-dd');
+            resetDataActual(vacationDate);
+        }
+
+        function resetDataActual(vacationDate) {
+            $("input[name='Object.VacationDateActual']").prop("checked", false);
+        }
+
+        if ('@Model.Object.AccountType' == 'rekening') {
+            $("#DivBankCode").hide();
+            $("#DivAccountNumber").hide();
+            $("#DivAccountName").hide();
+            $("#Object_AccountType").prop("checked", true);
+        }
+        else if ('@Model.Object.AccountType' == 'rekeninglain') {
+            $("#DivBankCode").show();
+            $("#DivAccountNumber").show();
+            $("#DivAccountName").show();
+            $("#Object_AccountType").prop("checked", false);
+        }
+        else {
+            $("#DivBankCode").hide();
+            $("#DivAccountNumber").hide();
+            $("#DivAccountName").hide();
+            $("#Object_AccountType").prop("checked", true);
+        }
+
+        $('.select-all').change(function () {
+            var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                this.checked = false;
+                return;
+            }
+
+            if (!this.checked) {
+                $(".cb-department").each(function () {
+                    $(this).click();
+                });
+
+                $(".select-all-div").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+
+            } else {
+                $(".cb-department").each(function () {
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+
+                $(".select-all-div").each(function () {
+                    var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+                    if (keyDate == null) {
+                        app.error("Please select a date");
+
+                        this.checked = false;
+                        return;
+                    }
+
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+
+            return false;
+        });
+
+        $('.select-all-div').change(function () {
+            var keyDate = $("#Object_VacationDate").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                this.checked = false;
+                return;
+            }
+
+            if (!this.checked) {
+                $(".cb-division").each(function () {
+                    $(this).click();
+                });
+
+                $(".select-all").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+            } else {
+
+                $(".cb-division").each(function () {
+
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+
+                });
+
+                $(".select-all").each(function () {
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+        });
+        @*if ('@isCanEdit' == 'True') {
+
+        } else if('@isCanEdit' != 'True'){
+
+        }*@
+
+        $('.select-all-actual').change(function () {
+            var keyDate = $("#Object_VacationDateActual").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                this.checked = false;
+                return;
+            }
+
+            if (!this.checked) {
+                $(".cb-department-actual").each(function () {
+                    $(this).click();
+                });
+
+                $(".select-all-div-actual").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+
+            } else {
+                $(".cb-department").each(function () {
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+
+                $(".select-all-div-actual").each(function () {
+                    var keyDate = $("#Object_VacationDateActual").data("kendoDatePicker").value();
+
+                    if (keyDate == null) {
+                        app.error("Please select a date");
+
+                        this.checked = false;
+                        return;
+                    }
+
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+
+            return false;
+        });
+
+        $('.select-all-div-actual').change(function () {
+            var keyDate = $("#Object_VacationDateActual").data("kendoDatePicker").value();
+
+            if (keyDate == null) {
+                app.error("Please select a date");
+
+                this.checked = false;
+                return;
+            }
+
+            if (!this.checked) {
+                $(".cb-division-actual").each(function () {
+                    $(this).click();
+                });
+
+                $(".select-all-actual").each(function () {
+                    if (this.checked) {
+                        $(this).click();
+                    }
+                });
+            } else {
+
+                $(".cb-division-actual").each(function () {
+
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+
+                });
+
+                $(".select-all-actual").each(function () {
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+        });
+        $('input[type=radio][id=Object_AccountType]').change(function () {
+
+            var selected = [];
+            $('.department-list input:checked').each(function () {
+                selected.push($(this).data('code'));
+            });
+
+
+            if (this.value == "rekening") {
+                $("#DivBankCode").hide();
+                $("#DivAccountNumber").hide();
+                $("#DivAccountName").hide();
+            }
+            if (this.value == "rekeninglain") {
+                $("#DivBankCode").show();
+                $("#DivAccountNumber").show();
+                $("#DivAccountName").show();
+                $("#Object_BankCode").data("kendoComboBox").value("");
+                $("#Object_AccountNumber").val("");
+                $("#Object_AccountName").val("");
+
+            }
+        })
+
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        };
+
+
+        @if (default(Guid) != Model.DocumentApprovalId)
+        {
+            <text> 
+                $.ajax({
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/get-allowances?type=recreation'),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            allowances = data;
+                            GetDepartmentSelected();
+                            GetDivisionSelected();
+                            @*GetDepartmentsSelected('@Model.Object.VacationDate');
+                            GetDivisionsSelected('@Model.Object.VacationDate');*@
+                            PrepareData();
+                        }
+                    }
+                });
+            </text>
+        }
+        else
+        {
+            <text>loadFirst();</text>
+        }
+    </script>
+}
+<div class="row" >
+
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Vacation Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Vacation Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Transfer Destination"]</label>
+                                    @Html.HiddenFor(x => x.Object.User)
+                                </div>
+                                <div class="form-group">
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["<b class='font-red' id='User'></b>'s Account"]
+                                        @Html.RadioButtonFor(x => x.Object.AccountType, "rekening", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                        <span></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["Another Account"]
+                                        @Html.RadioButtonFor(x => x.Object.AccountType, "rekeninglain", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                        <span></span>
+                                    </label>
+                                </div>
+                                <div class="form-group" id="DivBankCode">
+                                    @(Html.KendoComboBoxFor(x => x.Object.BankCode, "BankCode")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BankCode" })
+                                        .Placeholder(Localizer["Bank Name"].Value)
+                                        .DataTextField("BankName")
+                                        .DataValueField("BankName")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/bank/distinct")))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group" id="DivAccountNumber">
+                                    @(Html.Kendo().NumericTextBox<decimal>()
+                                        .Name("Object.AccountNumber")
+                                        .HtmlAttributes(new { @class = "form-control", maxlength = "16", @data_validation_for = "Object.AccountNumber" })
+                                        .Placeholder(Localizer["Input Account Number"].Value)
+                                        .Value(string.IsNullOrEmpty(Model.Object.AccountNumber) ? null : decimal.Parse(Model.Object.AccountNumber) as decimal?)
+                                        .Spinners(false)
+                                        .Min(0)
+                                        .Format("#")
+                                        .Decimals(0)
+                                        .Round(false)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                    @*@Html.TextBoxFor(x => x.Object.AccountNumber, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.AccountNumber", placeholder = Localizer["Please Input Account Number"].Value, onkeydown = "return ValidateNumber(event);",
+                                            maxlength = "16"
+                                        }, isCanEdit))*@
+
+                                </div>
+                                <div class="form-group" id="DivAccountName">
+                                    @Html.TextBoxFor(x => x.Object.AccountName, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountName", placeholder = Localizer["Please Input Account Name"].Value }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Location"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Location, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Location", placeholder = Localizer["Input Location"].Value }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Vacation Date"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.VacationDate)
+                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.VacationDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                        .Enable(isCanEdit)
+                                        .Format("dd/MM/yyyy")
+                                        .Events(e => e.Change("dateChange"))
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Upload Proposal"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.ProposalPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "ProposalPath" })
+                                        }
+                                    }
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Participants"]</legend>
+                                <span><span class="required" aria-required="true"> * </span>@Localizer["Select Division"]</span>
+                                <br />
+
+                                <div class="mt-checkbox-list" id="divSelectAll">
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            <label class="mt-checkbox mt-checkbox-outline">@Localizer["Select All"] <input class="select-all-div" name="select-all-div" type="checkbox"><span></span></label>
+
+                                        }
+                                        else
+                                        {
+                                            <label class="mt-checkbox mt-checkbox-outline">@Localizer["Select All"] <input class="select-all-div" name="select-all-div" type="checkbox" disabled><span></span></label>
+
+                                        }
+                                    }
+                                </div>
+
+                                <div class="mt-checkbox-list division-list" style="max-height:200px;overflow-y:scroll">
+
+                                </div>
+
+                                <hr />
+                                <span><span class="required" aria-required="true"> * </span>@Localizer["Select Department"]</span>
+                                <br />
+
+                                <div class="mt-checkbox-list" id="divSelectAll">
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            <label class="mt-checkbox mt-checkbox-outline">@Localizer["Select All"] <input class="select-all" name="select-all" type="checkbox"><span></span></label>
+
+                                        }
+                                        else
+                                        {
+                                            <label class="mt-checkbox mt-checkbox-outline">@Localizer["Select All"] <input class="select-all" name="select-all" type="checkbox" disabled><span></span></label>
+
+                                        }
+                                    }
+                                </div>
+
+                                <div class="mt-checkbox-list department-list" style="max-height:200px;overflow-y:scroll">
+
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset class="border p-2">
+                                <legend class="w-auto">@Localizer["Summary"]</legend>
+                                <div style="overflow:auto">
+                                    <table class="table summary">
+                                        <tr>
+                                            <th>@Localizer["Class"]</th>
+                                            <th>@Localizer["Participants (Qty)"]</th>
+                                            <th style="text-align:right">Total</th>
+                                        </tr>
+                                        <tr>
+                                            <td>@Localizer["Class"] 1-3 <input type="hidden" name="Object.Summaries[][Range]" value="1-3" /></td>
+                                            <td align="center"><span id="qty_range13"></span><input id="input_qty_range13" type="hidden" name="Object.Summaries[][Qty]" value="0" /></td>
+                                            <td align="right"><span id="sum_range13"></span><input id="input_total_range13" type="hidden" name="Object.Summaries[][Total]" value="0" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td>@Localizer["Class"] 4-6 <input type="hidden" name="Object.Summaries[][Range]" value="4-6" /></td>
+                                            <td align="center"><span id="qty_range46"></span><input id="input_qty_range46" type="hidden" name="Object.Summaries[][Qty]" value="0" /></td>
+                                            <td align="right"><span id="sum_range46"></span><input id="input_total_range46" type="hidden" name="Object.Summaries[][Total]" value="0" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td>@Localizer["Class"] 7-8 <input type="hidden" name="Object.Summaries[][Range]" value="7-8" /></td>
+                                            <td align="center"><span id="qty_range78"></span><input id="input_qty_range78" type="hidden" name="Object.Summaries[][Qty]" value="0" /></td>
+                                            <td align="right"><span id="sum_range78"></span><input id="input_total_range78" type="hidden" name="Object.Summaries[][Total]" value="0" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td>@Localizer["Class"] 9-10 <input type="hidden" name="Object.Summaries[][Range]" value="9-10" /></td>
+                                            <td align="center"><span id="qty_range910"></span><input id="input_qty_range910" type="hidden" name="Object.Summaries[][Qty]" value="0" /></td>
+                                            <td align="right"><span id="sum_range910"></span><input id="input_total_range910" type="hidden" name="Object.Summaries[][Total]" value="0" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td>@Localizer["Class"] 11-12 <input type="hidden" name="Object.Summaries[][Range]" value="11-12" /></td>
+                                            <td align="center"><span id="qty_range1112"></span><input id="input_qty_range1112" type="hidden" name="Object.Summaries[][Qty]" value="0" /></td>
+                                            <td align="right"><span id="sum_range1112"></span><input id="input_total_range1112" type="hidden" name="Object.Summaries[][Total]" value="0" /></td>
+                                        </tr>
+                                        <tr>
+                                            <th>Total</th>
+                                            <th style="text-align:center"><span id="total_qty"></span></th>
+                                            <th style="text-align:right" align="right"><span id="total_sum"></span></th>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </fieldset>
+                            <fieldset class="border p-2">
+                                <legend class="w-auto">@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Detail Notes"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                            <div class="detail-vacation"></div>
+                            @{if (isApproveHRAdmin > 0)
+                            {
+                                    <fieldset class="border p-2">
+
+                                        <legend class="w-auto">@Localizer["Vacation Report"]</legend>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Location"]</label>
+                                            @Html.TextBoxFor(x => x.Object.LocationActual, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.LocationActual", placeholder = Localizer["Input Location"].Value }, isCanEditReport))
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Vacation Date"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.VacationDateActual)
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.VacationDateActual", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                            .Enable(isCanEditReport)
+                                            .Format("dd/MM/yyyy")
+                                            .Events(e => e.Change("dateChangeActual"))
+                                            .Deferred()
+                                                )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Total Participant"]</label>
+                                            @Html.Kendo().NumericTextBoxFor(x => x.Object.TotalParticipant).HtmlAttributes(new {@class = "form-control", data_validation_for = "Object.TotalParticipant", placeholder = Localizer["Input Total Participant"].Value}).Enable(isCanEditReport).Deferred()
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Upload Attachment Report"]</label>
+                                            @{
+                                                if (isCanEditReport)
+                                                {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "AttachmentFilePath" })
+                                                }
+                                                else
+                                                {
+                                                    <br />
+                                                    @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "AttachmentFilePath" })
+                                                }
+                                            }
+                                        </div>
+                                    </fieldset>
+                            }
+                            }
+                            
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-7">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

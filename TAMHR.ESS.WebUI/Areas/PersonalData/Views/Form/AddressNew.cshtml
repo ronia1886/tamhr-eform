@@ -1,0 +1,250 @@
+﻿@model DocumentRequestDetailViewModel<AddressViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+
+    var personalData = ViewData["Data"] as TAMHR.ESS.Domain.PersonalDataCommonAttribute;
+}
+
+<style type="text/css">
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+
+@section scripts{
+    <script type="text/javascript">
+    @if (ApplicationHelper.IsDefault(Model.DocumentApprovalId)) {
+        @:$('#Object_PopulationNumber').val('@personalData?.Nik');
+        @:$('#Object_FamilyCardNumber').val('@personalData?.KKNumber');
+    }
+
+    function casscadeDatabound(e) {
+        if ('@isCanEdit' == 'False') {
+        this.enable(false);
+        }
+    }
+
+    $(document).ready(function () {
+        $("#Object_Provice").val("");
+    });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Address Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-6 col-md-7 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Address Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Family Card Number"]</label>
+                                    @(Html.Kendo().NumericTextBox<decimal>()
+                                        .Name("Object.FamilyCardNumber")
+                                        .HtmlAttributes(new { @class = "form-control", maxlength = "16", @data_validation_for = "Object.FamilyCardNumber" })
+                                        .Placeholder(Localizer["Input Family Card Number"].Value)
+                                        .Value(string.IsNullOrEmpty(Model.Object.FamilyCardNumber) ? null : decimal.Parse(Model.Object.FamilyCardNumber) as decimal?)
+                                        .Spinners(false)
+                                        .Min(0)
+                                        .Format("#")
+                                        .Decimals(0)
+                                        .Round(false)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Family Card Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.FamilyCardPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "FamilyCardPath" })
+                                            }
+                                        }
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Number"]</label>
+                                    @(Html.Kendo().NumericTextBox<decimal>()
+                                        .Name("Object.PopulationNumber")
+                                        .HtmlAttributes(new { @class = "form-control", maxlength = "16", @data_validation_for = "Object.PopulationNumber" })
+                                        .Placeholder(Localizer["Please Input Identity Number"].Value)
+                                        .Value(string.IsNullOrEmpty(Model.Object.PopulationNumber) ? null : decimal.Parse(Model.Object.PopulationNumber) as decimal?)
+                                        .Spinners(false)
+                                        .Min(0)
+                                        .Format("#")
+                                        .Decimals(0)
+                                        .Round(false)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.PopulationPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "PopulationPath" })
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 col-sm-6 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Province"]</label>
+                                        @(Html.KendoComboBoxAutocompleteFor(x => x.Object.Provice, Url.Content("~/api/category/get-query/region"))
+                                            .Placeholder(Localizer["Select Province"].Value)
+                                            .SelectedIndex(-1)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="col-md-6 col-sm-6 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Town / District"]</label>
+                                        @(Html.KendoComboBoxAutocompleteFor(x => x.Object.City, Url.Content("~/api/category/get-mapping-query"), "function() { return { 'code': $('#Object_City').val() } }")
+                                            .AutoBind(false)
+                                            .Enable(false)
+                                            .SelectedIndex(-1)
+                                            .Placeholder(Localizer["Select Town / District"].Value)
+                                            .Events(e => e.DataBound("casscadeDatabound"))
+                                            .CascadeFrom("Object_Provice")
+                                            .CascadeFromField("ParentGeneralCategoryCode")
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="col-md-6 col-sm-6 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Sub-district"]</label>
+                                        @(Html.KendoComboBoxAutocompleteFor(x => x.Object.DistrictCode, Url.Content("~/api/category/get-mapping-query"), "function() { return { 'code': $('#Object_DistrictCode').val() } }")
+                                            .AutoBind(false)
+                                            .Enable(false)
+                                            .SelectedIndex(-1)
+                                            .Placeholder(Localizer["Select Sub-district"].Value)
+                                            .CascadeFrom("Object_City")
+                                            .CascadeFromField("ParentGeneralCategoryCode")
+                                            .Events(e => e.DataBound("casscadeDatabound"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="col-md-6 col-sm-6 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Administrative Village"]</label>
+                                        @(Html.KendoComboBoxAutocompleteFor(x => x.Object.SubDistrictCode, Url.Content("~/api/category/get-mapping-query"), "function() { return { 'code': $('#Object_SubDistrictCode').val() } }")
+                                            .AutoBind(false)
+                                            .Enable(false)
+                                            .SelectedIndex(-1)
+                                            .Placeholder(Localizer["Select Administrative Village"].Value)
+                                            .CascadeFrom("Object_DistrictCode")
+                                            .CascadeFromField("ParentGeneralCategoryCode")
+                                            .Events(e => e.DataBound("casscadeDatabound"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="col-md-6 col-sm-6 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Postal Code"]</label>
+                                        @(Html.KendoComboBoxAutocompleteFor(x => x.Object.PostalCode, Url.Content("~/api/category/get-mapping-query"), "function() { return { 'code': $('#Object_PostalCode').val() } }")
+                                            .AutoBind(false)
+                                            .Enable(false)
+                                            .SelectedIndex(-1)
+                                            .Placeholder(Localizer["Select Postal Code"].Value)
+                                            .CascadeFrom("Object_SubDistrictCode")
+                                            .CascadeFromField("ParentGeneralCategoryCode")
+                                            .Events(e => e.DataBound("casscadeDatabound"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="form-group col-lg-8 col-md-6">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                                        @Html.TextAreaFor(x => x.Object.CompleteAddress, ApplicationHelper.Enable(new
+                                        {
+                                            @class = "form-control",
+                                            data_validation_for = "Object.CompleteAddress",
+                                            placeholder = Localizer["Input Address"].Value
+                                        }, isCanEdit))
+                                    </div>
+                                    <div class="form-group col-lg-2 col-md-3">
+                                        <label>RT</label>
+                                        @(Html.Kendo().NumericTextBox()
+                                            .Name("Object.RT")
+                                            .HtmlAttributes(new { @class = "form-control", maxlength = "3", @data_validation_for = "Object.RT" })
+                                            .Placeholder("RT")
+                                            .Value(string.IsNullOrEmpty(Model.Object.RT) ? null : double.Parse(Model.Object.RT) as double?)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Round(false)
+                                            .Format("000")
+                                            .Decimals(0)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-lg-2 col-md-3">
+                                        <label>RW</label>
+                                        @(Html.Kendo().NumericTextBox()
+                                            .Name("Object.RW")
+                                            .HtmlAttributes(new { @class = "form-control", maxlength = "3", @data_validation_for = "Object.RW" })
+                                            .Placeholder("RW")
+                                            .Value(string.IsNullOrEmpty(Model.Object.RW) ? null : double.Parse(Model.Object.RW) as double?)
+                                            .Spinners(false)
+                                            .Min(0)
+                                            .Round(false)
+                                            .Format("000")
+                                            .Decimals(0)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-lg-6 col-md-5 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group inline">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new
+                                    {
+                                   @class = "form-control",
+                                        data_validation_for = "Object.Remarks",
+                                        placeholder = Localizer["Input Notes"].Value
+                                    }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

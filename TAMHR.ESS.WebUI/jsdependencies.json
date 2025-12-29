@@ -1,0 +1,246 @@
+﻿{
+  "bundle": false,
+  "dependencyPath":  "~/plugins/kendo",
+  "references": [
+    {
+      "name": "core",
+      "scripts": [ "kendo.core.min.js" ]
+    },
+    {
+      "name": "data",
+      "scripts": [ "kendo.data.min.js" ]
+    },
+    {
+      "name": "autocomplete",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.list.min.js",
+        "kendo.popup.min.js",
+        "kendo.userevents.min.js",
+        "kendo.autocomplete.min.js"
+      ]
+    },
+    {
+      "name": "listview",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.pager.min.js",
+        "kendo.userevents.min.js",
+        "kendo.listview.min.js"
+      ]
+    },
+
+
+    {
+      "name": "grid",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.columnsorter.min.js",
+        "kendo.pager.min.js",
+        "kendo.grid.min.js",
+        "kendo.userevents.min.js",
+        "kendo.sortable.min.js",
+        "kendo.selectable.min.js",
+        "kendo.resizable.min.js",
+        "kendo.draganddrop.min.js",
+        "kendo.progressbar.min.js"
+      ]
+    },
+
+    {
+      "name": "editable-listview",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.pager.min.js",
+        "kendo.userevents.min.js",
+        "kendo.selectable.min.js",
+        "kendo.calendar.min.js",
+        "kendo.popup.min.js",
+        "kendo.datepicker.min.js",
+        "kendo.numerictextbox.min.js",
+        "kendo.validator.min.js",
+        "kendo.binder.min.js",
+        "kendo.editable.min.js",
+        "kendo.listview.min.js"
+      ]
+    },
+    {
+      "name": "drawing",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.color.min.js",
+        "kendo.popup.min.js",
+        "kendo.drawing.min.js"
+      ]
+    },
+    {
+      "name": "chart",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.userevents.min.js",
+        "kendo.color.min.js",
+        "kendo.popup.min.js",
+        "kendo.drawing.min.js",
+        "kendo.dataviz.core.min.js",
+        "kendo.dataviz.themes.min.js",
+        "kendo.dataviz.chart.min.js"
+      ]
+    },
+    {
+      "name": "datepicker",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.selectable.min.js",
+        "kendo.calendar.min.js",
+        "kendo.popup.min.js",
+        "kendo.pager.min.js",
+        "kendo.datepicker.min.js"
+      ]
+    },
+    {
+      "name": "datetimepicker",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.userevents.min.js",
+        "kendo.selectable.min.js",
+        "kendo.calendar.min.js",
+        "kendo.popup.min.js",
+        "kendo.datepicker.min.js",
+        "kendo.timepicker.min.js",
+        "kendo.datetimepicker.min.js"
+      ]
+    },
+    {
+      "name": "timepicker",
+      "scripts": [
+        "kendo.timepicker.min.js",
+        "kendo.dateinput.min.js",
+        "kendo.timezones.min.js"
+      ]
+    },
+    {
+      "name": "combobox",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.list.min.js",
+        "kendo.popup.min.js",
+        "kendo.fx.min.js",
+        "kendo.userevents.min.js",
+        "kendo.mobile.scroller.min.js",
+        "kendo.combobox.min.js"
+      ]
+    },
+    {
+      "name": "dropdownlist",
+      "scripts": [
+        "kendo.dropdownlist.min.js",
+        "kendo.list.min.js",
+        "kendo.fx.min.js",
+        "kendo.userevents.min.js",
+        "kendo.mobile.scroller.min.js",
+        "kendo.virtuallist.min.js",
+        "kendo.data.min.js"
+      ]
+    },
+    {
+      "name": "numeric",
+      "scripts": [
+        "kendo.userevents.min.js",
+        "kendo.numerictextbox.min.js"
+      ]
+    },
+    {
+      "name": "calendar",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.userevents.min.js",
+        "kendo.selectable.min.js",
+        "kendo.calendar.min.js"
+      ]
+    },
+    {
+      "name": "upload",
+      "scripts": [
+        "kendo.upload.min.js"
+      ]
+    },
+    {
+      "name": "colorpicker",
+      "scripts": [
+        "kendo.color.min.js",
+        "kendo.popup.min.js",
+        "kendo.userevents.min.js",
+        "kendo.draganddrop.min.js",
+        "kendo.slider.min.js",
+        "kendo.button.min.js",
+        "kendo.colorpicker.min.js"
+      ]
+    },
+    {
+      "name": "multiselect",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.data.min.js",
+        "kendo.popup.min.js",
+        "kendo.list.min.js",
+        "kendo.multiselect.min.js"
+      ]
+    },
+    {
+      "name": "treelist",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.dom.min.js",
+        "kendo.data.min.js",
+        "kendo.pager.min.js",
+        "kendo.columnsorter.min.js",
+        "kendo.userevents.min.js",
+        "kendo.selectable.min.js",
+        "kendo.treelist.min.js"
+      ]
+    },
+    {
+      "name": "pdfviewer",
+      "scripts": [
+        "kendo.pdfviewer.min.js"
+      ]
+    },
+    {
+      "name": "maskedtextbox",
+      "scripts": [
+        "kendo.core.min.js",
+        "kendo.maskedtextbox.min.js"
+      ]
+    },
+    {
+      "name": "switch",
+      "scripts": [ "kendo.switch.min.js" ]
+    },
+    {
+      "name": "panelbar",
+      "scripts": [ "kendo.panelbar.min.js" ]
+    },
+    {
+      "name": "treeview",
+      "scripts": [ "kendo.treeview.min.js" ]
+    },
+    {
+      "name": "dropdowntree",
+      "scripts": [
+        //"kendo.treeview.min.js",
+        //"kendo.dropdowntree.min.js"
+        "kendo.all.min.js"
+      ]
+    },
+    {
+      "name": "tooltip",
+      "scripts": [ "kendo.tooltip.min.js", "kendo.all.min.js" ]
+    }
+  ]
+}

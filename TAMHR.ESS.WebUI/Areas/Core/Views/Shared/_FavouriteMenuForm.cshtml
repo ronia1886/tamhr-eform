@@ -1,0 +1,56 @@
+﻿@model IEnumerable<TAMHR.ESS.Infrastructure.ViewModels.MenuViewModel>
+@{ 
+    var counter = 0;
+    var favourites = Model.Where(x => x.FavouriteCategory).SelectMany(x => x.Menus).ToDictionary(x => x.Id);
+}
+<form method="post" action="~/api/menu/favourite">
+    @foreach (var menuCategory in Model)
+    {
+        <div class="row" data-favourite="@menuCategory.FavouriteCategory.ToString().ToLower()">
+            <div class="col">
+                <h3 class="title">@Localizer[menuCategory.Category]</h3>
+                <div class="d-flex align-content-start flex-wrap">
+                    @foreach (var menu in menuCategory.Menus)
+                    {
+                        <div class="flex-icon-item">
+                            @if (menuCategory.FavouriteCategory || favourites.ContainsKey(menu.Id))
+                            {
+                                <a class="flex-icon-action" data-id="@menu.Id" data-add="false" data-trigger="handler" data-handler="switchHandler">
+                                    <span class="badge badge-danger">
+                                        <i class="ft-minus"></i>
+                                    </span>
+                                </a>
+                            }
+                            else
+                            {
+                                <a class="flex-icon-action" data-id="@menu.Id" data-add="true" data-trigger="handler" data-handler="switchHandler">
+                                    <span class="badge badge-success">
+                                        <i class="ft-plus"></i>
+                                    </span>
+                                </a>
+                            }
+                            <span class="flex-icon">
+                                @if ((menu.Title ?? "") != "SHE")
+                                {
+                                    <i class="@menu.IconClass"></i>
+                                }
+                                else
+                                {
+                                    <img src="~/img/logo/logo-she.png" width="45" height="45" />
+                                }
+                            </span>
+                            <span class="title">@Localizer[menu.Title]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+        @if (++counter < Model.Count())
+        {
+            <hr class="mt-0" style="border-style: dashed;" />
+        }
+    }
+    <div class="actions">
+        <a class="btn red-sunglo" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler" data-reload="true">@Localizer["Save"]</a>
+    </div>
+</form>

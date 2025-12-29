@@ -1,0 +1,107 @@
+﻿@model TAMHR.ESS.Domain.EmailTemplate
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/email-template">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Module"]</label>
+                @(Html.KendoComboBoxFor(x => x.ModuleCode, "Module")
+                    .Placeholder(Localizer["Please select module"].Value)
+                    .Suggest(true)
+                )
+                <span class="invalid" data-validation-for="ModuleCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Mail Key"]</label>
+                @Html.TextBoxFor(x => x.MailKey, new { @class = "form-control", @data_validation_for = "MailKey", @placeholder = Localizer["Please input mail key"].Value })
+                <span class="invalid" data-validation-for="MailKey"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Subject"]</label>
+                @Html.TextBoxFor(x => x.Subject, new { @class = "form-control", @data_validation_for = "Subject", @placeholder = Localizer["Please input subject"].Value })
+                <span class="invalid" data-validation-for="Subject"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Display Name"]</label>
+                @Html.TextBoxFor(x => x.DisplayName, new { @class = "form-control", @data_validation_for = "DisplayName", @placeholder = Localizer["Please input display name"].Value })
+                <span class="invalid" data-validation-for="DisplayName"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Mail From"]</label>
+                @Html.TextBoxFor(x => x.MailFrom, new { @class = "form-control", @data_validation_for = "MailFrom", @placeholder = Localizer["Please input mail from"].Value })
+                <span class="invalid" data-validation-for="MailFrom"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Content"]</label>
+                @Html.TextAreaFor(x => x.MailContent, new { @class = "form-control hidden", @data_validation_for = "MailContent", placeholder = Localizer["Please input mail content"].Value })
+                <span class="invalid" data-validation-for="MailContent"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+        $(function () {
+
+        let $mailContent = $("#MailContent"),
+            $modal = $mailContent.closest(".modal");
+
+        // Hapus instance jika sebelumnya pernah dibuka
+        if ($mailContent.next('.note-editor').length) {
+            $mailContent.summernote('destroy');
+        }
+
+        // Init Summernote
+        $mailContent.summernote({
+            height: 400,
+            focus: true,
+            dialogsInBody: true,
+            disableDragAndDrop: false,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'strikethrough', 'underline', 'color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['insert', ['link', 'picture','table']],
+                ['view', ['codeview']],
+                 
+            ]
+        });
+
+        $mailContent.removeClass("hidden");
+
+        // Hancurkan editor saat modal ditutup — setara tinyMCE.get(...).remove()
+        $modal.off('hidden.bs.modal').on('hidden.bs.modal', function () {
+            if ($mailContent.next('.note-editor').length) {
+                $mailContent.summernote('destroy');
+            }
+        });
+    });
+</script>

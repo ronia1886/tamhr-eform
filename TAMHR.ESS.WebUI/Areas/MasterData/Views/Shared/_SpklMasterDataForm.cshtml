@@ -1,0 +1,231 @@
+﻿@model TAMHR.ESS.Domain.SpklMasterDataView
+@{ 
+    var isNew = Model.Id == default(Guid);
+    if (isNew)
+    {
+        Model.OvertimeDate = DateTime.Now.Date.AddDays(-1);
+    }
+    var maxDate = Model.OvertimeDate;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/spkl">
+    <script>
+        var disabledDatesList = [];
+
+        var OnSelectEmployee = function(e){
+            var dataItem = this.dataItem(e.item.index());
+            e.sender.element.closest("form").find("input[name='NoReg']").val(dataItem.NoReg);
+
+            $.ajax({
+                url: app.resolveUrl("~/api/master-data/spkl/get-unavailable-date-noreg"),
+                type: 'POST',
+                data: { NoReg : dataItem.NoReg }
+            }).done(function (data) {
+                disabledDatesList = [];
+
+                JSON.parse(data).forEach((el) => {
+                    disabledDatesList.push(new Date(el))
+                });
+
+                var overtimeDate = $("#OvertimeDate").data("kendoDatePicker");
+
+                overtimeDate.setOptions({
+                    disableDates: disableDatesFunc
+                });
+            });
+        }
+
+        function disableDatesFunc(date) {
+            if (date && compareDates(date, disabledDatesList)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        function compareDates(date, dates) {
+            for (var i = 0; i < dates.length; i++) {
+                if (dates[i].getDate() == date.getDate() &&
+                  dates[i].getMonth() == date.getMonth() &&
+                    dates[i].getYear() == date.getYear()) {
+                    return true
+                }
+            }
+        }
+
+        app.registerHandler("dataInterceptor", function (d) {
+            d.OvertimeInPlan = $('#OvertimeDate').val() + ' ' + $('#OvertimeInPlan').val();
+            d.OvertimeInAdjust = $('#OvertimeDate').val() + ' ' + $('#OvertimeInAdjust').val();
+            d.OvertimeOutPlan = $('#OvertimeDate').val() + ' ' + $('#OvertimeOutPlan').val();
+            d.OvertimeOutAdjust = $('#OvertimeDate').val() + ' ' + $('#OvertimeOutAdjust').val();
+
+            if(disabledDatesList.includes(new Date(kendo.toString($("#OvertimeDate").data("kendoDatePicker").value(), 'yyyy-MM-ddTHH:mm:ss'))) || $("#OvertimeDate").data("kendoDatePicker").value() == undefined){
+                app.error(app.translate("Disabled Date Chosen"));
+                return new Promise(() => {});
+            } else {
+                return d;
+            }
+        });
+    </script>
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    <div class="row">
+        <div class="col-md-6 form-group">
+            <label>Name</label>
+            @(Html.Kendo().AutoComplete()
+                .Name("noregAutoComplete")
+                .DataTextField("Name")
+                .Filter("contains")
+                .Value(Model.Name)
+                .Placeholder(Localizer["Find employee..."].Value)
+                .MinLength(3)
+                .HtmlAttributes(new { @class = "form-control" })
+                .DataSource(source =>
+                {
+                    source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/organization/employee-by-class")).Data(@<text>function() { return { orgCode: "%", keyDate: "@DateTime.Now.ToString("yyyy-MM-dd")", min: 3, max: 6 } }</text>)))
+                        .PageSize(10)
+                        .Sort(sort => sort.Add("Name"))
+                        .Schema(config => config.Data("Data").Total("Total"));
+                })
+                .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                .Events(evt => evt.Select("OnSelectEmployee"))
+                .Enable(isNew)
+            )
+            <span class="invalid" data-validation-for="NoReg"></span>
+        </div>
+        <div class="col-md-6 form-group">
+            <label>@Localizer["Overtime Date"]</label>
+            @(Html.Kendo().DatePickerFor(x => x.OvertimeDate)
+                .HtmlAttributes(isNew ? (object)new { style = "width: 100%" } : (object)new { style = "width: 100%", @readonly = "readonly" })
+                .Format("dd/MM/yyyy")
+                .ParseFormats("dd/MM/yyyy")
+                .Max(maxDate)
+            )
+            <span class="invalid" data-validation-for="OvertimeDate"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime In Plan"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("OvertimeInPlan", Model.OvertimeInPlan, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "OvertimeInPlan" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="OvertimeInPlan"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime Out Plan"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("OvertimeOutPlan", Model.OvertimeOutPlan, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "OvertimeOutPlan" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="OvertimeOutPlan"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime In Adjust"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("OvertimeInAdjust", Model.OvertimeInAdjust, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "OvertimeInAdjust" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="OvertimeInAdjust"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime Out Adjust"]</label>
+            <div class="input-group clockpicker">
+                @Html.TextBox("OvertimeOutAdjust", Model.OvertimeOutAdjust, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pick a Time (HH:mm)"].Value, data_validation_for = "OvertimeOutAdjust" }, true))
+                <div class="input-group-append input-group-addon">
+                    <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                </div>
+            </div>
+            <span class="invalid" data-validation-for="OvertimeOutAdjust"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime Break Plan"]</label>
+            @(Html.Kendo().NumericTextBoxFor(x => x.OvertimeBreakPlan)
+                .Value(Model.OvertimeBreakPlan)
+                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OvertimeBreakPlan" })
+                .Format("##,#")
+                .Decimals(0)
+                .Min(0)
+                .Max(1000)
+            )
+            <span class="invalid" data-validation-for="OvertimeBreakPlan"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Overtime Break Adjust"]</label>
+            @(Html.Kendo().NumericTextBoxFor(x => x.OvertimeBreakAdjust)
+                .Value(Model.OvertimeBreakAdjust)
+                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OvertimeBreakAdjust" })
+                .Format("##,#")
+                .Decimals(0)
+                .Min(0)
+                .Max(1000)
+            )
+            <span class="invalid" data-validation-for="OvertimeBreakAdjust"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Duration Plan"]</label>
+            @(Html.Kendo().NumericTextBoxFor(x => x.DurationPlan)
+                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "DurationPlan", @readonly = "readonly" })
+                .Format("##.#")
+                .Min(0)
+                .Max(1000)
+            )
+            <span class="invalid" data-validation-for="DurationPlan"></span>
+        </div>
+        <div class="col-md-6 col-12 form-group">
+            <label>@Localizer["Duration Adjust"]</label>
+            @(Html.Kendo().NumericTextBoxFor(x => x.DurationAdjust)
+                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "DurationAdjust", @readonly = "readonly" })
+                .Format("##.#")
+                .Min(0)
+                .Max(1000)
+            )
+            <span class="invalid" data-validation-for="DurationAdjust"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12 form-group">
+            <label>@Localizer["Category"]</label>
+            @(Html.KendoComboBoxFor(x => x.OvertimeCategoryCode, "CategorySPKL")
+                .HtmlAttributes(new { @class = "form-control", data_validation_for = "OvertimeCategory" })
+                .Placeholder(Localizer["Select Category"].Value)
+                .SelectedIndex(-1)
+            )
+            <span class="invalid" data-validation-for="OvertimeCategoryCode"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12 form-group">
+            <label>@Localizer["Reason"]</label>
+            @Html.TextAreaFor(x => x.OvertimeReason, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "OvertimeReason", style = "height: 85px;" , placeholder = Localizer["Input Reason"].Value }, true))
+            <span class="invalid" data-validation-for="OvertimeReason"></span>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    $(function () {
+        window.setTimeout(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done'
+            });
+        }, 1000);
+    });
+</script>

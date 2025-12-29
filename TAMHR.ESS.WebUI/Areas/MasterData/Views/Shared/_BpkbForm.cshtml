@@ -1,0 +1,104 @@
+﻿@model TAMHR.ESS.Domain.BpkbView
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/bpkb">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["NoReg"]</label>
+                @Html.TextBoxFor(x => x.NoReg, new { @class = "form-control", @data_validation_for = "NoReg", disabled = "disabled" })
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @data_validation_for = "Name", disabled = "disabled" })
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["BPKB Number"]</label>
+                @Html.TextBoxFor(x => x.NoBPKB, new { @class = "form-control", @data_validation_for = "NoBPKB", @placeholder = Localizer["Please input number"].Value })
+                <span class="invalid" data-validation-for="NoBPKB"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["VIN Number"]</label>
+                @Html.TextBoxFor(x => x.VINNo, new { @class = "form-control", @data_validation_for = "VINNo", @placeholder = Localizer["Please input number"].Value })
+                <span class="invalid" data-validation-for="VINNo"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Model"]</label>
+                @Html.TextBoxFor(x => x.Model, new { @class = "form-control", @data_validation_for = "Model", @placeholder = Localizer["Please input model name"].Value })
+                <span class="invalid" data-validation-for="Model"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Type"]</label>
+                @Html.TextBoxFor(x => x.Type, new { @class = "form-control", @data_validation_for = "Type", @placeholder = Localizer["Please input type"].Value })
+                <span class="invalid" data-validation-for="TranslateValue"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["License Plat"]</label>
+                @Html.TextBoxFor(x => x.LicensePlat, new { @class = "form-control", @data_validation_for = "LicensePlat", @placeholder = Localizer["Please input license plat"].Value })
+                <span class="invalid" data-validation-for="LicensePlat"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Engine No"]</label>
+                @Html.TextBoxFor(x => x.EngineNo, new { @class = "form-control", @data_validation_for = "EngineNo", @placeholder = Localizer["Please input enginee number"].Value })
+                <span class="invalid" data-validation-for="EngineNo"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Vehicle Owner"]</label>
+                @Html.TextBoxFor(x => x.VehicleOwner, new { @class = "form-control", @data_validation_for = "VehicleOwner", @placeholder = Localizer["Please input vehicle owner"].Value })
+                <span class="invalid" data-validation-for="VehicleOwner"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Color"]</label>
+                @Html.TextBoxFor(x => x.Color, new { @class = "form-control", @data_validation_for = "Color", @placeholder = Localizer["Please input color"].Value })
+                <span class="invalid" data-validation-for="Color"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                @Html.TextBoxFor(x => x.Address, new { @class = "form-control", @data_validation_for = "Address", @placeholder = Localizer["Please input address"].Value })
+                <span class="invalid" data-validation-for="Address"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Created Year"]</label>
+                @Html.TextBoxFor(x => x.CreatedYear, new { @class = "form-control", @data_validation_for = "CreatedYear", @placeholder = Localizer["Please input created year"].Value })
+                <span class="invalid" data-validation-for="CreatedYear"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

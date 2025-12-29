@@ -1,0 +1,80 @@
+﻿@model TAMHR.ESS.Domain.OnlineLetterView
+@{
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/online-letter">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Letter Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.LetterDate)
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                )
+                <span class="invalid" data-validation-for="LetterDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Letter Type"]</label>
+                @Html.KendoComboBoxFor(x => x.LetterTypeCode, "OnlineLetterType").Placeholder(Localizer["Please select letter type"].Value)
+                <span class="invalid" data-validation-for="LetterTypeCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Department"]</label>
+                @(Html.Kendo().ComboBox().Name("Department")
+                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "Department" })
+                                .AutoWidth(true)
+                                .Height(350)
+                                .DataTextField("Department")
+                                .DataValueField("Department")
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Value(Model.Department)
+                                .DataSource(dataSource => dataSource
+                                .Custom()
+                                .Type("aspnetmvc-ajax")
+                                .Group(group => group.Add("Division", typeof(string)))
+                                .Sort(sort => sort.Add("Department"))
+                                .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/organization/get-departments"))))
+                                .ServerFiltering(true)
+                                .Schema(schema => schema.Data("Data")
+                                .Total("Total")
+                                )
+                                )
+                                )
+                <span class="invalid" data-validation-for="Department"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["PIC Target"]</label>
+                @Html.TextBoxFor(x => x.PicTarget, new { @class = "form-control", @data_validation_for = "PicTarget", @placeholder = Localizer["Please input PIC Target"].Value })
+                <span class="invalid" data-validation-for="PicTarget"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Destination Division/Agency"]</label>
+                @Html.TextBoxFor(x => x.CompanyTarget, new { @class = "form-control", @data_validation_for = "CompanyTarget", @placeholder = Localizer["Please input destination Division/Agency"].Value })
+                <span class="invalid" data-validation-for="CompanyTarget"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Remarks"]</label>
+                @Html.TextBoxFor(x => x.Remarks, new { @class = "form-control", @data_validation_for = "Remarks", @placeholder = Localizer["Please input remarks if any"].Value })
+                <span class="invalid" data-validation-for="Remarks"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

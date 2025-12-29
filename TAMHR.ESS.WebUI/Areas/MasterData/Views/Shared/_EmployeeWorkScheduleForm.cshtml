@@ -1,0 +1,48 @@
+﻿@model TAMHR.ESS.Domain.EmployeeWorkSchedule
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/employee-work-schedule">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>@Localizer["Work Schedule Rule"]</label>
+                <br/>
+                @Html.TextBoxFor(x => x.WorkScheduleRule, new { @class = "form-control", placeholder = Localizer["Please input a work schedule"].Value })
+                <span class="invalid" data-validation-for="WorkScheduleRule"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePicker()
+                    .Name("Wsr_StartDate")
+                    .Value(Model.StartDate)
+                    .HtmlAttributes(new { @class = "form-control", @readonly = "readonly" })
+                    .Format("dd/MM/yyyy")
+                    .ParseFormats("dd/MM/yyyy")
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePicker()
+                    .Name("Wsr_EndDate")
+                    .Value(Model.EndDate)
+                    .HtmlAttributes(new { @class = "form-control", @readonly = "readonly" })
+                    .Format("dd/MM/yyyy")
+                    .ParseFormats("dd/MM/yyyy")
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

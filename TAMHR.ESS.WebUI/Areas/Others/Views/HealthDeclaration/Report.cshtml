@@ -1,0 +1,375 @@
+﻿@{ 
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var maxDate = DateTime.Now.Date;
+
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart");
+
+    var canViewAll = AclHelper.HasPermission("Core.ViewAllHealthDeclarationReport");
+    var canFillNotes = AclHelper.HasPermission("Form.CanFillHealthDeclarationNotes");
+
+    var items = new List<object> {
+        new { Text = "All", Value = "" },
+        new { Text = "Healthy", Value = "healthy" },
+        new { Text = "Submitted", Value = "submitted" },
+        new { Text = "Not Submitted", Value = "not-submitted" },
+        new { Text = "Need Monitoring", Value = "need-monitoring" }
+    };
+
+    if (canViewAll) {
+        items.Add(new { Text = "Need to be Follow Up", Value = "with-notes" });
+    }
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <script type="text/javascript" src="~/js/pages/health-declaration-report.js" asp-append-version="true"></script>
+}
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/css/chat.css" />
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+}
+@section pageToolbars {
+    <a href="javascript:;" class="btn btn-sm green-jungle" onclick="$.download();">
+        <i class="ft-download"></i> <span class="d-none d-sm-inline">@Localizer["Download"]</span>
+    </a>
+}
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Report Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Report summary by period"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .DataSource(ds => ds
+                                    .WebApi()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/health-declaration-report/summary")).Data("$.getData"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series => {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Working Type"]</h3>
+                    <span class="m-widget-desc">@Localizer["working type by period"]</span>
+                </div>
+                <div class="m-widget-item pt-2">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("secondChart")
+                                .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .DataSource(ds => ds
+                                    .WebApi()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/health-declaration-report/work-type-summary")).Data("$.getData"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ category }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Health Declaration Submissions"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+                                <legend>Filter</legend>
+                                <div class="row container-by-date">
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["Submission Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("SubmissionDate")
+                                            .Events(e => e.Change("$.filterChange"))
+                                            .Value(DateTime.Now.Date)
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Max(maxDate)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Type"]</label>
+                                        @(Html.Kendo().ComboBox()
+                                            .Name("Type")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .DataTextField("Text")
+                                            .DataValueField("Value")
+                                            .BindTo(items)
+                                            .AutoBind(true)
+                                            .SelectedIndex(0)
+                                            .ClearButton(false)
+                                            .Placeholder(Localizer["Please select type"].Value)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Working Type"]</label>
+                                        @(Html.KendoComboBox("WorkType", string.Empty, "WorkingType", all: true)
+                                            .AutoBind(true)
+                                            .SelectedIndex(0)
+                                            .ClearButton(false)
+                                            .Placeholder(Localizer["Please select working type"].Value)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Free Search"]</label>
+                                        <div class="input-group input-group-icon mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text font-red">
+                                                    <i class="fa fa-search"></i>
+                                                </span>
+                                            </div>
+                                            <input type="text" id="search" class="form-control" placeholder="@Localizer["Free search"]" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.HealthDeclarationReportStoredEntity>()
+                                .Name("grid")
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Columns(cols =>
+                                {
+                                    if (canFillNotes)
+                                    {
+                                        cols.Bound(c => c.DocumentNumber)
+                                            .Title(Localizer["Action"].Value)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .Width(80)
+                                            .ClientTemplate(
+                                                @"<div class=""btn-group"">
+                                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""general-modal"" data-modal-title=""Manage Notes - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/core/formlog/load"" data-parameters-formKey=""health-declaration"" data-parameters-noreg=""#:NoReg#"">
+                                                        <i class=""ft-edit""></i>
+                                                    </a>
+                                                </div>"
+                                            );
+
+                                        cols.Bound(c => c.DocumentNumber)
+                                            .Title(Localizer["Status"].Value)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .Width(80)
+                                            .ClientTemplate(
+                                                @"# if (HasSubmitForm) { #
+                                                <div class=""custom-control custom-switch"" style=""padding-left: 3rem;"">
+                                                    <input type=""checkbox"" class=""custom-control-input"" id=""switch-#:uid#"" # if (Marked === false) { # onchange=""$.onSwitchChange(this);"" # } else if (Marked === null) { # disabled=""disabled"" # } # # if (Marked === true) { # checked=""checked"" disabled=""disabled"" # } # value=""#:ReferenceDocumentApprovalId#"" />
+                                                    <label class=""custom-control-label"" for=""switch-#:uid#"" style=""cursor: pointer;""></label>
+                                                </div>
+                                                # } else { #
+                                                <i class=""fa fa-warning font-red-flamingo""></i>
+                                                # } #"
+                                            );
+                                    }
+
+                                    cols.Bound(o => o.DocumentNumber)
+                                        .Title(Localizer["Document Number"].Value)
+                                        .Width(160)
+                                        .HtmlAttributes(new { @class = "text-center" })
+                                        .ClientTemplate(@"<div class=""#:HasRemarks ? 'sick-group' : (IsSick ? 'has-remarks' : '') #"">#if(HasSubmitForm){#<a class=""font-blue-sharp"" data-trigger=""modal"" data-modal=""general-modal"" data-modal-title=""View Form - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/others/healthdeclaration/load"" data-parameters-id=""#:ReferenceDocumentApprovalId#"" data-parameters-noreg=""#:NoReg#"">#:DocumentNumber#</a>#}else{#Not Submitted#}#</div>");
+
+                                    cols.Bound(o => o.Name)
+                                        .Title(Localizer["Name"].Value)
+                                        .Width(250)
+                                        .ClientTemplate(
+                                            @"<div class=""text-left"">
+                                                #:NoReg# - #:Name#
+                                            </div>"
+                                        );
+
+                                    if (canFillNotes)
+                                    {
+                                        cols.Bound(o => o.PhoneNumber)
+                                            .Width(240)
+                                            .Title(Localizer["Phone Number"].Value);
+
+                                        cols.Bound(o => o.WorkType)
+                                            .Width(180)
+                                            .Title(Localizer["Working Type"].Value);
+
+                                        cols.Bound(o => o.Notes)
+                                            .Width(240)
+                                            .Title(Localizer["My Notes"].Value);
+
+                                        cols.Bound(o => o.IsSick)
+                                            .Width(180)
+                                            .Title(Localizer["Need Monitoring"].Value)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .ClientTemplate("#:IsSick ? 'True' : (IsSick != null ? 'False' : '')#");
+
+                                        cols.Bound(o => o.Remarks)
+                                            .Width(240)
+                                            .Title(Localizer["Monitoring Notes"].Value);
+                                    }
+
+                                    cols.Bound(o => o.PostName)
+                                        .Width(240)
+                                        .Title(Localizer["Position"].Value);
+
+                                    cols.Bound(o => o.JobName)
+                                        .Width(200)
+                                        .Title(Localizer["Job"].Value);
+
+                                    cols.Bound(o => o.Division)
+                                        .Width(240)
+                                        .Title(Localizer["Division"].Value);
+
+                                    cols.Bound(o => o.Department)
+                                        .Width(240)
+                                        .Title(Localizer["Department"].Value);
+
+                                    cols.Bound(o => o.Section)
+                                        .Width(240)
+                                        .Title(Localizer["Section"].Value);
+
+                                    cols.Bound(o => o.Email)
+                                        .Width(300)
+                                        .Title(Localizer["Email"].Value);
+
+                                    cols.Bound(o => o.HierarchyName)
+                                        .Width(250)
+                                        .Title(Localizer["Hierarchy Name"].Value);
+
+                                    cols.Bound(o => o.HierarchyEmail)
+                                        .Width(300)
+                                        .Title(Localizer["Hierarchy Email"].Value);
+
+                                    cols.Bound(o => o.HierarchyPhoneNumber)
+                                        .Width(240)
+                                        .Title(Localizer["Hierarchy Phone Number"].Value);
+
+                                    if (!canFillNotes)
+                                    {
+                                        cols.Bound(o => o.PhoneNumber)
+                                            .Width(240)
+                                            .Title(Localizer["Phone Number"].Value);
+
+                                        cols.Bound(o => o.WorkType)
+                                            .Width(180)
+                                            .Title(Localizer["Working Type"].Value);
+
+                                        cols.Bound(o => o.IsSick)
+                                            .Width(180)
+                                            .Title(Localizer["Need Monitoring"].Value)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .ClientTemplate("#:IsSick ? 'True' : (IsSick != null ? 'False' : '')#");
+
+                                        cols.Bound(o => o.Remarks)
+                                            .Width(240)
+                                            .Title(Localizer["Monitoring Notes"].Value);
+                                    }
+
+                                    cols.Bound(o => o.EmergencyFamilyStatus)
+                                            .Width(200)
+                                            .Title(Localizer["Emergency Family Status"].Value);
+                                    cols.Bound(o => o.EmergencyName)
+                                            .Width(150)
+                                            .Title(Localizer["Emergency Name"].Value);
+                                    cols.Bound(o => o.EmergencyPhoneNumber)
+                                            .Width(240)
+                                            .Title(Localizer["Emergency Phone Number"].Value);
+                                })
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/health-declaration-report/get-report")).Data("$.getData"))
+                                    .PageSize(20)
+                                    .Sort(sort => {
+                                        sort.Add(x => x.OrderRank);
+                                        sort.Add(x => x.Name);
+                                    })
+                                )
+                                .Sortable(sortable => sortable.Enabled(true))
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Events(events =>
+                                {
+                                    events.DataBound("$.onDataBound");
+                                })
+                                .Scrollable(scrollable => scrollable.Height("auto"))
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,21 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.IMenu>
+<div class="d-flex row align-content-start flex-wrap">
+    <div class="d-flex align-content-start flex-wrap flex-no-border flex-item-large w-100">
+        @foreach (var menu in Model)
+        {
+            <a class="flex-icon-item font-dark" href="@Url.Content(menu.Url)">
+                <span class="flex-icon">
+                    @if ((menu.Title ?? "") != "SHE")
+                    {
+                        <i class="@menu.IconClass"></i>
+                    }
+                    else
+                    {
+                        <img src="~/img/logo/logo-she.png" width="45" height="45" />
+                    }
+                </span>
+                <span class="title">@Localizer[menu.Title]</span>
+            </a>
+        }
+    </div>
+</div>

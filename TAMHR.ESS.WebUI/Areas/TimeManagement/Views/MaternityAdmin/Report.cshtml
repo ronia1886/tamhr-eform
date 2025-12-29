@@ -1,0 +1,349 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, 1, 1);
+    var end = new DateTime(now.Year, 12, 31);
+}
+@section styles  {
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+            left: -1.13rem;
+        }
+    </style>
+}
+@section scripts{
+    <script type="text/javascript" src="~/js/pages/maternity-leave-report.js"></script>
+    <script type="text/javascript">
+        function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { startDate: startDate, endDate: endDate };
+        }
+    </script>
+}
+@section pageToolbars
+{
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler" data-parameters-type="xlsx">
+                    @Localizer["Download Report to XLSX"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Document Status Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Document status summary by period"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .DataSource(ds => ds
+                                    .WebApi()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/maternity-leave-report/document-status-summary")).Data("getParameters"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series => {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Class Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Class summary by period"]</span>
+                </div>
+                <div class="m-widget-item pt-2">
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("secondChart")
+                                .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .DataSource(ds => ds
+                                    .WebApi()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/maternity-leave-report/class-summary")).Data("getParameters"))
+                                    .Sort(sort => sort.Add("Code"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series => {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ category }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Maternity Leave Request List"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+                                <legend>Filter</legend>
+                                <div class="row container-by-date">
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["Start Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("StartDate")
+                                            .Value(start)
+                                            .Events(e => e.Change("$.filterChange"))
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["End Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("EndDate")
+                                            .Value(end)
+                                            .Events(e => e.Change("$.filterChange"))
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Document Status"]</label>
+                                        @(Html.KendoComboBox("DocumentStatus", string.Empty, "DocumentStatus", all: true)
+                                            .AutoBind(true)
+                                            .SelectedIndex(0)
+                                            .ClearButton(false)
+                                            .Placeholder(Localizer["Please select document status"].Value)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Employee"]</label>
+                                        <div class="input-group input-group-icon mb-3">
+                                            <div class="input-group-prepend">
+                                                <span class="input-group-text font-red">
+                                                    <i class="fa fa-search"></i>
+                                                </span>
+                                            </div>
+                                            <input type="text" id="search" class="form-control" placeholder="@Localizer["Choose Employee"]" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.MaternityLeaveStoredEntity>()
+                                .Name("grid")
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(o => o.NoReg).Title("No Reg.").HtmlAttributes(new { @class = "text-center" }).Width(100).Locked(true).MinScreenWidth(768);
+                                    columns.Bound(o => o.Name).Title("Name").Width(200).Locked(true).MinScreenWidth(768);
+
+                                    columns.Bound(o => o.DocumentNumber).Title("Document Number").ClientTemplate(@"<a class=""font-blue-sharp"" href=""" + Url.Content("~/core/form/view?formKey=maternity-leave&id=#:Id#") + @""" target=""_blank"">#:DocumentNumber#</a>").Width(180).HtmlAttributes(new { @class = "text-center" });
+                                    columns.Bound(o => o.Id).ClientHeaderTemplate(string.Format(@"<span class=""d-block d-md-none"">{0}</span><span class=""d-none d-md-block"">{1}</span>", Localizer["Employee"].Value, Localizer["Progress"].Value)).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                        <div class=""d-block d-md-none"">
+                                            #:NoReg# - #:Name#<br/>
+                                            <hr style=""margin: 10px 0;""/>
+                                        </div>
+                                        <a href=""javascript:;"" data-trigger=""modal"" data-modal-title=""Tracking Approval - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""#:Id#"">
+                                            <div class=""clearfix mb-1"">
+                                                <div class=""pull-left"">#:app.translate(DocumentStatusTitle)#</div>
+                                                <div class=""pull-right"">#:Progress#%</div>
+                                            </div>
+                                            <div class=""progress"" style=""height: 4px;"">
+                                                <div class=""progress-bar progress-bar-striped #: css('DocumentApproval', DocumentStatusCode) #"" role=""progressbar"" aria-valuenow=""#:Progress#"" aria-valuemin=""#:Progress#"" aria-valuemax=""#:Progress#"" style=""width:#:Progress#%;""></div>
+                                            </div>
+                                        </a>
+                                    ").Width(240);
+
+                                    columns.Bound(o => o.PostName).Title("Position").Width(250).HtmlAttributes(new { @class = "text-center" });
+                                    columns.Bound(o => o.JobName).Title("Job").Width(150).HtmlAttributes(new { @class = "text-center" });
+                                    columns.Bound(o => o.EmployeeSubgroupText).Title("Class").Width(110).HtmlAttributes(new { @class = "text-center" });
+
+                                    columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                        <div class=""btn-group"">
+                                            <a class=""btn btn-sm green-jungle"" href=""" + Url.Content("~/core/form/download?formKey=maternity-leave&") + @"id=#:Id#"" target=""_blank""><i class=""ft-download""></i></a>
+                                        </div>
+                                    ").Width(90);
+                                })
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/maternity-leave-report/gets")))
+                                    .PageSize(20)
+                                    .Sort(sort =>
+                                    {
+                                        sort.Add("Name");
+                                    })
+                                    .Filter(filter =>
+                                    {
+                                        filter.Add(x => x.CreatedOn)
+                                            .IsGreaterThanOrEqualTo(start)
+                                            .And()
+                                            .IsLessThanOrEqualTo(end);
+                                    })
+                                )
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Events(events =>
+                                {
+                                events.DataBound(@<text>
+                                        function() {
+                                            var wrapper = this.wrapper,
+                                                header = wrapper.find(".k-grid-header"),
+                                                root = wrapper.closest(".k-grid"),
+                                                contentLocked = root.find(".k-grid-content-locked"),
+                                                content = root.find(".k-grid-content");
+
+                                            function resizeFixed() {
+                                                var paddingRight = parseInt(header.css("padding-right"));
+                                                header.css("width", wrapper.width() - paddingRight);
+                                            }
+
+                                            function scrollFixed() {
+                                                var offset = $(this).scrollTop() + 50,
+                                                    tableOffsetTop = wrapper.offset().top,
+                                                    tableOffsetBottom = tableOffsetTop + wrapper.height() - header.height();
+
+                                                if(offset < tableOffsetTop || offset > tableOffsetBottom) {
+                                                    header.removeClass("fixed-header");
+                                                    contentLocked.css("margin-top", 0);
+                                                    content.css("margin-top", 0);
+                                                } else if(offset >= tableOffsetTop && offset <= tableOffsetBottom && !header.hasClass("fixed")) {
+                                                    header.addClass("fixed-header");
+                                                    contentLocked.css("margin-top", "50px");
+                                                    content.css("margin-top", "50px");
+                                                }
+                                            }
+
+                                            resizeFixed();
+
+                                            $(window).resize(resizeFixed);
+                                            $(window).scroll(scrollFixed);
+                                            
+                                            if ($("#chart").length > 0 && $("#secondChart").length > 0) {
+                                                $("#chart").data("kendoChart").dataSource.read();
+                                                $("#secondChart").data("kendoChart").dataSource.read();
+                                            }
+                                        }
+                                    </text>);
+                                })
+                                .Scrollable(scrollable => scrollable.Height("auto"))
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

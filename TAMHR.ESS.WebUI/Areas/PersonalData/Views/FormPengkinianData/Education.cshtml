@@ -1,0 +1,291 @@
+﻿@model DocumentRequestDetailViewModel<FamilyRegistViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker", "combobox", "timepicker", "grid", "panelbar", "numeric");
+    @inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataservice;
+    var user = User.GetClaim("NoReg");
+    string stringObject = ViewBag.StringObject;
+    var param = updatedataservice.DeserializeFromJson<TAMHR.ESS.Domain.PersonalDataFamilyView>(stringObject);
+    var data = updatedataservice.GetPersonalDataFamilyRegistration(user).ToList();
+    var update = data.Where(x => x.Id == param.Id).FirstOrDefault();
+    if (update == null)
+    {
+        update = new TAMHR.ESS.Domain.PersonalDataFamilyView();
+    }
+
+}
+<style type="text/css">
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+@section scripts{
+    <script type="text/javascript">
+
+        function casscadeDatabound(e) {
+
+            this.enable(true);
+
+        }
+
+        $(document).ready(function () {
+            $("#Object_Provice").val("");
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Address Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-6">
+                            <fieldset>
+                                <legend>@Localizer["Address Data"]</legend>
+                                <div class="row">
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                                            <input type="text" class="form-control" value="@update.Name" disabled />
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Place of Birth"]</label>
+                                            @(Html.KendoComboBoxFor(x => x.Object.PlaceOfBirthCode, "PlaceOfBirthCode")
+                                               .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PlaceOfBirthCode" })
+                                               .Placeholder(Localizer["Select Place of Birth"].Value)
+                                               .DataTextField("Name")
+                                               .DataValueField("Code")
+                                               .DataSource(dataSource => dataSource
+                                                   .Ajax()
+                                                   .Sort(s => s.Add("Name").Descending())
+                                                   .Read(read => read.Url(Url.Content("~/api/form-pengkinian-data/getsbycategory?category=birthplace")))
+                                               )
+                                               .SelectedIndex(-1)
+                                               .Value(update.BirthPlace)
+                                               .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Date of Birth"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.DateOfBirth)
+                                                .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DateOfBirth", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                .Format("dd/MM/yyyy")
+                                                .Max(DateTime.Now)
+                                                .Value(update.BirthDate)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Gender"]</label>
+                                            <div class="mt-radio-inline">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Male"]
+                                                    @Html.RadioButtonFor(x => x.Object.GenderCode, "lakilaki", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Female"]
+                                                    @Html.RadioButtonFor(x => x.Object.GenderCode, "perempuan", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Blood Type"]</label>
+                                            @(Html.KendoComboBoxFor(x => x.Object.BloodTypeCode, "BloodTypeCode")
+                                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BloodTypeCode" })
+                                                .Placeholder(Localizer["Select Blood Type"].Value)
+                                                .DataTextField("Name")
+                                                .DataValueField("Code")
+                                                .DataSource(dataSource => dataSource
+                                                    .Ajax()
+                                                    .Read(read => read.Url(Url.Content("~/api/form-pengkinian-data/getsbycategory?category=bloodType")))
+                                                )
+                                                .SelectedIndex(-1)
+                                                .Value(update.BloodTypeCode)
+                                                .Deferred()
+                                            )
+
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                                            <textarea type="text" class="form-control" value="@update.Address" id="alamat" name="alamat"></textarea>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Province"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.Provinsi, Url.Content("~/api/form-pengkinian-data/get-general-category/region"))
+                                                .Placeholder(Localizer["Select Province"].Value)
+                                                .SelectedIndex(-1)
+                                                .Value(update.Provinsi)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Town / District"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.Kota, Url.Content("~/api/form-pengkinian-data/get-mapping-query"), "function() { return { 'code': $('#Object_Kota').val() } }")
+                                                .AutoBind(true)
+                                                .Enable(true)
+                                                .SelectedIndex(-1)
+                                                .Placeholder(Localizer["Select Town / District"].Value)
+                                                .Events(e => e.DataBound("casscadeDatabound"))
+                                                .CascadeFrom("Object_Provice")
+                                                .CascadeFromField("ParentGeneralCategoryCode")
+                                                .Value(update.Kota)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Sub-district"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.Kecamatan, Url.Content("~/api/form-pengkinian-data/get-mapping-query"), "function() { return { 'code': $('#Object_Kecamatan').val() } }")
+                                                .AutoBind(true)
+                                                .Enable(true)
+                                                .SelectedIndex(-1)
+                                                .Placeholder(Localizer["Select Sub-district"].Value)
+                                                .CascadeFrom("Object_City")
+                                                .CascadeFromField("ParentGeneralCategoryCode")
+                                                .Events(e => e.DataBound("casscadeDatabound"))
+                                                .Value(update.Kecamatan)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Administrative Village"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.Kelurahan, Url.Content("~/api/form-pengkinian-data/get-mapping-query"), "function() { return { 'code': $('#Object_Kelurahan').val() } }")
+                                                .AutoBind(false)
+                                                .Enable(true)
+                                                .SelectedIndex(-1)
+                                                .Placeholder(Localizer["Select Administrative Village"].Value)
+                                                .CascadeFrom("Object_DistrictCode")
+                                                .CascadeFromField("ParentGeneralCategoryCode")
+                                                .Events(e => e.DataBound("casscadeDatabound"))
+                                                .Value(update.Kelurahan)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Postal Code"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.PostalCode, Url.Content("~/api/form-pengkinian-data/get-mapping-query"), "function() { return { 'code': $('#Object_PostalCode').val() } }")
+                                                .AutoBind(false)
+                                                .Enable(true)
+                                                .SelectedIndex(-1)
+                                                .Placeholder(Localizer["Select Postal Code"].Value)
+                                                .CascadeFrom("Object_SubDistrictCode")
+                                                .CascadeFromField("ParentGeneralCategoryCode")
+                                                .Events(e => e.DataBound("casscadeDatabound"))
+                                                .Value(update.PostalCode)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group row">
+                                            <div class="form-group col-lg-6 col-md-6">
+                                                <label>RT</label>
+                                                @(Html.Kendo().NumericTextBox()
+                                                    .Name("Object.RT")
+                                                    .HtmlAttributes(new { @class = "form-control", maxlength = "3", @data_validation_for = "Object.RT" })
+                                                    .Placeholder("RT")
+                                                    .Value(string.IsNullOrEmpty(update.RT) ? null : double.Parse(update.RW) as double?)
+                                                    .Spinners(false)
+                                                    .Min(0)
+                                                    .Round(false)
+                                                    .Format("000")
+                                                    .Decimals(0)
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                            <div class="form-group col-lg-6 col-md-6">
+                                                <label>RW</label>
+                                                @(Html.Kendo().NumericTextBox()
+                                                    .Name("Object.RW")
+                                                    .HtmlAttributes(new { @class = "form-control", maxlength = "3", @data_validation_for = "Object.RW" })
+                                                    .Placeholder("RW")
+                                                    .Value(string.IsNullOrEmpty(update.RT) ? null : double.Parse(update.RW) as double?)
+                                                    .Spinners(false)
+                                                    .Min(0)
+                                                    .Round(false)
+                                                    .Format("000")
+                                                    .Decimals(0)
+                                                    .Deferred()
+                                                )
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                            </fieldset>
+                            <div class="card-header bordered">
+                                <div class="float-right">
+                                    <a class="btn btn-primary mr-2" onclick="SaveAll()">
+                                        <i class="ft-check"></i> <span class="d-none d-md-inline" style="color:white">@Localizer["Submit"]</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+<script>
+    function SaveAll() {
+        var Provinsi = $("#Object_Provice").val();
+        var kota = $("#Object_City").val();
+        var Kecamatan = $("#Object_DistrictCode").val();
+        var Kelurahan = $("#Object_SubDistrictCode").val();
+        var KodePos = $("#Object_PostalCode").val();
+        var Alamat = $("#alamat").val();
+        var RT = $("#Object_RT").val();
+        var RW = $("#Object_RW").val();
+            app.confirm(kendo.format(app.translate("Are you sure to submit this Update data?"), app.translate(true)), function (d) {
+                var entity = {
+                    KKNumber: '@update.KKNumber',
+                    NoReg: '@user',
+                    Nik: '@update.NIK',
+                    Provice: Provinsi,
+                    City: kota,
+                    DistrictCode: Kecamatan,
+                    SubDistrictCode: Kelurahan,
+                    PostalCode: KodePos,
+                    Address: Alamat,
+                    RT: RT,
+                    RW: RW,
+                    RowStatus: 1,
+                };
+                if (d.value) {
+                    $.post(app.resolveUrl("~/api/form-pengkinian-data/update-address"), entity, function (
+                        result) {
+                        if (result) {
+                            swal('success', 'Success save data', 'success');
+                            location.reload();
+                            topFunction();
+                        }
+                    });
+                }
+            });
+        }
+</script>

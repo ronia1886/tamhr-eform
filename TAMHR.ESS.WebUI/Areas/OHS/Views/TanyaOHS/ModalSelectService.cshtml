@@ -1,0 +1,289 @@
+﻿<style>
+    .Pic {
+        cursor: pointer;
+        width: fit-content;
+        display: flex;
+        gap: 1em;
+        border: 1px solid;
+        border-radius: 1em;
+        padding: 1em;
+        box-shadow: -5px 5px;
+    }
+
+    .PicName {
+        font-weight: bold;
+    }
+
+    .PicStatus {
+        height: 1em;
+        width: 1em;
+        background: darkturquoise;
+        border-radius: 1em;
+    }
+
+    .StatusInfo {
+        gap: 0.5em;
+        display: flex;
+        align-items: baseline;
+    }
+</style>
+<script type="text/javascript">
+    var GetDoctor = () => {
+        $("#iDoctorId").val("");
+        var Category = $("#ssCategory").val();
+        var Role = ""
+        if (Category == "Konsultasi Kesehatan") {
+            Role = "OHS_PIC_KESEHATAN"
+        }
+        if (Category == "Konsultasi Asuransi") {
+            Role = "OHS_PIC_ASURANSI"
+        }
+        axios.get('../../api/tanyaohs/GetDoctor', {
+            headers: {
+                Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+            },
+            params: {
+                Role
+            }
+            }).then((response) => {
+        const $doctorView = $("#DoctorView");
+        $doctorView.empty();
+
+        response.data.forEach((i) => {
+            // Tentukan warna status
+            let color = "background: gray;";
+            if (i.Status === "Available") color = "background: green;";
+            else if (i.Status === "Tidak Available") color = "background: red;";
+            else if (i.Status === "Dalam Penanganan") color = "background: yellow;";
+
+            // Buat struktur HTML statis, isi text/attr kemudian tempel
+            const $pic = $(`
+                <div class="Pic">
+                    <img class="PicPhoto" style="width:3em" src="../../img/ohs/DoctorAva.png" alt="Doctor photo">
+                    <div class="Data">
+                        <div class="PicName"></div>
+                        <div class="PicLocation"></div>
+                    </div>
+                    <div class="PicStatus"></div>
+                </div>
+            `);
+
+            // Isi text secara aman
+            $pic.find(".PicName").text(i.Name || "-");
+            $pic.find(".PicLocation").text(i.Username || "-");
+            $pic.find(".PicStatus").attr("style", color);
+
+            // Tambahkan event click handler aman (tidak inline)
+            $pic.on("click", function () {
+                SelectDoctor(this, i.Id, i.Status);
+            });
+
+            // Tambahkan ke container utama
+            $doctorView.append($pic).append("<br>");
+        });
+    }).catch(function (error) {
+        console.log(error);
+    });
+    }
+    var SelectDoctor = (e, id, Status) => {
+        if (Status == 'Tidak Available' && $("#ssCategory").val() == "Konsultasi Kesehatan") {
+            Swal.fire({
+                //html: "Silahkan pilih yang Available!",
+                html: "PIC yang anda pilih sedang offline, anda dapat submit pesan dan pesan anda akan dibalas setelah PIC tersedia.",
+                showConfirmButton: false
+            });
+            //return;
+        }
+        $(".Pic").css("background","white");
+        $("#iDoctorId").val(id);
+        e.setAttribute("style","background:lightslategrey");
+    }
+    var SetupReadOnly = () => {
+        $("#SsiName").val("@User.GetClaim("Name")");
+        $("#SsiNoreg").val("@User.GetClaim("NoReg")");
+    }
+    var Validation = () => {
+        var valid = true;
+
+        $("#SsiComplaint").removeClass("is-invalid");
+        $("#SsfComplaint").html("");
+        if ($("#SsiComplaint").val() == "") {
+            valid = false;
+            $("#SsiComplaint").addClass("is-invalid");
+            $("#SsfComplaint").html("Keluhan required.");
+        }
+        $("#ssCategory").removeClass("is-invalid");
+        $("#ssCategoryFeedback").html("");
+        if ($("#ssCategory").val() == "") {
+            valid = false;
+            $("#ssCategory").addClass("is-invalid");
+            $("#ssCategoryFeedback").html("Kategori Layanan required.");
+        }
+        return valid
+    }
+    document.addEventListener("DOMContentLoaded", function (event) {
+        SetupReadOnly();
+        var SsBSubmit = $("#SsBSubmit")
+        var ssICategory = $("#ssCategory")
+        var ssVPic = $("#ssVPic")
+        ssICategory.change(() => {
+            GetDoctor();
+            if (ssICategory.val() != "") {
+                if (ssICategory.val() == "Konsultasi Kesehatan" || ssICategory.val() == "Konsultasi Asuransi") {
+                    if (ssICategory.val() == "Konsultasi Kesehatan") {
+                        if (IsNotWorkingTime()) showOutOfService();
+                    }
+                    ssVPic.show();
+                } else {
+                    ssVPic.hide();
+                }
+            }
+            else ssVPic.hide();
+        });
+        SsBSubmit.click(() => {
+            $("#ssCategoryFeedback").html("");
+            if (!Validation()) return;
+            if ($("#ssCategory").val() == "Konsultasi Kesehatan" || $("#ssCategory").val() == "Konsultasi Asuransi") {
+                if ($("#iDoctorId").val() == "") {
+                    $("#ssCategoryFeedback").html("Please Select Pic");
+                    return;
+                }
+            }
+            $("#mdlSelectService").modal("toggle");
+            Swal.fire({
+                html: "Mohon tunggu untuk konsultasi dengan PIC",
+                showConfirmButton: false
+            });
+            axios.post('../../api/tanyaohs/NewConsult', {
+                "Id": "00000000-0000-0000-0000-000000000000",
+                "DoctorId": $("#iDoctorId").val(),
+                "Keluhan": $("#SsiComplaint").val(),
+                "Solve": "",
+                "Rating": "",
+                "ReplyFeedback": "",
+                "KategoriLayanan": $("#ssCategory").val(),
+                "Status": "On-Going"
+            },{
+                headers : {
+                    Requestverificationtoken : $("[name='__RequestVerificationToken']").val()
+                    }
+                })
+                .then(function (response) {
+                    Swal.close();
+                    $('#grid').data('kendoGrid').dataSource.read();
+                    var SelectedCategory = $("#ssCategory").val();
+                    var Id = response.data.Result.Id;
+                    if (SelectedCategory == "Konsultasi Kesehatan" || SelectedCategory == "Konsultasi Asuransi") {
+                        if (IsWorkingTime()) OpenChat(Id);
+                    }
+                    if (SelectedCategory == "Kebijakan Kesehatan") {
+                        window.location.href = `./KebijakanKesehatan?Id=${Id}`;
+                    }
+                    if (SelectedCategory == "Kebijakan Keselamatan (Safety)") {
+                        window.location.href = `./KebijakanKeselamatan?Id=${Id}`;
+                    }
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        })
+    });
+</script>
+<div id="mdlSelectService" class="modal fade" role="dialog">
+    <form method="post" action="~/vaccine/">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" onclick="mdlSelectServiceToggle();" class="close" data-dismiss-modal="modal2">&times;</button>
+                    <h4 class="modal-title" style="color: transparent;">a</h4>
+                </div>
+                <div class="modal-body">
+                    <div>
+                        <div class="col-12">
+                            <div class="row">
+                                <div class="form-group col-6">
+                                    <label>
+                                        <span class="required" aria-required="true"> * </span>
+                                        @Localizer["Name"]
+                                    </label>
+                                    <br />
+                                    <input id="SsiName" class="form-control" type="text" readonly />
+                                </div>
+                                <div class="form-group col-6">
+                                    <label>
+                                        <span class="required" aria-required="true"> * </span>
+                                        Noreg
+                                    </label>
+                                    <br />
+                                    <input id="SsiNoreg" class="form-control" readonly />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-12">
+                            <label>
+                                <span class="required" aria-required="true"> * </span>
+                                @Localizer["Complaint And Question"]
+                            </label>
+                            <br />
+                            <textarea id="SsiComplaint" class="form-control"></textarea>
+                            <div id="SsfComplaint" class="invalid-feedback"></div>
+                        </div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            @Localizer["Select Service Category"]
+                        </label>
+                        <br />
+                        <select id="ssCategory" class="form-control">
+                            <option value="">
+                                @Localizer["Select Category"]
+                            </option>
+                        </select>
+                        <div id="ssCategoryFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div id="ssVPic" class="form-group col-md-12" style="display:none;">
+                        <div class="invalid-feedback" style="display: block;">
+                            *Disclaimer : Fitur chat pada layanan TanyaOHS ini hanya bersifat konsultasi kesehatan dan bukan merupakan hasil diagnosa,
+                            Untuk pemeriksaan lebih lanjut silahkan mengunjungi Dokter atau Layanan kesehatan
+                        </div>
+                        <div class="row">
+                            <div class="form-group col-md-3">
+                                <label>
+                                    <span class="required" aria-required="true"> * </span>
+                                    Pilih PIC
+                                </label>
+                            </div>
+                            <div class="form-group col-md-3 StatusInfo">
+                                <div class="PicStatus" style="background:green;"></div>
+                                <label>
+                                    Available
+                                </label>
+                            </div>
+                            <div class="form-group col-md-3 StatusInfo">
+                                <div class="PicStatus" style="background:red;"></div>
+                                <label>
+                                    Tidak Available
+                                </label>
+                            </div>
+                            <div class="form-group col-md-3 StatusInfo">
+                                <div class="PicStatus" style="background:yellow;"></div>
+                                <label>
+                                    Dalam Penanganan
+                                </label>
+                            </div>
+                        </div>
+                        <br />
+                        <input id="iDoctorId" style="display: none;" />
+                        <div id="DoctorView" class="col-md-12 col-sm-12 overflow-auto" style="height:13em;overflow-y:scroll"></div>
+                        <div id="ssCategoryFeedback" class="invalid-feedback" style="display: block;">Please Select Pic</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="SsBSubmit">Submit</button>
+                    <button type="button" name="btnCloseNewConsult" onclick="mdlSelectServiceToggle();" class="btn btn-default" data-dismiss-modal="modal2">Close</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

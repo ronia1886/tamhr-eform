@@ -1,0 +1,86 @@
+﻿@model VaccineMonitoringLog
+@{
+    var isNew = Model.Id == default;
+}
+<form action="~/api/vaccine-report/monitoring-log" method="post" >
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.VaccineId)
+    @Html.HiddenFor(x => x.NoReg)
+    <span class="invalid" data-validation-for="FormId"></span>
+    <div class="row">
+        <div class="form-group col-md-12">
+            <label>@Localizer["Notes"]</label>
+            @Html.TextAreaFor(x => x.Notes, new { @class = "form-control", rows = 4 })
+            <span class="invalid" data-validation-for="Notes"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="form-group col-12">
+            <label>@Localizer["Closed"]</label>
+            <div class="custom-control custom-switch">
+                @Html.CheckBoxFor(x => x.Closed, new { @class = "custom-control-input", id = "closed-switch" })
+                <label class="custom-control-label" for="closed-switch">@Localizer["Marked as closed or not"]</label>
+            </div>
+            <span class="invalid" data-validation-for="Closed"></span>
+        </div>
+    </div>
+    <hr />
+    @(Html.Kendo().Grid<FormLog>()
+        .Name("formLogHistoryGrid")
+        .Columns(cols =>
+        {
+            cols.Bound(o => o.Id)
+                .Title(Localizer["Logs"].Value)
+                .ClientTemplate(
+                    @"<p>""#:Notes#""</p>
+                    <small class=""d-block description"">Opened on #:kendo.toString(CreatedOn, 'dd/MM/yyyy at HH:mm')#</small>
+                    <small class=""d-block description"">Closed on #:kendo.toString(ModifiedOn, 'dd/MM/yyyy at HH:mm')#</small>"
+                );
+        })
+        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Read(read => read.Url(Url.Content("~/api/vaccine-report/get-closed")).Data(@"function() { return { ""noreg"": """ + Model.NoReg + @""",""vaccineId"": """ + Model.VaccineId + @""" } }"))
+            .PageSize(5)
+            .Sort(sort => sort.Add(x => x.ModifiedOn).Descending())
+        )
+    )
+<div class="actions">
+    <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="formLogDataInterceptor">@Localizer["Save"]</a>
+    @*<a class="btn red-haze" onclick="masuk()" data-interceptor="formLogDataInterceptor">@Localizer["Save"]</a>*@
+</div>
+</form>
+<script type="text/javascript">
+    app.registerHandler("formLogDataInterceptor", function (d) {
+        d.Closed = $(this).closest(".modal").find("input[name='Closed']").prop("checked");
+
+        return d;
+    });
+
+    //app.registerHandler("updateHandler", function (d) {
+    //        entity = {
+    //            Id: $("#Id").val(),
+    //            FormId: $("#FormId").val(),
+    //            Notes: $("#Notes").val(),
+    //            NoReg: $("#NoReg").val()
+    //    }
+
+    //    var valdata = $("#friendform").serialize();
+    //        //to get alert popup
+    //        //alert(valdata);
+    //        $.ajax({
+    //            url: "~/api/vaccine-report/form-log",
+    //            type: "POST",
+    //            dataType: 'json',
+    //            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+    //            data: entity
+    //        });
+    //        //$.post(app.resolveUrl("~/api/vaccine-report/form-log"), entity, function (d) {
+    //        //    app.flash("Success Update Data");
+    //        //    d.Closed = $(this).closest(".modal").find("input[name='Closed']").prop("checked");
+    //        //    return d;
+    //        //}).fail(function (jqXHR, textStatus, errorThrown) {
+
+    //        //});
+    //    });
+</script>

@@ -1,0 +1,231 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualBDJKPlanningService annualBDJKPlanningService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService mdmService;
+@{
+    Layout = null;
+    AnnualBDJKPlanning abp = annualBDJKPlanningService.GetAnnualBDJKPlanningByDocumentApprovalId(Model.DocumentApproval.Id).FirstOrDefault();
+    IEnumerable<AnnualBDJKPlanningSummaryPdfStoredEntity> summary = annualBDJKPlanningService.GetAnnualBDJKPlanningSummaryPdfData(Model.DocumentApproval.Id);
+    AnnualBDJKPlanningSummaryPdfStoredEntity totalWorkingDay = null;
+    IEnumerable<AnnualBDJKPlanningSummaryPdfStoredEntity> totalBDJK = null;
+    IEnumerable<AnnualBDJKPlanningDetailView> details = annualBDJKPlanningService.GetDetails(Model.DocumentApproval.Id).OrderBy(a => a.StartDate);
+    int subordinates = annualBDJKPlanningService.GetManPower(abp.Submitter).Count();
+    var OrgName = annualBDJKPlanningService.GetDivisionByNoReg(User.GetClaim("NoReg"));
+    int rowNo = 1;
+    if (summary.Count() > 0)
+    {
+        totalWorkingDay = summary.Where(s => s.Category == "working-day").FirstOrDefault();
+        totalBDJK = summary.Where(s => s.Category == "bdjk-summary");
+    }
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .bg-light-blue {
+        background-color: rgb(221, 235, 247);
+    }
+
+    .bg-dark-blue {
+        background-color: rgb(47, 117, 181);
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+
+<table class="tableizer-table bold" style="font-family:'Segoe UI'; font-size:12px; width: 100%;" border="1" cellspacing="0" cellpadding="0">
+    <tr>
+        <td colspan="15" style="text-align: center;"><h2>@Localizer["BDJK PLANNING"]</h2></td>
+    </tr>
+
+    <tr>
+        <td colspan="15" style="text-align: center;"><h3>@Localizer["Division: " + OrgName]</h3></td>
+    </tr>
+
+    <tr>
+        <td rowspan="2" style="width: 10%"></td>
+        <td colspan="14" style="text-align: center;">@(abp == null ? string.Empty : abp.YearPeriod.ToString())</td>
+    </tr>
+
+    <tr>
+        <td style="width: 7%;text-align: center;">@Localizer["Jan"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Feb"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Mar"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Apr"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["May"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Jun"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Jul"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Aug"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Sep"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Oct"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Nov"]</td>
+        <td style="width: 7%;text-align: center;">@Localizer["Dec"]</td>
+        <td style="width: 3%;text-align: center;">@Localizer["DAY TOTAL"]</td>
+        <td style="width: 3%;text-align: center;">@Localizer["HOUR TOTAL"]</td>
+    </tr>
+
+    <tr>
+        <td>@Localizer["Total MP"]</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center">@subordinates</td>
+        <td style="text-align: center"></td>
+        <td style="text-align: center"></td>
+    </tr>
+
+    <tr class="bg-light-blue">
+        <td>@Localizer["Total Working Day"]</td>
+        @if (totalWorkingDay != null)
+        {
+            <td style="text-align: center">@totalWorkingDay.Jan</td>
+            <td style="text-align: center">@totalWorkingDay.Feb</td>
+            <td style="text-align: center">@totalWorkingDay.Mar</td>
+            <td style="text-align: center">@totalWorkingDay.Apr</td>
+            <td style="text-align: center">@totalWorkingDay.May</td>
+            <td style="text-align: center">@totalWorkingDay.Jun</td>
+            <td style="text-align: center">@totalWorkingDay.Jul</td>
+            <td style="text-align: center">@totalWorkingDay.Aug</td>
+            <td style="text-align: center">@totalWorkingDay.Sep</td>
+            <td style="text-align: center">@totalWorkingDay.Oct</td>
+            <td style="text-align: center">@totalWorkingDay.Nov</td>
+            <td style="text-align: center">@totalWorkingDay.Dec</td>
+            <td style="text-align: center">@(totalWorkingDay.Jan + totalWorkingDay.Feb + totalWorkingDay.Mar + totalWorkingDay.Apr + totalWorkingDay.May + totalWorkingDay.Jun + totalWorkingDay.Jul + totalWorkingDay.Aug + totalWorkingDay.Sep + totalWorkingDay.Oct + totalWorkingDay.Nov + totalWorkingDay.Dec)</td>
+            <td style="text-align: center">@((totalWorkingDay.Jan + totalWorkingDay.Feb + totalWorkingDay.Mar + totalWorkingDay.Apr + totalWorkingDay.May + totalWorkingDay.Jun + totalWorkingDay.Jul + totalWorkingDay.Aug + totalWorkingDay.Sep + totalWorkingDay.Oct + totalWorkingDay.Nov + totalWorkingDay.Dec) * 8)</td>
+        }
+        else
+        {
+            <td colspan="14" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr class="bg-dark-blue">
+        <td colspan="15" style="text-align: center;">@Localizer["BDJK PLANNING"]</td>
+    </tr>
+
+    @if(totalBDJK != null && totalBDJK.Count() > 0)
+    {
+        @foreach(AnnualBDJKPlanningSummaryPdfStoredEntity bdjk in totalBDJK)
+        {
+
+        <tr class="bg-light-blue"><td colspan="15">@(rowNo.ToString() + ". " + bdjk.Name)</td></tr>
+        
+        <tr class="bg-light-blue">
+            <td>@Localizer["Total Day BDJK"]</td>
+            <td style="text-align: center">@bdjk.Jan</td>
+            <td style="text-align: center">@bdjk.Feb</td>
+            <td style="text-align: center">@bdjk.Mar</td>
+            <td style="text-align: center">@bdjk.Apr</td>
+            <td style="text-align: center">@bdjk.May</td>
+            <td style="text-align: center">@bdjk.Jun</td>
+            <td style="text-align: center">@bdjk.Jul</td>
+            <td style="text-align: center">@bdjk.Aug</td>
+            <td style="text-align: center">@bdjk.Sep</td>
+            <td style="text-align: center">@bdjk.Oct</td>
+            <td style="text-align: center">@bdjk.Nov</td>
+            <td style="text-align: center">@bdjk.Dec</td>
+            <td style="text-align: center">@(bdjk.Jan + bdjk.Feb + bdjk.Mar + bdjk.Apr + bdjk.May + bdjk.Jun + bdjk.Jul + bdjk.Aug + bdjk.Sep + bdjk.Oct + bdjk.Nov + bdjk.Dec)</td>
+            <td style="text-align: center">@((bdjk.Jan + bdjk.Feb + bdjk.Mar + bdjk.Apr + bdjk.May + bdjk.Jun + bdjk.Jul + bdjk.Aug + bdjk.Sep + bdjk.Oct + bdjk.Nov + bdjk.Dec) * 8)</td>
+        </tr>
+
+        <tr class="bg-light-blue">
+            <td>@Localizer["BDJK Code"]</td>
+            
+            @for (int i = 1; i <= 12; i++)
+            {
+                <td style="text-align: center">
+                    @if (details.Where(p => p.StartDate.Month == i) != null && details.Where(p => p.StartDate.Month == i).Count() > 0)
+                    {
+                        @foreach (AnnualBDJKPlanningDetailView bdjkDetail in details.Where(p => p.StartDate.Month == i))
+                        {
+                            @for(DateTime startDate = bdjkDetail.StartDate; startDate <= bdjkDetail.EndDate; startDate = startDate.AddDays(1))
+                            {
+                                @(startDate.ToString("dd MMM") + " - " + bdjkDetail.BDJKCodeName)
+                                <br />
+                            }
+                        }
+                    }
+                </td>
+            }
+
+            <td></td>
+            <td></td>
+        </tr>
+        
+        <tr class="bg-light-blue">
+            <td>@Localizer["Activity"]</td>
+
+            @for (int i = 1; i <= 12; i++)
+            {
+                <td style="text-align: left">
+                    @if (details.Where(p => p.StartDate.Month == i) != null && details.Where(p => p.StartDate.Month == i).Count() > 0)
+                    {
+                        @foreach (AnnualBDJKPlanningDetailView bdjkDetail in details.Where(p => p.StartDate.Month == i))
+                        {
+                            @for (DateTime startDate = bdjkDetail.StartDate; startDate <= bdjkDetail.EndDate; startDate = startDate.AddDays(1))
+                            {
+                                @(startDate.ToString("dd MMM") + " - " + bdjkDetail.Activity)
+                                <br />
+                            }
+                        }
+                    }
+                </td>
+            }
+
+            <td></td>
+            <td></td>
+            @{ rowNo = rowNo + 1; }
+        </tr>
+
+        }
+    }
+    else
+    { 
+        <tr class="bg-light-blue">
+            <td colspan="15">@Localizer["No BDJK data available"]</td>
+        </tr>
+    }
+
+</table>

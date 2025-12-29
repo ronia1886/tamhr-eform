@@ -1,0 +1,60 @@
+﻿@{
+    var id = (Guid)ViewBag.Id;
+}
+@(Html.Kendo().ListView<TAMHR.ESS.Domain.DocumentApprovalHistory>()
+    .Name("documentApprovalHistoryListView")
+    .TagName("div")
+    .HtmlAttributes(new { @class = "mt-comments mt-comments-bordered" })
+    .Events(evt =>
+    {
+        evt.DataBinding(@<text>function() {
+            this.element.removeClass("k-widget k-listview");
+        }</text>);
+        evt.DataBound(@<text>function() {
+            var total = this.dataSource.total();
+
+            if (total === 0) {
+                this.element.html("<div class=\"text-center p-3 text-muted\"><i class=\"fa fa-clipboard font-large-1\"></i><br />@Localizer["No history found"]</div>");
+            }
+
+            if (total @Html.Raw("<=") 5) {
+                this.element.parent().find(".k-pager-wrap").remove();
+            }
+        }</text>);
+    })
+    .ClientTemplateId("document-approval-history-template")
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/approval-history/gets")).Data(@<text>function() { return { id: "@id" } }</text>))
+        .Sort(sort => sort.Add("CreatedOn").Descending())
+        .PageSize(5)
+    )
+    .Pageable(pageable =>
+    {
+        pageable.Input(true);
+        pageable.Numeric(false);
+    })
+    .Deferred(true)
+)
+<script type="text/template" id="document-approval-history-template">
+    <div class="mt-comment">
+        <div class="mt-comment-img">
+            <img src="#:app.resolveImageUrl(NoReg)#" style="width: 2.5rem; height: 3rem;">
+        </div>
+        <div class="mt-comment-body">
+            <div class="mt-comment-info">
+                <span class="mt-comment-author">#:Name#</span>
+                <span class="mt-comment-status">
+                    <span class="label #:css('ApprovalAction', ApprovalActionCode)#">#:ApprovalActionCode#</span>
+                </span>
+                <span class="mt-comment-sub-info">#:PostName#</span>
+                <span class="mt-comment-time">
+                    <i class="fa fa-clock-o"></i> #:kendo.toString(CreatedOn, "dd MMM yyyy - HH:mm tt")#
+                </span>
+            </div>
+            # if (!(Remarks == null || Remarks == "")) {#
+            <div class="mt-comment-text">#:Remarks#</div>
+            # } #
+        </div>
+    </div>
+</script>

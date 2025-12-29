@@ -1,0 +1,292 @@
+﻿@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="employee-leave-modal" data-modal-title="Create new Employee Leave" data-modal-ajax="true" data-ajax-url="~/masterdata/employeeleave/LoadAddForm">
+                    @Localizer["Create Employee Leave"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:void(0);" id="downloadReportBtn">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:void(0);" onclick="openModal('uploadViewProfile')">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+
+        </ul>
+    </div>
+}
+
+<!-- Load jQuery first -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<style>
+    .btn-close {
+        display: inline-block;
+        width: 1.8em; /* Increase size */
+        height: 1.8em; /* Increase size */
+        background: transparent url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='white' d='M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z'/></svg>") center/1.8em auto no-repeat;
+        opacity: 1; /* Make sure it is fully visible */
+    }
+
+        .btn-close:hover {
+            opacity: 0.8; /* Add a slight hover effect */
+        }
+
+</style>
+<div class="modal fade" id="uploadViewProfile" tabindex="-1" aria-hidden="true" role="dialog">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h5 class="modal-title">Upload Employee Annual Leave</h5>
+                <button type="button" class="btn-close" onclick="closeModal('uploadViewProfile')" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <div class="mb-3 d-flex align-items-center">
+                        <div class="form-control d-flex justify-content-between align-items-center"
+                             style="cursor: pointer;"
+                             onclick="document.getElementById('fileUpload').click()">
+                            <span id="fileName">Choose file...</span>
+                            <button type="button" class="btn btn-primary" style="left:12px;">Browse</button>
+                        </div>
+                        <input type="file" class="d-none" id="fileUpload" onchange="updateFileName(this)" required>
+                    </div>
+
+                    <script>
+                        function updateFileName(input) {
+                            const fileName = input.files.length > 0 ? input.files[0].name : "Choose file...";
+                            document.getElementById('fileName').textContent = fileName;
+                        }
+                    </script>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" onclick="downloadTemplate()">DOWNLOAD TEMPLATE</button>
+                <button type="button" class="btn btn-danger" id="uploadBtn" onclick="uploadFile()">UPLOAD & MERGE</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal('uploadViewProfile')">CLOSE</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openModal(id) {
+        let modal = document.getElementById(id);
+        modal.classList.add("show", "d-block"); // Show modal
+        document.body.classList.add("modal-open");
+
+        // Add backdrop
+        let backdrop = document.createElement("div");
+        backdrop.className = "modal-backdrop fade show";
+        backdrop.id = "modal-backdrop";
+        document.body.appendChild(backdrop);
+    }
+
+    function closeModal(id) {
+        let modal = document.getElementById(id);
+        modal.classList.remove("show", "d-block"); // Hide modal
+        document.body.classList.remove("modal-open");
+
+        // Remove backdrop
+        let backdrop = document.getElementById("modal-backdrop");
+        if (backdrop) backdrop.remove();
+    }
+</script>
+
+@{
+    var downloadUrl = Url.Content("~/masterdata/employeeleave/DownloadTemplate");
+}
+
+<script>
+    var downloadUrl = '@downloadUrl';
+
+    function downloadTemplate() {
+        window.location.href = downloadUrl;
+    }
+</script>
+
+<script>
+    function updateFileName(input) {
+        const fileName = input.files.length > 0 ? input.files[0].name : "Choose file...";
+        document.getElementById('fileName').textContent = fileName;
+    }
+
+    function uploadFile() {
+        let fileInput = document.getElementById('fileUpload');
+        let uploadBtn = document.getElementById('uploadBtn');
+
+        // Check if a file is selected
+        if (fileInput.files.length === 0) {
+            app.error("Please select a file first!");
+            fileInput.classList.add("is-invalid"); // Add Bootstrap validation class
+            return;
+        } else {
+            fileInput.classList.remove("is-invalid"); // Remove validation error if file exists
+        }
+
+        let formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        var uploadUrl = '@Url.Content("~/masterdata/employeeleave/merges")';
+
+        // Disable the button to prevent multiple clicks
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = "Uploading..."; // Show loading text
+
+        $.ajax({
+            url: uploadUrl,
+            type: "POST",
+            data: formData,
+            processData: false,  // Prevents jQuery from converting FormData to a string
+            contentType: false,  // Prevents jQuery from adding default content type
+            success: function (response) {
+                Swal.fire({
+                    title: "Upload successful!",
+                    text: "Your file has been uploaded and merged successfully.",
+                    type: "success",
+                    confirmButtonText: "OK"
+                }).then((result) => {
+                    if (result.value) {
+                        location.reload();
+                    }
+                });
+            },
+            error: function (xhr, status, error) {
+                console.error("Upload error:", xhr.responseText);
+                app.error("Upload failed: " + (xhr.responseText || "Unknown error"));
+            },
+            complete: function () {
+                // Re-enable the button after completion
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = "UPLOAD & MERGE";
+            }
+        });
+    }
+</script>
+
+<script>
+    function s2ab(s) {
+        var buf = new ArrayBuffer(s.length);
+        var view = new Uint8Array(buf);
+        for (var i = 0; i != s.length; ++i) view[i] = s.charCodeAt(i) & 0xFF;
+        return buf;
+    }
+
+    function downloadHandler(url, data, filename) {
+        var formData = new FormData();
+        Object.keys(data).forEach(function (key) {
+            var value = data[key];
+            if (value instanceof Array) {
+                value.forEach(function (v) {
+                    formData.append(key, v);
+                });
+            } else {
+                formData.append(key, value);
+            }
+        });
+
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", url);
+        xhr.setRequestHeader("RequestVerificationToken", REQUEST_VERIFICATION_TOKEN);
+        xhr.send(formData);
+
+        xhr.onload = function (event) {
+            if (this.status === 200) {
+
+                var bin = atob(xhr.response);
+                var ab = s2ab(bin);
+                var blob = new Blob([ab], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;' });
+
+                let a = document.createElement("a");
+                a.style = "display: none";
+                document.body.appendChild(a);
+                let url = window.URL.createObjectURL(blob);
+                a.href = url;
+                a.download = filename + '.xlsx';
+                a.click();
+                window.URL.revokeObjectURL(url);
+            }
+        };
+    };
+
+    $(document).ready(function () {
+        $(document).ready(function () {
+            $("#downloadReportBtn").on("click", function () {
+                console.log("TEST");
+
+                // Format tanggal hari ini untuk nama file
+                var today = new Date();
+                var yyyy = today.getFullYear();
+                var mm = String(today.getMonth() + 1).padStart(2, '0');
+                var dd = String(today.getDate()).padStart(2, '0');
+                var formattedToday = yyyy + "-" + mm + "-" + dd;
+
+                // Panggil fungsi download tanpa filter
+                downloadHandler("@Url.Action("Download", "EmployeeLeave", new { area = "MasterData" })", {}, "Employee_Leave_Report_" + formattedToday);
+            });
+        });
+    });
+</script>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Employee Leave"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeLeave>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "employee-leave-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Faskes").ClientTemplate(@"
+                            <div class=""media"">
+                                <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                    <small>Long Leave: #:LongLeave#, Annual Leave: #:AnnualLeave#</small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""employee-leave-modal"" data-modal-title=""Edit Employee Leave"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/employeeleave/load"" data-parameters-noreg=""#:NoReg#"">
+                <i class=""ft-edit""></i>
+                </a>
+                ").Width(90);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/employee-leave/gets")))
+                        .PageSize(10)
+                        .Sort(sort => sort.Add("Name"))
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

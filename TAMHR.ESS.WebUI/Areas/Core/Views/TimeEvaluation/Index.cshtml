@@ -1,0 +1,126 @@
+﻿@{ 
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+    var now = DateTime.Now;
+    var currentMonth = now.Month;
+    var counter = 0;
+    var retro = 2015;
+    var yearNow = now.Year;
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/time-evaluation/download">
+                    @Localizer["Generate Time Evaluation"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/time-evaluation/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            var $monthDdl = $("#monthDdl"),
+                $yearDdl = $("#yearDdl");
+
+            $(function () {
+                if ($monthDdl.length > 0) {
+                    $monthDdl.on("change", function () {
+                        $("#grid").data("kendoGrid").dataSource.read();
+                    });
+                }
+
+                if ($yearDdl.length > 0) {
+                    $yearDdl.on("change", function () {
+                        $("#grid").data("kendoGrid").dataSource.read();
+                    });
+
+                    $monthDdl.val("@currentMonth");
+                    $yearDdl.val("@yearNow");
+                }
+            });
+        })(jQuery, app);
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Time Evaluation List"]
+                </h3>
+                <div class="heading-elements">
+                    <div class="pull-right">
+                        <div class="d-inline">
+                            <select id="yearDdl" style="margin:0;padding:0;border:1px solid #0094ff">
+                                @for (var i = yearNow; i >= retro; i--)
+                                {
+                                    <option>@i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="d-inline">
+                            <select id="monthDdl" style="margin:0;padding:0;border:1px solid #0094ff">
+                                @foreach (var month in monthNames)
+                                {
+                                    <option value="@(++counter)">@Localizer[month]</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeEvaluationStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { @class = "table-w-padding" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title("Employee").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body d-none d-sm-block"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                </div>
+                            </div>
+                            <div class=""pull-right ml-3 mt-1"">
+                                <span class=""small d-block"">#:OffDays# " + Localizer["Off"].Value + @"</span>
+                            </div>
+                            <div class=""pull-right ml-3 mt-1"">
+                                <span class=""small d-block"">#:WorkDays# " + Localizer["Work Days"].Value + @"</span>
+                                <span class=""small d-block"">#:Absent# " + Localizer["Absent"].Value + @"</span>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/time-evaluation/gets")).Data(@<text>function() { return { month: $("#monthDdl").val(), year: $("#yearDdl").val() } }</text>))
+                        .Sort(sort =>
+                        {
+                            sort.Add("Name").Ascending();
+                        })
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

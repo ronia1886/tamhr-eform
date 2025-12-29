@@ -1,0 +1,179 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker","grid","combobox","treelist", "dropdowntree");
+    int Period = ViewBag.Period;
+    string NoReg = ViewBag.NoReg;
+    string Name = ViewBag.Name;
+    string PostName = ViewBag.PostName;
+    var ListBDJKCategory = ViewBag.ListBDJKCategory;
+}
+@section scripts{
+    <script type="text/javascript">
+    $.filterChange = function () {
+            category = $("#category").data("kendoComboBox").value();
+
+            finalFilters = {
+                logic: "and",
+                filters: []
+            };
+
+            if(category!=""){
+                var child_filter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                child_filter.filters.push(
+                {
+                    field: 'Plans',
+                    operator: 'eq',
+                    value: category
+                });
+                
+                child_filter.filters.push(
+                {
+                    field: 'Actual',
+                    operator: 'eq',
+                    value: category
+                });
+                finalFilters.filters.push(child_filter);
+            }
+            $("#grid").data("kendoGrid").dataSource.filter(finalFilters);
+        }
+    $.downloadBDJKDetail = function () {
+        Period = "@Period";
+        NoReg = "@NoReg";
+        
+        window.open(app.resolveUrl("~/api/annual-planning/download-bdjk-planning-detail?Period=" + Period + "&NoReg=" + NoReg, "_blank"));
+    };
+
+    (function ($, app) {
+        $(function () {
+            $(document).on('click', '.k-link, li.k-item', function (e) {
+                e.stopPropagation();
+            });
+        });
+    })(jQuery, app);
+</script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Annual BDJK Planning"] @Period</h4>
+                @*<div class="heading-elements">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="$.downloadBDJKDetail();"><span class="ft-download"></span> @Localizer["Download"].Value</button>
+                </div>*@
+                <div class="heading-elements text-right" style="width:200px">
+                <ul id="absence-filter" class="page-toolbars" data-role="filter">
+                    <li class="dropdown custom-filter">
+                        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-filter"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right" style="width: 280px">
+                            <form class="form-horizontal p-2" role="form">
+                                <div class="row">
+                                    
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>@Localizer["Category"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                      .Name("category")
+                                                      .DataTextField("Name")
+                                                      .DataValueField("Name")
+                                                      .BindTo(ListBDJKCategory)
+                                                      .Placeholder(Localizer["Please select category"].Value)
+                                                      .HtmlAttributes(new { style = "width: 100%" })
+                                                      .Deferred()
+                                                )
+                                        </div>
+                                    </div>
+                    
+                                </div>
+                                <hr class="mt-1"/>
+                                <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler" onClick="$.filterChange();">@Localizer["Search"]</a>
+                                <a href="javascript:;" class="btn green-jungle btn-block" data-trigger="handler" data-handler="downloadBDJKDetail" onclick="$.downloadBDJKDetail();">
+                                    @Localizer["Download"]
+                                </a>
+                            </form>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="portlet light profile-light">
+                                    <div class="portlet-body">
+                                        <div class="profpic">
+                                            <div class="profpic-wrapper">
+                                                <div class="profpic-avatar">
+                                                    <img src="@ConfigService.ResolveAvatar(@NoReg)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                                </div>
+                                                <div class="profpic-body">
+                                                    <span class="profpic-title">@Name</span>
+                                                    <span class="profpic-description">@PostName</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AnnualLeavePlanningDetailStoredEntity>()
+                                        .Name("grid")
+                                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                        .Columns(columns =>
+                                        {
+                                            columns.Bound(c => c.PlanDate)
+                                                .Title(Localizer["Date"].Value)
+                                                .Width(150)
+                                                .ClientTemplate(@"#= kendo.toString(PlanDate, ""dd/MM/yyyy"" )#")
+                                                .HtmlAttributes(new { @class = "text-center" });
+                                            columns.Bound(c => c.Plans)
+                                                .Width(60)
+                                                .Title(Localizer["Plan"].Value)
+                                                .Width(150)
+                                                .HtmlAttributes(new { @class = "text-center" });;
+                                            columns.Bound(c => c.Actual)
+                                                .Width(60)
+                                                .Title(Localizer["Actual"].Value)
+                                                .Width(150)
+                                                .HtmlAttributes(new { @class = "text-center" });;
+                                            columns.Bound(c => c.Remark)
+                                                .Width(60)
+                                                .Title(Localizer["Remark"].Value)
+                                                .Width(150);
+                                        })
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/annual-planning/get-bdjk-details?Period=" + Period + "&NoReg=" + NoReg))
+                                            .Data("function() { return { 'Period': '#=Period#','NoReg': '#=NoReg#' } }"))
+                                            .PageSize(10)
+                                        )
+                                        .Resizable(resizable => resizable.Columns(true))
+                                        .Pageable(options =>
+                                        {
+                                            options.Input(true);
+                                            options.Numeric(false);
+                                            //options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                        })
+                                        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                                        .Scrollable()
+                                        .Deferred()
+                    )
+                    </div>
+                        </div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>

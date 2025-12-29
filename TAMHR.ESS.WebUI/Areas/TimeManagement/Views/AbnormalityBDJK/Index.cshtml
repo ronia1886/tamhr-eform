@@ -1,0 +1,295 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityBdjkService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService ;
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "datetimepicker", "grid", "datepicker", "combobox", "numeric", "upload", "multiselect", "listview", "autocomplete");
+    var currentUser = User.GetClaim("NoReg");
+    var name = @User.GetClaim("Name");
+    var postName = @User.GetClaim("PostName");
+    var postCode = @User.GetClaim("PostCode");
+    var organizationStructure = MdmService.GetActualOrganizationStructure(currentUser, postCode);
+    var orgCode = organizationStructure?.OrgCode;
+    var orgLevel = organizationStructure?.OrgLevel;
+    string id = ViewContext.HttpContext.Request.Query["id"];
+    var iconFa = "ft-eye";
+
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-header bordered">
+                    <h3 class="card-title">@Localizer["Master Data BDJK"]</h3>
+
+                    <div class="heading-elements">
+                        <div class="dropdown">
+                            <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                                <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-right">
+                                <li>
+                                    <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                                        @Localizer["Download"]
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload BDJK" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/bdjk">
+                                        @Localizer["Upload"]
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["Start Date"]</label>
+                                @(Html.Kendo().DatePicker()
+                                    .Name("StartDate")
+                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                    .Format("dd/MM/yyyy")
+                                    .Deferred()
+                                    )
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["End Date"]</label>
+                                @(Html.Kendo().DatePicker()
+                                    .Name("EndDate")
+                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                    .Format("dd/MM/yyyy")
+                                    .Deferred()
+                                    )
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["Name"]</label>
+                                @(Html.Kendo().AutoComplete()
+                                .Name("Name")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select name"].Value)
+                                .ClearButton(true)
+                                .Filter(FilterType.Contains)
+                                .Deferred()
+                                )
+                            </div>
+                        </div>
+                         <div class="col-md-1 col-sm 12">
+                            <div class="form-group">
+                                <label style="color:transparent">.</label>
+                                <div>
+                                    <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler"><i class="fa fa-search" aria-hidden="true"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-2 col-sm 12">
+                            <div class="form-group">
+                                <label style="color:transparent">.</label>
+                                <div>
+                                    <a href="javascript:;" class=" btn btn-md font-green-haze fa-pull-right" data-target="grid" data-trigger="modal" data-modal="bdjk-modal" data-modal-title="Create new BDJK request" data-modal-ajax="true" data-ajax-url="~/timemanagement/abnormalitybdjk/loadmasterbdjk">
+                                        <i class="fa fa-plus-circle"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="form-group col-md-12" style="overflow-x: auto;">
+                            @(Html.Kendo().Grid<AbnormalityBdjkView>
+                                ()
+                                .Name("grid")
+                                .HtmlAttributes(new { data_filter = "proxy-time-filter" })
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(p => p.Name)
+                                    .Title("Name").HeaderHtmlAttributes(new { @class = "text-center" }).Width(200)
+                                    .ClientTemplate(@"<small class="" d-block"">#:NoReg# - #:Name#</small>");
+                                    columns.Bound(p => p.WorkingDate)
+                                    .Title("Date").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                    .ClientTemplate(@"<small class="" d-block"">#:kendo.toString(WorkingDate, 'dd/MM/yyyy')#</small>");
+                                    columns.Bound(p => p.WorkingTimeIn)
+                                    .Title("Proxy In").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                    .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm tt'), '')#</span></small>");
+                                    columns.Bound(p => p.WorkingTimeOut)
+                                    .Title("Proxy Out").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                    .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm tt'), '')#</span></small>");
+                                    columns.Bound(p => p.BdjkCode).Width(50)
+                                    .Title("BDJK Code").HeaderHtmlAttributes(new { @class = "text-center" })
+                                    .ClientTemplate(@"<small class="" d-block bold font-red-sunglo"">#:BdjkCode#</small>");
+                                    columns.Bound(p => p.ActivityName)
+                                    .Title("Activity").HeaderHtmlAttributes(new { @class = "text-center" }).Width(170)
+                                    .ClientTemplate(@"<small class="" d-block"">#:ActivityName#</small>");
+                                    columns.Bound(p => p.BdjkReason)
+                                    .Title("Reason").HeaderHtmlAttributes(new { @class = "text-center" }).Width(200)
+                                    .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:BdjkReason#</span></small>");
+                                    columns.Bound(p => p.DocumentStatusName)
+                                    .Title("Status").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                    .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:DocumentStatusName#</span></small>");
+                                    columns.Bound(p => p.CreatedOn)
+                                    .Title("Created Date").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                    .ClientTemplate(@"<small class="" d-block"">#:kendo.toString(CreatedOn, 'dd/MM/yyyy')#</small>");
+                                    columns.Bound(c => c.Id).Title("Action")
+                                    .HeaderHtmlAttributes(new { @class = "text-center" })
+                                    .HtmlAttributes(new { @class = "text-center" }).ClientTemplate("<a class='btn btn-xs blue-sharp ml-1' data-trigger='modal' data-modal='over-time-modal-File' data-modal-title='View BDJK - #:Name#' data-modal-ajax='true' data-ajax-url='~/timemanagement/abnormalitybdjk/loadmasterbdjkedit' data-parameters-id='#:Id#' data-parameters-workingDate='#:WorkingDate#'><i class='ft " + iconFa + " font-normal'></i></a>" +
+                                    @"<a class='btn btn-xs red-haze ml-1' data-trigger='handler' data-parameters-Id=""#:Id#"" data-handler='deleteFileHandler'><i class='ft-trash font-normal'></i></a>")
+                                    .Width(120);
+
+                                })
+                                .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                                .Events(events => {events.DataBound("$.OnDataBound");})
+                                .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .ServerOperation(false)
+
+                                .Read(read => read.Url(Url.Content("~/api/abnormality-bdjk/gets-master")))
+                                .PageSize(5)
+                                .Sort(sort =>
+                                {
+                                    sort.Add("Name");
+                                    sort.Add("WorkingDate");
+                                })
+                                )
+
+                                .Sortable(sortable => sortable.Enabled(true))
+                                .Resizable(resizable => resizable.Columns(true))
+                                //.Pageable(options =>
+                                //{
+                                //options.Input(true);
+                                //options.Numeric(false);
+                                //options.AlwaysVisible(false);
+                                //})
+                                .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                                .Scrollable(scrollable => scrollable.Height("auto"))
+                                .Deferred()
+                                )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    <script type="text/javascript">
+        var firstTimeLoad = true;
+        app.registerHandler("searchHandler", function () {
+            var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1);
+            var endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31);
+            var nameDropdown = $("#Name").data("kendoAutoComplete").value();
+            var name = nameDropdown.split(' - ')[1];
+            var noreg = nameDropdown.split(' - ')[0];
+
+            console.log(name + ' - ' + noreg);
+
+            var filters = [];
+
+            if (startDate) {
+                filters.push({
+                    field: "WorkingDate",
+                    operator: "gte",
+                    value: startDate
+                });
+            }
+
+            if (endDate) {
+                filters.push({
+                    field: "WorkingDate",
+                    operator: "lte",
+                    value: endDate
+                });
+            }
+
+            if (name && name.trim() !== "") {
+                filters.push({
+                    field: "Name",
+                    operator: "equal",
+                    value: name
+                });
+            }
+
+            if (noreg && noreg.trim() !== "") {
+                filters.push({
+                    field: "NoReg",
+                    operator: "equal",
+                    value: noreg
+                });
+            }
+
+            $("#grid").data("kendoGrid").dataSource.filter({
+                logic: "and",
+                filters: filters
+            });
+        });
+
+        var selectedEmp = [];
+        function selectEmployee(item) {
+            let CurrentVal = $("#BdjkCode").val()
+            if (CurrentVal != "") {
+                CurrentVal = CurrentVal + " " + item.dataItem.Name
+            } else {
+                CurrentVal = item.dataItem.Name
+            }
+            $("#BdjkCode").val(CurrentVal)
+        }
+        function deselectEmployee(item) {
+            let CurrentVal = $("#BdjkCode").val()
+            if (CurrentVal != "") {
+                CurrentVal = CurrentVal.replace(" " + item.dataItem.Name, "");
+            } 
+            $("#BdjkCode").val(CurrentVal)
+        }
+        app.registerHandler("deleteFileHandler", function (Id) {
+            app.confirm(app.translate("Are you sure want to delete this data?"), app.translate("You won't be able to revert this!"), function (d) {
+                if (!d.value) return;
+                $.post(app.resolveUrl("~/api/abnormality-bdjk/soft-delete"), Id, function (d) {
+
+                    swal('success', 'Delete data successed', 'success');
+                    app.refreshControl('grid');
+
+                });
+            });
+        });
+
+        $.OnDataBound = function (e) {
+            var data = this.dataSource.data();
+            if(firstTimeLoad){
+                SeedDataCreated(data);
+                firstTimeLoad = false;
+            }
+        }
+
+        function SeedDataCreated(data){
+            const listItem = [...new Set(data.filter(function (e) {return e.Name != null && e.NoReg != null;}).map(item => item.NoReg + ' - ' + item.Name))];
+
+            var nameDropdown = $("#Name").data("kendoAutoComplete");
+
+            //var dataSource = new kendo.data.HierarchicalDataSource({
+            //    data:  listItem
+            //});
+
+            var dataSource = new kendo.data.DataSource({
+              data: listItem
+            });
+
+            nameDropdown.setDataSource(dataSource);
+            //nameDropdown.SelectedIndex = -1;
+        }
+
+        app.registerHandler("downloadReportHandler", function () {
+            var StartDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), 'yyyy-MM-dd');
+            var EndDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31), 'yyyy-MM-dd');
+            var name = $("#Name").data("kendoAutoComplete").value() || '';
+
+            window.open(app.resolveUrl("~/api/master-data/bdjk/download-report?startDate="+StartDate+"&endDate=" + EndDate + "&name=" + name), "_blank");
+        });
+    </script>
+}

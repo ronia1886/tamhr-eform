@@ -1,0 +1,108 @@
+﻿@model TAMHR.ESS.Domain.Form
+<form method="@ApplicationHelper.Method(Model.Id)" action="@Url.Content(ApplicationHelper.Api("contacthobbies"))">
+    @Html.Hidden("Id", Model.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Module"]</label>
+                @(Html.KendoComboBoxFor(x => x.ModuleCode, "Module")
+                    .Placeholder(Localizer["Please select module"].Value)
+                    .Suggest(true)
+                )
+                <span class="invalid" data-validation-for="ModuleCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title Format"]</label>
+                @Html.TextBoxFor(x => x.TitleFormat, new { @class = "form-control", @data_validation_for = "TitleFormat", @placeholder = Localizer["Please input title format"].Value })
+                <span class="invalid" data-validation-for="TitleFormat"></span>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Form Key"]</label>
+                @Html.TextBoxFor(x => x.FormKey, new { @class = "form-control", @data_validation_for = "FormKey", @placeholder = Localizer["Please input form key"].Value })
+                <span class="invalid" data-validation-for="FormKey"></span>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Document Number Format"]</label>
+                @Html.TextBoxFor(x => x.DocumentNumberFormat, new { @class = "form-control", @data_validation_for = "DocumentNumberFormat", @placeholder = Localizer["Please input title format"].Value })
+                <span class="invalid" data-validation-for="DocumentNumberFormat"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["ISO Number"]</label>
+                @Html.TextBoxFor(x => x.IsoNumber, new { @class = "form-control", @data_validation_for = "IsoNumber", @placeholder = Localizer["Please input ISO Number"].Value })
+                <span class="invalid" data-validation-for="IsoNumber"></span>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Can Download"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.CanDownload)
+                <span class="invalid" data-validation-for="CanDownload"></span>
+            </div>
+        </div>
+        <div class="col-12 col-md-3">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Integration"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.IntegrationDownload)
+                <span class="invalid" data-validation-for="IntegrationDownload"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDate", placeholder = Localizer["Please select a date (if any)"].Value })
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDate", placeholder = Localizer["Please select a date (if any)"].Value })
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Start Time"]</label>
+                @(Html.Kendo().TimePickerFor(x => x.StartTime)
+                    .Format("HH:mm")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartTime", placeholder = Localizer["Please select a time (if any)"].Value })
+                )
+                <span class="invalid" data-validation-for="StartTime"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["End Time"]</label>
+                @(Html.Kendo().TimePickerFor(x => x.EndTime)
+                    .Format("HH:mm")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndTime", placeholder = Localizer["Please select a time (if any)"].Value })
+                )
+                <span class="invalid" data-validation-for="EndTime"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

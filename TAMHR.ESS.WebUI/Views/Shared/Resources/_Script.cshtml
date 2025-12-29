@@ -1,0 +1,92 @@
+﻿@inject IScriptManager ScriptManager
+@inject ConfigService ConfigService
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Xsrf
+@{
+    ScriptManager.RegisterReference("autocomplete");
+
+    var timeoutConfig = ConfigService.GetTimeoutConfig();
+    var requestVerificationToken = Xsrf.GetAndStoreTokens(Context).RequestToken;
+}
+<script type="text/javascript" src="~/plugins/jquery-3.7.1.min.js"></script>
+<script type="text/javascript" src="~/plugins/jquery.serialize-object.min.js"></script>
+<script type="text/javascript" src="~/plugins/popper.min.js"></script>
+<script type="text/javascript" src="~/plugins/bootstrap.min.js"></script>
+<script type="text/javascript" src="~/plugins/jquery-idle-timeout/jquery.idletimeout.min.js"></script>
+<script type="text/javascript" src="~/plugins/jquery-idle-timeout/jquery.idletimer.min.js"></script>
+<script type="text/javascript" src="~/plugins/jquery.blockui.min.js"></script>
+<script type="text/javascript" src="~/plugins/signalr.min.js"></script>
+<script type="text/javascript" src="~/plugins/sweet-alert/sweetalert.min.js"></script>
+<script type="text/javascript">
+    const REQUEST_VERIFICATION_TOKEN = "@requestVerificationToken";
+
+    $.ajaxSetup({
+        headers: { "RequestVerificationToken": REQUEST_VERIFICATION_TOKEN }
+    });
+</script>
+@ScriptManager.Render()
+<script type="text/javascript" src="~/plugins/kendo/kendo.aspnetmvc.min.js"></script>
+<script type="text/javascript" src="~/plugins/date.js"></script>
+<script type="text/javascript">
+    var applicationConfiguration = {
+        imageHandlerUrl: "@ConfigService.GetConfig("Avatar.Url", true)?.ConfigValue",
+        baseUrl: "@Url.Content("~")",
+        uploadUrl: "@Url.Content("~/api/files/upload")",
+        localizer: {
+            "Form Data": "@Localizer["Form Data"]",
+            "List of Benefits": "@Localizer["List of Benefits"]",
+            "Drop Request Remarks": "@Localizer["Drop Request Remarks"]",
+            "Choose File": "@Localizer["Choose File"]",
+            "Please input reason for revise": "@Localizer["Please input reason for revise"]",
+            "Are you sure to approve selected documents": "@Localizer["Are you sure to approve selected documents"]",
+            "Success approve selected documents": "@Localizer["Success approve selected documents"]",
+            "Close": "@Localizer["Close"]",
+            "In Progress": "@Localizer["In Progress"]",
+            "Completed": "@Localizer["Completed"]",
+            "Rejected": "@Localizer["Rejected"]",
+            "Cancelled": "@Localizer["Cancelled"]",
+            "Dropped": "@Localizer["Dropped"]",
+            "Draft": "@Localizer["Draft"]",
+            "approve": "@Localizer["approve"]",
+            "reject": "@Localizer["reject"]",
+            "cancel": "@Localizer["cancel"]",
+            "revise": "@Localizer["revise"]",
+            "Are you sure want to delete this object?": "@Localizer["Are you sure want to delete this object?"]",
+            "You won't be able to revert this!": "@Localizer["You won't be able to revert this!"]",
+            "Update success": "@Localizer["Update success"]",
+            "Success submit document": "@Localizer["Success submit document"]",
+            "Success \{0\} document": "@Localizer[@"Success {{0}} document"]",
+            "Are you sure to \{0\} this request?": "@Localizer[@"Are you sure to {{0}} this request?"]",
+            "Save success": "@Localizer["Save success"]",
+            "Type your remarks here": "@Localizer["Type your remarks here"]",
+            "Revise Remarks": "@Localizer["Revise Remarks"]",
+            "Reject Remarks": "@Localizer["Reject Remarks"]",
+            "Drop Request Remarks": "@Localizer["Drop Request Remarks"]",
+            "Please input reason for drop request": "@Localizer["Please input reason for drop request"]",
+            "Please input reason for revise": "@Localizer["Please input reason for revise"]",
+            "Please input reason for reject": "@Localizer["Please input reason for reject"]",
+            "Remarks": "@Localizer["Remarks"]"
+        },
+        hubUrl: "@Url.Content("~/chatHub")",
+        data: {
+            "timeout_interval": @timeoutConfig.Timeout,
+            "timeout_idle_after": @timeoutConfig.IdleAfter,
+            "timeout_failed_requests": @timeoutConfig.FailedRequests,
+            "timeout_polling_interval": @timeoutConfig.PollingInterval
+        }
+    };
+</script>
+<script type="text/javascript">
+    if (top != self) { 
+        top.location = self.location;
+    }
+</script>
+<environment names="Development">
+    <script type="text/javascript" src="~/js/app-core.js"></script>
+    <script type="text/javascript" src="~/js/app-menu.js"></script>
+    <script type="text/javascript" src="~/js/app-notification.js"></script>
+    <script type="text/javascript" src="~/js/app-init.js"></script>
+    <script type="text/javascript" src="~/js/app-idle-timeout.js"></script>
+</environment>
+<environment exclude="Development">
+    <script type="text/javascript" src="~/js/app.min.js" asp-append-version="true"></script>
+</environment>

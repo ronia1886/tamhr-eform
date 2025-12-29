@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup Label="Globals">
+    <SccProjectName>SAK</SccProjectName>
+    <SccProvider>SAK</SccProvider>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccLocalPath>SAK</SccLocalPath>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>TAMHR.ESS.WebApi</AssemblyName>
+    <RootNamespace>TAMHR.ESS.WebApi</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="CustomAuthorize.cs" />
+    <Compile Remove="HasScopeHandler.cs" />
+    <Compile Remove="HasScopeRequirement.cs" />
+    <Compile Remove="Startup.cs" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.19" />
+    <PackageReference Include="Scrutor" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TAMHR.ESS.Domain\TAMHR.ESS.Domain.csproj" />
+    <ProjectReference Include="..\TAMHR.ESS.Infrastructure.Web\TAMHR.ESS.Infrastructure.Web.csproj" />
+    <ProjectReference Include="..\TAMHR.ESS.Infrastructure\TAMHR.ESS.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

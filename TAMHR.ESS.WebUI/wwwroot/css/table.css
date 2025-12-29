@@ -1,0 +1,82 @@
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #e3ebf3;
+    border-top: 1px solid #e3ebf3;
+    font-size: 0.9rem;
+}
+
+.table-w-padding tbody > tr > td:first-child {
+    padding-left: 1.25rem !important;
+}
+
+.table-w-padding tbody > tr > td:last-child {
+    padding-right: 1.25rem !important;
+}
+
+.header-center th {
+    text-align: center !important;
+}
+
+.table th, .table td {
+    padding: 0.75rem 2rem;
+    border-bottom: 1px solid #e3ebf3;
+}
+
+.table td, .table tbody th {
+    font-size: 0.85rem;
+}
+
+.table.table-small thead th {
+    font-size: 0.75rem;
+}
+
+.table.table-small td, .table.table-small tbody th {
+    font-size: 0.7rem;
+}
+
+.table.table-large thead th {
+    font-size: 1.1rem;
+}
+
+.table.table-large td, .table.table-large tbody th {
+    font-size: 1rem;
+}
+
+.no-table-header table thead, table.no-table-header thead {
+    display: none;
+}
+
+.no-table-header table tbody tr:first-child td, table.no-table-header tbody tr:first-child td {
+    border-top: 0;
+}
+
+.no-table-header table tbody tr:last-child td, table.no-table-header tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.table tbody td .custom-control-label::before, .table tbody td .custom-control-label::after {
+    top: 0;
+}
+
+.table.table-nopadding td {
+    padding: 0.75rem 0.75rem 0.75rem 0 !important;
+}
+
+.table.table-borderless td {
+    border: none !important;
+}
+
+tr.invalid td {
+    background-color: red;
+    color: #FFFFFF;
+}
+
+table.show-header thead, .show-header table thead {
+    display: table-header-group !important;
+}
+
+.placeholder {
+    outline-style: dashed;
+    outline-width: 1px;
+    outline-color: red;
+}

@@ -1,0 +1,143 @@
+﻿@model TAMHR.ESS.Domain.Vehicle
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{ 
+    var isNew = Model.Id == default(Guid);
+    var carColors = ConfigService.GetGeneralCategories("carColor");
+    var colors = (Model.Colors ?? string.Empty).Split(',');
+
+    var selectedColors = carColors.Where(x => colors.Contains(x.Code));
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/vehicle">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Type Name"]</label>
+                @Html.TextBoxFor(x => x.TypeName, new { @class = "form-control", @data_validation_for = "Typename", @placeholder = Localizer["Please input type name"].Value })
+                <span class="invalid" data-validation-for="Typename"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Type"]</label>
+                @Html.TextBoxFor(x => x.Type, new { @class = "form-control", @data_validation_for = "Type", @placeholder = Localizer["Please input type"].Value })
+                <span class="invalid" data-validation-for="Type"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Model Code"]</label>
+                @Html.TextBoxFor(x => x.ModelCode, new { @class = "form-control", @data_validation_for = "ModelCode", @placeholder = Localizer["Please input model code"].Value })
+                <span class="invalid" data-validation-for="ModelCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Suffix"]</label>
+                @Html.TextBoxFor(x => x.Suffix, new { @class = "form-control", @data_validation_for = "Suffix", @placeholder = Localizer["Please input suffix"].Value })
+                <span class="invalid" data-validation-for="Suffix"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Final Price"]</label>
+                <div class="input-group">
+                    <div class="input-group-prepend">
+                        <span class="input-group-text">Rp</span>
+                    </div>
+                    @(Html.Kendo().NumericTextBoxFor(x => x.FinalPrice)
+                        .Value(Math.Floor(Model.FinalPrice))
+                        .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "FinalPrice" })
+                        .Format("##,#")
+                        .Decimals(0)
+                        .Min(0)
+                        .Max(1000000000)
+                    )
+                </div>
+                <span class="invalid" data-validation-for="FinalPrice"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["COP/CPP/SCP"]</label>
+                <div class="mt-radio-inline">
+                    <label class="mt-radio green mt-radio-outline">
+                        COP
+                        @Html.RadioButtonFor(x => x.LoanType, "COP", new { @class = "form-control", data_validation_for = "LoanType" })
+                        <span></span>
+                    </label>
+                    <label class="mt-radio green mt-radio-outline">
+                        CPP
+                        @Html.RadioButtonFor(x => x.LoanType, "CPP", new { @class = "form-control", data_validation_for = "LoanType" })
+                        <span></span>
+                    </label>
+                    <label class="mt-radio green mt-radio-outline">
+                        SCP
+                        @Html.RadioButtonFor(x => x.LoanType, "SCP", new { @class = "form-control", data_validation_for = "LoanType" })
+                        <span></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Colors"]</label>
+                @(Html.Kendo().MultiSelectFor(x => x.Colors)
+                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Colors" })
+                    .DataTextField("Name")
+                    .DataValueField("Code")
+                    .Placeholder("Please Select Colors")
+                    .BindTo(carColors)
+                    .Value(selectedColors)
+                )
+                <span class="invalid" data-validation-for="Colors"></span>
+            </div>
+        </div>
+    </div>
+    <hr class="mt-1" />
+    <div class="row">
+        <div class="col">
+            @(Html.Kendo().Grid<TAMHR.ESS.Domain.Role>()
+                .Name("matrix-grid")
+                .Columns(columns =>
+                {
+                    columns.Bound(c => c.Id).HtmlAttributes(new { @class = "text-center" })
+                        .HeaderHtmlAttributes(new { @class = "text-center" })
+                        .ClientHeaderTemplate(@"<input type=""checkbox"" />")
+                        .ClientTemplate(@"<input type=""checkbox"" name=""Matrix[]"" value=""#:EmployeeSubgroup#|#:EmployeeSubgroupText#"" #: Active ? 'checked' : '' # />")
+                        .Width(55);
+
+                    columns.Bound(c => c.Title).Title("Employee Subgroup").ClientTemplate(@"
+                        <div class=""media"">
+                            <div class=""media-body ml-2"">
+                                <h6 class=""mt-1 mb-0 bold"">#:EmployeeSubgroupText# (#:EmployeeSubgroup#)</h6>
+                            </div>
+                        </div>
+                    ");
+                    columns.Bound(c => c.Id).HtmlAttributes(new { @class = "text-center" })
+                    .Title("Payment")
+                    .HeaderHtmlAttributes(new { @class = "text-center" })
+                    //.ClientHeaderTemplate(@"<input type=""checkbox"" />")
+                    .ClientTemplate(@"<input type=""checkbox"" name=""IsUpgrade[]"" value=""#:EmployeeSubgroup#|#:EmployeeSubgroupText#|#:IsUpgrade#"" #: IsUpgrade? 'checked' : '' # />")
+                    .Width(55);
+
+                })
+                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/vehicle/getbymatrix")).Data(@<text>function() { return { id: "@Model.Id" } }</text>))
+                    .Sort(sort => sort.Add("EmployeeSubgroup"))
+                )
+            )
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

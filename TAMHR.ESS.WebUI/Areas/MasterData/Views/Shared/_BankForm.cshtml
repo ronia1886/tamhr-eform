@@ -1,0 +1,59 @@
+﻿@model TAMHR.ESS.Domain.Bank
+@{
+    var isNew = true;
+    var valueId = Guid.NewGuid();
+    // if(Model != null)
+    // {
+    //     isNew = Model.Id == default(Guid);
+    //     valueId = Model.Id == default(Guid)? Guid.NewGuid() : Model.Id;
+    // }
+    
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/bank">
+    @* @Html.HiddenFor(x => x.Id) *@
+    @* <input type="hidden" name="Id" value="@valueId" /> *@
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Bank Key"]</label>
+                @Html.TextBoxFor(x => x.BankKey, new { @class = "form-control", @data_validation_for = "BankKey", @placeholder = Localizer["Please input bank key"].Value })
+                <span class="invalid" data-validation-for="BankKey"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Bank Name"]</label>
+                @Html.TextBoxFor(x => x.BankName, new { @class = "form-control", @data_validation_for = "BankName", @placeholder = Localizer["Please input bank name"].Value })
+                <span class="invalid" data-validation-for="BankName"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Branch"]</label>
+                @Html.TextBoxFor(x => x.Branch, new { @class = "form-control", @data_validation_for = "Branch", @placeholder = Localizer["Please input branch"].Value })
+                <span class="invalid" data-validation-for="Branch"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["City"]</label>
+                @Html.TextBoxFor(x => x.City, new { @class = "form-control", @data_validation_for = "City", @placeholder = Localizer["Please input city if any"].Value })
+                <span class="invalid" data-validation-for="City"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                @Html.TextBoxFor(x => x.Address, new { @class = "form-control", @data_validation_for = "Address", @placeholder = Localizer["Input Address"].Value })
+                <span class="invalid" data-validation-for="Address"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

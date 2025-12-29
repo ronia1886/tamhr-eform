@@ -1,0 +1,91 @@
+﻿@model TAMHR.ESS.Domain.Guideline
+@{ 
+    var isNew = Model.Id == default(Guid);
+    var allowedExtensions = new[] { ".doc", ".docx", ".xls", ".xlsx", ".pdf", ".ppt", ".pptx", ".zip" };
+    var maxFileSize = 25000000;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/guideline">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDate)
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDate", placeholder = Localizer["Please select a date"].Value })
+                    .Format("dd/MM/yyyy")
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDate)
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDate", placeholder = Localizer["Please select a date"].Value })
+                    .Format("dd/MM/yyyy")
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", @rows = "3", @data_validation_for = "Description", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["File URL"]<span class="required" aria-required="true"> * </span></label>
+                @(Html.Kendo().Upload()
+                    .Name("FileUploadWrapper")
+                    .ShowFileList(true)
+                    .Multiple(false)
+                    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+                    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach"].Value}"))
+                    .Async(conf =>
+                        conf
+                        .AutoUpload(false)
+                        .SaveUrl(Url.Content("~/api/files/upload-public"))
+                    )
+                    .Files(config =>
+                    {
+                        if (!string.IsNullOrEmpty(Model.FileUrl))
+                        {
+                            var fileName = System.IO.Path.GetFileName(Model.FileUrl);
+                            var extension = System.IO.Path.GetExtension(fileName);
+
+                            config.Add().Name("Uploaded File").Extension(extension);
+                        }
+                    })
+                    .Events(events => {
+                        events.Success(@<text>function (e) { $("#FileUrl").val(e.response.url); }</text>);
+                    })
+                    .Validation(validation =>
+                    {
+                        validation.AllowedExtensions(allowedExtensions);
+                        validation.MaxFileSize(maxFileSize);
+                    })
+                )
+                @Html.HiddenFor(x => x.FileUrl, new { data_validation_for = "FileUrl" })
+                <span class="invalid" data-validation-for="FileUrl"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

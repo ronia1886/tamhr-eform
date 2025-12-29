@@ -1,0 +1,319 @@
+﻿@model PdfViewModel;
+@using Newtonsoft.Json;
+@using TAMHR.ESS.Domain
+@using TAMHR.ESS.Infrastructure.ViewModels
+@using TAMHR.ESS.Infrastructure.Web.ScriptManagement
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityOverTimeService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+
+@{
+    Layout = null;
+    //ScriptManager.RegisterReferences("dropdownlist", "datetimepicker", "grid", "multiselect", "datepicker", "combobox", "numeric", "upload", "listview");
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+
+    List<AbnormalityOverTimeView> list = new List<AbnormalityOverTimeView>();
+    var result = JsonConvert.DeserializeObject<AbnormalityOverTimeViewModel>(Model.DocumentApproval.ObjDocumentRequestDetail.ObjectValue);
+    list.AddRange(result.Details);
+    var apprv = ApprovalService.GetTrackingApprovalsAsync(Model.DocumentApproval.Id).Result;
+    //var getDivisionHead = apprv.Where(x => x.JobName.Contains("Division Head")).FirstOrDefault();
+
+    var getDivisionHead = svc.GetHRHierarchies(DateTime.Now).ToList()[0];
+    var date = DateTime.Now.ToString("dd-MM-yyyy");
+
+    var index = 0;
+    var strip = "-";
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .col12 {
+        width: 12%;
+    }
+
+    .col8 {
+        width: 8%;
+    }
+
+    .col100 {
+        width: 100%;
+    }
+
+    .d {
+        text-decoration-line: overline underline !important
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 15%;" />
+        <col style="width: 75%;" />
+    </colgroup>
+    <thead>
+        <tr class="tableizer-firstrow">
+            <td class="bold" align="center" style="font-size:14px;border-top:0px !important" colspan="2"><span class="d">MEMO INTERNAL</span></td>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td height="20px"></td>
+        </tr>
+
+        <tr>
+            <td>Kepada<label style="float:right">:</label></td>
+            <td>@getDivisionHead.NameDH (@getDivisionHead.PostNameDH)</td>
+        </tr>
+        <tr>
+            <td>Tanggal<label style="float:right">:</label></td>
+            <td>@date</td>
+        </tr>
+        <tr>
+            <td>Perihal<label style="float:right">:</label></td>
+            <td>Permohonan Edit SPKL</td>
+        </tr>
+        <tr>
+            <td>No Document<label style="float:right">:</label></td>
+            <td>@Model.DocumentApproval.DocumentNumber</td>
+        </tr>
+    </tbody>
+</table>
+<div class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <p>
+        Dengan Hormat,
+    </p>
+    <span>
+        Bersama ini kami mohon bantuan tim HR untuk dapat memproses perubahan data SPKL karyawan dengan detail berikut :
+    </span>
+</div>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 15%;" />
+        <col style="width: 75%;" />
+    </colgroup>
+    <thead>
+        <tr class="tableizer-firstrow">
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td height="20px"></td>
+        </tr>
+
+        <tr>
+            <td>Nama<label style="float:right">:</label></td>
+            <td>@org.Name</td>
+        </tr>
+        <tr>
+            <td>No. Registrasi<label style="float:right">:</label></td>
+            <td>@org.NoReg</td>
+        </tr>
+        <tr>
+            <td>Kelas<label style="float:right">:</label></td>
+            <td>@org.EmployeeSubgroupText</td>
+        </tr>
+        <tr>
+            <td>Divisi<label style="float:right">:</label></td>
+            <td>@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        </tr>
+    </tbody>
+</table>
+
+<div style="height:20px"></div>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+
+    <thead class="border">
+        <tr>
+            <th class="border text-center" rowspan="2" style="width: 10%">Date</th>
+            <th colspan="2" class="border text-center" style="width: 20%">Proxy</th>
+            <th colspan="2" class="border text-center" style="width: 20%">Overtime</th>
+            <th class="border text-center" rowspan="2" style="width: 7%">Break</th>
+            <th class="border text-center" rowspan="2" style="width: 8%">Duration</th>
+            <th class="border text-center" rowspan="2" style="width: 20%">Reason</th>
+            <th class="border text-center" rowspan="2" style="width: 15%">Code Category</th>
+        </tr>
+        <tr>
+            <th class="border text-center">In</th>
+            <th class="border text-center">Out</th>
+            <th class="border text-center">In</th>
+            <th class="border text-center">Out</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in result.Details)
+        {
+            var pin = item.ProxyIn.ToString("HH : mm");
+            var pout = item.ProxyOut.ToString("HH : mm");
+            var otin = item.OvertimeIn.ToString("HH : mm");
+            var otout = item.OvertimeOut.ToString("HH : mm");
+
+            <tr class="text-center">
+                <td style="text-align:center" class="border ">@item.OvertimeDate.ToString("dd-MM-yyyy") </td>
+                <td style="text-align:center" class="border">@pin </td>
+                <td style="text-align:center" class="border">@pout</td>
+                <td style="text-align:center" class="border">@otin</td>
+                <td style="text-align:center" class="border">@otout</td>
+                <td style="text-align:center" class="border">@item.OvertimeBreak</td>
+                <td style="text-align:center" class="border">@item.Duration</td>
+                <td style="text-align:center" class="border">@item.OvertimeReason</td>
+                <td style="text-align:center" class="border">@item.OvertimeCategory</td>
+                <!--More properties-->
+            </tr>
+        }
+    </tbody>
+    <!--Add footer for totals-->
+</table>
+
+<div class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+    <p>
+        Demikian yang dapat kami sampaikan, terima kasih atas bantuan dan kerjasamanya.
+    </p>
+    <span>
+        Hormat Kami,
+    </span>
+</div>
+<div style="height:20px"></div>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:10%;margin-right:10%;" border="0" cellspacing="0" cellpadding="0">
+
+    <thead class="border">
+        <tr>
+            @foreach (var item in apprv)
+            {
+                var dateString = item.ModifiedOn.HasValue ? "Tanggal :" + @item.ModifiedOn.Value.ToString("dd-MM-yyyy") : "";
+                <th class="border text-center col12 ">@dateString</th>
+
+                index++;
+                if (index == apprv.Count - 1)
+                {
+                    index = 0;
+                    break;
+                } 
+            }
+        </tr>
+    </thead>
+    <tbody>
+
+        <tr class="text-center">
+            @foreach (var yes in apprv)
+            {
+                var statusApp = yes.ApprovalActionCode != null ? yes.ApprovalActionCode == "approve" ? "Aprrove" : "Initiate" : "";
+                <td style="text-align:center" class="border ">
+                    <h3>@statusApp</h3>
+                </td>
+                index++;
+                if (index == apprv.Count - 1)
+                {
+                    index = 0;
+                    break;
+                } 
+            }
+        </tr>
+        <tr class="text-center">
+            @foreach (var item in apprv)
+            {
+                if (index < apprv.Count - 2)
+                {
+                    <td style="text-align:center" class="border ">
+                        @item.Name
+                    </td>
+                }
+                index++;
+                if (index == apprv.Count - 2)
+                {
+                    continue;
+                }
+                if (index == apprv.Count - 1)
+                {
+                    if(item.ApprovalActionCode == "approve")
+                    {
+                        <td style="text-align:center" class="border ">
+                            @item.Name
+                        </td>
+                    } else
+                    {
+                        <td style="text-align:center" class="border ">
+                            @strip
+                        </td>
+                    }
+                    index = 0;
+                    break;
+                }
+            }
+        </tr>
+        <tr class="text-center">
+            @foreach (var item in apprv)
+            {
+                if (index < apprv.Count - 2)
+                {
+                    <td style="text-align:center" class="border ">
+                        @item.PostName
+                    </td>
+                }
+                index++;
+                if (index == apprv.Count - 2)
+                {
+                    continue;
+                }
+                if (index == apprv.Count - 1)
+                {
+                    if(item.ApprovalActionCode == "approve")
+                    {
+                        <td style="text-align:center" class="border ">
+                            @item.PostName
+                        </td>
+                    } else
+                    {
+                        <td style="text-align:center" class="border ">
+                            HRIS Admin
+                        </td>
+                    }
+
+                    index = 0;
+                    break;
+                } 
+            }
+        </tr>
+
+    </tbody>
+    <!--Add footer for totals-->
+</table>
+

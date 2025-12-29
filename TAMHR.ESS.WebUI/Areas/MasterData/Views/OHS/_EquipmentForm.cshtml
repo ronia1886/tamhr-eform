@@ -1,0 +1,89 @@
+﻿@model TAMHR.ESS.Domain.EquipmentView
+@{
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/master-data/ohs/insertEquipment" : "~/api/master-data/ohs/updateEquipment")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Divisi"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("DivisiCodeEquip")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisiCodeEquip", @required = "required" })
+                    .DataTextField("ObjectText")
+                    .DataValueField("ObjectCode")
+                    .Placeholder(Localizer["Please select Divisi"].Value)
+                    .Value(Model.DivisiCode == default(string) ? string.Empty : Model.DivisiCode)
+                    //.Value(Model.DivisiCode.ToString())
+                    @*.Events(events =>
+                {
+                events.Change("onchangeHospital");
+                })*@
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-Divisi")))
+                    .Sort(sort => sort.Add("ObjectText"))
+
+                    )
+                    .SelectedIndex(-1)
+                    //.Deferred()
+                    //.Deferred()
+                    @*.Template("<span class=\"k-state-default\">#: data.ProviderType# #: data.Name # </span>")*@
+                    //.ValueTemplate("<span class=\"selected-value\" style=\"background-image: url(" + Url.Content("~/shared/web/Customers/") + "#:data.CustomerID#.jpg"+ ");\" ></span>" + "<span>#:data.ContactName#</span>")
+                    )
+                <span class="invalid" data-validation-for="DivisiCodeEquip"></span>
+
+            </div>
+            
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Area Name"]</label>
+                @(Html.Kendo().ComboBox()
+                    .Name("AreaIdEquip")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "AreaIdEquip", @required = "required" })
+                    .DataTextField("NamaArea")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select Area"].Value)
+                    .Value(Model.AreaId == default(string) ? string.Empty : Model.AreaId)
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-AreaDropDown")))
+                    .Sort(sort => sort.Add("NamaArea"))
+
+                    ))
+                <span class="invalid" data-validation-for="AreaIdEquip"></span>
+
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Equipment Name"]</label>
+                @Html.TextBoxFor(x => x.EquipmentName, new { @class = "form-control", @data_validation_for = "EquipmentName", @placeholder = Localizer["Please input Equipment"].Value })
+                <span class="invalid" data-validation-for="EquipmentName"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Quantity"]</label>
+                @Html.TextBoxFor(x => x.Quantity, new { @class = "form-control", @data_validation_for = "Quantity", @placeholder = Localizer["Please input Quantity"].Value })
+                <span class="invalid" data-validation-for="Quantity"></span>
+            </div>
+        </div>
+
+    </div>
+    <div class="row">
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

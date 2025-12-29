@@ -1,0 +1,76 @@
+﻿@model TAMHR.ESS.Domain.EmployeeSubstitutionView
+@{ 
+    var isNew = Model.Id == default(Guid);
+    if (isNew)
+    {
+        Model.Date = DateTime.Now.Date;
+    }
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/employee-work-schedule/upsert-substitution">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    <div class="row">
+        <div class="col-md-6 form-group">
+            <label>Name</label>
+            @(Html.Kendo().AutoComplete()
+                .Name("noregAutoComplete")
+                .DataTextField("Name")
+                .Filter("contains")
+                .Value(Model.Name)
+                .Placeholder(Localizer["Find employee..."].Value)
+                .MinLength(3)
+                .HtmlAttributes(new { @class = "form-control", data_validation_for = "NoReg" })
+                .DataSource(source =>
+                {
+                    source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/gets"))))
+                        .PageSize(10)
+                        .Sort(sort => sort.Add("Name"))
+                        .Schema(config => config.Data("Data").Total("Total"));
+                })
+                .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                .Events(evt => evt.Select(@<text>function(e) {
+                    var dataItem = this.dataItem(e.item.index());
+                    e.sender.element.closest("form").find("input[name='NoReg']").val(dataItem.NoReg);
+                }</text>))
+                .Enable(isNew)
+            )
+            <span class="invalid" data-validation-for="NoReg"></span>
+        </div>
+        <div class="col-md-6 form-group">
+            <label>Date</label>
+            @(Html.Kendo().DatePickerFor(x => x.Date)
+                .HtmlAttributes(new { style = "width: 100%" })
+                .Format("dd/MM/yyyy")
+                .ParseFormats("dd/MM/yyyy")
+                .Enable(isNew)
+            )
+            <span class="invalid" data-validation-for="Date"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>@Localizer["Shift"]</label>
+                @(Html.Kendo().ComboBoxFor(x => x.ShiftCodeUpdate)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataTextField("ShiftName")
+                    .DataValueField("ShiftCode")
+                    .Placeholder(Localizer["Select shift"].Value)
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/daily-work-schedule/gets")))
+                        .Sort(sort => sort.Add("ShiftCode"))
+                    )
+                    .SelectedIndex(-1)
+                )
+                <span class="invalid" data-validation-for="ShiftCodeUpdate"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

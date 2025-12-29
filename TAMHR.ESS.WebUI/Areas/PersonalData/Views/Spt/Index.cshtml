@@ -1,0 +1,135 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("grid", "combobox", "pdfviewer");
+
+    var now = DateTime.Now.Date;
+    var currentPeriod = now.Year;
+    var currentMonth = now.Month;
+    var offsetYear = 2020;
+
+    var periods = Enumerable.Range(offsetYear, (currentPeriod - offsetYear) + 1)
+        .OrderByDescending(x => x);
+}
+@section scripts {
+    <partial name="_Script" />
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadHandler">
+                    @Localizer["Download"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@Html.AntiForgeryToken()
+<div class="card">
+    <div class="card-header bordered">
+        <h3 class="card-title text-muted">
+            <i class="fa fa-slack mr-2 font-small-3"></i>@Localizer["SPT"]
+        </h3>
+        <a class="heading-elements-toggle">
+            <i class="ft-ellipsis-h font-medium-3"></i>
+        </a>
+        <div class="heading-elements">
+            <ul class="list-inline mb-0" style="position:relative; top: -3px;">
+                <li class="dropdown custom-filter">
+                    <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="fa fa-filter mr-1"></i>@Localizer["Filter"]
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-right" style="width: 250px;">
+                        <form class="form-horizontal p-2" role="form">
+                            <div class="row">
+                                <div class="col-12 form-group">
+                                    <label>@Localizer["Period"]</label>
+                                    @(Html.Kendo().ComboBox()
+                                        .Name("Period")
+                                        .HtmlAttributes(new { @class = "form-control" })
+                                        .Value(currentPeriod.ToString())
+                                        .BindTo(periods)
+                                        .Deferred()
+                                    )
+                                </div>
+                            </div>
+                            <hr class="mt-1" />
+                            <a href="javascript:;" class="btn green-jungle btn-block mb-1" data-trigger="handler" data-handler="downloadHandler">@Localizer["Download"]</a>
+                            <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="viewHandler">@Localizer["View"]</a>
+                        </form>
+                    </div>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="result position-relative">
+            <div class="text-center text-muted no-result p-4">
+                <img src="~/img/no-spt.png" style="max-height: 150px;" />
+                <br />
+                <span class="message">@Localizer["Please select period first"]</span>
+            </div>
+            <div id="pdf-wrapper"></div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header bordered">
+        <h3 class="card-title">
+            <i class="fa fa-list-alt mr-2 font-small-3"></i>@Localizer["Activity Log List"]
+        </h3>
+        <a class="heading-elements-toggle">
+            <i class="ft-ellipsis-h font-medium-3"></i>
+        </a>
+        <div class="heading-elements">
+            <ul class="list-inline mb-0" style="position: relative; top: 3px;">
+                <li>
+                    <a data-action="collapse">
+                        <i class="ft-minus"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="card-body p-0 no-table-header">
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.UserActivityLog>()
+            .Name("userActivityLogGrid")
+            .HtmlAttributes(new { data_filter = "log-filter" })
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Id)
+                    .ClientTemplate(
+                        @"<div class=""media"">
+                            <div class=""media-body"">
+                                <span class=""d-block description"">#=Description#</span>
+                                <small class=""d-block""><i class=""fa fa-clock-o mr-1""></i>#:kendo.toString(CreatedOn, 'dd/MM/yyyy at hh:mm')#</small>
+                            </div>
+                        </div>"
+                    );
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-3 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No activity logs data"].Value + "</div>"))
+            .Events(evt =>
+            {
+                evt.DataBinding(@<text>function() {
+                    this.element.removeClass("k-grid k-widget k-display-block");
+                    this.element.find("table").addClass("table w-100 mb-1");
+                }</text>);
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/spt/get-activity-logs")))
+                .Sort(sort => sort.Add("CreatedOn").Descending())
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+            .Deferred()
+        )
+    </div>
+</div>

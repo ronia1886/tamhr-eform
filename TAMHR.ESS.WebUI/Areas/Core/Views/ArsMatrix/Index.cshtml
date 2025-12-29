@@ -1,0 +1,24 @@
+﻿@model IEnumerable<TAMHR.ESS.Infrastructure.ViewModels.ArsMatrixViewModel>
+@foreach (var area in Model)
+{
+    var len = area.Items.Count();
+    <h3>@area.Title</h3>
+    <div class="row">
+        @foreach (var item in area.Items)
+        {
+            <div class="col-md-4">
+                <div class="card">
+                    <img class="card-img-top img-fluid" src="@Url.Content(item.ImageUrl)" style="height: 246px;" />
+                    <div class="card-body text-center">
+                        <h4 class="card-title">@item.Title</h4>
+                        <p class="card-text">@item.Description</p>
+                        <div class="text-center">
+                            <a class="btn blue-sharp text-center" data-trigger="modal" data-modal="detail-modal" data-modal-title="View Details - @item.Title" data-modal-ajax="true" data-ajax-url="~/core/arsmatrix/load" data-parameters-key="@item.Key">view details</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="mb-1">&nbsp;</div>
+}

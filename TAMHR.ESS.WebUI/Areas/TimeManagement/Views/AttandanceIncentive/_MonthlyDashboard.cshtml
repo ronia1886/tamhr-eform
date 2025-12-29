@@ -1,0 +1,139 @@
+﻿@{ 
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+    var currentMonth = DateTime.Now.Month;
+    //var counter = 0;
+    //var retro = 2015;
+    var yearNow = DateTime.Now.Year;
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    <span class="d-block d-md-none">@Localizer["Monitoring"]</span>
+                    <span class="d-none d-md-block">@Localizer["Monthly Monitoring"]</span>
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_MonthlyMonitoringToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeMonitoringSubordinateMonthlyStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { @class = "table-w-padding", data_filter = "absence-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title("Employee").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                </div>
+                            </div>
+                            <div class=""d-none d-md-block"">
+                                <div class=""pull-right ml-3 mt-1"">
+                                    <span class=""small d-block"">#:TotalLeave# " + Localizer["Leave"].Value + @"</span>
+                                    <span class=""small d-block"">#:TotalLate# " + Localizer["Late"].Value + @"</span>
+                                </div>
+                                <div class=""pull-right ml-3 mt-1"">
+                                    <span class=""small d-block"">#:TotalIn# " + Localizer["Work Days"].Value + @"</span>
+                                    <span class=""small d-block"">#:TotalAbsent# " + Localizer["Absent"].Value + @"</span>
+                                </div>
+                            </div>
+                            <div class=""row d-flex d-md-none pt-3"" style=""clear: both;"">
+                                <div class=""col-6"">
+                                    <span class=""small d-block"">#:TotalLeave# " + Localizer["Leave"].Value + @"</span>
+                                    <span class=""small d-block"">#:TotalLate# " + Localizer["Late"].Value + @"</span>
+                                </div>
+                                <div class=""col-6"">
+                                    <span class=""small d-block"">#:TotalIn# " + Localizer["Work Days"].Value + @"</span>
+                                    <span class=""small d-block"">#:TotalAbsent# " + Localizer["Absent"].Value + @"</span>
+                                </div>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/monitoring-report/get-monthly-monitoring")).Data(@<text>getParameters</text>))
+                        .Sort(sort =>
+                        {
+                            sort.Add("JobLevel").Ascending();
+                            sort.Add("Name").Ascending();
+                        })
+                        .PageSize(31)
+                    )
+                    .Events(events =>
+                    {
+                        events.DataBound(@<text>function(e) {
+                            var grid = e.sender,
+                                dataSource = this.dataSource,
+                                totalRecords = dataSource.total();
+
+                            if (totalRecords === 1) {
+                                this.expandRow(this.tbody.find("tr.k-master-row").first());
+                            }
+
+                            $.loadSummary();
+                        }</text>);
+                    })
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .ClientDetailTemplateId("detail-template")
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="abnormal-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                <h4 class="modal-title">Warning</h4>
+            </div>
+            <div class="modal-body">
+                <div class="card">
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AbnormalityStoredEntity>()
+                            .Name("abnormalitygrid")
+                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Type).Title("Abnormality").HtmlAttributes(new { @class = "text-center" });
+                                columns.Bound(c => c.TotalAbnormality).Title("Total").HtmlAttributes(new { @class = "text-center" });
+                                columns.Bound(c => c.ViewURL).Title("Action").ClientTemplate(@"
+                                <div class='row'>
+                                    <div class='col-md-2'></div>
+                                    <div class='col-md-4'>
+                                        <a onclick=window.open(app.resolveUrl(""#:CreateURL#"",'_blank')) class='btn btn-xs green w-100' style='box-shadow: 5px 5px 5px -2px rgba(0,0,0,.3)'>Create</a>
+                                    </div>
+                                    <div class='col-md-4'>
+                                        <a onclick=window.open(app.resolveUrl(""#:ViewURL#"",'_blank')) class='btn btn-xs red w-100' style='box-shadow: 5px 5px 5px -2px rgba(0,0,0,.3)'>View</a>
+                                    </div>
+                                    <div class='col-md-2'></div>
+                                ").HtmlAttributes(new { @class = "text-center" });
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/monitoring-report/get-abnormality")).Data(@<text>getParameters</text>))
+                            )
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

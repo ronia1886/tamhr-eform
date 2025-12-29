@@ -1,0 +1,537 @@
+﻿@model DocumentRequestDetailViewModel<DismembermentViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService personalDataService
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    string idfamily = string.IsNullOrEmpty(Model.Object.OtherFamilyId) ? "" : Model.Object.OtherFamilyId;
+    string urlNonFamilyRelationship = "";
+
+    if (isCanEdit)
+    {
+        urlNonFamilyRelationship = "~/api/personaldata/getnonfamily";
+    }
+    else
+    {
+        urlNonFamilyRelationship = "~/api/category/getsbycategory?category=NonMainFamily";
+    }
+
+    var genderObj = personalDataService.GetGender(requester).FirstOrDefault();
+    var gender = genderObj.GetType().GetProperty("GenderCode").GetValue(genderObj);
+}
+@section scripts {
+    <partial name="Components/_CondolenceTermAndConditions" />
+    <script type="text/javascript" src="~/js/pages/termconditions.js"></script>
+    <script type="text/javascript">
+        $("#frm-NonFamilyRelationship").hide();
+        $("#li_TaxStatus").hide();
+        $("#li_JumlahBpk").hide();
+        $("#li_BPJS").hide();
+        $("#li_AVIVA").hide();
+
+        if ('@gender' == 'perempuan') {
+            $("#li_TaxStatus").hide();
+        }
+
+         if ('@Model.Object.IsMainFamily' == 'ya') {
+            $("#frm-FamilyRelationship").show();
+            $("#frm-NonFamilyRelationship").hide();
+             subtype = 'MainFamily'
+             changeFamilyType('MainFamily')
+             changeFamilySelection()
+
+        }
+        else if ('@Model.Object.IsMainFamily' == 'tidak'){
+            $("#frm-FamilyRelationship").hide();
+             $("#frm-NonFamilyRelationship").show();
+             subtype = 'NonMainFamily'
+             changeFamilyType('NonMainFamily')
+             changeFamilySelection()
+
+        }
+        else {
+            $("#frm-FamilyRelationship").show();
+            $("#frm-NonFamilyRelationship").hide();
+             $('#Object_IsMainFamily').prop('checked', true);
+             subtype = 'MainFamily'
+             changeFamilyType('MainFamily')
+             changeFamilySelection()
+
+        }
+        $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                    dataType: 'json',
+                    data: {
+                        noreg: '@requester', type: 'miseryallowance', subtype: subtype
+                },
+                
+                success: function (result) {
+                        $('#id_User').text(result.Name);
+                        $('#id_Kelas').text(result.Kelas);
+                        $('#id_TaxStatus').text(result.TaxStatus);
+                        $('#id_TunjanganKedukaan').text(null);
+                        $('#id_TunjanganKedukaan').text('Rp. ' + app.formatNumber(result.Ammount));
+                        $('#Object_AllowancesAmount').val(result.Ammount);
+                    taxStatus = result.TaxStatus;
+                        empNP = result.NP;
+                        $('#id_labelmaksimal').hide();
+                        $('#id_labelminimal').hide();
+                        $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                            dataType: 'json',
+                            data: {
+                                noreg: '@requester', type: 'miseryallowance', subtype: subtype
+                                },
+                
+                                success: function (result) {
+                                    $('#id_TunjanganKedukaan').text('Rp. ' + app.formatNumber(result.Ammount));
+                                    $('#Object_AllowancesAmount').val(result.Ammount);
+                                    var empNP = result.NP;
+                                    if (empNP >= 3 && empNP <= 6) {
+                                        if (subtype == 'MainFamily') {
+                                            $('#id_labelmaksimal').show();
+                                            $('#id_labelminimal').show();
+                                        }
+                                        else {
+                                            $('#id_labelmaksimal').hide();
+                                            $('#id_labelminimal').hide();
+                                        }
+                                    }
+                            }
+                        });
+                        $.ajax(
+                            {
+                                type: 'POST',
+                                url: app.resolveUrl('~/api/personaldata/getinfobpjs'),
+                                dataType: 'json',
+                                success: function (result) {
+                                    $('#id_BPJS').text(result.Data[0].Name);
+                                }
+                            });
+                        $.ajax(
+                            {
+                                type: 'POST',
+                                url: app.resolveUrl('~/api/personaldata/getinfoaviva'),
+                                dataType: 'json',
+                                success: function (result) {
+                                    $('#id_AVIVA').text(result.Data[0].Name);
+                                }
+                            });
+                    }
+                });
+        
+            //changeFamilyType('MainFamily');
+
+            $('input[type=radio][id=Object_IsMainFamily]').change(function () {
+                ismainfamily = $("input[name='Object.IsMainFamily']:checked").val();
+                if (ismainfamily == "ya") {
+                    $("#frm-FamilyRelationship").show();
+                    $("#frm-NonFamilyRelationship").hide();
+                    $("#Object_FamilyName").val("");
+                    $("#Object_OtherFamilyName").val("");
+                    $("#Object_OtherFamilyId").data("kendoComboBox").value("");
+                    $("#Object_NonFamilyRelationship").data("kendoComboBox").value("");
+                    changeFamilyType('MainFamily');
+                }
+                else if (ismainfamily == 'tidak') {
+                    $("#frm-FamilyRelationship").hide();
+                    $("#frm-NonFamilyRelationship").show();
+                    $("#Object_FamilyName").val("");
+                    $("#Object_OtherFamilyName").val("");
+                    $("#Object_OtherFamilyId").data("kendoComboBox").value("");
+                    $("#Object_NonFamilyRelationship").data("kendoComboBox").value("");
+                    famMember = '';
+                    changeFamilyType('NonMainFamily');
+                }
+                changeFamilySelection();
+        });
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+            $("#anda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+            $("#anda").hide()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ) {
+            $("#textanda").show()
+            $("#anda").show()
+        }
+        $('#id_Module').text('@Localizer["Condolence"].Value');
+       
+
+        function onChange() {
+            if ('@isCanEdit' == 'True') {
+                $("#Object_OtherFamilyName").val(this.text());
+                famMember = this.value();
+                changeFamilySelection();
+            }
+        }
+
+        function formatNumber(num) {
+            num = parseFloat(num);
+            return num.toString()
+                .replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+        }
+
+        var famMember ;
+        var ismainfamily;
+        var taxStatus;
+        var empNP;
+        function changeFamilySelection() {
+            ismainfamily = $("input[name='Object.IsMainFamily']:checked").val();
+            if ('@idfamily' != '' && '@idfamily' != null) {
+                famMember = '@idfamily'
+            }
+            if (ismainfamily == "ya") {
+                if (famMember != '' && famMember != undefined) {
+                    //cek fam member fam type code anak ato bukan
+
+                    $.ajax(
+                    {
+                        type: 'POST',
+                        url: app.resolveUrl('~/api/personaldata/getinfofamtypecode'),
+                        dataType: 'json',
+                            data: { FamilyMemberId: famMember },
+                            success: function (data) {
+                                famTypeCode = data.Data[0].FamilyTypeCode;
+                                if (famTypeCode.toLowerCase().includes('anak')) {
+                                    showInfo();
+                                    var newtaxstatus = taxStatus;
+                                    var val = newtaxstatus.slice(-1);
+                                    var str = newtaxstatus.substring(0, newtaxstatus.length - 1);
+                                    if (val == 0) {
+                                        $("#changestatus").text(newtaxstatus);
+                                    }
+                                    else {
+                                        var newvalue = parseInt(val) - 1;
+                                        newtaxstatus = (str + newvalue);
+                                        $("#changestatus").text(newtaxstatus);
+                                    }
+                                    $.ajax(
+                                        {
+                                            type: 'POST',
+                                            url: app.resolveUrl('~/api/personaldata/getinfomedicalbpk'),
+                                            dataType: 'json',
+                                            data: { np: empNP, newtaxstatus: newtaxstatus },
+                                            success: function (result) {
+                                                if ($.trim(result.Data)) {
+                                                    $('#id_JumlahBpk').text('Rp. ' + formatNumber(result.Data[0].AmmountTunjangan));
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                                else {
+                                                    $('#id_JumlahBpk').text('Rp. 0');
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                            }
+                                        });
+                                }
+                                else if (famTypeCode.toLowerCase().includes('pasangan')) {
+                                    showInfo();
+
+                                    var newtaxstatus2 = taxStatus;
+                                    var val2 = newtaxstatus2.slice(-1);
+                                    var str2 = 'TK';
+                                    var newvalue2 = parseInt(val2);
+                                    newtaxstatus2 = (str2 + newvalue2);
+                                    $("#changestatus").text(newtaxstatus2);
+
+                                    $.ajax(
+                                        {
+                                            type: 'POST',
+                                            url: app.resolveUrl('~/api/personaldata/getinfomedicalbpk'),
+                                            dataType: 'json',
+                                            data: { np: empNP, newtaxstatus: newtaxstatus2 },
+                                            success: function (result) {
+                                                if ($.trim(result.Data)) {
+                                                    $('#id_JumlahBpk').text('Rp. ' + formatNumber(result.Data[0].AmmountTunjangan));
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                                else {
+                                                    $('#id_JumlahBpk').text('Rp. 0');
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                            }
+                                        });
+                                }
+                                else {
+                                    hideInfo();
+
+                                    var newtaxstatus3 = taxStatus;
+                                    var val3 = newtaxstatus3.slice(-1);
+                                    var str3 = newtaxstatus3.substring(0, newtaxstatus3.length - 1);
+                                    if (val3 == 0) {
+                                        $("#changestatus").text(newtaxstatus3);
+                                    }
+                                    else {
+                                        var newvalue3 = parseInt(val3);
+                                        newtaxstatus3 = (str3 + newvalue3);
+                                        $("#changestatus").text(newtaxstatus3);
+                                    }
+
+                                    $.ajax(
+                                        {
+                                            type: 'POST',
+                                            url: app.resolveUrl('~/api/personaldata/getinfomedicalbpk'),
+                                            dataType: 'json',
+                                            data: { np: empNP, newtaxstatus: newtaxstatus3 },
+                                            success: function (result) {
+                                                if ($.trim(result.Data)) {
+                                                    $('#id_JumlahBpk').text('Rp. ' + formatNumber(result.Data[0].AmmountTunjangan));
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                                else {
+                                                    $('#id_JumlahBpk').text('Rp. 0');
+                                                    $('#text_Description').text(result.Data[0].Description)
+                                                }
+                                            }
+                                        });
+                                }
+                        }
+                    });
+                }
+                else {
+                    hideInfo();
+                }
+
+            }
+            else if (ismainfamily == 'tidak') {
+                hideInfo();
+            }
+        }
+
+        function showInfo() {
+            if ('@gender' != 'perempuan') {
+                $("#li_TaxStatus").show();
+            }
+
+            $("#li_JumlahBpk").show();
+            $("#li_BPJS").show();
+            $("#li_AVIVA").show();
+        }
+
+        function hideInfo() {
+            $("#li_TaxStatus").hide();
+            $("#li_JumlahBpk").hide();
+            $("#li_BPJS").hide();
+            $("#li_AVIVA").hide();
+        }
+
+        function changeFamilyType(subtype) {
+            $('#id_labelmaksimal').hide();
+            $('#id_labelminimal').hide();
+            $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'miseryallowance', subtype: subtype
+                    },
+                
+                    success: function (result) {
+                        $('#id_TunjanganKedukaan').text('Rp. ' + app.formatNumber(result.Ammount));
+                        $('#Object_AllowancesAmount').val(result.Ammount);
+                        var kelas = result.NP;
+                        if (kelas >= 3 && kelas <= 6) {
+                            if (subtype == 'MainFamily') {
+                                $('#id_labelmaksimal').show();
+                                $('#id_labelminimal').show();
+                            }
+                            else {
+                                $('#id_labelmaksimal').hide();
+                                $('#id_labelminimal').hide();
+                            }
+                        }
+                }
+            });
+        }
+    </script>
+}
+<a id="termAndConditionsBtn" class="hidden" data-trigger="modal" data-modal="term-and-conditions-modal" data-modal-title="Term and Conditions" data-modal-ajax="true" data-ajax-url="~/core/form/termandconditions" data-modal-callback="contentCallback" data-parameters='{ "documentApprovalId": "@Model.DocumentApprovalId" }'></a>
+<div class="row" id="divHeader">
+    <div class="col">
+        @Html.HiddenFor(x => x.Object.AllowancesAmount)
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='id_User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='id_Kelas'></b>. If <label id='anda'>you</label> complete <b class='font-red' id='id_Module'></b> form, then there are changes in data & allowance as follows:"]</span>
+                    <ul class="list-style-icons margin-top-10">
+                        <li>
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Get Condolence Allowance with amount <label id='id_labelminimal'>Maximum </label> <b class='font-red' id='id_TunjanganKedukaan'></b> <label id='id_labelmaksimal'> or Minimal 150% * Basic Salary</label>"]
+                        </li>
+                        <li id="li_TaxStatus">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of Tax Status from <b class='font-red' id='id_TaxStatus'></b> to <b class='font-red' id='changestatus'></b>"]
+                        </li>
+                        <li id="li_JumlahBpk">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of <span id='text_Description'></span> to <b class='font-red' id='id_JumlahBpk'></b>"]
+                        </li>
+                        <li id="li_BPJS">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Removed membership <b class='font-red' id='id_BPJS'></b>"]
+                        </li>
+                        <li id="li_AVIVA">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Removed membership of <b class='font-red' id='id_AVIVA'></b> Insurance"]
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row" id="divContent">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Condolence Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["Condolence Data"]</legend>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Condolence Date"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.DismembermentDate)
+                                                                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DismembermentDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                                                        .Enable(isCanEdit)
+                                                                                        .Format("dd/MM/yyyy")
+                                                                                        .Max(DateTime.Now)
+                                                                                        .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Main Family"]</label>
+                                            <div class="mt-radio-inline">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Yes"]
+                                                    @Html.RadioButtonFor(x => x.Object.IsMainFamily, "ya", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.IsMainFamily" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["No"]
+                                                    @Html.RadioButtonFor(x => x.Object.IsMainFamily, "tidak", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.IsMainFamily" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div id="frm-FamilyRelationship" class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Name"]</label>
+                                            @if (isCanEdit)
+                                            {
+                                                <div>
+                                                    @(Html.KendoComboBoxFor(x => x.Object.OtherFamilyId, "OtherFamilyId")
+                                                                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.OtherFamilyId" })
+                                                                                .Placeholder(Localizer["Select Family Name"].Value)
+                                                                                .DataTextField("FullName")
+                                                                                .DataValueField("FamilyMemberId")
+                                                                                .SelectedIndex(-1)
+                                                                                .DataSource(dataSource => dataSource
+                                                                                    .Ajax()
+                                                                                    .Read(read => read.Url(Url.Content("~/api/personaldata/getfamilymember")))
+                                                                                )
+                                                                                .Events(e =>
+                                                                                {
+                                                                                    e.Change("onChange");
+                                                                                })
+                                                                                .Enable(isCanEdit)
+                                                                                .Deferred()
+                                                    )
+                                                    @Html.HiddenFor(x => x.Object.OtherFamilyName, ApplicationHelper.Enable(new {
+                                                    @class = "form-control", data_validation_for = "Object.OtherFamilyName", placeholder = "" }, isCanEdit))
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                @Html.HiddenFor(x => x.Object.OtherFamilyId)
+                                                @Html.HiddenFor(x => x.Object.OtherFamilyName)
+                                                <br /><label>@Model.Object.OtherFamilyName</label>
+                                            }
+
+
+                                        </div>
+                                        <div id="frm-NonFamilyRelationship" class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Relationship"]</label>
+                                            <div class="form-group">
+                                                @(Html.KendoComboBoxFor(x => x.Object.NonFamilyRelationship, "NonFamilyRelationship")
+                                                                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.NonFamilyRelationship" })
+                                                                                                        .Placeholder(Localizer["Select Family Relationship"].Value)
+                                                                                                        .DataTextField("Name")
+                                                                                                        .DataValueField("Code")
+                                                                                                        .DataSource(dataSource => dataSource
+                                                                                                            .Ajax()
+                                                                                                            //.Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=NonMainFamily")))
+                                                                                                            .Read(read => read.Url(Url.Content(urlNonFamilyRelationship)))
+                                                                                                        )
+                                                                                                        .Enable(isCanEdit)
+                                                                                                        .Deferred()
+                                                )
+                                            </div>
+
+                                            <div class="form-group">
+                                                @Html.TextBoxFor(x => x.Object.FamilyName, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.FamilyName", placeholder = Localizer["Input Family Name"].Value }, isCanEdit))
+                                            </div>
+
+                                        </div>
+
+                                        <div class="form-group exclude">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Death Certificate Attachment"]</label>
+                                            @{
+                                                if (isCanEdit)
+                                                {
+                                                    @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.FamilyCardPath" })
+                                                }
+                                                else
+                                                {
+                                                    <br />
+                                                    @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "FamilyCardPath" })
+                                                }
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend class="w-auto">@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value}, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

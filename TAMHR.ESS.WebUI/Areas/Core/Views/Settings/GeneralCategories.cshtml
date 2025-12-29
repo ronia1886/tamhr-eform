@@ -1,0 +1,105 @@
+﻿@{ 
+    ScriptManager.RegisterReferences("numeric");
+}
+@section scripts {
+    <script type="text/javascript">
+        (function($, app) {
+            app.registerHandler("addMappingHandler", async function (parameters) {
+                var parentCode = parameters.code;
+
+                const { value: value } = await swal({
+                    title: 'Enter value',
+                    input: 'text',
+                    showCancelButton: true
+                });
+
+                if (value) {
+                    $.post(app.resolveUrl("~/api/category/map"), { ParentGeneralCategoryCode: parentCode, GeneralCategoryCode: value, Readonly: false }, function (d) {
+                        app.refreshControl("sub-grid");
+                    });
+                }
+            });
+
+            $(document).on('focusin', function (e) {
+                e.stopImmediatePropagation();
+            });
+        })(jQuery, app);
+    </script>
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="category-modal" data-modal-title="Create new Category" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-handler="category">
+                    @Localizer["Create Category"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/category/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Category" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/category">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Categories"]</h3>
+                <div class="heading-elements">
+                    <partial name="Components/_GeneralCategoriesToolbars" />
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.GeneralCategory>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "categories-filter" })
+                    .Columns(cols =>
+                    {
+                        cols.Bound(c => c.Id)
+                            .Title("Id")
+                            .ClientGroupHeaderTemplate("#:value#")
+                            .ClientTemplate(@"
+                                <div class=""media"">
+                                    <div class=""media-body ml-2"">
+                                        <small class=""d-block"">General category with name ""<b>#:Name# (#:Code#)</b>"" and <b>#:OrderSequence#</b> as order sequence</small>
+                                        <small class=""d-block""># if (ModifiedOn != null) { #<b>Last modified - </b> #:kendo.toString(ModifiedOn, 'dd/MM/yyyy HH:mm')# # } #</small>
+                                    </div>
+                                </div>
+                            ");
+
+                        cols.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""category-modal"" data-modal-title=""Edit Category - #:Code#"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-handler=""category"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                            </div>
+                        ").Width("8rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/category/gets")))
+                        .Group(group => group.Add(x => x.Category))
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

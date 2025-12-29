@@ -1,0 +1,69 @@
+﻿@{ 
+    var year = DateTime.Now.Year;
+}
+@*@{ 
+    ScriptManager.RegisterReference("chart");
+}
+@section scripts {
+    <script>
+        kendo.syncReady(function () { jQuery("#chart").kendoChart({ "legend": { "labels": { "template": "${ text } (${ value })" }, "position": "right" }, "series": [{ "name": "Total", "type": "pie", "field": "Total", "categoryField": "Title" }], "dataSource": { "schema": { "model": { "fields": { "Title": { "type": "string" }, "Total": { "type": "number" } } } }, "data": [{ "Title": "In Progress", "Total": 3 }, { "Title": "Rejected", "Total": 2 }, { "Title": "Approved", "Total": 10 }, { "Title": "Draft", "Total": 2 }, { "Title": "Revised", "Total": 5 }] }, "seriesColors": ["#03a9f4", "#ff9800", "#fad84a", "#4caf50"], "tooltip": { "template": "${ category }: ${ value }", "visible": true } }); });
+        kendo.syncReady(function () { jQuery("#chart2").kendoChart({ "legend": { "labels": { "template": "${ text } (${ value })" }, "position": "right" }, "series": [{ "name": "Total", "type": "pie", "field": "Total", "categoryField": "Title" }], "dataSource": { "schema": { "model": { "fields": { "Title": { "type": "string" }, "Total": { "type": "number" } } } }, "data": [{ "Title": "In Progress", "Total": 3 }, { "Title": "Rejected", "Total": 2 }, { "Title": "Approved", "Total": 10 }, { "Title": "Draft", "Total": 2 }, { "Title": "Revised", "Total": 5 }] }, "seriesColors": ["#03a9f4", "#ff9800", "#fad84a", "#4caf50"], "tooltip": { "template": "${ category }: ${ value }", "visible": true } }); });
+        kendo.syncReady(function () { jQuery("#chart3").kendoChart({ "legend": { "labels": { "template": "${ text } (${ value })" }, "position": "right" }, "series": [{ "name": "Total", "type": "pie", "field": "Total", "categoryField": "Title" }], "dataSource": { "schema": { "model": { "fields": { "Title": { "type": "string" }, "Total": { "type": "number" } } } }, "data": [{ "Title": "In Progress", "Total": 3 }, { "Title": "Rejected", "Total": 2 }, { "Title": "Approved", "Total": 10 }, { "Title": "Draft", "Total": 2 }, { "Title": "Revised", "Total": 5 }] }, "seriesColors": ["#03a9f4", "#ff9800", "#fad84a", "#4caf50"], "tooltip": { "template": "${ category }: ${ value }", "visible": true } }); });
+    </script>
+}
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-4">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">Document Summary</h3>
+                    <span class="m-widget-desc">Document status summary in @year</span>
+                </div>
+                <div class="m-widget-item pt-2">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="k-chart" id="chart" style="height: 95px; width: 200px; position: relative;" data-role="chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">Outstanding Document</h3>
+                    <span class="m-widget-desc">Outstanding document status in @year</span>
+                </div>
+                <div class="m-widget-item pt-1">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="k-chart" id="chart3" style="height: 95px; width: 200px; position: relative;" data-role="chart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">Latest Claim</h3>
+                    <span class="m-widget-desc">Top 5 latest claim in @year</span>
+                </div>
+                <div class="m-widget-item pt-1">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <ol class="pl-3 font-small-2 mb-0">
+                                <li>Kacamata (Rp 1,900,000) - 1 Jan 2019</li>
+                                <li>Lensa (Rp 700,000) - 2 Jan 2019</li>
+                                <li>COP (Rp 1,107,000,000) - 3 Jan 2019</li>
+                                <li>Reimburse RS (Rp 1,000,000) - 31 Jan 2019</li>
+                                <li>Reimburse RS (Rp 1,500,000) - 2 Jan 2019</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>*@
+@(await Component.InvokeAsync<RequestHistory>(new { formKey = string.Empty, showFormTitle = true }))

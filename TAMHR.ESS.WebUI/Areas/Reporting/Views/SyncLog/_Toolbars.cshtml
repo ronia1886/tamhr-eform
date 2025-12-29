@@ -1,0 +1,48 @@
+﻿<ul id="sync-logs-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["MailSubject", "InstanceKey"]' />
+    </li>
+    <li class="dropdown dropdown-arrow">
+        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="MailSubject">@Localizer["Subject"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="MailStatusCode">@Localizer["Status"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="ModifiedOn">@Localizer["Sent Date"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Created Date"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+    <li>
+        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-filter"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "MailStatusCode", "value": "pending" }'>@Localizer["Pending"]</a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "MailStatusCode", "value": "sent" }'>@Localizer["Sent"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="filter">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+</ul>

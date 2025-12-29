@@ -1,0 +1,248 @@
+@using System.Net
+@inject AclHelper AclHelper
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var currentUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}";
+    
+    var englishName = System.Globalization.CultureInfo.CurrentUICulture.EnglishName;
+    
+    englishName = englishName.Substring(0, englishName.IndexOf('(') - 1);
+    
+    var isoLanguageName = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+
+    isoLanguageName = isoLanguageName == "en" ? "gb" : isoLanguageName == "ja" ? "jp" : isoLanguageName;
+    
+    var hasImpersonation = bool.Parse(User.GetClaim("HasImpersonation"));
+    
+    var hasConcurrentPositions = int.Parse(User.GetClaim("TotalPosition")) > 1;
+
+    var isExternalUser = User.GetClaim("NoReg").StartsWith("ext_");
+
+}
+<header class="navbar fixed-top navbar-brand-center">
+    <div class="navbar-header">
+        <ul class="nav navbar-nav">
+            <li class="nav-item d-none d-sm-block">
+                <a class="navbar-brand" href="~/">
+                    <img class="brand-logo" alt="e-Form logo" src="~/img/logo/ico-logo1.png" />
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="navbar-top">
+        <div class="navbar-actions">
+            <ul class="nav mr-auto pull-left">
+                <li class="nav-item">
+                    <a href="javascript:;" class="nav-link" data-trigger="modal" data-modal-title="@Localizer["All Menu"]" data-html-title="true" data-modal-type="xl" data-modal-ajax="true" data-ajax-url="~/core/home/fixedmenu">
+                        <i class="icon-grid"></i>
+                    </a>
+                </li>
+                @if (!isExternalUser)
+                {
+                    <li class="nav-item">
+                        <a href="javascript:;" class="nav-link" title="@Localizer["Events Calendar"]" data-trigger="modal" data-modal-title="@Localizer["Events Calendar"]" data-modal-ajax="true" data-ajax-url="~/core/home/calendar">
+                            <i class="icon-calendar"></i>
+                        </a>
+                    </li>
+                }
+                <li class="nav-item d-block d-sm-none">
+                    <a href="~/" class="nav-link" title="@Localizer["Home"]">
+                        <img class="brand-logo" alt="e-Form logo" src="~/img/logo/logo-full.png" style="height: 1.25rem; margin-top: -0.35rem" />
+                    </a>
+                </li>
+            </ul>
+        </div>
+        <div class="navbar-menu px-0 d-sm-flex">
+            <ul class="nav pull-right">
+                <li class="dropdown dropdown-language">
+                    <a href="javascript:;" class="dropdown-toggle nav-link" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        <i class="flag-icon flag-icon-@isoLanguageName"></i> <span class="d-none d-lg-inline">@englishName</span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a href="~/core/language/setlanguage?culture=en-US&returnUrl=@WebUtility.UrlEncode(currentUrl)">
+                                <i class="flag-icon flag-icon-gb"></i> &nbsp;English
+                            </a>
+                        </li>
+                        <li>
+                            <a href="~/core/language/setlanguage?culture=id-ID&returnUrl=@WebUtility.UrlEncode(currentUrl)">
+                                <i class="flag-icon flag-icon-id"></i> &nbsp;Indonesian
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <li class="dropdown dropdown-extended dropdown-notification notification-wrapper" data-url="@Url.Content("~/api/notification")" data-view-url="@Url.Content("~/core/home/notifications")" data-read-url="@Url.Content("~/api/notification/read")" data-template="_notificationTpl">
+                    <a href="javascript:;" class="dropdown-toggle nav-link" title="@Localizer["Notifications"]" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                        <i class="icon-bell"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="external notifications-header">
+                            <span>@Localizer["Loading"] ...</span>
+                        </li>
+                    </ul>
+                </li>
+                <li class="dropdown dropdown-extended dropdown-tasks notification-wrapper" title="@Localizer["Tasks"]" data-url="@Url.Content("~/api/task")" data-view-url="@Url.Content("~/core/home/tasks")" data-template="_taskTpl" data-badge-class="badge-danger">
+                    <a href="javascript:;" class="dropdown-toggle nav-link" data-toggle="dropdown" data-hover="dropdown" data-close-others="true">
+                        <i class="icon-envelope-letter"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li class="external notifications-header">
+                            <span>@Localizer["Loading"] ...</span>
+                        </li>
+                    </ul>
+                </li>
+                <li class="dropdown dropdown-user avatar-left">
+                    <a href="javascript:;" class="dropdown-toggle nav-link" data-toggle="dropdown" data-hover="dropdown" data-close-others="true" aria-expanded="true">
+                        <img alt="" class="rounded" src="@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))">
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-default" style="width: 18.75rem;">
+                        <li class="profpic">
+                            <div class="profpic-wrapper">
+                                <div class="profpic-avatar">
+                                    <img src="@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                </div>
+                                <div class="profpic-body">
+                                    <span class="profpic-title">@User.GetClaim("Name")</span>
+                                    <span class="profpic-description">@User.GetClaim("PostName")</span>
+                                </div>
+                            </div>
+                        </li>
+                        @if (AclHelper.HasPermission("Core.ViewProfile"))
+                        {
+                            <li>
+                                <a href="~/core/home/profile">
+                                    <i class="icon-user"></i> @Localizer["My Profile"]
+                                </a>
+                            </li>
+                        }
+                        @if (!isExternalUser)
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="modal" data-modal-title="@Localizer["Events Calendar"]" data-modal-ajax="true" data-ajax-url="~/core/home/calendar">
+                                    <i class="icon-calendar"></i> @Localizer["My Calendar"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.FindEmployee"))
+                        {
+                            <li>
+                                <a href="~/core/home/findemployee">
+                                    <i class="icon-magnifier"></i> @Localizer["Find Employee"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ViewOnlineLetter"))
+                        {
+                            <li>
+                                <a href="~/core/onlineletter/index">
+                                    <i class="icon-drawer"></i> @Localizer["Online Letter"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ViewOrganization"))
+                        {
+                            <li>
+                                <a href="~/core/organization/index">
+                                    <i class="icon-layers"></i> @Localizer["Organization Structure"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ViewArsMatrix"))
+                        {
+                            <li>
+                                <a href="~/core/arsmatrix/index">
+                                    <i class="icon-pin"></i> @Localizer["ARS Matrix"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.Guideline.List"))
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="modal" data-modal-title="@Localizer["Guidelines"]" data-modal-ajax="true" data-ajax-url="~/core/home/guideline">
+                                    <i class="icon-notebook"></i> @Localizer["Guidelines"]
+                                </a>
+                            </li>
+                        }
+                        @if (hasConcurrentPositions)
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="modal" data-modal="switch-organization-modal" data-modal-title="@Localizer["Switch Organization"]" data-modal-ajax="true" data-ajax-url="~/core/home/concurrentposition">
+                                    <i class="icon-directions"></i> @Localizer["Switch Organization"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ProxyAs"))
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="modal" data-modal="proxy-modal" data-modal-title="@Localizer["Proxy As"]" data-modal-callback="proxyAsCallback">
+                                    <i class="icon-target"></i> @Localizer["Proxy As"]
+                                </a>
+                            </li>
+                        }
+                        @if (hasImpersonation)
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="modal" data-modal-title="@Localizer["Impersonate As"]" data-modal-ajax="true" data-ajax-url="~/core/home/impersonator">
+                                    <i class="ft-users"></i> @Localizer["Impersonate As"]
+                                </a>
+                            </li>
+                        }
+                        @if (User.GetClaim("Username") != User.GetClaim("Originator"))
+                        {
+                            <li>
+                                <a href="javascript:;" data-trigger="handler" data-handler="becameSelfHandler">
+                                    <i class="icon-calendar"></i> @Localizer["Become Self"]
+                                </a>
+                            </li>
+                        }
+                        @if (!isExternalUser)
+                        {
+                            <li class="dropdown-divider"> </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ApplicationLog.View"))
+                        {
+                            <li>
+                                <a href="~/core/log/index">
+                                    <i class="icon-book-open"></i> @Localizer["Application Log"]
+                                </a>
+                            </li>
+                        }
+                        @if (AclHelper.HasPermission("Core.ProxyLog.View"))
+                        {
+                            <li>
+                                <a href="~/core/log/proxylog">
+                                    <i class="icon-calculator"></i> @Localizer["Proxy Log"]
+                                </a>
+                            </li>
+                        }
+                        <li>
+                            <a href="~/core/account/logout">
+                                <i class="icon-logout"></i> @Localizer["Log Out"]
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                $.ajax({
+                    url: "@Url.Content("~/api/task/notiflongleave")",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify({}),
+                    async: false, // Membuat synchronous
+                    success: function (response) {
+                        console.log("API call successful:", response);
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("API call failed:", status, error);
+                    }
+                });
+            });
+        </script>
+
+    </div>
+
+</header>

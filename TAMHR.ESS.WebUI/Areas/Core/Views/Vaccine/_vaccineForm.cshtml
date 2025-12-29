@@ -1,0 +1,1161 @@
+﻿@using Newtonsoft.Json;
+@using System.Configuration;
+@model Vaccine
+@inject TAMHR.ESS.Infrastructure.DomainServices.FormService FormService
+@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService personalDataService
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineScheduleService vaccineScheduleService
+@inject TAMHR.ESS.Infrastructure.DomainServices.FormQuestionService formQuestionService
+@{
+    DateTime ActivateDate = ViewBag.ActivateDate;
+
+    DateTime today = DateTime.Today;
+
+    int months = today.Month - Model.BirthDate.Month;
+    int years = today.Year - Model.BirthDate.Year;
+
+    if (today.Day < Model.BirthDate.Day)
+    {
+        months--;
+    }
+
+    if (months < 0)
+    {
+        years--;
+        months += 12;
+    }
+
+    //int currentAge = Model.BirthDate.Month > DateTime.Now.Month ? Model.BirthDate.Year : Model.BirthDate.Year-1;
+    //int Age = DateTime.Now.Year - currentAge;
+    int Age = years;
+    int MonthAge = months;
+
+    string BirthDate = Model.BirthDate.ToString("dd/MM/yyyy");
+    var formQuestions = FormService.GetFormQuestions("vaccine", true).ToList();
+    string isNew = "update";
+    bool SHAStatus = Model.SHAStatus;
+    string Status = Model.Status;
+    if (Model.Id == Guid.Parse("00000000-0000-0000-0000-000000000000"))
+    {
+        isNew = "create";
+        Model.SubmissionDate = DateTime.Now;
+        Model.SHAStatus = false;
+        Status = "0";
+    }
+
+    // Get and set list of form answers from current view model.
+    TAMHR.ESS.Infrastructure.ViewModels.VaccineAnswerViewModel[] FormAnswers = Array.Empty<TAMHR.ESS.Infrastructure.ViewModels.VaccineAnswerViewModel>();
+
+    var answers = FormAnswers.ToDictionary(x => x.FormQuestionId);
+
+    var isCompleted = false;
+    if (answers.Count > 0)
+    {
+        isCompleted = true;
+    }
+
+    // Get and set list of root form questions.
+    var roots = formQuestions.Where(x => x.ParentFormQuestionId == null);
+
+    var dataVaccineSchedule = vaccineScheduleService.GetVaccineScheduleLimits().GroupBy(g => g.VaccineDate).Select(s => s.FirstOrDefault()).ToList();
+
+    var isNewFile = Model.Id == default(Guid);
+    var allowedExtensions = new[] { ".jpg", ".jpeg", ".bmp", ".gif", ".png" };
+    //double maxFileSize = Convert.ToDouble(ConfigurationManager.AppSettings["maxFileSize"]);
+    double maxFileSize = (4096000);
+    var isDisableVaccine2 = String.IsNullOrEmpty(Model.VaccineCard1);
+    var isDisableVaccineOnTAM = Model.HaveVaccine != null && Model.HaveVaccine == false ? false : true;
+}
+<style type="text/css">
+    .ui-datepicker-unselectable .ui-state-default {
+        background: yellow;
+        color: red;
+    }
+</style>
+<form id="vaccineForm" method="post" action="~/api/vaccine/@isNew">
+    <div class="card">
+        <div class="row no-gutters">
+            <div class="col-md-4">
+                <div class="p-4" style="height: 100%; background: url('@Url.Content("~/img/assets/vaccine.jpg")') 0 0 no-repeat; background-size: cover;">
+                    <div class="section-heading d-block d-md-none">
+                        <p class="text-uppercase font-weight-bold mb-0">Vaccine Form</p>
+                        <h5 class="text-header m-0">
+                            Juklak pengisian form deklarasi kesehatan karyawan.
+                        </h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8 col-12">
+                <div class="card-body">
+                    <div class="section-heading mb-2 d-none d-md-block">
+                        <p class="text-uppercase font-weight-bold mb-0">@Localizer["Health Assessment untuk "+@Model.Name+" ["+@Model.FamilyStatus.Replace(" 0", "")+"]"]</p>
+                        @*<h5 class="text-header m-0">
+                            Juklak pengisian form vaccine COVID-19.
+                        </h5>*@
+                    </div>
+                    <div class="mb-2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="row no-gutters">
+            <div class="col-md-4">
+                <div class="section-heading p-4" style="background-color: #eff2f7; height: 100%; position: relative;">
+                    <div class="position-md-sticky">
+                        @Localizer["Vaccine.SHADescription"]
+                        <input type="hidden" name="SubmitType" value="@isNew" />
+                        <input type="hidden" name="Id" value="@Model.Id" />
+                        <input type="hidden" name="NoReg" value="@Model.NoReg" />
+                        <input type="hidden" name="Name" value="@Model.Name" />
+                        <input type="hidden" name="BirthDate" value="@Model.BirthDate.ToString("yyyy-MM-dd")" />
+                        <input type="hidden" name="FamilyStatus" value="@Model.FamilyStatus.Replace("0 ", "Kandung")" />
+                        <input type="hidden" name="SubmissionDate" value="@Model.SubmissionDate.ToString("yyyy-MM-dd")" />
+                        @{
+                            int j = 0;
+                            foreach (var dataSchedule in dataVaccineSchedule)
+                            {
+
+                                <input type="hidden" name="dateSchedule-@j" class="dateSchedule" title="@dataSchedule.VaccineHospitalId" value="@dataSchedule.VaccineDate" />
+                                j++;
+                            }
+                        }
+                        <input type="hidden" name="totalSchedule" value="@j" />
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <div class="card-body">
+                    <div class="row material">
+                        <div class="form-group col-md-12">
+                            <label>@Localizer["Nama"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().TextBox()
+    .Name("NameView")
+    .Value(Model.Name)
+    .HtmlAttributes(new { @class = "form-control" })
+    .Enable(false)
+
+                            )
+                            <span class="invalid" id="NameValidation" data-validation-for="Name"></span>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Tanggal Lahir (dd/mm/yyyy)"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("BirthDateView")
+                                .Value(Model.BirthDate) // Asumsi Model.BirthDate adalah DateTime
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Enable(false)
+                                .Format("d MMMM yyyy")
+                                .Deferred()
+                            )
+                            <span class="invalid" id="BirthDateValidation" data-validation-for="BirthDate"></span>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Umur"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().TextBox()
+                            .Name("Age")
+                            .Value(Age+" tahun "+MonthAge+" bulan")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .Enable(false)
+                            .Deferred()
+                            )
+                        </div>
+                        @{if (Model.FamilyStatus.ToLower() == "employee")
+                            {
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["No Telepon"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().MaskedTextBox()
+                             .Name("PhoneNumber")
+                             .Value(Model.PhoneNumber)
+                             .Mask("999 9999999999")
+                             .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Masukkan nomor ponsel anda"].Value })
+                            )
+
+                                <span class="invalid" id="PhoneNumberValidation" data-validation-for="PhoneNumber"></span>
+                            </div>
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Alamat Sesuai KTP"] <span class="required" aria-required="true"> * </span></label>
+                                <label style="font-size:12px">
+                                    @Localizer["Vaccine.Address.Info"]
+                                </label>
+
+                                @(Html.Kendo().TextBox()
+.Name("Address")
+.Value(Model.Address)
+.HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Masukkan alamat anda"].Value })
+                            )
+                                <span class="invalid" id="AddressValidation" data-validation-for="Address"></span>
+                            </div>
+
+                            <div class="form-group col-md-6">
+                                <label>@Localizer["Kelurahan"]</label>
+                                @(Html.Kendo().TextBoxFor(x => x.SubDistrict)
+                                              .HtmlAttributes(new { @class = "form-control" })
+                                              .Enable(false)
+                                      )
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label>@Localizer["Kecamatan"]</label>
+                                @(Html.Kendo().TextBoxFor(x => x.District)
+                                              .HtmlAttributes(new { @class = "form-control" })
+                                              .Enable(false)
+                                     )
+                            </div>
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Kota"]</label>
+                                @(Html.Kendo().TextBoxFor(x => x.City)
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .Enable(false)
+                                     )
+                            </div>
+
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Domisili"] <span class="required" aria-required="true"> *</span></label>
+                                <label><small><input type="checkbox" class="custom-checkbox" name="AddressCopied" value="true" />&nbsp;@Localizer["Sama dengan alamat KTP"]</small></label>
+                                <label style="font-size:12px">
+                                    @Localizer["Vaccine.Domicile.Info"]
+                                </label>
+                                @(Html.Kendo().TextBox()
+                                        .Name("Domicile")
+                                        .Value(Model.Domicile)
+                                        .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Jl. Yos Sudarso No.10, Sungai Bambu, Tj Priok, Jakarta Utara"].Value })
+                                      )
+                                <span class="invalid" id="DomicileValidation" data-validation-for="Domicile"></span>
+                            </div>
+
+                            }
+
+                        }
+
+
+
+                        @{
+                            string IdentityLabel = "";
+                            if (Age >= 17)
+                            {
+                                IdentityLabel = "KTP";
+                            }
+                            else
+                            {
+                                IdentityLabel = "KK";
+                            }
+                        }
+                        <div class="form-group col-md-12">
+                            <label>@Localizer[IdentityLabel] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().MaskedTextBox()
+                       .Name("IdentityId")
+                       .Value(Model.IdentityId)
+                       .Mask("0000000000000000")
+                       .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Masukkan identitas anda"].Value })
+                        )
+                            <span class="invalid" id="IdentityIdValidation" data-validation-for="IdentityId"></span>
+                        </div>
+                        <div class="form-group col-md-12">
+
+                            <label style="font-size:12px;color:red">
+                                <b>Data ini sangat penting untuk penentuan vaksinasi Anda</b>.
+                                Mohon Anda memastikan no @IdentityLabel yang tertera dan diupload sudah sesuai dengan data @IdentityLabel Anda saat ini.
+                            </label>
+                        </div>
+                        <div class="form-group col-md-12 exclude identityImageDiv">
+                            <label>@Localizer["Upload " + IdentityLabel + " (max file size " + (maxFileSize / 1000) + " KB)"]</label>
+                            @(Html.Kendo().Upload()
+                    .Name("FileUploadWrapper")
+                    .ShowFileList(true)
+                    .Multiple(false)
+                    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+                    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach"].Value}"))
+                    .Async(conf =>
+                        conf
+                        .AutoUpload(false)
+                        .SaveUrl(Url.Content("~/api/vaccine/upload-public"))
+                    )
+                    .Files(config =>
+                    {
+                        if (!string.IsNullOrEmpty(Model.IdentityImage))
+                        {
+                            var fileName = System.IO.Path.GetFileName(Model.IdentityImage);
+                            var extension = System.IO.Path.GetExtension(fileName);
+                            config.Add().Name("Uploaded File").Extension(extension);
+                        }
+                    })
+                    .Events(events =>
+                            {
+                    events.Success(@<text>function (e) { $("#IdentityImage").val(e.response.url); }</text>);
+})
+.Validation(validation =>
+{
+validation.AllowedExtensions(allowedExtensions);
+validation.MaxFileSize(maxFileSize);
+})
+                            )
+                            @Html.HiddenFor(x => x.IdentityImage, new { data_validation_for = "IdentityImage" })
+                            <span class="invalid" id="IdentityImageValidation" data-validation-for="IdentityImage"></span>
+                        </div>
+                    </div>
+                    <div class="form-group col-md-12 question-wrapper-root">
+                        <input type="hidden" id="Gender" name="Gender" value="@Model.Gender" />
+                        @foreach (var root in roots)
+                        {
+                            var counter = 0;
+
+                            var items = isCompleted
+                                ? formQuestions.Where(x => x.ParentFormQuestionId == root.Id && FormAnswers.Any(y => y.FormQuestionId == x.Id))
+                                : formQuestions.Where(x => x.ParentFormQuestionId == root.Id && x.RowStatus);
+
+                            if ((!isCompleted && !root.RowStatus) || items.Count() == 0)
+                            {
+                                continue;
+                            }
+                        <div class="form-group col-md-12 question-wrapper-@root.Id">
+                            <label>@Localizer[root.Title]</label>
+
+                            <div class="form-group col-md-12 border border-dark">
+                                @{string strQuestionId = "";}
+                                @{int i = 0;
+                                        foreach (var item in items)
+                                        {
+                                            strQuestionId += item.Id + ",";
+                                            var color = ++counter % 2 == 1 ? "aliceblue" : "inherit";
+
+                                            var name = $"rb-{item.Id}";
+
+                                            var id1 = $"{name}-1";
+
+                                            var id2 = $"{name}-2";
+
+                                            bool? answer = null;
+
+                                            if (Model.VaccineQuestionList.Count > 0)
+                                            {
+                                                answer = false;
+                                                foreach (var vaccineQuestionData in Model.VaccineQuestionList)
+                                                {
+                                                    if (vaccineQuestionData.FormQuestionId == item.Id && vaccineQuestionData.Answer == "true")
+                                                    {
+                                                        answer = true;
+                                                    }
+                                                }
+                                            }
+
+                                            Guid vaccineQuestionId = default(Guid);
+                                            var data = Model.VaccineQuestionList.Find(x => x.FormQuestionId == item.Id);
+                                            if (data != null)
+                                            {
+                                                vaccineQuestionId = data.Id;
+
+                                            }
+
+                                            var dataD = new ViewDataDictionary(ViewData) {
+                                                { "vaccineQuestionId", vaccineQuestionId.ToString() },
+                                                { "name", name },
+                                               { "id1", id1 },
+                                               { "id2", id2 },
+                                               { "answer", answer },
+                                               //{ "VaccineQuestionDetailList", data.VaccineQuestionDetailList}
+                                                };
+
+                                            if (!item.Title.ToLower().Contains("hamil"))
+                                            {
+                                    <partial name="_vaccineFormDetail" model="item" view-data="dataD" />
+                                                i++;
+                                            }
+                                            if (item.Title.ToLower().Contains("hamil") && !Model.Gender.ToLower().Contains("laki"))
+                                            {
+                                    <partial name="_vaccineFormDetail" model="item" view-data="dataD" />
+                                                i++;
+                                            }
+
+                                        }
+                                }
+                                <input type="hidden" name="strQuestionId_@root.Id" value="@strQuestionId" />
+                                <input type="hidden" name="OtherQuestion" value="@Model.OtherQuestion" />
+                                @{
+                                        string formAnswerId = "FormAnswers-" + root.Id + "Validation";
+                                }
+                                <span class="invalid" id="@formAnswerId" data-validation-for="FormAnswers.@root.Id"></span>
+                            </div>
+                        </div>
+                        }
+
+                    </div>
+                </div>
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Apakah Anda bersedia untuk mengikuti vaksinasi di TAM?"]</label>
+                    <div class="form-check mb-3 mb-md-0">
+                        <input class="form-check-input" type="radio" name="TAMVaccineAgreement" id="cb_tamvaccineagreement_no" value="false" @(Model.TAMVaccineAgreement != null && Model.TAMVaccineAgreement == false ? "checked" : string.Empty)>
+                        <label class="form-check-label font-red-flamingo" for="cb_tamvaccineagreement_no">
+                            @Localizer["No"]
+                        </label>
+                    </div>
+                    <div class="form-check mb-2 mb-md-0">
+                        <input class="form-check-input" type="radio" name="TAMVaccineAgreement" id="cb_tamvaccineagreement_yes" value="true" @(Model.TAMVaccineAgreement != null && Model.TAMVaccineAgreement == true ? "checked" : string.Empty)>
+                        <label class="form-check-label" for="cb_tamvaccineagreement_yes">
+                            @Localizer["Yes"]
+                        </label>
+                    </div>
+                    <span class="invalid" id="TAMVaccineAgreementValidation" data-validation-for="TAMVaccineAgreement"></span>
+                </div>
+                @{
+                    string isHidden = "hidden";
+                    <div class="form-group col-md-12 otherVaccineClass hidden">
+                        <label>@Localizer["Data Vaksin"]</label>
+                    </div>
+                    <div class="form-group col-md-12 otherVaccineClass hidden">
+                        <label>@Localizer["Apakah Anda mendapatkan imunisasi (selain COVID) dalam 1 bulan terakhir atau berencana di 1 bulan yang akan datang?"]</label>
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="radio" name="OtherVaccine" id="cb_othervaccine_no" value="false" @(Model.OtherVaccine != null && Model.OtherVaccine == false ? "checked" : string.Empty)>
+                            <label class="form-check-label" for="cb_othervaccine_no">
+                                @Localizer["No"]
+                            </label>
+                        </div>
+                        <div class="form-check mb-2 mb-md-0">
+                            <input class="form-check-input" type="radio" name="OtherVaccine" id="cb_othervaccine_yes" value="true" @(Model.OtherVaccine != null && Model.OtherVaccine == true ? "checked" : string.Empty)>
+                            <label class="form-check-label font-red-flamingo" for="cb_othervaccine_yes">
+                                @Localizer["Yes"]
+                            </label>
+                        </div>
+                        <span class="invalid" id="OtherVaccineValidation" data-validation-for="OtherVaccine"></span>
+                    </div>
+
+                    if (ActivateDate <= DateTime.Now && Model.Id != Guid.Empty)
+                    {
+                    <div class="form-group col-md-12 vaccineScheduleEntry @isHidden otherVaccineNo">
+                        <label>@Localizer["Apakah Anda sudah melakukan vaksinasi COVID-19 pertama dan/atau kedua di luar TAM?"]</label>
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="radio" name="HaveVaccine" id="cb_havevaccine_no" value="false" @(Model.HaveVaccine != null && Model.HaveVaccine == false ? "checked" : string.Empty)>
+                            <label class="form-check-label" for="cb_havevaccine_no">
+                                @Localizer["No"]
+                            </label>
+                        </div>
+                        <div class="form-check mb-2 mb-md-0">
+                            <input class="form-check-input" type="radio" name="HaveVaccine" id="cb_havevaccine_yes" value="true" @(Model.HaveVaccine != null && Model.HaveVaccine == true ? "checked" : string.Empty)>
+                            <label class="form-check-label font-red-flamingo" for="cb_havevaccine_yes">
+                                @Localizer["Yes"]
+                            </label>
+                        </div>
+                        <span class="invalid" id="HaveVaccineValidation" data-validation-for="HaveVaccine"></span>
+                    </div>
+                    <div class="form-group col-md-12 vaccineScheduleEntry vaccineHaveVaccineYes @isHidden otherVaccineNo">
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="checkbox" name="VaccineAgreement" id="cb_vaccineagreement_yes" value="true" @(Model.VaccineAgreement == true ? "checked" : string.Empty)>
+                            <label class="form-check-label" for="cb_vaccineagreement_yes">
+                                @Localizer["Vaccine.Agreement.Info"]
+                            </label>
+                        </div>
+                        <span class="invalid" id="VaccineAgreementValidation" data-validation-for="VaccineAgreement"></span>
+                    </div>
+                    <div class="row material vaccineScheduleEntry @isHidden otherVaccineNo">
+                        <div class="form-group col-md-12">
+                            <div class="col-md-12 border border-dark Vaccine1">
+                                <label>@Localizer["Vaksin 1"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().DatePicker()
+.Name("VaccineDate1")
+.Value(Model.VaccineDate1)
+.Events(e => e.Change("startChange"))
+.HtmlAttributes(new { @class = "form-control VaccineYes", placeHolder = Localizer["Tanggal Vaksin"].Value })
+.Format("dd/MM/yyyy").Max(DateTime.Now)
+                                        )
+                                <span class="invalid" id="VaccineDateValidation" data-validation-for="VaccineDate1"></span>
+                                @(Html.Kendo().TextBox()
+.Name("VaccineHospital1")
+.Value(Model.VaccineHospital1)
+.HtmlAttributes(new { @class = "form-control VaccineYes", placeHolder = Localizer["Nama RS"].Value })
+                                        )
+                                <input type="hidden" id="VaccineHospital1Val" />
+                                <span class="invalid" id="VaccineHospital1Validation" data-validation-for="VaccineHospital1"></span>
+                                <div class="VaccineYes vaccineCard1Div">
+                                    @(Html.Kendo().Upload()
+    .Name("FileVaccine1")
+    .ShowFileList(true)
+    .Multiple(false)
+    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach Kartu Vaksin"].Value}"))
+    .Async(conf =>
+        conf
+        .AutoUpload(false)
+        .SaveUrl(Url.Content("~/api/vaccine/upload-public"))
+    )
+    .Files(config =>
+    {
+        if (!string.IsNullOrEmpty(Model.VaccineCard1))
+        {
+            var fileName = System.IO.Path.GetFileName(Model.VaccineCard1);
+            var extension = System.IO.Path.GetExtension(fileName);
+            config.Add().Name("Uploaded File").Extension(extension);
+        }
+    })
+    .Events(events =>
+    {
+    events.Success(@<text>function (e) { $("#VaccineCard1").val(e.response.url); }</text>);
+})
+.Validation(validation =>
+{
+validation.AllowedExtensions(allowedExtensions);
+validation.MaxFileSize(maxFileSize);
+})
+                                        )
+                                    @Html.HiddenFor(x => x.VaccineCard1, new { data_validation_for = "VaccineCard1" })
+
+                                    <input id="vaccineFile1" value="@Model.VaccineCard1" style="display:none" />
+                                    <span class="invalid" id="VaccineCard1Validation" data-validation-for="VaccineCard1"></span>
+                                </div>
+
+                                <input type="hidden" name="VaccineType1" value="external" />
+                                <div class="form-group col-md-12 isSideEffectsClass1 hidden">
+                                    <label>@Localizer["Vaccine.IsSideEffects"]</label>
+                                    <div class="form-check mb-3 mb-md-0">
+                                        <input class="form-check-input" type="radio" name="IsSideEffects1" id="cb_issideeffects1_no" value="false" @(Model.IsSideEffects1 != null && Model.IsSideEffects1 == false ? "checked" : string.Empty)>
+                                        <label class="form-check-label" for="cb_issideeffects1_no">
+                                            @Localizer["No"]
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2 mb-md-0">
+                                        <input class="form-check-input" type="radio" name="IsSideEffects1" id="cb_issideeffects1_yes" value="true" @(Model.IsSideEffects1 != null && Model.IsSideEffects1 == true ? "checked" : string.Empty)>
+                                        <label class="form-check-label font-red-flamingo" for="cb_issideeffects1_yes">
+                                            @Localizer["Yes"]
+                                        </label>
+                                    </div>
+                                    <span class="invalid" id="IsSideEffects1Validation" data-validation-for="IsSideEffects1"></span>
+                                </div>
+                                <div class="form-group col-md-12 SideEffects1YesClass hidden">
+                                    <label>@Localizer["Vaccine.SideEffects"]</label>
+                                    @Html.Kendo().TextBoxFor(x => x.SideEffects1).HtmlAttributes(new { @class = "form-control" })
+                                    <span class="invalid" id="SideEffects1Validation" data-validation-for="SideEffects1"></span>
+                                </div>
+                                <div class="form-group VaccineNo text-center">
+                                    <input type="button" name="btnVaccineSchedule1" id="btnVaccineSchedule1" class="btn btn-sm btn-primary" value="Set Schedule" data-trigger="btnVaccineSchedule1" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group col-md-12 vaccineScheduleEntry">
+                            <div class="col-md-12 border border-dark Vaccine2">
+                                <label>@Localizer["Vaksin 2"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().DatePicker()
+.Name("VaccineDate2")
+.Value(Model.VaccineDate2)
+.Events( e => e.Open("schedule2Click").Open("startChange"))
+//.Enable(isDisableVaccineOnTAM)
+.HtmlAttributes(new { @class = "form-control VaccineYes", placeHolder = Localizer["Tanggal Vaksin"].Value, @readonly = "readonly" })
+.Format("dd/MM/yyyy").Max(DateTime.Now)
+                                        )
+                                <span class="invalid" id="VaccineDate2Validation" data-validation-for="VaccineDate2"></span>
+
+                                @*<label>@Localizer["Nama RS"] <span class="required" aria-required="true"> * </span></label>*@
+                                @(Html.Kendo().TextBox()
+.Name("VaccineHospital2")
+.Value(Model.VaccineHospital2)
+//.Enable(!isDisableVaccine2 && isDisableVaccineOnTAM)
+.HtmlAttributes(new { @class = "form-control VaccineYes", placeHolder = Localizer["Nama RS"].Value })
+                                        )
+                                <input type="hidden" id="VaccineHospital2Val" />
+                                <span class="invalid" id="VaccineHospital2Validation" data-validation-for="VaccineHospital2"></span>
+
+                                <div class="vaccineCard2Div hidden">
+                                    @(Html.Kendo().Upload()
+    .Name("FileVaccine2")
+    .ShowFileList(true)
+    //.Enable(!isDisableVaccine2)
+    .Multiple(false)
+    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach Kartu Vaksin"].Value}"))
+    .Async(conf =>
+        conf
+        .AutoUpload(false)
+        .SaveUrl(Url.Content("~/api/vaccine/upload-public"))
+    )
+    .Files(config =>
+    {
+        if (!string.IsNullOrEmpty(Model.VaccineCard2))
+        {
+            var fileName = System.IO.Path.GetFileName(Model.VaccineCard2);
+            var extension = System.IO.Path.GetExtension(fileName);
+            config.Add().Name("Uploaded File").Extension(extension);
+        }
+    })
+    .Events(events =>
+    {
+    events.Success(@<text>function (e) { $("#VaccineCard2").val(e.response.url); }</text>);
+            })
+.Validation(validation =>
+{
+    validation.AllowedExtensions(allowedExtensions);
+    validation.MaxFileSize(maxFileSize);
+})
+                                            )
+                                    @Html.HiddenFor(x => x.VaccineCard2, new { data_validation_for = "VaccineCard2" })
+                                    <span class="invalid VaccineCard2Validation" id="VaccineCard2Validation" data-validation-for="VaccineCard2"></span>
+                                </div>
+                                @*<div class="form-group col-md-12">
+                            <span class="invalid hidden" id="FileVaccine2Validation">Jadwal vaksin harus diisi terlebih dahulu</span>
+                        </div>*@
+                                <input type="hidden" name="VaccineType2" value="external" />
+                                <div class="form-group col-md-12 isSideEffectsClass2 hidden">
+                                    <label>@Localizer["Vaccine.IsSideEffects"]</label>
+                                    <div class="form-check mb-3 mb-md-0">
+                                        <input class="form-check-input" type="radio" name="IsSideEffects2" id="cb_issideeffects2_no" value="false" @(Model.IsSideEffects2 != null && Model.IsSideEffects2 == false ? "checked" : string.Empty)>
+                                        <label class="form-check-label" for="cb_issideeffects2_no">
+                                            @Localizer["No"]
+                                        </label>
+                                    </div>
+                                    <div class="form-check mb-2 mb-md-0">
+                                        <input class="form-check-input" type="radio" name="IsSideEffects2" id="cb_issideeffects2_yes" value="true" @(Model.IsSideEffects2 != null && Model.IsSideEffects2 == true ? "checked" : string.Empty)>
+                                        <label class="form-check-label font-red-flamingo" for="cb_issideeffects2_yes">
+                                            @Localizer["Yes"]
+                                        </label>
+                                    </div>
+
+                                    <span class="invalid" id="IsSideEffects2Validation" data-validation-for="IsSideEffects2"></span>
+                                </div>
+                                <div class="form-group col-md-12 SideEffects2YesClass hidden">
+                                    <label>@Localizer["Vaccine.SideEffects"]</label>
+                                    @Html.Kendo().TextBoxFor(x => x.SideEffects2).HtmlAttributes(new { @class = "form-control" })
+                                    <span class="invalid" id="SideEffects2Validation" data-validation-for="SideEffects2"></span>
+                                </div>
+                                <div class="form-group VaccineNo text-center">
+                                    <input type="button" name="btnVaccineSchedule2" id="btnVaccineSchedule2" class="btn btn-sm btn-primary" value="Set Schedule" />
+
+                                </div>
+                                <div class="form-group col-md-12">
+                                    <span class="invalid hidden" id="SetSchedule2Validation">@Localizer["Vaccine.Schedule2.Validation"]</span>
+                                </div>
+
+
+                            </div>
+
+                        </div>
+                    </div>
+                    }
+                    //}
+
+
+                }
+                <input type="hidden" id="SHAStatus" name="SHAStatus" value="@SHAStatus" />
+                <input type="hidden" id="Status" name="Status" value="@Status" />
+            </div>
+            </div>
+        </div>
+    @*</div>*@
+
+    <div class="row mb-5">
+        <div class="col-2">
+            <label class="d-flex align-items-center">@Localizer["Send Update?"]</label>
+        </div>
+        <div class="col-8 text-justify">
+            @Localizer["Vaccine.Save.Info"]
+        </div>
+        <div class="col-2">
+            <div class="float-right">
+                <a class="btn btn-primary" href="#" data-trigger="submit" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to save this data?"]" data-callback="submitHandler" data-parameters-id="@Model.Id" data-interceptor="dataInterceptor">
+                    <i class="ft-check mr-1"></i> @Localizer["Save"]
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
+
+<partial name="~/Areas/Core/Views/Vaccine/_vaccineSchedule.cshtml" />
+
+<script type="text/javascript">
+
+    $("input[name='OtherVaccine']").on('click', function () {
+        HealthValidation();
+    });
+
+
+    $(".VaccineYes").addClass('hidden');
+    $(".VaccineNo").removeClass('hidden');
+    $(".vaccineScheduleEntry").addClass('hidden');
+    $("input[name='HaveVaccine']").on('click', function () {
+        HealthValidation();
+    });
+
+    $("input[name='VaccineAgreement']").on('click', function () {
+        HealthValidation();
+     });
+
+    $("#FileVaccine1").on('change', function () {
+        $(".isSideEffectsClass1").addClass("hidden");
+        $(".vaccineCard1Div .k-upload-selected").on('click', function () {
+            if ($(".vaccineCard1Div .k-file-success .k-file-name").html() != "") {
+                $(".isSideEffectsClass1").removeClass("hidden");
+            } else {
+                $(".isSideEffectsClass1").addClass("hidden");
+            }
+        });
+    });
+
+    $("#FileVaccine2").on('change', function () {
+        $(".isSideEffectsClass2").addClass("hidden");
+        $(".vaccineCard2Div .k-upload-selected").on('click', function () {
+            if ($(".vaccineCard2Div .k-file-success .k-file-name").html() != "") {
+                $(".isSideEffectsClass2").removeClass("hidden");
+            } else {
+                $(".isSideEffectsClass2").addClass("hidden");
+            }
+        });
+    });
+
+    $("input[name='IsSideEffects1']").on('click', function () {
+        if ($("#cb_issideeffects1_yes:checked").val() == "true") {
+            $(".SideEffects1YesClass").removeClass("hidden");
+            $("#SideEffects1").removeClass("hidden");
+        } else {
+            $(".SideEffects1YesClass").addClass("hidden");
+            $("#SideEffects1").addClass("hidden");
+        }
+    });
+
+    $("input[name='IsSideEffects2']").on('click', function () {
+        if ($("#cb_issideeffects2_yes:checked").val() == "true") {
+            $(".SideEffects2YesClass").removeClass("hidden");
+            $("#SideEffects2").removeClass("hidden");
+        } else {
+            $(".SideEffects2YesClass").addClass("hidden");
+            $("#SideEffects1").addClass("hidden");
+        }
+    });
+
+    function getGrid() {
+        return $("#vaccineGrid");
+    }
+
+    app.registerHandler("submitHandler", function () {
+        app.close($(this));
+        app.success("Success to update data");
+        app.refreshControl(getGrid());
+    });
+
+    app.registerHandler("dataInterceptor", function (d) {
+        let checkedRadios = $(".question-wrapper-root input[type='radio']:checked");
+        var i = 0;
+        d.VaccineQuestionList = $.map(checkedRadios, function (item) {
+            i++;
+
+            return {
+                Id: item.getAttribute("data-id"),
+                FormQuestionId: item.getAttribute("data-uid"),
+                VaccineId: $("input[name='Id']").val(),
+                Answer: item.value,
+                Gender: $("#Gender").val(),
+                VaccineQuestionDetailList: $.map($(".question-detail-wrapper-" + item.getAttribute("data-uid") + " input"), function (itemDetail) {
+                    if (itemDetail.getAttribute("datadetailid") != null && itemDetail.getAttribute("datadetailid") != "") {
+                        return {
+                            Id: itemDetail.getAttribute("questionDetailId"),
+                            FormQuestionDetailId: itemDetail.getAttribute("datadetailid"),
+                            VaccineQuestionId: item.getAttribute("data-id"),
+                            Answer: itemDetail.value
+                        };
+                    }
+
+                }),
+            };
+        });
+
+        //clean all invalid validation
+        let checkValidation = $("form .invalid");
+        $.map(checkValidation, function (item2) {
+            var attributeItem = item2.getAttribute("data-validation-for");
+            if (attributeItem != "" && attributeItem != undefined) {
+                var id = attributeItem.replace(".", "-") + "Validation";
+                $("#" + id).html("");
+            }
+
+        });
+        //clean all invalid validation
+
+        setTimeout(function () {
+            let checkValidation = $("form .invalid");
+            $.map(checkValidation, function (item2) {
+                var attributeItem = item2.getAttribute("data-validation-for");
+                if (attributeItem != "" && attributeItem != undefined) {
+                    var id = attributeItem.replace(".","-") + "Validation";
+
+                    if ($("#" + id).html() != "" && $("#" + id).html() != undefined) {
+                        app.error("@Localizer["Vaccine.Alert.Required"]");
+                    }
+                }
+
+            });
+        },1000);
+
+        return d;
+    });
+
+    function compareDates(date) {
+
+        for (i = 0; i < $("input[name='totalSchedule']").val(); i++) {
+            if (date.getDate() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getDate() &&
+                date.getMonth() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getMonth() &&
+                date.getYear() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getYear()) { return true; }
+        }
+    }
+        $(".form-check-input").on('click', function () {
+            collectQuestionAll();
+        });
+
+        $("input[name='btnVaccineSchedule1']").on("click", function (e) {
+            e.preventDefault();
+            $("#VaccineNo").html("1");
+            loadVaccineSchedule(1);
+        });
+        $("input[name='btnVaccineSchedule2']").on("click", function (e) {
+            e.preventDefault();
+            if ($("#VaccineDate1").val() != "" && $("#VaccineCard1").val() != "") {
+                $("#VaccineNo").html("2");
+                loadVaccineSchedule(2);
+                $("#SetSchedule2Validation").addClass("hidden");
+            } else {
+                $("#SetSchedule2Validation").removeClass("hidden");
+            }
+
+        });
+
+    $("input[name='AddressCopied']").on('click', function () {
+        if ($("input[name='AddressCopied']:checked").val() == "true") {
+            $("input[name='Domicile']").val($("input[name='Address']").val());
+        } else {
+            $("input[name='Domicile']").val("");
+        }
+
+    });
+
+    $("input[name='VaccineDate1']").on('change', function () {
+        if ($("input[name='VaccineDate1']").val() != "" && $("input[name='VaccineHospital1']").val() != "") {
+            $(".vaccineCard1Div").removeClass("hidden");
+        } else {
+            $(".vaccineCard1Div").addClass("hidden");
+        }
+    });
+
+    $("input[name='VaccineHospital1']").on('keyup', function () {
+        if ($("input[name='VaccineDate1']").val() != "" && $("input[name='VaccineHospital1']").val() != "") {
+            $(".vaccineCard1Div").removeClass("hidden");
+        } else {
+            $(".vaccineCard1Div").addClass("hidden");
+        }
+    });
+
+    $("input[name='VaccineDate2']").on('change', function () {
+        if ($("input[name='VaccineDate2']").val() != "" && $("input[name='VaccineHospital2']").val() != "") {
+            $(".vaccineCard2Div").removeClass("hidden");
+        } else {
+            $(".vaccineCard2Div").addClass("hidden");
+        }
+    });
+
+    $("input[name='VaccineHospital2']").on('keyup', function () {
+        if ($("input[name='VaccineDate2']").val() != "" && $("input[name='VaccineHospital2']").val() != "") {
+            $(".vaccineCard2Div").removeClass("hidden");
+        } else {
+            $(".vaccineCard2Div").addClass("hidden");
+        }
+    });
+
+
+    function CheckQuotaSchedule() {
+        $("#btnSaveVaccineSchedule").removeAttr('disabled');
+        var vaccineDate = $("#ScheduleVaccineDate").val();
+        splitDate = vaccineDate.split("/");
+        newVaccineDate = splitDate[2] + "-" + splitDate[1] + "-" + splitDate[0];
+        var vaccineHospital = $("#ScheduleVaccineHospital").val();
+
+        if (vaccineDate != "" && vaccineHospital != "") {
+            $.get(app.resolveUrl("~/api/vaccine/get-schedule-limit"), { vaccineDate: newVaccineDate, vaccineHospitalId: vaccineHospital },
+                function (data) {
+                    if (data <= 0) {
+                        data = 0;
+                        app.error("Quota is not available");
+                        $("#btnSaveVaccineSchedule").attr('disabled', 'disabled');
+                    }
+                    $('#Qty').val(data);
+                }
+            );
+        }
+    }
+
+    function collectQuestionAll() {
+        //var strQuestion = $("input[name='strQuestionId']").val().split(",");
+        var txt = "";
+        let checkedRadios = $(".question-wrapper-root input[type='radio']");
+
+        //var strQuestion = $("input[name='strQuestionId']").val().split(",");
+        var txt = "";
+        //$.each(strQuestion, function (i, dt) {
+        $.map(checkedRadios, function (item) {
+            dt = item.getAttribute("data-uid");
+            if (dt != "") {
+                var isChecked = "true";
+                if ($("#rb-" + dt + "-1:checked").val() == "true") {
+                    txt = txt + dt + ",";
+                    isChecked = "true";
+                    $(".divQuestionDetail-" + dt).removeClass("hidden");
+
+                } else {
+                    isChecked = "false";
+                    $(".divQuestionDetail-" + dt).addClass("hidden");
+                }
+
+                txtDetail = "";
+                var questionDetail = $("#strQuestionDetailId-" + dt).val();
+                if (questionDetail != "" && questionDetail != undefined) {
+                    arrQuestionDetail = questionDetail.split(",");
+
+                    $.each(arrQuestionDetail, function (i2, dt2) {
+                        if (dt2 != "") {
+                            if (isChecked == "true") {
+                                txtDetail += '"' + dt2 + '":"' + $("#Description_" + dt2).val() + '",';
+                            } else {
+                                txtDetail = "";
+                            }
+
+                            $("#Description_" + dt2).on('change', function () {
+                                collectQuestionAll();
+                            });
+                        }
+                    });
+                }
+
+                if (txtDetail.length > 0) {
+                    txtDetail = txtDetail.substr(0, txtDetail.length - 1);
+                }
+
+                //txt = txt + '{"' + dt + '":"' + isChecked + '",Detail:{' + txtDetail+'}},';
+            }
+
+        });
+
+        if (txt != "") {
+            txt = txt.substr(0, txt.length - 1);
+        }
+
+        $("input[name='OtherQuestion']").val(txt);
+    }
+
+    function HealthValidation() {
+        var error = false;
+        let checkedRadios = $(".question-wrapper-root input[type='radio']");
+
+        //var strQuestion = $("input[name='strQuestionId']").val().split(",");
+        var txt = "";
+        //$.each(strQuestion, function (i, dt) {
+        $.map(checkedRadios, function (item) {
+
+            dt = item.getAttribute("data-uid");
+            if ($("#rb-" + dt + "-1:checked").val() == "true") {
+
+                var questionDetail = $("#strQuestionDetailId-" + dt).val();
+                if (questionDetail != "") {
+                    arrQuestionDetail = questionDetail.split(",");
+                    txtDetail = "";
+                    $.each(arrQuestionDetail, function (i2, dt2) {
+                        if (dt2 != "") {
+                            if ($("#rb-" + dt + "-1:checked").val() == "true") {
+
+                                if ($("#criteria_type_" + dt2).val() != "") {
+                                    var description_type = $("#description_type_" + dt2).val();
+                                    var descVal = $("#Description_" + dt2).val();
+                                    var minTrueVal = $("#min_true_" + dt2).val();
+                                    var maxTrueVal = $("#max_true_" + dt2).val();
+                                    if (description_type == "numeric") {
+                                        descVal = parseInt(descVal);
+                                        minTrueVal = parseInt(minTrueVal);
+                                        maxTrueVal = parseInt(maxTrueVal);
+                                    }
+
+                                    if ($("#criteria_type_" + dt2).val() == "between") {
+                                        //if (minTrueVal != "" && maxTrueVal != "") {
+                                            if (descVal < minTrueVal || descVal > maxTrueVal) {
+                                                //console.log(descVal + "<" + minTrueVal + "||" + descVal + ">" + maxTrueVal);
+                                                error = true;
+                                            }
+                                        //}
+                                    } else if ($("#criteria_type_" + dt2).val() == "morethan") {
+                                        var diff = CompareQuestionAnswer(dt2);
+                                        //if (minTrueVal != "") {
+                                            if (diff < minTrueVal) {
+                                                //console.log("tes true2-" + dt2 + "=" + diff + "<" + minTrueVal);
+                                                error = true;
+                                            }
+                                        //}
+                                    } else if ($("#criteria_type_" + dt2).val() == "lessthan") {
+                                        var diff = CompareQuestionAnswer(dt2);
+
+                                        //if (minTrueVal != "") {
+                                            if (diff > minTrueVal) {
+                                                //console.log("cek true tes3=" + diff + "||" + minTrueVal)
+                                                error = true;
+                                            }
+                                        //}
+
+                                    }
+                                } else {
+                                    error = true;
+                                }
+
+
+                            }
+
+                        }
+                    });
+                } else {
+                    error = true;
+                }
+
+
+
+            }
+        });
+
+        //console.log(error)
+        if (error) {
+            $("#SHAStatus").val("false");
+            //show vaccine schedule
+            $(".otherVaccineClass").addClass("hidden");
+            $(".vaccineScheduleEntry").addClass("hidden");
+            $("#cb_vaccineagreement_no").attr('checked', 'checked');
+            $("#cb_vaccineagreement_yes").removeAttr('checked');
+
+        } else {
+            $("#SHAStatus").val("true");
+
+            $(".otherVaccineClass").removeClass("hidden");
+            if ($("#cb_othervaccine_yes:checked").val() == undefined && $("#cb_othervaccine_no:checked").val()==undefined) {
+                $(".otherVaccineClass").addClass("hidden");
+            }else if ($("#cb_othervaccine_yes:checked").val() == "true") {
+                $(".otherVaccineNo").addClass('hidden');
+                $("#SHAStatus").val("false");
+            } else if ($("#cb_othervaccine_yes:checked").val() == "false"){
+                $(".otherVaccineNo").removeClass('hidden');
+                $("#SHAStatus").val("true");
+            }
+
+            if ($("#SHAStatus").val() == "false" || $("#Status").val()=="Tidak Vaksin") {
+                $(".vaccineScheduleEntry").addClass("hidden");
+                $("#cb_vaccineagreement_no").attr('checked', 'checked');
+                $("#cb_vaccineagreement_yes").removeAttr('checked');
+            } else {
+                //debugger;
+                $(".vaccineScheduleEntry").removeClass("hidden");
+                $(".vaccineAgreementYes").removeClass("hidden");
+
+                if ($("#cb_havevaccine_yes:checked").val() == "true") {
+                    $(".vaccineHaveVaccineYes").addClass('hidden');
+                    $(".VaccineYes").removeClass('hidden');
+                    $(".VaccineNo").addClass('hidden');
+                    $("#VaccineCard1").val("");
+                    $("#VaccineCard2").val("");
+                    if ($("#VaccineDate1").data("kendoDatePicker") != undefined) {
+                        $("#VaccineDate1").data("kendoDatePicker").readonly(false);
+                    }
+                    if ($("#VaccineDate2").data("kendoDatePicker") != undefined) {
+                        $("#VaccineDate2").data("kendoDatePicker").readonly(false);
+                    }
+                    $("#VaccineHospital1").removeAttr("readonly");
+                    $("#VaccineHospital2").removeAttr("readonly");
+                } else {
+                    $(".vaccineHaveVaccineYes").removeClass('hidden');
+                    $(".VaccineNo").removeClass('hidden');
+                    $(".VaccineYes").addClass('hidden');
+                    if ($("#VaccineDate1").data("kendoDatePicker") != undefined) {
+                        $("#VaccineDate1").data("kendoDatePicker").readonly();
+                    }
+                    if ($("#VaccineDate2").data("kendoDatePicker") != undefined) {
+                        $("#VaccineDate2").data("kendoDatePicker").readonly();
+                    }
+                    $("#VaccineHospital1").attr("readonly", "readonly");
+                    $("#VaccineHospital2").attr("readonly", "readonly");
+                }
+
+                if ($("#cb_vaccineagreement_yes:checked").val() == "true") {
+                    $("#btnVaccineSchedule1").removeAttr("disabled");
+                    $("#btnVaccineSchedule2").removeAttr("disabled");
+
+                } else {
+                    $("#btnVaccineSchedule1").attr("disabled", "disabled");
+                    $("#btnVaccineSchedule2").attr("disabled", "disabled");
+                }
+
+                //if vaccine schedule set
+                if ($("#VaccineDate1").val() != "") {
+                    $(".VaccineYes").removeClass('hidden');
+                }
+
+                //if ($("#VaccineDate1").val() != "" && $("#VaccineHospital1").val() != "") {
+                //    $(".vaccineCard1Div").removeClass("hidden");
+                //}
+
+                if ($("#VaccineDate2").val() != "" && $("#VaccineHospital2").val() != "") {
+                    $(".vaccineCard2Div").removeClass("hidden");
+                }
+            }
+        }
+
+        for (i = 1; i <= 2; i++) {
+            $(".isSideEffectsClass" + i).addClass("hidden");
+
+            if ($(".vaccineCard" + i + "Div .k-file-name").html() != "" && $(".vaccineCard" + i + "Div .k-file-name").html() != undefined) {
+                $(".isSideEffectsClass" + i).removeClass("hidden");
+
+                $("#SideEffects" + i).addClass("hidden");
+                if ($("#cb_issideeffects"+i+"_yes:checked").val() == "true") {
+                    $(".SideEffects" + i + "YesClass").removeClass("hidden");
+                    $("#SideEffects" + i).removeClass("hidden");
+                } else {
+                    $(".SideEffects" + i + "YesClass").addClass("hidden");
+                    $("#SideEffects" + i).addClass("hidden");
+                }
+            } else {
+                $(".isSideEffectsClass"+i).addClass("hidden");
+            }
+
+        }
+
+    }
+
+    function CompareQuestionAnswer(dt2) {
+
+        var diff = $("#Description_" + dt2).val();
+        if ($("#description_type_" + dt2).val() == "date") {
+            if ($("#Description_" + dt2).val() != "") {
+                diff = $("#Description_" + dt2).val().split('/')[2] + "-" + $("#Description_" + dt2).val().split('/')[1] + "-" + $("#Description_" + dt2).val().split('/')[0];
+            }
+
+            if ($("#issubmitted_date_" + dt2).val() == "true") {
+
+                //var submissionDate = $("input[name='SubmissionDate']").val();
+                //if (submissionDate == "") {
+                    today = new Date();
+                //} else {
+
+                //    today = Date.parse(submissionDate);
+                //}
+
+                var dd = String(today.getDate()).padStart(2, '0');
+                var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+                var yyyy = today.getFullYear();
+
+                DescriptionDate = $("#Description_" + dt2).val().split("/")[2] + "-" + $("#Description_" + dt2).val().split("/")[1] + "-" + $("#Description_" + dt2).val().split("/")[0];
+                var miliday = 24 * 60 * 60 * 1000;
+                diff = (today - Date.parse(DescriptionDate)) / miliday;
+                diff = Math.floor(diff);
+                //console.log(diff);
+            }
+        }
+        return diff;
+    }
+    setTimeout(function () {
+        var shaStatus = "@SHAStatus";
+        if (shaStatus.toLowerCase() == "false") {
+            $(".vaccineScheduleEntry").addClass("hidden");
+        } else {
+            $(".vaccineScheduleEntry").removeClass("hidden");
+        }
+
+        HealthValidation();
+        collectQuestionAll();
+        $(".identityImageDiv .k-file-name").html("<a href='@Url.Content("~/api/vaccine/download-image?Id="+Model.Id + "&ImageType=IdentityId")' target='_blank' >Uploaded File</a>");
+        $(".vaccineCard1Div .k-file-name").html("<a href='@Url.Content("~/api/vaccine/download-image?Id="+Model.Id + "&ImageType=VaccineCard1")' target='_blank' >Uploaded File</a>");
+        $(".vaccineCard2Div .k-file-name").html("<a href='@Url.Content("~/api/vaccine/download-image?Id="+Model.Id + "&ImageType=VaccineCard2")' target='_blank' >Uploaded File</a>");
+
+    },1000);
+</script>

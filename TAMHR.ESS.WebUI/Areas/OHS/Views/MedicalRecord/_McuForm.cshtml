@@ -1,0 +1,1443 @@
+﻿@model TAMHR.ESS.Domain.PersonalDataMedicalHistory
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+
+@{
+
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "multiselect", "numeric");
+
+
+    var isNew = Model.Id == default(Guid);
+}
+
+@section styles{
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>
+
+    </style>
+}
+
+
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+        <h4 class="modal-title">@Localizer["Input Mcu"]</h4>
+    </div>
+    <form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/ohs/medical-record/insertMcu" : "~/api/ohs/medical-record/updateMcu")" data-target="McuGrid" data-trigger="McuGrid">
+        @*<form id="medicalRecordForm">*@
+        @Html.HiddenFor(x => x.Id)
+        <div class="modal-body">
+        <div class="row">
+            <!-- Paket -->
+            <div class="col-sm-1">
+                    <div class="form-group">
+                        <label>@Localizer["Paket"]</label>
+                        @(
+                        Html.Kendo().ComboBox()
+                        .Name("Paket")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("ObjectText")
+                        .DataValueField("ObjectCode")
+                        //.Placeholder(Localizer["Please select Paket"].Value)
+                        .Value(Model.Paket ?? string.Empty)
+                        .BindTo(new[]
+                        {
+                    new { ObjectCode = "1", ObjectText = "1" },
+                    new { ObjectCode = "2", ObjectText = "2" },
+                    new { ObjectCode = "3", ObjectText = "3" }
+                        })
+                        )
+
+                </div>
+            </div>
+
+            <!-- Tahun MCU -->
+            <div class="col-1">
+                <div class="form-group" style="width: 100px;">
+                    <label>@Localizer["Tahun MCU"]<span class="required" aria-required="true"> * </span></label>
+                         @(Html.Kendo().NumericTextBoxFor(x => x.YearPeriod)
+                        .HtmlAttributes(new { @class = "form-control", maxlength = "16" })
+                        @*.Placeholder(Localizer["Please Input"].Value)*@
+                        .Spinners(false)
+                        .Min(0)
+                        .Format("#")
+                        .Decimals(0)
+                        .Round(false)
+                        //.Deferred()
+                        )
+                        
+
+                </div>
+            </div>
+
+            <!-- Lokasi -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Lokasi"] <span class="required" aria-required="true"> * </span></label>
+                   @* @(Html.Kendo().ComboBox()
+                        .Name("LokasiMCU")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("Klinik")
+                        .DataValueField("Klinik")
+                        .Placeholder(Localizer["Please select Area"].Value)
+                        .Value(Model.LokasiMCU == default(string) ? string.Empty : Model.LokasiMCU)
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-UpkkDropDown")))
+                        .Sort(sort => sort.Add("Klinik"))
+                        ))*@
+                    @Html.TextBoxFor(x => x.LokasiMCU, new {@class = "form-control"})
+
+                </div>
+            </div>
+
+            <!-- Penyakit yang pernah diderita -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label><span>  </span>@Localizer["Penyakit yang pernah diderita"]</label>
+                    @Html.TextBoxFor(x => x.PenyakitPernahDiderita, new {@class = "form-control"})
+
+                </div>
+            </div>
+            <!-- Olahraga -->
+            <div class="col-1">
+                <div class="form-group">
+                    <label>@Localizer["Olahraga"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Olahraga")
+                        .HtmlAttributes(new { style = "width:140%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK","KADANG-KADANG" })
+                        .Value(Model.Olahraga ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Frequensi -->
+            <div class="col-2">
+                <div class="form-group">
+                    <label>@Localizer["Freaquensi/Minggu"]</label>
+                    @(Html.Kendo().NumericTextBoxFor(x => x.FrequencyPerMinggu)
+                        .HtmlAttributes(new { @class = "form-control", maxlength = "16" })
+                        //.Placeholder(Localizer["Please Input"].Value)
+                        .Spinners(false)
+                        .Min(0)
+                        .Format("#")
+                        .Decimals(0)
+                        .Round(false)
+                        //.Deferred()
+                        )
+
+                </div>
+            </div>
+
+
+
+        </div>
+        <div class="row">
+            <!-- Noreg -->
+            <div class="col-2" style="margin-right: 10px;">
+                <div class="form-group">
+                    <label>@Localizer["TIDAK Reg"]</label>
+                    @* @(Html.Kendo().ComboBox()
+                    .Name("Noreg")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisiCode", @required = "required" })
+                    .DataTextField("Noreg")
+                    .DataValueField("Noreg")
+                    .Placeholder(Localizer["NoReg"].Value)
+                    .Value(Model.NoReg == default(string) ? string.Empty : Model.NoReg)
+                    //.Value(Model.DivisiCode.ToString())
+                    .Events(events =>
+                    {
+                    events.Change("onchangeNoreg");
+                    })
+
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-Noreg")))
+                    )
+                    .SelectedIndex(-1)
+                    )*@
+                    <input type="text" name="NoregMcu" id="NoregMcu" class="form-control" readonly="readonly" value="@Model.NoReg" />
+
+                </div>
+            </div>
+
+            <!-- Nama -->
+            <div class="col-sm-2" style="margin-right: 25px;padding-right: 1px;">
+                <div class="form-group">
+                    <label>@Localizer["Nama"]</label>
+                    <input type="text" name="namaMcu" id="namaMcu" class="form-control" readonly="readonly" value="@Model.NoReg" />
+                    @*@Html.TextBoxFor(x => x.NoReg, new { @required = "required", @class = "form-control", @data_validation_for = "Province", @placeholder = Localizer["Please input province"].Value, @readonly = "readonly" })*@
+                </div>
+            </div>
+            <!-- Merokok -->
+            <div class="col-1">
+                <div class="form-group">
+                    <label>@Localizer["Merokok"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Perokok")
+                        .HtmlAttributes(new { style = "width:140%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.Perokok ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Batang/hari -->
+            <div class="col-2">
+                <div class="form-group">
+                    <label>@Localizer["Batang/Hari"]</label>
+                    @*<input type="number" style="width:50%" name="Usia" class="form-control" value="@Model.Usia" />*@
+                    @(Html.Kendo().NumericTextBoxFor(x => x.JumlahBatangPerHari)
+
+                        .HtmlAttributes(new { @class = "form-control", maxlength = "16" })
+                        //.Placeholder(Localizer["Please Input"].Value)
+                        .Spinners(false)
+                        .Min(0)
+                        .Format("#")
+                        .Decimals(0)
+                        .Round(false)
+                        //.Deferred()
+                        )
+                    @* @(Html.Kendo().NumericTextBoxFor(x => x.OrderSequence)
+                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OrderSequence" })
+                    .Decimals(0)
+                    .Format("#")
+                    .Min(1)
+                    )*@
+                </div>
+            </div>
+
+            <!-- Kebisingan -->
+            <div class="col-1" style="margin-right: 12px;">
+                <div class="form-group">
+                    <label>@Localizer["Kebisingan"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Kebisingan")
+                        .HtmlAttributes(new { style = "width:140%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.Kebisingan ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Suhu Extrime -->
+            <div class="col-1" style="margin-right: 13px;">
+                <div class="form-group" style="width: 100px;">
+                    <label>@Localizer["Suhu Extrime"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("SuhuExtrime")
+                        .HtmlAttributes(new { style = "width:90%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.SuhuExtremePanasAtauDingin ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Radiasi -->
+            <div class="col-1">
+                <div class="form-group">
+                    <label>@Localizer["Radiasi"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Radiasi")
+                        .HtmlAttributes(new { style = "width:140%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.Radiasi ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Usia -->
+            <div class="col-2" style="margin-right: 10px;">
+                <div class="form-group">
+                    <label>@Localizer["Usia (Year)"]</label>
+                    @*<input type="number" name="Usia" class="form-control" value="@Model.Usia" />*@
+                    @(Html.Kendo().NumericTextBoxFor(x => x.Usia)
+
+                        .HtmlAttributes(new { @class = "form-control", maxlength = "16" })
+                        @*.Placeholder(Localizer["Please Input"].Value)*@
+                        .Spinners(false)
+                        .Min(0)
+                        .Format("#")
+                        .Decimals(0)
+                        .Round(false)
+                        //.Deferred()
+                        )
+                </div>
+            </div>
+
+            <!-- Jenis Kelamin -->
+            <div class="col-sm-2" style="margin-right: 24px;">
+                <div class="form-group">
+                    <label>@Localizer["Jenis Kelamin"]</label>
+                    @*   @(
+                    Html.Kendo().ComboBox()
+                    .Name("JenisKelamin")
+                    .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                    .DataTextField("Text")
+                    .DataValueField("Value")
+                    .BindTo(new[]
+                    {
+                    new { Text = "Laki-Laki", Value = "L" },
+                    new { Text = "Perempuan", Value = "P" }
+                    })
+                    .Value(Model.NoReg ?? "")
+                    )*@
+                    <input type="text" name="genderMcu" id="genderMcu" class="form-control" readonly="readonly" value="@Model.NoReg" />
+                    @*@Html.TextBoxFor(x => x.NoReg, new { @class = "form-control", @readonly = "readonly" })*@
+                </div>
+            </div>
+
+            <!-- Miras -->
+            <div class="col-md-3 lg" style="margin-right: 15px;">
+                <div class="form-group">
+                    <label>@Localizer["Minum Alkohol"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Miras")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK","KADANG-KADANG" })
+                        .Value(Model.Miras ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Getaran Lokal -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["Getaran Lokal"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("GetaranLokal")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.GetaranLokal ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Getaran Tubuh -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Getaran Tubuh"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("GetaranSeluruhTubuh")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.GetaranSeluruhTubuh ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Lainnya -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["LainNya"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("LainnyaFisika")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.LainnyaFisika ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- RiwayatHipertensi -->
+            <div class="col-2" style="margin-right: 10px;">
+                <div class="form-group">
+                    <label>@Localizer["Riwayat Hipertensi"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatHipertensi")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatHipertensi ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Riwayat Diabetes -->
+            <div class="col-sm-2" style="margin-right: 24px;">
+                <div class="form-group">
+                    <label>@Localizer["Riwayat Diabetes"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatDiabetes")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatDiabetes ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- GerakanBerulangDenganTangan -->
+            <div class="col-3" style="margin-right: 15px;">
+                <div class="form-group">
+                    <label>@Localizer["Gerakan Berulang Dengan Tangan"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("GerakanBerulangDenganTangan")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.GerakanBerulangDenganTangan ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Debu -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["Debu"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Debu")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.Debu ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Asap -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Asap"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("Asap")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.Asap ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Limbahb3 -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["LimbahB3"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("LimbahB3")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.LimbahB3 ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- RiwayatPenyakitJantung -->
+            <div class="col-2" style="margin-right: 10px;">
+                <div class="form-group" style="width: 180px;">
+                    <label>@Localizer["Riwayat Penyakit Jantung"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatPenyakitJantung")
+                        .HtmlAttributes(new {style = "width:87%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatPenyakitJantung ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- RiwayatPenyakitGinjal -->
+            <div class="col-sm-2" style="margin-right: 24px;">
+                <div class="form-group" style="width: 180px;">
+                    <label>@Localizer["Riwayat Penyakit Ginjal"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatPenyakitGinjal")
+                        .HtmlAttributes(new { style = "width:87%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatPenyakitGinjal ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- AngkatBerat -->
+            <div class="col-3" style="margin-right: 15px;">
+                <div class="form-group">
+                    <label>@Localizer["Angkat Berat"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("AngkatBerat")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.AngkatBerat ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- LimbahLainNya -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["LimbahLain"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("LainnyaKimia")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.LainnyaKimia ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Bakteri/Virus -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Bakteri/Virus"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("BakteriAtaVirusAtauJamurAtauParasit")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.BakteriAtaVirusAtauJamurAtauParasit ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Lain-Lain -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["LainNya"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("LainnyaBiologi")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.LainnyaBiologi ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- RiwayatGangguanMental -->
+            <div class="col-2" style="margin-right: 10px;">
+                <div class="form-group" style="width: 186px;">
+                    <label>@Localizer["Riwayat Gangguan Mental"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatGangguanMental")
+                        .HtmlAttributes(new {style = "width:84%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatGangguanMental ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- RiwayatPenyakitLain -->
+            <div class="col-sm-2" style="margin-right: 24px;">
+                <div class="form-group">
+                    <label>@Localizer["Riwayat Penyakit Lain"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("RiwayatPenyakitLain")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.RiwayatPenyakitLain ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- PenyakitSaatIni -->
+            <div class="col-3" style="margin-right: 15px;">
+                <div class="form-group">
+                    <label>@Localizer["Penyakit Saat Ini"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("PenyakitSaatIni")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.PenyakitSaatIni ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Duduk>4H -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["Duduk>4H"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("DudukLama")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.DudukLama ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Berdiri -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Berdiri>4H"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("BerdiriLama")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.BerdiriLama ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Tidak ergonomis -->
+            <div style="width: 11%;">
+                <div class="form-group">
+                    <label>@Localizer["Tidak Ergonomis"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("PosisiTubuhTidakErgonomis")
+                        .HtmlAttributes(new { style = "width:69%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.PosisiTubuhTidakErgonomis ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Satus Hasil MCU -->
+            <div class="col-4" style="margin-right: 33px;">
+                <div class="form-group">
+                    <label>@Localizer["Satus Hasil MCU/Fitness to Work"]<span class="required" aria-required="true"> * </span></label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("HealthEmployeeStatus")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "FIT", "FIT DENGAN CATATAN", "FIT DENGAN RESTRIKSI", "TEMPORARY UNFIT" })
+                        .Value(Model.HealthEmployeeStatus ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Sedang berobat -->
+            <div class="col-3" style="margin-right: 15px;">
+                <div class="form-group">
+                    <label>@Localizer["SedangBerobat"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("SedangBerobat")
+                        .HtmlAttributes(new { style = "width:100%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.SedangBerobat ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- CahayCukup -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Cahaya Cukup"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("PencahayaanTidakSesuai")
+                        .HtmlAttributes(new { style = "width:78%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.PencahayaanTidakSesuai ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- TatapLayar >4H -->
+            <div style="width: 11%;margin-left: -8px;">
+                <div class="form-group">
+                    <label>@Localizer["Tatap Layar >4H"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("BekerjaDepanLayar")
+                        .HtmlAttributes(new { style = "width:75%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.BekerjaDepanLayar ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+            <!-- Lain ergonomis -->
+            <div style="width: 9%;margin-left: -3px;">
+                <div class="form-group">
+                    <label>@Localizer["LainNya"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("LainnyaErgonomis")
+                        .HtmlAttributes(new { style = "width:85%;left: -8px;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.LainnyaErgonomis ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!--  -->
+            <div class="col-4" style="margin-right: 32px;">
+            </div>
+
+            <!-- Obat Yang diberikan -->
+            <div class="col-3" style="margin-right: 17px;">
+                <div class="form-group">
+                    <label>@Localizer["Obat Yang Diberikan"]</label>
+                    @Html.TextBoxFor(x => x.ObatYangDiberikan, new { @class = "form-control"})
+                </div>
+            </div>
+
+            <!-- Tinggi Badan -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["Tinggi Badan"]</label>
+                    @Html.TextBoxFor(x => x.Tinggi, new { @class = "form-control"})
+                </div>
+            </div>
+
+            <!-- Berat Badan -->
+            <div style="width: 10%;">
+                <div class="form-group">
+                    <label>@Localizer["Berat Badan"]</label>
+                    @Html.TextBoxFor(x => x.Berat, new { @class = "form-control"})
+                </div>
+            </div>
+            <!-- BMI -->
+            <div style="width: 9%;">
+                <div class="form-group">
+                    <label>@Localizer["BMI"]</label>
+                    @Html.TextBoxFor(x => x.StatusBMI, new { @class = "form-control"})
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!--  -->
+            <div class="col-4" style="margin-right: 26px;">
+            </div>
+
+            <!-- Saran/Anjuran -->
+            <div class="col-7">
+                <div class="form-group">
+                    <label>@Localizer["Saran/Anjuran"]</label>
+                    @Html.TextAreaFor(x => x.Saran, new { @class = "form-control", rows = 4 })
+                </div>
+            </div>
+
+
+        </div>
+        <div>
+            <hr style="height: 2px; background-color: black; border: none;">
+
+        </div>
+
+        <div class="row">
+            <!-- TekananDarahSistol -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["TekananDarahSistol"]</label>
+                    @Html.TextBoxFor(x => x.TekananDarahSistol, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- TekananDarahDiastol -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["TekananDarahDiastol"]</label>
+                    @Html.TextBoxFor(x => x.TekananDarahDiastol, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HasilPapsmear -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["HasilPapsmear"]</label>
+                    @Html.TextBoxFor(x => x.HasilPapsmear, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanPamsmear -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanPamsmear"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanPamsmear")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "ABNORMAL" })
+                        .Value(Model.KesimpulanPamsmear ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Hemoglobine -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["Hemoglobine"]</label>
+                    @Html.TextBoxFor(x => x.Hemoglobine, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KategoriTekananDarah -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["TekananDarah"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("TekananDarah")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "PREHIPERTENSI", "HIPERTENSI 1 ", "HIPERTENSI 2 " })
+                        .Value(Model.TekananDarah ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- HasilEKG -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["HasilEKG"]</label>
+                    @Html.TextBoxFor(x => x.HasilEKG, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- Hematocrit -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["Hematocrit"]</label>
+                    @Html.TextBoxFor(x => x.Hematocrit, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- LeucocyteCount -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["LeucocyteCount/WBC"]</label>
+                    @Html.TextBoxFor(x => x.Leucocyte, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- TotalPlateletsCount -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["TotalPlateletsCount"]</label>
+                    @Html.TextBoxFor(x => x.TotalPlatelets, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KesimpulanEKG -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanEKG"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanEKG")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "ABNORMAL" })
+                        .Value(Model.KesimpulanEKG ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- KesimpulanTreadmill -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanTreadmill"]</label>
+                    @Html.TextBoxFor(x => x.KesimpulanTreadmill, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- Eryrocyte -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["EryrocytecCount/RBC"]</label>
+                    @Html.TextBoxFor(x => x.Eryrocyte, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- MCV -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["MCV"]</label>
+                    @Html.TextBoxFor(x => x.MCV, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- MCH -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["MCH"]</label>
+                    @Html.TextBoxFor(x => x.MCH, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KesanPhotoRontgen -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KesanPhotoRontgen"]</label>
+                    @Html.TextBoxFor(x => x.KesanPhotoRontgen, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HasilRontgen -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["HasilRontgen"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("HasilRontgen")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "ABNORMAL" })
+                        .Value(Model.HasilRontgen ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- MCHC -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["MCHC"]</label>
+                    @Html.TextBoxFor(x => x.MCHC, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- ESR -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ESR"]</label>
+                    @Html.TextBoxFor(x => x.ESR, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- GlucoseFasting -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["GlucoseFasting"]</label>
+                    @Html.TextBoxFor(x => x.GlukosaPuasa, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KesimpulanUsgAbdomen -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanUsgAbdomen"]</label>
+                    @Html.TextBoxFor(x => x.KesimpulanUsgAbdomen, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HasilUsgMammae -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["HasilUsgMammae"]</label>
+                    @Html.TextBoxFor(x => x.HasilUsgMammae, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HbA1c -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["HbA1c"]</label>
+                    @Html.TextBoxFor(x => x.HbA1c, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- SGOT -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["SGOT"]</label>
+                    @Html.TextBoxFor(x => x.SGOT, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- SGPT -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["SGPT"]</label>
+                    @Html.TextBoxFor(x => x.SGPT, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KesimpulanUsgMammae -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanUsgMammae"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanUsgMammae")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "MASSA GINAK", "KANKER" })
+                        .Value(Model.KesimpulanUsgMammae ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- KesimpulanFisik -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanFisik"]</label>
+                    @Html.TextBoxFor(x => x.KesimpulanFisik, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- GammaGT -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["GammaGT"]</label>
+                    @Html.TextBoxFor(x => x.GammaGT, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HBsAg -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["HBsAg"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("HBsAg")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "REACTIVE", "NON REACTIVE" })
+                        .Value(Model.HBsAg ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Ureum -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["Ureum"]</label>
+                    @Html.TextBoxFor(x => x.Ureum, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- KesimpulanButaWarna -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanButaWarna"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanButaWarna")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "PARTIAL", "TOTAL" })
+                        .Value(Model.KesimpulanButaWarna ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- KesimpulanPemVisusMata -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanPemVisusMata"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanPemVisusMata")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "NORMAL", "MIOPI", "HIPERMETROPI", "PRESBIOPI" })
+                        .Value(Model.KesimpulanPemVisusMata ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- Creatinin -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["Creatinin"]</label>
+                    @Html.TextBoxFor(x => x.Kreatinin, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- AsamUrat -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["UricAcid"]</label>
+                    @Html.TextBoxFor(x => x.AsamUrat, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- GFR -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["GFR"]</label>
+                    @Html.TextBoxFor(x => x.GFR, new { @class = "form-control" })
+                </div>
+            </div>
+
+        </div>
+        <div>
+            <hr style="height: 2px; background-color: black; border: none;">
+
+        </div>
+        <div class="row">
+            <!-- KolesterolTotal -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["KolesterolTotal"]</label>
+                    @Html.TextBoxFor(x => x.KolesterolTotal, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- HDL -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["HDL"]</label>
+                    @Html.TextBoxFor(x => x.HDL, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- ScoreQualitative -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreQualitative"]</label>
+                    @Html.TextBoxFor(x => x.ScoreQualitative, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanQualitative -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanQualitative"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanQualitative")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanQualitative ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Triglyceride -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Triglyceride"]</label>
+                    @Html.TextBoxFor(x => x.Triglyceride, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- PlateletAggregation -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["PlateletAggregation"]</label>
+                    @Html.TextBoxFor(x => x.PlateletAggregation, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- ScoreCareerDevelopment -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreCareerDevelopment"]</label>
+                    @Html.TextBoxFor(x => x.ScoreCareerDevelopment, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanCareerDevelopment -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanCareerDevelopment"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanCareerDevelopment")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanCareerDevelopment ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- CEA -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["CEA"]</label>
+                    @Html.TextBoxFor(x => x.CEA, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- PSA -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["PSA"]</label>
+                    @Html.TextBoxFor(x => x.PSA, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- ScoreAmbiguity -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreAmbiguity"]</label>
+                    @Html.TextBoxFor(x => x.ScoreAmbiguity, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanAmbiguity -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanAmbiguity"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanAmbiguity")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanAmbiguity ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- VitD25OH -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["VitD25-OH"]</label>
+                    @Html.TextBoxFor(x => x.VitD25OH, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- UrinDarah -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Darah(Makro/Mikro)"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("UrinDarah")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.UrinDarah ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- ScoreConflict -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreConflict"]</label>
+                    @Html.TextBoxFor(x => x.ScoreConflict, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanConflict -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanConflict"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanConflict")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanConflict ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- UrinKristal -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Kristal"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("UrinKristal")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.UrinKristal ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- UrinLeukosit -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Leukosit"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("UrinLeukosit")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.UrinLeukosit ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- ScoreResponsibilityforPeople -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreResponsibilityforPeople"]</label>
+                    @Html.TextBoxFor(x => x.ScoreResponsibilityforPeople, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanResponsibilityforPeople -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanResponsibilityforPeople"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanResponsibilityforPeople")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanResponsibilityforPeople ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- UrinBakteri -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Bakteri"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("UrinBakteri")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "YA", "TIDAK" })
+                        .Value(Model.UrinBakteri ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+
+            <!-- LDL -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["LDL"]</label>
+                    @Html.TextBoxFor(x => x.LDL, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- ScoreQuantitative -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["ScoreQuantitative"]</label>
+                    @Html.TextBoxFor(x => x.ScoreQuantitative, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanQuantitative -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanQuantitative"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KesimpulanQuantitative")
+                        .HtmlAttributes(new { style = "width:85%;", @class = "form-control" })
+                        .BindTo(new[] { "RINGAN", "SEDANG", "BERAT" })
+                        .Value(Model.KesimpulanQuantitative ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Fibrinogen -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Fibrinogen"]</label>
+                    @Html.TextBoxFor(x => x.Fibrinogen, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- Ca125 -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["CA-125"]</label>
+                    @Html.TextBoxFor(x => x.Ca125, new { @class = "form-control" })
+                </div>
+            </div>
+
+            <!-- KesimpulanLab -->
+            <div class="col-sm-2">
+                <div class="form-group">
+                    <label>@Localizer["KesimpulanLaboratorium"]</label>
+                    @Html.TextBoxFor(x => x.KesimpulanLab, new { @class = "form-control" })
+                </div>
+            </div>
+        </div>
+
+    </div>
+    @*<div class="modal-footer">
+    <a href="javascript:;" class="btn red-haze" data-trigger="submit" data-callback="updateHandlerMcu">@Localizer["Save"]</a>
+    <a class="btn red-haze" id="submitForm">@Localizer["Save"]</a>
+    <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+    </div>*@
+</form>
+<div class="modal-footer">
+    <a href="javascript:;" id="submitFormMcu" class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    @*<a class="btn red-haze" id="submitForm">@Localizer["Save"]</a>*@
+    <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+</div>
+
+
+<script>
+
+    $(function () {
+        function prosesDataMcu() {
+            // Simulasi proses async (contoh: AJAX, setTimeout, dsb.)
+            setTimeout(function () {
+                console.log("Proses selesai");
+
+                // Setelah proses selesai, refresh grid
+                $("#McuGrid").data("kendoGrid").dataSource.read();
+            }, 2000); // Simulasi proses selama 2 detik
+        }
+
+        //setInterval(refreshGrid, 2000);
+
+        $("#submitFormMcu").click(function () {
+            //alert('ffff');
+            //$("#McuGrid").data("kendoGrid").dataSource.read();  //Refresh grid
+            prosesDataMcu();
+        });
+    });
+
+  
+</script>
+

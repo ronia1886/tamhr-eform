@@ -1,0 +1,25 @@
+﻿@using System.IO
+@inject TAMHR.ESS.Infrastructure.Web.Runtime.Providers.PathProvider PathProvider
+@{
+    var formKey = this.Context.Request.Query["formKey"].ToString();
+    ScriptManager.RegisterReference("listview");
+}
+@section pageToolbars {
+    <ul class="page-toolbars">
+        <li>
+            <a class="btn btn-sm red" href="~/core/passport/create?formKey=@formKey">
+                <i class="fa fa-plus-square"></i> <span class="d-none d-md-inline">@Localizer["Create New Request"]</span><span class="d-inline d-md-none">@Localizer["New"]</span>
+            </a>
+        </li>
+    </ul>
+}
+@{
+    try
+    {
+        await Html.RenderPartialAsync($"~/Views/Shared/InfoSummary/{formKey.Replace("-", string.Empty)}Info.cshtml");
+    }
+    catch
+    {
+    }
+}
+@(await Component.InvokeAsync<RequestHistory>(new { formKey = formKey }))

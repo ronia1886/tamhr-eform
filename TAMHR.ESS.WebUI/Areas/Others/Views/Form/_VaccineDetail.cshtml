@@ -1,0 +1,226 @@
+﻿@model List<VaccineDetailViewModel>
+@inject FormService FormService
+
+@{ 
+    int i=0;
+    foreach (var listData in Model)
+    {
+        bool canEdit = false;
+
+        // Get and set list of form questions by form key.
+        var formQuestions = FormService.GetFormQuestions(listData.FormKey);
+
+        // Get and set list of form answers from current view model.
+        var answers = listData.FormAnswers.ToDictionary(x => x.FormQuestionId);
+        //var isCompleted = listData.DocumentStatusCode == "completed";
+        var isCompleted = false;
+        if (answers.Count > 0)
+        {
+            isCompleted = true;
+        }
+
+        // Get and set list of root form questions.
+        var roots = formQuestions.Where(x => x.ParentFormQuestionId == null);
+        string tab_active = "";
+        if (i == 0)
+        {
+            tab_active = "active";
+        }
+        else
+        {
+            tab_active = "";
+        }
+
+        <div id="family-@i" class="tab-pane @tab_active">
+            <div class="row material">
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Nama"] <span class="required" aria-required="true"> * </span></label>
+                    @(Html.Kendo().TextBox()
+                        .Name("VaccineDetailViewModel["+i+"].Name")
+                        .Value(listData.Name)
+                        .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your name"].Value })
+                        .Enable(false)
+                        .Deferred()
+                    )
+                    <span class="invalid" data-validation-for="Object.Name"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>@Localizer["Tanggal Lahir"] <span class="required" aria-required="true"> * </span></label>
+                    @(Html.Kendo().DatePicker()
+                        .Name("VaccineDetailViewModel["+i+"].BirthDate")
+                        .Value(listData.BirthDate)
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .Enable(canEdit)
+                        .Format("d MMMM yyyy")
+                        .Deferred()
+                    )
+                    <span class="invalid" data-validation-for="Object.BirthDate"></span>
+                </div>
+                <div class="form-group col-md-6">
+                    <label>@Localizer["Umur"] <span class="required" aria-required="true"> * </span></label>
+                    @(Html.Kendo().NumericTextBox()
+                        .Name("VaccineDetailViewModel[" + i + "].Age")
+                        .Value(listData.Age)
+                        .Format("#")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .Enable(false)
+                        .Deferred()
+                    )
+                </div>
+                <div class="form-group col-md-12">
+                    <label>@Localizer["No Telepon"] <span class="required" aria-required="true"> * </span></label>
+                    @(Html.Kendo().TextBox()
+                        .Name("VaccineDetailViewModel[" + i + "].PhoneNumber")
+                        .Value(listData.PhoneNumber)
+                        .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your phone number"].Value })
+                        .Deferred()
+                    )
+                    <span class="invalid" data-validation-for="Object.PhoneNumber"></span>
+                </div>
+
+                <div class="form-group col-md-12">
+                    <label>@Localizer["NO KTP / KK"] <span class="required" aria-required="true"> * </span></label>
+                    @(Html.Kendo().TextBox()
+                        .Name("VaccineDetailViewModel[" + i + "].IdentityId")
+                        .Value(listData.IdentityId)
+                        .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", placeholder = Localizer["Please input your identity Id"].Value }, canEdit))
+                        .Enable(canEdit)
+                        .Deferred()
+                    )
+                    <span class="invalid" data-validation-for="Object.IdentityId"></span>
+                </div>
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Upload KTP / KK"] <label style="font-size:12px">(<span class="required" aria-required="true"> * </span></label></label>
+
+                    @{
+                    if (canEdit)
+                    {
+                        @await Component.InvokeAsync("FileUpload", new { docId = listData.IdentityID, field = "Object.IdentityIdPath" })
+                    }
+                    else
+                    {
+                        <br />
+                        @await Component.InvokeAsync("Attachment", new { files = listData.IdentityID, fieldCategory = "IdentityIdPath" })
+                    }
+                    }
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Apakah Anda memiliki riwayat alergi yang berat (alergi yang memerlukan pengobatan di RS atau dokter)?"]</label>
+                    <div class="form-check mb-3 mb-md-0">
+                        <input class="form-check-input" type="radio" name="VaccineDetailViewModel[@i].Allergies" id="cb_allergies_2" value="false" @(listData.Allergies == null ? "checked" : string.Empty)>
+                        <label class="form-check-label" for="cb_allergies_2">
+                            @Localizer["No"]
+                        </label>
+                    </div>
+                    <div class="form-check mb-2 mb-md-0">
+                        <input class="form-check-input" type="radio" name="VaccineDetailViewModel[@i].Allergies" id="cb_allergies_1" value="true" @(listData.Allergies != null ? "checked" : string.Empty)>
+                        <label class="form-check-label font-red-flamingo" for="cb_allergies_1">
+                            @Localizer["Yes"]
+                        </label>
+                    </div>
+                    <input type="text" id="AllergiesDesc" name="VaccineDetailViewModel[@i].AllergiDesc" class="form-control">
+                    <span class="invalid" data-validation-for="VaccineDetailViewModel[@i].Allergies"></span>
+                </div>
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Apakah Anda pernah di diagnosa menderita COVID-19?Bila iya kapan Anda SWAB Negative terakhir?"]</label>
+                    <div class="form-check mb-3 mb-md-0">
+                        <input class="form-check-input" type="radio" name="Object.HaveFever" id="cb_fever_2" value="false" @(listData.HaveFever.HasValue && !listData.HaveFever.Value ? "checked" : string.Empty)>
+                        <label class="form-check-label" for="cb_fever_2">
+                            @Localizer["No"]
+                        </label>
+                    </div>
+                    <div class="form-check mb-2 mb-md-0">
+                        <input class="form-check-input" type="radio" name="VaccineDetailViewModel[@i].HaveFever" id="cb_fever_1" value="true" @(listData.HaveFever.HasValue && listData.HaveFever.Value ? "checked" : string.Empty)>
+                        <label class="form-check-label font-red-flamingo" for="cb_fever_1">
+                            @Localizer["Yes"]
+                        </label>
+                    </div>
+                    <span class="invalid" data-validation-for="Object.HaveFever"></span>
+                </div>
+                <div class="form-group col-md-12">
+                    <label>@Localizer["Apakah Anda sedang hamil / menyusui / berencana hamil selama periode bulan Januari s/d Juni?"]</label>
+                    <div class="form-check mb-3 mb-md-0">
+                        <input class="form-check-input" type="radio" name="VaccineDetailViewModel[@i].HaveFever" id="cb_fever_2" value="false" @(listData.IsPregnant.HasValue && !listData.IsPregnant.Value ? "checked" : string.Empty)>
+                        <label class="form-check-label" for="cb_fever_2">
+                            @Localizer["No"]
+                        </label>
+                    </div>
+                    <div class="form-check mb-2 mb-md-0">
+                        <input class="form-check-input" type="radio" name="VaccineDetailViewModel[@i].HaveFever" id="cb_fever_1" value="true" @(listData.IsPregnant.HasValue && listData.IsPregnant.Value ? "checked" : string.Empty)>
+                        <label class="form-check-label font-red-flamingo" for="cb_fever_1">
+                            @Localizer["Yes"]
+                        </label>
+                    </div>
+                    <span class="invalid" data-validation-for="Object.HaveFever"></span>
+                </div>
+                @foreach (var root in roots)
+                {
+                    var counter = 0;
+
+                    var items = isCompleted
+                        ? formQuestions.Where(x => x.ParentFormQuestionId == root.Id && listData.FormAnswers.Any(y => y.FormQuestionId == x.Id))
+                        : formQuestions.Where(x => x.ParentFormQuestionId == root.Id && x.RowStatus);
+
+                    if ((!isCompleted && !root.RowStatus) || items.Count() == 0)
+                    {
+                        continue;
+                    }
+                    <div class="form-group col-md-12 question-wrapper">
+                        <label>@Localizer[root.Title]</label>
+                        <table class="table table-borderless" name="Object.FormAnswers.@root.Id">
+                            <colgroup>
+                                <col />
+                                <col width="60" />
+                                <col width="60" />
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th class="border-top-0"></th>
+                                    <th class="border-top-0 text-center">@Localizer["No"]</th>
+                                    <th class="border-top-0 text-center">@Localizer["Yes"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in items)
+                                {
+                                    var answer = answers.ContainsKey(item.Id) ? answers[item.Id] : null;
+
+                                    var color = ++counter % 2 == 1 ? "aliceblue" : "inherit";
+
+                                    var name = $"rb-{item.Id}";
+
+                                    var id1 = $"{name}-1";
+
+                                    var id2 = $"{name}-2";
+
+                                    <tr style="background-color: @color">
+                                        <td>@Localizer[item.Title]</td>
+                                        <td class="text-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="@name" id="@id2" data-uid="@item.Id" value="false" @(answer?.Value == "false" ? "checked" : string.Empty)>
+                                                <label class="form-check-label" for="@id2">
+                                                </label>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="@name" id="@id1" data-uid="@item.Id" value="true" @(answer?.Value == "true" ? "checked" : string.Empty)>
+                                                <label class="form-check-label" for="@id1">
+                                                </label>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <span class="invalid" data-validation-for="Object.FormAnswers.@root.Id"></span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        i++;
+    }
+}

@@ -1,0 +1,6 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    ScriptManager.RegisterReferences("datepicker", "combobox", "numeric", "grid");
+}

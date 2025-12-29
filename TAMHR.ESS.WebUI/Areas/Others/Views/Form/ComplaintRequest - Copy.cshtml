@@ -1,0 +1,246 @@
+﻿@model DocumentRequestDetailViewModel<ComplaintRequestViewModel[]>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    ScriptManager.RegisterReferences("grid");
+    var permissions = Model.Permissions;
+    var canFillSolution = permissions.Contains("UpdateSolution") && AclHelper.CanApprove();
+    var hasSolutions = Model.Object != null && Model.Object.All(x => !string.IsNullOrEmpty(x.Solution));
+}
+@section scripts {
+    <script id="detail-template" type="text/kendo-tmpl">
+        <h3 class="font-blue-madison font-small-3">@Localizer["Complaint Detail"]</h3>
+        <p class="font-small-2">#:ComplaintDetail#</p>
+        <h3 class="font-blue-madison font-small-3">@Localizer["Expectation"]</h3>
+        <p class="font-small-2">#:Expectation#</p>
+        <div class="d-block d-sm-none">
+            # if (FilePath != '' && FilePath != null) { #
+                <h3 class="font-blue-madison font-small-3">@Localizer["Attachment"]</h3>
+                <a href="@Url.Content("~/api/files/download?id=#:CommonFileId#")" class="btn green-haze btn-xs">
+                    <i class="ft-download"></i> @Localizer["download this file"]
+                </a>
+            # } #
+        </div>
+    </script>
+    <script type="text/javascript">
+        (function ($, app) {
+            var _currentId = '';
+
+            function getGrid() {
+                return $("#grid").data("kendoGrid");
+            }
+
+            app.registerHandler("getSubDetailHandler", function (d) {
+                var $grid = getGrid(),
+                    field = d.field,
+                    value = d.value,
+                    values = $grid.options.columns.find(x => x.field == field).values;
+
+                return values.find(x => x.value == value).text;
+            });
+
+            @if  (canFillSolution)
+            {
+                <text>
+                    app.interceptHandler("postHandler", x => x.action == "approve", function (parameters, callback) {
+                        var $grid = getGrid(),
+                            dataItems = $grid.dataSource.data(),
+                            data = [];
+
+                        for (var i = 0; i @Html.Raw("<") dataItems.length; i++) {
+                            data.push(dataItems[i].Solution);
+                        }
+
+                        $.post("~/api/complaint-request/solutions", { Id: "@Model.Id", Solutions: data }, function (d) {
+                            callback();
+                        });
+                    });
+                </text>
+            }
+
+            app.registerHandler("complaintRequestFormInterceptor", function (d) {
+                if (d.hasOwnProperty("Attachments")) {
+                    d.CommonFileId = d.Attachments[0].CommonFileId;
+                }
+
+                return d;
+            });
+
+            app.registerHandler("dataInterceptor", function (d) {
+                var $grid = getGrid(),
+                    dataItems = $grid.dataSource.data(),
+                    data = [],
+                    fields = $grid.dataSource.options.schema.model.fields;
+
+                d.Attachments = [];
+                for (var i = 0; i < dataItems.length; i++) {
+                    var temp = { Id: (i + 1) };
+
+                    for (var key in fields) {
+                        temp[key] = dataItems[i][key];
+                    }
+
+                    if (temp.FilePath != null && temp.FilePath != "") {
+                        d.Attachments.push({ CommonFileId: temp.CommonFileId, FieldCategory: "Attachment[" + i + "]" });
+                    }
+
+                    data.push(temp);
+                }
+
+                d.Object = data;
+
+                return d;
+            });
+
+            app.registerHandler("customAjaxHandler", function () {
+                var $this = $(this),
+                    $tr = $this.closest("tr"),
+                    $grid = getGrid(),
+                    dataItem = $grid.dataItem($tr),
+                    fields = $grid.dataSource.options.schema.model.fields,
+                    data = {};
+
+                _currentId = $tr.data("uid");
+
+                for (var key in fields) {
+                    data[key] = dataItem[key];
+                }
+
+                return data;
+            });
+
+            app.registerHandler("updateHandler", function (d) {
+                var $grid = getGrid(),
+                    $tr = $("tr[data-uid='" + _currentId + "']");
+
+                if ($tr.length > 0) {
+                    var dataItem = $grid.dataItem($tr);
+
+                    for (var key in d) {
+                        dataItem.set(key, d[key]);
+                    }
+                } else {
+                    $grid.dataSource.add(d);
+                }
+
+                _currentId = '';
+                app.close(this);
+            });
+
+            app.registerHandler("deleteHandler", function (d) {
+                let $this = $(this),
+                    $tr = $this.closest("tr"),
+                    $grid = getGrid();
+
+                app.confirm("@Localizer["Are you sure want to remove this data?"]", function (d) {
+                    if (!d.value) return;
+
+                    $grid.removeRow($tr);
+                })
+            });
+
+            app.registerHandler("createSolutionHandler", async function (d) {
+                var $this = $(this),
+                    $tr = $this.closest("tr"),
+                    $grid = getGrid(),
+                    dataItem = $grid.dataItem($tr),
+                    solution = dataItem.Solution || '';
+
+                const { value: text } = await swal({
+                    title: 'Solution',
+                    input: 'textarea',
+                    inputValue: solution,
+                    inputPlaceholder: 'Type your solution here',
+                    showCancelButton: true,
+                    inputValidator: (value) => {
+                        return !value && 'Solution must be filled!'
+                    }
+                });
+
+                if (text) {
+                    dataItem.set("Solution", text);
+                }
+            });
+        })(jQuery, app);
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Complaint Request Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-12">
+                            @if (AclHelper.CanEdit())
+                            {
+                                <a class="btn btn-sm green-dark" data-trigger="modal" data-modal="complaint-request-modal" data-modal-title="@Localizer["Create Complaint Request"]" data-modal-ajax="true" data-ajax-url="~/others/form/loadcomplaintrequest">
+                                    <i class="ft-plus"></i> @Localizer["Add new Complaint"]
+                                </a>
+                                <hr />
+                            }
+                            @(Html.Kendo().Grid(Model.Object)
+                                .Name("grid")
+                                .Columns(columns =>
+                                {
+                                    var canViewSolution = canFillSolution || hasSolutions;
+                                    columns.ForeignKey(p => p.ComplaintCode, (System.Collections.IEnumerable)ConfigService.GetGeneralCategories("ComplaintType"), "Code", "Name").ClientTemplate(@"
+                                        <div class=""d-none d-md-block"">#:app.invokeHandler('getSubDetailHandler', { field: 'ComplaintCode', value: ComplaintCode })#</div>
+                                        <div class=""d-block d-md-none"">
+                                            <h3 class=""font-blue-madison font-small-3"">" + Localizer["Complaint"].Value + @"</h3>
+                                            <p>#:app.invokeHandler('getSubDetailHandler', { field: 'ComplaintCode', value: ComplaintCode })#</p>
+                                            <h3 class=""font-blue-madison font-small-3"">" + Localizer["Sub Complaint"].Value + @"</h3>
+                                            <p>#:app.invokeHandler('getSubDetailHandler', { field: 'ComplaintSubCode', value: ComplaintSubCode })#</p>
+                                            # if (" + canViewSolution.ToString().ToLower() + @") { #
+                                                <h3 class=""font-blue-madison font-small-3"">" + Localizer["Solution"].Value + @"</h3>
+                                                <p>" + (canFillSolution ? "<a href='javascript:;' data-trigger='handler' data-handler='createSolutionHandler'><i class='ft-edit'></i></a>" : string.Empty) + @" #:$.toDefault(Solution, '')#</p>
+                                            # } #
+                                        </div>
+                                    ").Title(Localizer["Complaint"].Value);
+                                    columns.ForeignKey(p => p.ComplaintSubCode, (System.Collections.IEnumerable)ConfigService.GetGeneralCategories("ComplaintSubType"), "Code", "Name").Title(Localizer["Sub Complaint"].Value).MinScreenWidth(700);
+
+                                    if (canViewSolution)
+                                    {
+                                        columns.Bound(c => c.Solution).ClientTemplate((canFillSolution ? "<a href='javascript:;' data-trigger='handler' data-handler='createSolutionHandler'><i class='ft-edit'></i></a>" : string.Empty) + " #:$.toDefault(Solution, '')#").MinScreenWidth(700);
+                                    }
+
+                                    columns.Bound(c => c.CommonFileId).Title(Localizer["Attachment"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"# if (FilePath != '' && FilePath != null) { #<a href=""" + Url.Content("~/api/files/download?id=#:CommonFileId#") + @"""><i class=""ft-download""></i></a># } #").Width(75).MinScreenWidth(700);
+
+                                    if (AclHelper.CanEdit())
+                                    {
+                                        columns.Bound(c => c.ComplaintCode).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                            <div class=""btn-group"">
+                                                <a class=""btn btn-xs blue-sharp"" data-trigger=""modal"" data-modal=""complaint-request-modal"" data-modal-title=""Edit Complaint Request"" data-modal-ajax=""true"" data-ajax-url=""~/others/form/loadcomplaintrequest"" data-ajax-handler=""customAjaxHandler""><i class=""ft-edit""></i></a>
+                                                <a class=""btn btn-xs red"" data-trigger=""handler"" data-handler=""deleteHandler""><i class=""ft-trash""></i></a>
+                                            </div>
+                                        ").Width(100);
+                                    }
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-1"">" + Localizer["No Request"].Value + "</div>"))
+                                .ClientDetailTemplateId("detail-template")
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .ServerOperation(false)
+                                    )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

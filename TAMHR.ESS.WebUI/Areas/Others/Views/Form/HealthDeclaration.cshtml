@@ -1,0 +1,534 @@
+﻿@model DocumentRequestDetailViewModel<HealthDeclarationViewModel>
+@inject FormService FormService
+@inject UserService UserService
+@inject OthersService OthersService
+@inject PersonalDataQueryService PersonalDataQueryService
+@inject AnnualWFHPlanningService AnnualWFHPlanningService 
+@inject TimeManagementService TimeManagementService 
+@{
+    // Hide default approval history and conversation panel.
+    ViewBag.ShowApprovalAndConversation = false;
+
+    // Hide default action button.
+    ViewBag.ShowActionButton = false;
+
+    // Determine whether current document status is completed or not.
+    var isCompleted = Model.DocumentStatusCode == "completed";
+
+    // Determine whether current user session can edit this document or not.
+    var canEdit = AclHelper.CanEdit();
+
+    // Determine whether current document is new or not.
+    var isNew = Model.Id == Guid.Empty;
+
+    // Get and set document requester (if new then get from current user session noreg).
+    var noreg = isNew ? User.GetClaim("NoReg") : Model.Requester;
+
+    // Get and set current user data by given noreg.
+    var user = UserService.GetByNoReg(noreg);
+
+    // Get and set employee name.
+    var employeeName = user?.Name;
+
+    // Get and set employee display name.
+    var displayName = string.Format("{0} - {1}", employeeName, noreg);
+
+    // Get and set list of form questions by form key.
+    var formQuestions = FormService.GetFormQuestions(Model.FormKey);
+
+    // Get and set list of root form questions.
+    var roots = formQuestions.Where(x => x.ParentFormQuestionId == null);
+
+    // Get and set list of form answers from current view model.
+    var answers = Model.Object.FormAnswers.ToDictionary(x => x.FormQuestionId);
+
+    var markedByDoctor = false;
+
+    // Get today WFH schedule 
+    var todayWFHPlan = AnnualWFHPlanningService.GetWFHPlanningByDate(noreg, DateTime.Today);
+
+    var createdDate = Model.CreateOn != DateTime.MinValue ? Model.CreateOn : DateTime.Today;
+
+    var documentWFHPlan = AnnualWFHPlanningService.GetWFHPlanningByDate(noreg, createdDate);
+
+    var workSchedule = TimeManagementService.GetListWorkSchEmp(noreg, DateTime.Today, DateTime.Today);
+
+    var isOff = workSchedule.ToList()[0].Off;
+
+    // If current document is new then filled with default value.
+    if (isNew)
+    {
+        // Get and set latest submitted health declaration document by noreg.
+        var latestSubmission = OthersService.GetLatestSubmittedHealthDeclaration(noreg);
+
+        // Get and set latest submitted form answer view models by noreg.
+        var latestSubmittedViewModel = OthersService.GetLatestFormAnswerViewModels(noreg);
+
+        // Get and set latest common attribute data by noreg.
+        var commonAttribute = PersonalDataQueryService.GetPersonalDataCommonAttribute(noreg);
+
+        // Get and set default email.
+        Model.Object.Email = user.Email;
+
+        // Always set health declaration filled to true if latest submission document is exist.
+        Model.Object.HealthDeclarationFilled = latestSubmission != null;
+
+        // Get and set default phone number from master data if any else get from latest submitted document.
+        Model.Object.PhoneNumber = !string.IsNullOrEmpty(latestSubmission?.PhoneNumber)
+            ? latestSubmission?.PhoneNumber
+            : commonAttribute?.PhoneNumber;
+
+        // Get and set default EmergencyFamilyStatus from master data if any else get from latest submitted document.
+        Model.Object.EmergencyFamilyStatus = !string.IsNullOrEmpty(latestSubmission?.EmergencyFamilyStatus)
+            ? latestSubmission?.EmergencyFamilyStatus
+            : null;
+
+        // Get and set default EmergencyName from master data if any else get from latest submitted document.
+        Model.Object.EmergencyName = !string.IsNullOrEmpty(latestSubmission?.EmergencyName)
+            ? latestSubmission?.EmergencyName
+            : null;
+
+        // Get and set default EmergencyPhoneNumber from master data if any else get from latest submitted document.
+        Model.Object.EmergencyPhoneNumber = !string.IsNullOrEmpty(latestSubmission?.EmergencyPhoneNumber)
+            ? latestSubmission?.EmergencyPhoneNumber
+            : null;
+
+        // If latest submitted health declaration view model is exist then get list of form answers from view model.
+        if (latestSubmittedViewModel != null)
+        {
+            var questionsWithDefaultValue = formQuestions.Where(x => x.DefaultValue == "previous-form-submission" && x.ParentFormQuestionId.HasValue && x.RowStatus);
+
+            // Get and set list of form answers from view model.
+            answers = latestSubmittedViewModel.Where(x => questionsWithDefaultValue.Any(y => y.Id == x.FormQuestionId))
+                .ToDictionary(x => x.FormQuestionId);
+
+            Model.Object.WorkTypeCode = answers.Any(x => x.Value.Value == "true") ? "wt-wfh" : null;
+        }
+
+        markedByDoctor = OthersService.MarkedByDoctor(noreg, DateTime.Now.Date);
+
+        if (markedByDoctor)
+        {
+            Model.Object.WorkTypeCode = "wt-wfh";
+        }
+    }
+
+    var channelId = noreg + "_" + Model.FormKey;
+
+    var listFamilyStatus = new List<object> {
+        new { Text = "", Value = "" },
+        new { Text = "Orang Tua", Value = "Orang Tua" },
+        new { Text = "Suami / Istri", Value = "suamiistri" },
+        new { Text = "Anak", Value = "Anak" },
+        new { Text = "Lainnya", Value = "Lainnya" }
+    };
+
+    var xx = Model.Object.WorkTypeCode;
+}
+@section styles {
+    <style type="text/css">
+        @@media (max-width: 736px) {
+            .form-check {
+                padding-left: 1.55rem !important;
+            }
+
+            .form-check-input {
+                margin-top: 0.15rem !important;
+                margin-left: -1.55rem !important;
+            }
+        }
+
+        .card.tracking-approval .actions > div {
+            border-top: 1px solid #ddd;
+            display: block !important;
+            margin-top: 1.5rem !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 1.5rem !important;
+            float: none !important;
+        }
+    </style>
+}
+@section formScripts {
+    <script type="text/javascript">
+        app.set("url", "~/others/form/view?formKey=health-declaration&docid=@Model.DocumentApprovalId");
+        app.set("channelId", "@channelId");
+    </script>
+    <script type="text/javascript" src="~/js/pages/common-conversation.js" asp-append-version="true"></script>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            let canEdit = @canEdit.ToString().ToLower(),
+                $bodyTemperatureEl = $("input[name='Object.BodyTemperature']"),
+                $bodyTemperatureOtherEl = $("input[name='Object.BodyTemperatureOtherValue']");
+
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                onOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            app.registerHandler("dataInterceptor", function (d) {
+                let checkedRadios = $(".question-wrapper input[type='radio']:checked");
+
+                d.Object.FormAnswers = $.map(checkedRadios, function (item) {
+                    return {
+                        FormQuestionId: item.getAttribute("data-uid"),
+                        Value: item.value
+                    };
+                });
+
+                return d;
+            });
+
+            app.registerHandler("updateRemarksHandler", function () {
+                let remarks = $("textarea[name='Remarks']").val();
+
+                $.post(app.resolveUrl("~/api/health-declaration-report/update-remarks"), { DocumentApprovalId: "@Model.DocumentApprovalId", Remarks: remarks }, function (d) {
+                    Toast.fire({
+                        type: 'success',
+                        title: 'Update notes successfully'
+                    });
+                });
+            });
+
+            if (!canEdit) {
+                $("input[type='radio']").prop("disabled", true);
+            }
+
+            $bodyTemperatureEl.on("change", function () {
+                let $this = $(this),
+                    value = $this.val();
+
+                $bodyTemperatureOtherEl.prop("readonly", value !== "others");
+
+                if (value !== "others") {
+                    $bodyTemperatureOtherEl.val("");
+                }
+            });
+
+            $bodyTemperatureOtherEl.trigger("change");
+
+            $("main.page-content-wrapper").css("overflow", "inherit");
+        })(jQuery, app);
+    </script>
+}
+@section pageHeader {
+    @if (markedByDoctor)
+    {
+        <div class="fancy-alert">
+            <a href="javascript:;" class="fancy-alert-close d-none d-md-block" data-dismiss="alert">
+                <svg class="fancy-alert-close" width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M7.426 6.001l4.278-4.279A1.008 1.008 0 1 0 10.278.296L6 4.574 1.723.296A1.008 1.008 0 1 0 .295 1.722l4.278 4.28-4.279 4.277a1.008 1.008 0 1 0 1.427 1.426L6 7.427l4.278 4.278a1.006 1.006 0 0 0 1.426 0 1.008 1.008 0 0 0 0-1.426L7.425 6.001z" fill-rule="evenodd"></path>
+                </svg>
+            </a>
+            <div class="fancy-alert-icon bg-yellow-crusta-opacity">
+                <i class="fa fa-warning"></i>
+            </div>
+            <div class="fancy-alert-info">
+                @Localizer["HealthDeclaration.MarkedByDoctorPlacholder1"]
+            </div>
+        </div>
+    }
+}
+@Html.HiddenFor(x => x.Object.HealthDeclarationFilled)
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-4">
+            <div class="p-4" style="height: 100%; background-color: #eff2f7;">
+                <div class="section-heading d-block d-md-none">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Health Declaration Form"]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["Juklak pengisian form deklarasi kesehatan karyawan."]
+                    </h5>
+                </div>
+                <div class="d-none d-md-flex align-items-center h-100">
+                    <img src="~/img/assets/asset-2.png" alt="login" class="mx-auto my-5" style="width: 65%;">
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8 col-12">
+            <div class="card-body">
+                <div class="section-heading mb-2 d-none d-md-block">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Health Declaration Form for {0}", displayName]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["Juklak pengisian form deklarasi kesehatan karyawan."]
+                    </h5>
+                </div>
+                <div class="mb-2">@Html.Raw(Localizer["HealthDeclaration.PlaceholderDescription"].Value)</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-4">
+            <div class="section-heading p-4" style="background-color: #eff2f7; height: 100%; position: relative;">
+                <div class="position-md-sticky">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Self Health Assessment"]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["To ensure health and safety at work, please be <b>honest</b> in answering these questions."]
+                    </h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Phone Number"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.PhoneNumber)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.PhoneNumber"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Email"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.Email)
+                            .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", placeholder = Localizer["Please input your email address"].Value }, canEdit && string.IsNullOrEmpty(Model.Object.Email)))
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.Email"></span>
+                    </div>
+                    <div class="col-md-12">
+                        <fieldset>
+                            <legend>Emergency Contact</legend>
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Family Status"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().ComboBoxFor(x => x.Object.EmergencyFamilyStatus)
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Text")
+                                                .DataValueField("Value")
+                                                .ClearButton(true)
+                                                .BindTo(listFamilyStatus)
+                                                .AutoBind(true)
+                                                .SelectedIndex(0)
+                                                .ClearButton(false)
+                                                .Placeholder(Localizer["Please select emergency family status"].Value)
+                                                .Deferred()
+                                            )
+                                <span class="invalid" data-validation-for="Object.EmergencyFamilyStatus"></span>
+                            </div>
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Name"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyName)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input emergency name"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                                <span class="invalid" data-validation-for="Object.EmergencyName"></span>
+                            </div>
+                            <div class="form-group col-md-12">
+                                <label>@Localizer["Phone Number"] <span class="required" aria-required="true"> * </span></label>
+                                @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyPhoneNumber)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input emergency phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                                <span class="invalid" data-validation-for="Object.EmergencyPhoneNumber"></span>
+                            </div>
+                        </fieldset>
+                    </div>
+                    
+                </div>
+                <div class="row">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Where are you working from?"]</label>
+                        <label class="font-red-flamingo">@Localizer["*according to today's plan "+ (isNew ? DateTime.Today.ToString("dd/MM/yyyy") : createdDate.ToString("dd/MM/yyyy")) +", your schedule is: " + (!isNew ? (
+                            //Model.Object.WorkTypeCode != "wt-wfh" ? "WFO" : "WFH"
+                            (documentWFHPlan == null ? "WFO" : "WFH")
+                        ) : ((isOff ? "OFF" : (todayWFHPlan == null ? "WFO" : "WFH"))))]</label>
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="radio" name="Object.WorkTypeCode" id="cb_working_1" @(markedByDoctor ? "disabled" : string.Empty) value="wt-wfo" @(Model.Object.WorkTypeCode == "wt-wfo" ? "checked" : (!isNew ? (Model.Object.WorkTypeCode != "wt-wfh" ? "WFO" : "WFH") : ((isOff ? "OFF" : (todayWFHPlan == null ? "checked" : string.Empty)))))>
+                            <label class="form-check-label" for="cb_working_1">
+                                @Localizer["Office"]
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="Object.WorkTypeCode" id="cb_working_2" value="wt-wfh" @(Model.Object.WorkTypeCode == "wt-wfh" ? "checked" : (!isNew ? (Model.Object.WorkTypeCode != "wt-wfh" ? "WFO" : "WFH") : ((isOff ? "OFF" : (todayWFHPlan == null ? string.Empty : "checked")))))>
+                            <label class="form-check-label" for="cb_working_2">
+                                @Localizer["Home"]
+                            </label>
+                        </div>
+                        @if (markedByDoctor)
+                        {
+                            <span class="required" aria-required="true"> * </span>
+                            <span class="small">@Localizer["HealthDeclaration.MarkedByDoctorPlacholder2"]</span>
+                        }
+                        <span class="invalid" data-validation-for="Object.WorkTypeCode"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Do you have a fever today?"]</label>
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="radio" name="Object.HaveFever" id="cb_fever_2" value="false" @(Model.Object.HaveFever.HasValue && !Model.Object.HaveFever.Value ? "checked" : string.Empty)>
+                            <label class="form-check-label" for="cb_fever_2">
+                                @Localizer["No"]
+                            </label>
+                        </div>
+                        <div class="form-check mb-2 mb-md-0">
+                            <input class="form-check-input" type="radio" name="Object.HaveFever" id="cb_fever_1" value="true" @(Model.Object.HaveFever.HasValue && Model.Object.HaveFever.Value ? "checked" : string.Empty)>
+                            <label class="form-check-label font-red-flamingo" for="cb_fever_1">
+                                @Localizer["Yes"]
+                            </label>
+                        </div>
+                        <span class="invalid" data-validation-for="Object.HaveFever"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer[@"OtherTemperature.PlaceholderTitle"]</label>
+                        <div class="form-check mb-3 mb-md-0">
+                            <input class="form-check-input" type="radio" name="Object.BodyTemperature" id="cb_body_1" value="not-measured" @(Model.Object.BodyTemperature == "not-measured" ? "checked" : string.Empty)>
+                            <label class="form-check-label" for="cb_body_1">
+                                @Localizer["Not measured"]
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="Object.BodyTemperature" id="cb_body_2" value="others" @(Model.Object.BodyTemperature == "others" ? "checked" : string.Empty)>
+                            <label class="form-check-label mb-1" for="cb_body_2">
+                                @Localizer["OtherTemperature.Placeholder"]
+                            </label>
+                            @Html.TextBoxFor(x => x.Object.BodyTemperatureOtherValue, new { type = "number", @class = "form-control form-control-sm", style = "width: 6.5rem;", @readonly = "readonly" })
+                            <span class="invalid" data-validation-for="Object.BodyTemperatureOtherValue"></span>
+                        </div>
+                        <span class="invalid" data-validation-for="Object.BodyTemperature"></span>
+                    </div>
+                    @foreach (var root in roots)
+                    {
+                        var counter = 0;
+
+                        var items = isCompleted
+                            ? formQuestions.Where(x => x.ParentFormQuestionId == root.Id && Model.Object.FormAnswers.Any(y => y.FormQuestionId == x.Id))
+                            : formQuestions.Where(x => x.ParentFormQuestionId == root.Id && x.RowStatus);
+
+                        if ((!isCompleted && !root.RowStatus) || items.Count() == 0)
+                        {
+                            continue;
+                        }
+                        <div class="form-group col-md-12 question-wrapper">
+                            <label>@Localizer[root.Title]</label>
+                            <table class="table table-borderless" name="Object.FormAnswers.@root.Id">
+                                <colgroup>
+                                    <col />
+                                    <col width="60" />
+                                    <col width="60" />
+                                </colgroup>
+                                <thead>
+                                    <tr>
+                                        <th class="border-top-0"></th>
+                                        <th class="border-top-0 text-center">@Localizer["No"]</th>
+                                        <th class="border-top-0 text-center">@Localizer["Yes"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in items)
+                                    {
+                                        var answer = answers.ContainsKey(item.Id) ? answers[item.Id] : null;
+                                        
+                                        var color = ++counter % 2 == 1 ? "aliceblue" : "inherit";
+
+                                        var name = $"rb-{item.Id}";
+                                        
+                                        var id1 = $"{name}-1";
+                                        
+                                        var id2 = $"{name}-2";
+
+                                        <tr style="background-color: @color">
+                                            <td>@Localizer[item.Title]</td>
+                                            <td class="text-center">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="@name" id="@id2" data-uid="@item.Id" value="false" @(answer?.Value == "false" ? "checked" : string.Empty)>
+                                                    <label class="form-check-label" for="@id2">
+                                                    </label>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" name="@name" id="@id1" data-uid="@item.Id" value="true" @(answer?.Value == "true" ? "checked" : string.Empty)>
+                                                    <label class="form-check-label" for="@id1">
+                                                    </label>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            <span class="invalid" data-validation-for="Object.FormAnswers.@root.Id"></span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section pageFooter
+{
+    @if (Model.DocumentStatusCode == "completed")
+    {
+        if (AclHelper.HasPermission("Core.ViewAllHealthDeclarationReport"))
+        {
+            <div class="card tracking-approval">
+                <div class="card-header bordered">
+                    <h4 class="card-title">@Localizer["Tracking Approval"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body pb-0">
+                    @(await Component.InvokeAsync<TrackingApproval>(new { id = Model.DocumentApprovalId }))
+                </div>
+            </div>
+        }
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Conversation"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @(await Component.InvokeAsync<CommonConversation>(new { id = channelId }))
+                <div style="padding: 0 12px; margin-top: -15px; padding-bottom: 1rem;">
+                    <span class="small">@Localizer["Conversation.Placeholder1"]</span>
+                </div>
+            </div>
+        </div>
+    }   
+}
+@if (AclHelper.CanSubmit())
+{
+    <div class="row mb-5">
+        <label class="col-6 d-flex align-items-center">@Localizer["Send Update?"]</label>
+        <div class="col-6">
+            <div class="float-right">
+                <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                    <i class="ft-check mr-1"></i> @Localizer["Submit"]
+                </a>
+            </div>
+        </div>
+    </div>
+}

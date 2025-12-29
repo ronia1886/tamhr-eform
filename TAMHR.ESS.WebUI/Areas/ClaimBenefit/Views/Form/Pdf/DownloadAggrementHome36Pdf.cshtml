@@ -1,0 +1,265 @@
+﻿@model PdfViewModel
+@using TAMHR.ESS.Infrastructure.DomainServices
+@inject ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService service;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as LoanViewModel;
+    var id = Model.ViewData.ToString();
+
+    var NP = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.NP;
+    var personalData = service.GetPdfInfoPersonal(org.NoReg).FirstOrDefault();
+
+    var interestCarLoan = service.GetLoan("CalculationLoan", "InterestHouseLoan", Convert.ToInt32(NP)).FirstOrDefault();
+    var AmmountInterest = interestCarLoan.GetType().GetProperty("Ammount").GetValue(interestCarLoan);
+
+    var PartyName = configService.GetConfig("multipurpose.secondPartyName").ConfigValue;
+    var PartyPosition = configService.GetConfig("multipurpose.secondPartyPosition").ConfigValue;
+
+    var periodLoan = service.GetLoan("CalculationLoan", "PeriodLoan", Convert.ToInt32(NP)).FirstOrDefault();
+    var AmmountperiodLoan = periodLoan.GetType().GetProperty("Ammount").GetValue(periodLoan);
+
+    string Address = (string)personalData.GetType().GetProperty("Address").GetValue(personalData);
+    string rt = (string)personalData.GetType().GetProperty("RT").GetValue(personalData);
+    string rw = (string)personalData.GetType().GetProperty("RW").GetValue(personalData);
+    string City = (string)personalData.GetType().GetProperty("City").GetValue(personalData);
+    string PostalCode = (string)personalData.GetType().GetProperty("PostalCode").GetValue(personalData);
+    var loan = (obj as LoanViewModel);
+
+    var pinjaman = loan.LoanAmount;
+    var bunga = Convert.ToInt32(AmmountInterest);
+    var jumahbunga = pinjaman * bunga / 100;
+    int calculation = Convert.ToInt16(loan.CalculationLoan);
+    DateTime Period = loan.Period.Value;
+    var periodloan = Convert.ToInt16(AmmountperiodLoan);
+
+    //Get tanggal Cut Off
+    var getCutOff = service.GetCutOff().FirstOrDefault();
+    int tanggalCutOff = Convert.ToInt16(getCutOff.GetType().GetProperty("ConfigValue").GetValue(getCutOff).ToString()) ;
+
+    //PMT
+    var calculatebunga = (double)bunga / 100 / 12;
+    int perido = (int)periodloan;
+    Double pinjam = (double)pinjaman;
+    var denominator = Math.Pow((1 + calculatebunga), perido) - 1;
+    var sumCicilan = (calculatebunga + (calculatebunga / denominator)) * pinjam;
+    var ii = Convert.ToDecimal(sumCicilan);
+    var pembulatan = Math.Round(ii, 0);
+    var jumlah = pembulatan * periodloan;
+    var potongan = pembulatan;
+
+    //Terbilang
+    var terbilang = service.Terbilang(Convert.ToDecimal(pinjaman));
+    var terbilangpotongan = service.Terbilang(Convert.ToDecimal(potongan));
+    var terbilangbunga = service.TerbilangAngka(Convert.ToDecimal(bunga));
+
+    //get Tanggal Full Approved
+    var getDateFullApprove = service.GetDateFullApproved(new Guid(id)).FirstOrDefault();
+    DateTime dateFullApprove = Convert.ToDateTime(getDateFullApprove.GetType().GetProperty("ModifiedOn").GetValue(getDateFullApprove));
+    int date = Convert.ToInt16(dateFullApprove.ToString("dd"));
+
+    string mulaicicil = "";
+    if (date <= tanggalCutOff)
+    {
+        mulaicicil = dateFullApprove.ToString("MMMM yyyy");
+    }
+    else
+    {
+        mulaicicil = dateFullApprove.AddMonths(1).ToString("MMMM yyyy");
+    }
+    DateTime enddate = dateFullApprove.AddMonths(Convert.ToInt16(AmmountperiodLoan));
+}
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<br /><br /><br />
+<h4 style="text-align:center"><u>SURAT PERJANJIAN PENGAKUAN HUTANG</u></h4>
+<p style="font-family:'Segoe UI'; font-size:12px;">Kami  yang  bertanda  tangan  dibawah  ini  : </p>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:0%;margin-right:15%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 30%;" />
+        <col style="width: 30%;" />
+    </colgroup>
+
+    <tr>
+        <td>Nama<label style="float:right">:</label></td>
+        <td>@org.Name.ToUpper()</td>
+    </tr>
+    <tr>
+        <td>No. Registrasi<label style="float:right">:</label></td>
+        <td>@org.NoReg</td>
+    </tr>
+    <tr>
+        <td>Divisi<label style="float:right">:</label></td>
+        <td>@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+    </tr>
+</table>
+<p style="font-family:'Segoe UI'; font-size:12px;">Untuk selanjutnya disebut <strong>PIHAK PERTAMA</strong></p>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:0%;margin-right:15%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 30%;" />
+        <col style="width: 30%;" />
+    </colgroup>
+
+    <tr>
+        <td>Nama<label style="float:right">:</label></td>
+        <td>@PartyName.ToUpper()</td>
+    </tr>
+    <tr>
+        <td valign="top">Jabatan<label style="float:right">:</label></td>
+        <td>@PartyPosition</td>
+    </tr>
+    <tr>
+        <td height="15px"></td>
+    </tr>
+    <tr>
+        <td colspan="2">Dalam hal ini bertindak untuk dan atas nama <strong>PT TOYOTA-ASTRA MOTOR</strong> disebut <strong>PIHAK KEDUA</strong>.</td>
+    </tr>
+</table>
+<p style="font-family:'Segoe UI'; font-size:12px; text-align:justify">
+    Kedua Pihak terlebih dahulu menerangkan bahwa :<br /><br />
+    PIHAK PERTAMA telah meminjam uang dari PIHAK KEDUA sebesar Rp. <strong>@loan.LoanAmount?.ToString("N0") (@terbilang)</strong>.
+    Sehubungan dengan pinjaman tersebut, pada tanggal <strong>@DateTime.Now.ToString("dd MMMM yyyy")</strong> kedua pihak sepakat mengadakan Perjanjian Pengakuan Hutang dengan syarat-syarat dan ketentuan sebagai berikut :
+</p>
+
+<h3 style="text-align:center ;font-family:'Century Gothic';">PASAL 1</h3>
+<p style="font-family:'Segoe UI'; font-size:12px; text-align:justify">
+    Pihak Pertama mengakui telah berhutang kepada PIHAK KEDUA uang sebesar Rp. <strong>@loan.LoanAmount?.ToString("N0") (@terbilang)</strong> dan PIHAK KEDUA menerima pengakuan hutang dari PIHAK PERTAMA tersebut.
+</p>
+
+<h3 style="text-align:center ;font-family:'Century Gothic';">PASAL 2</h3>
+<p style="font-family:'Segoe UI'; font-size:12px; text-align:justify">
+    Terhadap pinjaman tersebut PIHAK PERTAMA dikenakan bunga <strong>@bunga % (@terbilangbunga persen) tiap tahun</strong>, yang pembayarannya dilakukan tiap bulan bersama-sama dengan pembayaran angsuran hutang pokok.
+</p>
+
+<h3 style="text-align:center ;font-family:'Century Gothic';">PASAL 3</h3>
+<p style="font-family:'Segoe UI'; font-size:12px; text-align:justify">
+    Perjanjian ini berlaku mulai bulan <strong>@mulaicicil</strong> dan berakhir sampai dengan bulan <strong>@enddate.ToString("MMMM yyyy")</strong>.
+</p>
+
+<h3 style="text-align:center ;font-family:'Century Gothic';">PASAL 4</h3>
+<p style="font-family:'Segoe UI'; font-size:12px; text-align:justify">
+    Pinjaman Pokok dan Bunganya akan dibayarkan oleh PIHAK PERTAMA dengan cara pemotongan atau pengurangan gaji setiap bulan yang diterima oleh PIHAK PERTAMA dari PIHAK KEDUA dan akan terbayar lunas dalam <strong>@periodloan</strong> kali pemotongan<br /><br />
+    Besarnya potongan setiap bulan Rp. <strong>@potongan.ToString("N0") (@terbilangpotongan)</strong>. Pemotongan pertama dilakukan pada hari gajian bulan : <strong>@mulaicicil</strong>
+</p>
+<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br />
+<h3 style="text-align:center ;font-family:'Century Gothic';">PASAL 5</h3>
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 100%; margin-left:0%;margin-right:0%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 5%;" />
+        <col style="width: 5%;" />
+        <col style="width: 90%;" />
+    </colgroup>
+    <tr>
+        <td valign="top">1.</td>
+        <td style="text-align:justify" colspan="2">
+            <p style="text-align:justify">
+                PIHAK KEDUA dapat menagih sekaligus sisa pinjaman dan bunga yang masih terhutang dari PIHAK PERTAMA dalam hal apabila hubungan kerja antara PIHAK PERTAMA dan PIHAK KEDUA berakhir karena sesuatu sebab apapun.
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td valign="top">2.</td>
+        <td style="text-align:justify" colspan="2">
+            <p style="text-align:justify">
+                Dalam kejadian seperti tersebut pada ayat 1 pasal ini, PIHAK PERTAMA setuju Gaji Terakhir,
+                Tunjangan Pesangon dan lain-lain, yang harus diterima oleh PIHAK PERTAMA dari PIHAK KEDUA diprioritaskan untuk melunasi pinjaman dan bunga yang masih terhutang kepada PIHAK KEDUA.
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td valign="top">3.</td>
+        <td style="text-align:justify" colspan="2">
+            <p style="text-align:justify">
+                Bilamana Gaji Terakhir, Tunjangan Pesangon dan lain-lain tidak mencukupi untuk melunasi pinjaman dan bunganya yang masih terhutang,
+                maka PIHAK PERTAMA wajib untuk melunasi pinjaman dan bunganya yang masih terhutang.
+                Dan apabila ternyata PIHAK PERTAMA tidak sanggup lagi melunasi sisa pinjaman berikut bunga yang masih terhutang maka PIHAK KEDUA akan menahan penyelesaian administrasi PIHAK PERTAMA sampai
+                dengan penyelesaian hutang-bunga dari PIHAK PERTAMA kepada PIHAK KEDUA selesai
+            </p>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="3">
+            <p style="text-align:justify">
+                PIHAK PERTAMA wajib mentaati segala peraturan yang dikeluarkan oleh PT TOYOTA-ASTRA MOTOR yang berhubungan dengan pinjaman tersebut.
+                Surat Perjanjian Pengakuan Hutang ini dibuat dalam rangkap 2 (dua), kedua-duanya bermaterai cukup, masing-masing rangkap dipegang oleh PIHAK PERTAMA dan satu rangkap lagi oleh PIHAK KEDUA.
+            </p>
+        </td>
+    </tr>
+</table>
+<br /><br /><br /><br /><br /><br /><br />
+<table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 100%; margin-left:0%;margin-right:0%;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup>
+        <col style="width: 40%;" />
+        <col style="width: 20%;" />
+        <col style="width: 40%;" />
+    </colgroup>
+    <tr>
+        <td><strong>PIHAK KEDUA</strong></td>
+        <td></td>
+        <td><strong>PIHAK PERTAMA</strong></td>
+    </tr>
+    <tr>
+        <td><strong>PT. TOYOTA-ASTRA MOTOR</strong></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><strong>HUMAN RESOURCES AND GENERAL AFFAIRS</strong></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td height="120px"></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>@PartyName</td>
+        <td></td>
+        <td><strong>@org.Name</strong></td>
+    </tr>
+    <tr>
+        <td class="border-top">@PartyPosition</td>
+        <td></td>
+        <td class="border-top">Noreg : @org.NoReg</td>
+    </tr>
+</table>

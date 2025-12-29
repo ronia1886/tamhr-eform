@@ -1,0 +1,94 @@
+﻿@model TAMHR.ESS.Domain.VaccineSchedule
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineScheduleService vaccineScheduleService 
+@{
+    // Create vs Edit
+    var isNew = (Model?.Id ?? Guid.Empty) == Guid.Empty;
+
+    // Tentukan batch berikutnya tanpa menulis ke Model
+    var nextBatch = (vaccineScheduleService?.GetLastBatch() ?? 0) + 1;
+    var vaccineNumber = Model?.VaccineNumber ?? nextBatch;
+
+    // >>> FIX: definisikan minStartDate (null-safe)
+    var lastEnd = vaccineScheduleService?.GetLastEndDate(vaccineNumber);
+    var minStartDate = (lastEnd ?? DateTime.Today).AddDays(1);
+}
+
+<script type="text/javascript">
+    function filterChange() {
+        if ($("#StartDateTime").val() != "") {
+            $("#EndDateTime").data("kendoDatePicker").min($("#StartDateTime").val());
+            $("#EndDateTime").data("kendoDatePicker").enable(true);
+        }
+    }    
+</script>
+<form method="@(isNew ? "post" : "put")" action="~/api/vaccineschedule">
+    @Html.HiddenFor(x => x.Id)
+    <!-- JANGAN buat hidden untuk VaccineNumber; isi lewat Numeric di bawah -->
+
+    <div class="row">
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required">*</span>@Localizer["Batch"]</label>
+                @(Html.Kendo().NumericTextBoxFor(x => x.VaccineNumber)
+                    // >>> FIX: set nilai awal dari variable, bukan Model langsung
+                    .Value(vaccineNumber)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Min(1).Decimals(0).Format("#")
+                    )
+                <span class="invalid" data-validation-for="VaccineNumber"></span>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-6">
+            <div class="form-group">
+                <label><span class="required">*</span>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDateTime)
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDateTime" })
+                    .Format("dd/MM/yyyy")
+                    // >>> FIX: gunakan minStartDate yang sudah didefinisikan
+                    .Min(minStartDate)
+                    .Events(e => e.Change("filterChange"))
+                    )
+                <span class="invalid" id="StartDateTimeValidation" data-validation-for="StartDateTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required">*</span>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDateTime)
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDateTime" })
+                    .Format("dd/MM/yyyy")
+                    .Min(minStartDate)   // boleh DateTime.Now, tapi logisnya >= start date
+                    .Enable(false)
+                    )
+                <span class="invalid" data-validation-for="EndDateTime"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        @if ((Model?.Id ?? Guid.Empty) != Guid.Empty)   // >>> null-safe
+        {
+            <div class="form-group col-md-12">
+                <partial name="~/Areas/MasterData/Views/Shared/_VaccineScheduleDetailGrid.cshtml" model="Model" />
+            </div>
+        }
+    </div>
+
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    $(function () {
+        var num = $("#VaccineNumber").data("kendoNumericTextBox");
+        if (num) {
+            num.value(@vaccineNumber);   // sinkron nilai awal
+            num.readonly(true);          // readonly (bukan disable, agar tetap terkirim)
+        }
+        filterChange();
+    });
+</script>

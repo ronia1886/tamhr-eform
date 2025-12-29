@@ -1,0 +1,502 @@
+﻿@model DocumentRequestDetailViewModel<MarriageAllowanceViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.TimeManagementService TimeManagementService
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    bool stat = TimeManagementService.PreValidateMarried(requester);
+}
+@section scripts {
+    <script type="text/javascript">
+
+            $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'marriageallowance', subtype: ''
+                },
+                    success: function (result) {
+                        $('#User').text(result.Name);
+                        $('#Kelas').text(result.Kelas);
+                        $('#Tunjangan').text('Rp. ' + app.formatNumber(result.Ammount));
+                        $('#Object_AmountAllowance').val(result.Ammount);
+
+                }
+            });
+
+         @*if ('@isCanEdit' == 'False') {
+            $("#divHeader").hide();
+        }*@
+
+        if ('@Model.Object.IsOtherPlaceOfBirthCode' == 'True') {
+            $("#DivOtherPlaceOfBirthCode").show();
+            $("#DivPlaceOfBirthCode").hide();
+            $("#Object_IsOtherPlaceOfBirthCode").prop("checked", true);
+        } else {
+            $("#DivOtherPlaceOfBirthCode").hide();
+            $("#DivPlaceOfBirthCode").show();
+            $("#Object_IsOtherPlaceOfBirthCode").prop("checked", false);
+        }
+
+        $('input[type=checkbox][id=Object_IsOtherPlaceOfBirthCode]').change(function () {
+            if ($(this).is(':checked')) {
+                $("#DivOtherPlaceOfBirthCode").show();
+                $("#DivPlaceOfBirthCode").hide();
+                $("#Object_PlaceOfBirthCode").data("kendoComboBox").value("");
+                $("#Object_OtherPlaceOfBirthCode").val("");
+            }
+            else {
+                $("#DivOtherPlaceOfBirthCode").hide();
+                $("#DivPlaceOfBirthCode").show();
+                $("#Object_OtherPlaceOfBirthCode").val("");
+                $("#Object_PlaceOfBirthCode").data("kendoComboBox").value("");
+            }
+        });
+
+         if ('@Model.Object.IsOtherNation' == 'True') {
+            $("#DivOtherNation").show();
+            $("#DivNationCode").hide();
+            $("#Object_IsOtherNation").prop("checked", true);
+        } else {
+            $("#DivOtherNation").hide();
+            $("#DivNationCode").show();
+            $("#Object_IsOtherNation").prop("checked", false);
+        }
+
+        $('input[type=checkbox][id=Object_IsOtherNation]').change(function () {
+            if ($(this).is(':checked')) {
+                $("#DivOtherNation").show();
+                $("#DivNationCode").hide();
+                $("#Object_NationCode").data("kendoComboBox").value("");
+                $("#Object_OtherNation").val("");
+            }
+            else {
+                $("#DivOtherNation").hide();
+                $("#DivNationCode").show();
+                $("#Object_OtherNation").val("");
+                $("#Object_NationCode").data("kendoComboBox").value("");
+            }
+        });
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+        }
+
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        };
+
+        // Function to validate NIK length
+        function validateNIK() {
+            var nik = $('#Object_NIK').val(); // Get the NIK value
+            var nikErrorMessage = $('#nikErrorMessage'); // Get the error message span
+            var nikInput = $('#Object_NIK'); // Get the NIK input field
+
+            // Check if NIK is exactly 16 digits
+            if (nik.length !== 16 || isNaN(nik)) {
+                nikInput.css('border', '1px solid red'); // Set red border on invalid NIK
+                nikErrorMessage.show(); // Show error message
+            } else {
+                nikInput.css('border', ''); // Remove red border if valid
+                nikErrorMessage.hide(); // Hide error message
+            }
+        }
+
+        // Trigger validation on input change
+        $('#Object_NIK').on('input', function () {
+            validateNIK();
+        });
+
+        // Trigger validation before form submission
+        $('#submitBtn').on('click', function (e) {
+            validateNIK(); // Validate NIK when the submit button is clicked
+
+            if ($('#nikErrorMessage').is(':visible')) {
+                e.preventDefault(); // Prevent form submission if there is an error
+            }
+        });
+    </script>
+}
+<style type="text/css">
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+@if (!stat && AclHelper.CanSubmit())
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["You don't have access to create request, Please Update Your Marriage Status First"]</p>
+        <a href=@Url.Content("~/core/form/index?formKey=marriage-status") class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Go to Marriage"]</a>
+    </div>
+}
+else
+{
+    <div class="row" id="divHeader">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Information"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <span class="description">
+                            @Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>."]<br />
+                            @Localizer["Marriage Allowance that will be obtained is worth <b class='font-red' id='Tunjangan'></b>"]
+                        </span>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Detail Marriage"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Spouse Data"]</legend>
+                                    <div class="form-group">
+                                        @Html.HiddenFor(x => x.Object.AmountAllowance)
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Number"]</label>
+                                        @(Html.Kendo().NumericTextBox<decimal>()
+                    .Name("Object.PopulationNumber")
+                    .HtmlAttributes(new { @class = "form-control", maxlength = "16", @data_validation_for = "Object.PopulationNumber", id = "Object_NIK" })
+                    .Placeholder(Localizer["Input Identitity Card Number"].Value)
+                    .Value(string.IsNullOrEmpty(Model.Object.PopulationNumber) ? null : decimal.Parse(Model.Object.PopulationNumber) as decimal?)
+                    .Spinners(false)
+                    .Min(0)
+                    .Format("#")
+                    .Decimals(0)
+                    .Round(false)
+                    .Enable(isCanEdit)
+                    .Deferred()
+                                            )
+                                        <span id="nikErrorMessage" class="text-danger" style="display:none;">@Localizer["Identity Card Number must consist of 16 digits."]</span>
+                                        @*@Html.TextBoxFor(m => m.Object.PopulationNumber, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.PopulationNumber", placeholder = Localizer["Please Input Identity Number"].Value, onkeydown = "return ValidateNumber(event);", maxlength = "16" }, isCanEdit))*@
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.PopulationPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "PopulationPath" })
+                                            }
+                                        }
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Spouse Name"]</label>
+                                        @Html.TextBoxFor(x => x.Object.PartnerName, ApplicationHelper.Enable(new
+                                   {
+                                       @class = "form-control",
+                                       data_validation_for = "Object.PartnerName",
+                                       placeholder = Localizer["Input Spouse Name"].Value
+                                   }, isCanEdit))
+                                    </div>
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Nationality"]</label>
+                                    <div class="row">
+                                        <div id="DivNationCode" class="col-md-8 col-sm-6 form-group">
+                                            @(Html.KendoComboBoxFor(x => x.Object.CountryCode, "CountryCode")
+                                                           .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.CountryCode" })
+                                                           .Placeholder(Localizer["Select Nationality"].Value)
+                                                           .DataTextField("Name")
+                                                           .DataValueField("Code")
+                                                           .DataSource(dataSource => dataSource
+                                                               .Ajax()
+                                                               .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=Nationality")))
+                                                           )
+                                                           .SelectedIndex(-1)
+                                                           .Enable(isCanEdit)
+                                                           .Deferred()
+                                                    )
+                                        </div>
+                                        <div id="DivOtherNation" class="col-md-8 col-sm-6 form-group">
+                                            @Html.TextBoxFor(x => x.Object.OtherNation, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OtherNation", placeholder = Localizer["Please Input Nationality"].Value }, isCanEdit))
+                                        </div>
+                                        <div class="col-md-3 col-sm-3 form-group">
+                                            <div class="mt-checkbox-inline">
+                                                <label class="mt-checkbox green mt-checkbox-outline">
+                                                    Other
+                                                    <input type="checkbox" id="Object_IsOtherNation" name="Object.IsOtherNation" class="form-control" ,
+                                                           data_validation_for="Object.IsOtherNation" @(!isCanEdit ? "disabled" : "") />
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Place of Birth"]</label>
+                                        <div class="row">
+                                            <div id="DivPlaceOfBirthCode" class="col-md-8 col-sm-6 form-group">
+                                                @(Html.KendoComboBoxFor(x => x.Object.PlaceOfBirthCode, "PlaceOfBirthCode")
+                                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PlaceOfBirthCode" })
+                                                .Placeholder(Localizer["Select Place of Birth"].Value)
+                                                .DataTextField("Name")
+                                                .DataValueField("Code")
+                                                .DataSource(dataSource => dataSource
+                                                    .Ajax()
+                                                    .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=birthplace")))
+                                                )
+                                                .SelectedIndex(-1)
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                                    )
+                                            </div>
+                                            <div id="DivOtherPlaceOfBirthCode" class="col-md-8 col-sm-6 form-group">
+                                                @Html.TextBoxFor(x => x.Object.OtherPlaceOfBirthCode, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OtherPlaceOfBirthCode", placeholder = Localizer["Please Input Place of Birth"].Value }, isCanEdit))
+                                            </div>
+                                            <div class="col-md-3 col-sm-3 form-group">
+                                                <div class="mt-checkbox-inline">
+                                                    <label class="mt-checkbox green mt-checkbox-outline">
+                                                        Other
+                                                        <input type="checkbox" value="@Model.Object.IsOtherPlaceOfBirthCode" id="Object_IsOtherPlaceOfBirthCode" name="Object.IsOtherPlaceOfBirthCode" class="form-control" , data_validation_for="Object.IsOtherPlaceOfBirthCode" @(!isCanEdit ? "disabled" : "") />
+                                                        <span></span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Date of Birth"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.DateOfBirth)
+                                                   .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DateOfBirth", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                   .Format("dd/MM/yyyy")
+                                                   .Enable(isCanEdit)
+                                                   .Max(DateTime.Now)
+                                                   .Deferred()
+                                            )
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-12 col-sm-12 form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Citizenship"]</label>
+                                            <div class="mt-radio-inline">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Indonesian"]
+                                                    @Html.RadioButtonFor(x => x.Object.Citizenship, "wni", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Citizenship" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Foreign"]
+                                                    @Html.RadioButtonFor(x => x.Object.Citizenship, "wna", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Citizenship" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-12 col-sm-12 form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Gender"]</label>
+                                            <div class="mt-radio-inline">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Male"]
+                                                    @Html.RadioButtonFor(x => x.Object.GenderCode, "lakilaki", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Female"]
+                                                    @Html.RadioButtonFor(x => x.Object.GenderCode, "perempuan", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                    <span></span>
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <div class="form-group col-md-12">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Religion"]</label>
+                                                @(Html.KendoComboBoxFor(x => x.Object.Religion, "Religion")
+                                                                             .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Religion" })
+                                                                             .Placeholder(Localizer["Select Religion"].Value)
+                                                                             .DataTextField("Name")
+                                                                             .DataValueField("Code")
+                                                                             .DataSource(dataSource => dataSource
+                                                                             .Ajax()
+                                                                             .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=religion")))
+                                                                             )
+                                                                             .SelectedIndex(-1)
+                                                                             .Enable(isCanEdit)
+                                                                             .Deferred()
+                                                    )
+                                            </div>
+                                            <div class="form-group col-md-12">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Blood Type"]</label>
+                                                @(Html.KendoComboBoxFor(x => x.Object.BloodTypeCode, "BloodTypeCode")
+                                                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BloodTypeCode" })
+                                                                                    .Placeholder(Localizer["Select Blood Type"].Value)
+                                                                                    .DataTextField("Name")
+                                                                                    .DataValueField("Code")
+                                                                                    .DataSource(dataSource => dataSource
+                                                                                    .Ajax()
+                                                                                    .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=bloodType")))
+                                                                                    )
+                                                                                    .SelectedIndex(-1)
+                                                                                    .Enable(isCanEdit)
+                                                                                    .Deferred()
+                                                    )
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Marriage Data Detail"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Marriage Date"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.WeddingDate)
+                                           .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.WeddingDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                           .Enable(isCanEdit)
+                                           .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Marriage Certificate Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.MarriageCertificatePath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "MarriageCertificatePath" })
+                                            }
+                                        }
+                                    </div>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>@Localizer["Notes"]</legend>
+                                    <div class="form-group">
+                                        <label>@Localizer["Notes Detail"]</label>
+                                        @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new
+                                   {
+                                       @class = "form-control",
+                                       placeholder = Localizer["Input Notes"].Value
+                                   }, isCanEdit))
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@section formActions
+    {
+    @if (AclHelper.CanViewAction() && stat || AclHelper.CanApprove())
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-8 col-8">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanEdit())
+                                        {
+                                            <button name="btnAction" class="btn btn-info mr-2" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanSubmit())
+                                        {
+                                            <a class="btn btn-primary mr-2" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

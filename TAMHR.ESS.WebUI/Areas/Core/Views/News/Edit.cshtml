@@ -1,0 +1,48 @@
+﻿@model TAMHR.ESS.Domain.News
+@{
+    ScriptManager.RegisterReferences("datepicker", "combobox");
+}
+<form method="@ApplicationHelper.Method(Model.Id)" action="@Url.Content(ApplicationHelper.Api("news"))">
+    @Html.Hidden("Id", Model.Id)
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label>Title</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @placeholder = "Please input title" })
+            </div>
+            <div class="form-group">
+                <label>Slug Url</label>
+                @Html.TextBoxFor(x => x.SlugUrl, new { @class = "form-control", @placeholder = "Please input slug url" })
+            </div>
+        </div>
+        <div class="col">
+            <div class="form-group">
+                <label>Description</label>
+                @Html.TextBoxFor(x => x.ShortDescription, new { @class = "form-control", @placeholder = "Please input short description" })
+            </div>
+            <div class="form-group">
+                <label>Sticky</label>
+                @Html.TextBoxFor(x => x.Sticky, new { @class = "form-control", @placeholder = "Please select sticky" })
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>Body Html</label>
+                @Html.TextAreaFor(x => x.BodyHtml, new { @class = "form-control", @rows = 3 })
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>Image Url</label>
+                @Html.TextBoxFor(x => x.ImageUrl, new { @class = "form-control", @placeholder = "Please input image url" })
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn" data-trigger="submit" data-callback="updateHandler">Save</a>
+    </div>
+</form>

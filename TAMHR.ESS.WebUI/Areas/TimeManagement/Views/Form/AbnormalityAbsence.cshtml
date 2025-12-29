@@ -1,0 +1,503 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AbnormalityAbsenceViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityAbsenceService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@{
+    ScriptManager.RegisterReferences("dropdownlist", "datetimepicker", "grid", "multiselect", "datepicker", "combobox", "numeric", "upload", "listview");
+    var currentUser = User.GetClaim("NoReg");
+    var name = @User.GetClaim("Name");
+    var postName = @User.GetClaim("PostName");
+    string id = ViewContext.HttpContext.Request.Query["id"];
+    var CountData = 0;
+    var iconFa = "ft-edit";
+    if (Model.DocumentApprovalId == Guid.Empty)
+    {
+        var faskes = svc.GetsByCurrentUser(currentUser);
+        Model.Object.Details = faskes.ToArray();
+        CountData = faskes.Where(x => x.AbnormalityStatus != "Progress").Count();
+        if (CountData > 0)
+        {
+            currentUser = Model.Object.Details.FirstOrDefault().NoReg;
+        }
+    }
+    else
+    {
+        CountData = Model.Object.Details.Count();
+        if (CountData > 0)
+        {
+            currentUser = Model.Object.Details.FirstOrDefault().NoReg;
+            name = Model.Object.Details.FirstOrDefault().Name;
+            postName = Model.Object.Details.FirstOrDefault().PostName;
+        }
+        iconFa = "ft-eye";
+    }
+
+    string action = ViewContext.HttpContext.Request.Query["action"];
+    bool isCanEdit = Model.DocumentStatusCode == "draft" && Model.Progress == 0;
+
+    var now = DateTime.Now.Date;
+
+    var requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    bool isNewRequest = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid);
+
+}
+@section styles{
+    <style>
+        .k-grid-header .k-header .k-checkbox-label {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css">
+}
+
+<div>
+    <div class="row d-flex ">
+        <div class="col-md-6 col-sm-12">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <div class="profpic-avatar">
+                                    <img src="@ConfigService.ResolveAvatar(@currentUser)" style="width: 5rem; height: 5rem; border-radius: 50%;">
+                                </div>
+                            </div>
+                            <div class="media-body text-right">
+                                <h3 class="font-green-haze" data-field="EarlyLeave">@name</h3>
+                                <span class="font-dark">@postName</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <i class="iconmoon-absent font-red-haze font-large-2 float-left"></i>
+                            </div>
+                            @{
+                                var title = "Abnormality Absence";
+                                if (Model.DocumentApprovalId != Guid.Empty)
+                                {
+                                    title = "Pengajuan Abnormality Absence";
+                                }
+                            }
+                            <div class="media-body text-right">
+                                <h3 class="font-red-haze" data-field="Absent">@CountData</h3>
+                                <span class="font-dark d-md-none d-lg-block">@Localizer[@title]</span>
+                                <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer[@title]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Abnormality Absence"]</h3>
+                @if (Model.Progress == 0)
+                {
+                    <div class="row">
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["Start Date"]</label>
+                                @(Html.Kendo().DatePicker()
+                                    .Name("StartDate")
+                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                    .Format("dd/MM/yyyy")
+                                    .Deferred()
+                                )
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["End Date"]</label>
+                                <div>
+                                    <div style="display:inline-block">
+
+                                        @(Html.Kendo().DatePicker()
+                                                        .Name("EndDate")
+                                                        .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                        .Format("dd/MM/yyyy")
+                                                        .Deferred()
+                                                    )
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["Presence Code"]</label>
+                                    <div>
+                                    <div style="display:inline-block">
+
+                                        @(Html.Kendo().ComboBox()
+                                            .Name("presenceCode")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .DataTextField("ObjectText")
+                                            .DataValueField("CodePresensi")
+                                            .Placeholder(Localizer["Please select presence code"].Value)
+                                            .ClearButton(true)
+                                            .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/absence-log-tracking/get-presence-code")))
+                                            .Sort(s => s.Add("ObjectText"))
+                                            )
+                                            .SelectedIndex(-1)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                
+                                    <div style="display:inline-block;position:absolute;margin-left:20px">
+                                        <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler"><i class="fa fa-search" aria-hidden="true"></i></a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <div class="card-body p-0 table-wrap">
+
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid(Model.Object.Details)
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "proxy-time-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Group(group => group
+                            .Title("Abnormality Absence").HeaderHtmlAttributes(new { @class = "text-center" })
+                            .Columns(info =>
+                            {
+                                info.Bound(p => p.AbnormalityStatus).Hidden(true).HtmlAttributes(new { @class = "abnormality-absence-id"}).ClientTemplate(@"#:AbnormalityStatus#</small>");
+                                info.Select().Width(50).Title("Select All").HeaderHtmlAttributes(new { @class = "text-center"});
+                                info.Bound(p => p.WorkingDate)
+                               .Title("Date").HeaderHtmlAttributes(new { @class = "text-center" }).Width(100)
+                               .ClientTemplate(@"<small class="" d-block"">#:kendo.toString(WorkingDate, 'dd/MM/yyyy')#</small>#if(AbnormalityStatus == 'Progress') {#<small class="" d-block""><span class="" font-red-sunglo"">Already Submitted</span></small>#} else if(AbnormalityStatus == null) {#<small class="" d-block""><span class="" font-red-sunglo"">Not Yet Edited</span></small>#} else{##}#");
+                                info.Bound(p => p.WorkingTimeIn)
+                                .Title("Proxy In").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm tt'), '-')#</span></small>");
+                                info.Bound(p => p.WorkingTimeOut)
+                                .Title("Proxy Out").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm tt'), '-')#</span></small>");
+                                info.Bound(p => p.AbsentName).Width(160)
+                                .Title("Presence Code").HeaderHtmlAttributes(new { @class = "text-center" })
+                                .ClientTemplate(@"<small class="" d-block bold font-red-sunglo"">#:AbsentStatus# - #:AbsentName#</small>");
+                            })
+                         );
+                        columns.Group(group => group
+                            .Title("Abnormality Memo").HeaderHtmlAttributes(new { @class = "text-center" })
+                            .Columns(info =>
+                            {
+                                info.Bound(p => p.AbnormaityProxyIn).Locked(true).Lockable(false)
+                                .Title("Proxy In").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                .ClientTemplate(@"<small class="" d-block""><span class="" font-green-jungle"">#:$.toDefault(kendo.toString(AbnormaityProxyIn, 'HH:mm tt'), '-')#</span></small>");
+                                info.Bound(p => p.AbnormalityProxyOut)
+                                .Title("Proxy Out").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                                .ClientTemplate(@"<small class="" d-block""><span class=""font-green-jungle"">#:$.toDefault(kendo.toString(AbnormalityProxyOut, 'HH:mm tt'), '-')#</span></small>");
+                                info.Bound(p => p.AbnormalityAbsenStatus)
+                                .Title("Presence Code").HeaderHtmlAttributes(new { @class = "text-center" }).Width(160)
+                                .ClientTemplate(@"<small class="" d-block bold font-green-jungle"">#:$.toDefault(AbnormalityAbsenStatus, '')# - #:$.toDefault(AbnormalityAbsentName, '-')#</small>");
+                                info.Bound(p => p.Reason).Width(170)
+                                .Title("Reason").HeaderHtmlAttributes(new { @class = "text-center" })
+                                .ClientTemplate(@"<small class="" d-block bold font-green-jungle"">#:$.toDefault(Reason, '-')#</small>");
+
+                                info.Bound(c => c.Id).Title("Action").HeaderHtmlAttributes(new { @class = "text-center" }).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                     #if(AbnormaityProxyIn != null) {#<a class=""btn btn-xs yellow ml-1"" style='margin-right:10px' data-trigger=""modal"" data-modal=""over-time-modal"" data-modal-title=""Abnormality Absence File - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/timemanagement/abnormalityabsence/loadfile"" data-parameters-id=""#:Id#"" data-parameters-progress='" + Model.Progress + "'><i class='ft-paperclip'></i></a>#}#"+
+                                     "<a class='btn btn-xs blue-sharp ml-1' data-trigger='modal' data-modal='proxy-time-modal' data-modal-title='Abnormality Absence - #:Name#' data-modal-ajax='true' data-ajax-url='~/timemanagement/abnormalityabsence/load' data-parameters-id='#:Id#' data-parameters-progress='" + Model.Progress+"'>"+
+                                     "<i class='"+ iconFa + "'></i></a>").Width(140).Locked(true).Lockable(false);
+                            })
+                         );
+                    })
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Events(events => {events.DataBound("$.onBatchDataBound");})
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .ServerOperation(false)
+
+                    //.Read(read => read.Url(Url.Content("~/api/abnormality-absence/gets")).Data("$.getData"))
+                    .PageSize(5)
+                    .Sort(sort =>
+                    {
+                        sort.Add("Name");
+                        sort.Add("WorkingDate");
+                    })
+                    )
+
+                    .Sortable(sortable => sortable.Enabled(true))
+                    .Resizable(resizable => resizable.Columns(true))
+                    .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                    .Scrollable(scrollable => scrollable.Height("auto"))
+                    .Deferred()
+                    )
+                </div>
+
+                @*no-table-header*@
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section formActions
+{
+    @if (AclHelper.CanApprove() || AclHelper.CanEdit())
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (ApplicationHelper.IsDefault(Model.Id) || @isCanEdit)
+                                        {
+                                            <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-error-handler="" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (ApplicationHelper.IsDefault(Model.Id) || @isCanEdit)
+                                        {
+                                            <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-error-handler="" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="approveHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+}
+
+
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    <script type="text/javascript">
+         $.getData = function () {
+                var obj = {};
+                obj = { noReg: '@currentUser' }
+               return obj
+        };
+
+        app.registerHandler("searchHandler", function () {
+
+            var grid = $("#grid").data("kendoGrid");
+            var dataSource = grid.dataSource;
+
+            var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1);
+            var endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31);
+            var startDateStr = kendo.toString(startDate, "yyyy-MM-dd");
+
+            var presenceCode = $("#presenceCode").val();
+
+            dataSource.filter([{
+                field: 'WorkingDate',
+                value: startDate,
+                operator: 'gte'
+            }, {
+                field: 'WorkingDate',
+                value: endDate,
+                operator: 'lte'
+            }, {
+                field: 'AbsentStatus',
+                value: presenceCode,
+                operator: 'eq'
+            }
+            ]);
+
+        });
+
+        $.onBatchDataBound = function () {
+            var grid = $("#grid").data("kendoGrid");
+            var allRows = grid.items();
+            $.each(allRows, function (index, value) {
+                if($(value).find('.abnormality-absence-id').html() == "Progress" || $(value).find('.abnormality-absence-id').html() == "Completed"){
+                   $(value).find(".k-checkbox").attr('disabled', true);
+                }
+
+                if (grid.dataItem(value).AbnormalityAbsenceId == null || parseFloat("@Model.Progress") == 100) {
+                    $(value).find(".k-checkbox").attr('disabled', true);
+                }
+
+                if('@isCanEdit' == 'True'){
+                    $(value).find(".k-checkbox").attr('checked', true);
+                } else {
+                    if (parseFloat("@Model.Progress") == 0) {
+                        $(value).find(".ft-eye").replaceWith("<i class='ft-edit'></i>");
+                    } else if ((parseFloat("@Model.Progress") != 0 && parseFloat("@Model.Progress") != 100)){
+                        $(value).find(".k-checkbox").attr('checked', true);
+                    } else {
+                        $(value).find(".k-checkbox").attr('checked', false);
+                    }
+                }
+            })
+        };
+
+        app.registerHandler("dataInterceptor", function (d) {
+            var documents = []
+            var grid = $("#grid").data("kendoGrid");
+            grid.tbody.find("input:checked").closest("tr").each(function (index) {
+                grid.select($(this));
+                var dataItem = grid.dataItem($(this));
+
+                dataItem.WorkingDate = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd");
+                dataItem.AbnormalityWorkingDate = kendo.toString(dataItem.AbnormalityWorkingDate, "yyyy-MM-dd");
+                dataItem.AbnormaityProxyIn = kendo.toString(dataItem.AbnormaityProxyIn, "yyyy-MM-dd HH:mm");
+                dataItem.AbnormalityProxyOut = kendo.toString(dataItem.AbnormalityProxyOut, "yyyy-MM-dd HH:mm");
+
+                documents.push(dataItem);
+            });
+
+            if (documents.length == 0) {
+                app.warning("No data selected, please check your request");
+                return;
+            }
+            d.Object = {
+                Details: documents
+            };
+
+            return d;
+        });
+
+        app.registerHandler("updateHandler", function () {
+            location.reload();
+        });
+
+        app.registerHandler("deleteFileHandler", function (Id) {
+            $.post(app.resolveUrl("~/api/abnormality-absence/delete-file"), Id, function (d) {
+
+                swal('success', 'Delete data successed', 'success');
+                app.refreshControl('gridFile');
+
+            });
+        });
+
+        app.registerHandler("saveHandler", function (d) {
+            swal({
+                title: "Save Changes",
+                text: "Abnormality Absence Planning Data saved successfully",
+                type: "success"
+            }).then(function () {
+                window.location.href = app.resolveUrl("~/core/form/index?formKey=abnormality-absence");
+            });
+        });
+
+        app.registerHandler("approveHandler", function (d) {
+            var documents = []
+            var grid = $("#grid").data("kendoGrid");
+            grid.tbody.find("input:checked").closest("tr").each(function (index) {
+                grid.select($(this));
+                var dataItem = grid.dataItem($(this));
+
+                dataItem.WorkingDate = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd");
+                dataItem.AbnormalityWorkingDate = kendo.toString(dataItem.AbnormalityWorkingDate, "yyyy-MM-dd");
+                dataItem.AbnormaityProxyIn = kendo.toString(dataItem.AbnormaityProxyIn, "yyyy-MM-dd HH:mm");
+                dataItem.AbnormalityProxyOut = kendo.toString(dataItem.AbnormalityProxyOut, "yyyy-MM-dd HH:mm");
+
+                documents.push(dataItem);
+            });
+
+            if (documents.length == 0) {
+                app.warning("No data selected, please check your request");
+                return;
+            }
+            d.Object = {
+                Details: documents
+            };
+
+            d.DocumentApprovalId = '@Model.DocumentApprovalId'
+
+            $.post(app.resolveUrl("~/api/abnormality-absence/approve"), d, function (result) {
+                swal({
+                    title: "Save Changes",
+                    text: "Abnormality Absence Planning Data approved successfully",
+                    type: "success"
+                }).then(function () {
+                    window.location.href = app.resolveUrl("~/core/home/tasks");
+                });
+            });
+        });
+
+        function deleteRow(id) {
+            var ds = $("#grid").data("kendoGrid").dataSource;
+
+            var removeIndex = ds._data.map(item => item.Id).indexOf(id);
+
+            ds._data.splice(removeIndex, 1);
+
+            $("#grid").data("kendoGrid").setDataSource(ds._data);
+        }
+    </script>
+
+
+
+
+    @*@if (canCancelAbsence)
+        {
+            <script type="text/javascript">
+                (function ($, app) {
+                    app.registerHandler("dropDocumentHandler", function (parameters) {
+                        app.confirm(app.translate("Are you sure want to drop this document?"), app.translate("You won't be able to revert this!"), function (d) {
+                            if (!d.value) return;
+
+                            $.delete(app.resolveUrl("~/api/absence/drop-document"), { id: parameters.id }, function () {
+                                app.flash(app.translate("Success drop document"));
+                                window.location.reload();
+                            });
+                        });
+                    });
+                })(jQuery, app);
+            </script>
+        }*@
+}

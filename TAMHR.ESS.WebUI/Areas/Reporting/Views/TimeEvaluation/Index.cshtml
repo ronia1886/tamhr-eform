@@ -1,0 +1,276 @@
+﻿@{ 
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+    var now = DateTime.Now;
+    var currentMonth = now.Month;
+    var counter = 0;
+    var retro = 2015;
+    var yearNow = now.Year;
+    var guid = User.GetClaim("NoReg") + Guid.NewGuid().ToString("N");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> @Localizer["Actions"] <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="calculateHandler">
+                    @Localizer["Generate Time Evaluation"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="generateOtEvaluationHandler">
+                    @Localizer["Generate OT Evaluation"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadHandler" data-parameters-type="spkl">
+                    @Localizer["Download OT"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadHandler" data-parameters-type="bdjk">
+                    @Localizer["Download BDJK"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            var $monthDdl = $("#monthDdl"),
+                $yearDdl = $("#yearDdl"),
+                guid = "@guid",
+                hub = app.getHub();
+
+            function getKeyDate() {
+                var year = $("#yearDdl").val(),
+                    month = $("#monthDdl").val(),
+                    date = new Date(year, month - 1, 1),
+                    dateStr = kendo.toString(date, "yyyy-MM-dd");
+
+                return dateStr;
+            }
+
+            app.registerHandler("generateOtEvaluationHandler", function () {
+                var year = $("#yearDdl").val(),
+                    month = $("#monthDdl").val();
+
+                window.open(app.resolveUrl(`~/api/time-evaluation/overtime-evaluations/${month}/${year}`), "_blank");
+            });
+
+            app.registerHandler("downloadHandler", function (parameters) {
+                var type = parameters.type,
+                    keyDate = getKeyDate(),
+                    url = "~/api/master-data/" + type + "/multiple/download-template?keyDate=" + keyDate;
+                    
+                window.open(app.resolveUrl(url), "_blank");
+            });
+
+            app.registerHandler("calculateHandler", function () {
+                var keyDate = getKeyDate();
+
+                swal({
+                    title: 'Generating Files',
+                    html: 'Please wait',
+                    //html: '<span id="title">-</span>, progress <span id="progress">-</span>',
+                    allowOutsideClick: false,
+                    onOpen: () => {
+                        swal.showLoading();
+                    }
+                });
+
+                $.post(`~/api/time-evaluation/long-running/${guid}/${keyDate}`, {}, function () {
+                    swal({
+                      title: "Generate Success!",
+                      text: "Your file has been generated.",
+                      type: "success"
+                    }).then(() => {
+                        window.open(app.resolveUrl("~/api/time-evaluation/download/" + guid), "_blank");
+                    });
+                });
+            });
+
+            app.registerHandler("generateProxyHandler", function () {
+                var year = $("#yearDdl").val(),
+                    month = $("#monthDdl").val(),
+                    startDate = new Date(year, month - 1, 1),
+                    endDate = startDate.addMonths(1).addDays(-1),
+                    startDateStr = kendo.toString(startDate, "yyyyMMdd"),
+                    endDateStr = kendo.toString(endDate, "yyyyMMdd");
+
+                swal({
+                    title: 'Generating Proxy',
+                    html: 'Please wait',
+                    //html: '<span id="title">-</span>, progress <span id="progress">-</span>',
+                    allowOutsideClick: false,
+                    onOpen: () => {
+                        swal.showLoading();
+                    }
+                });
+
+                $.post(`~/api/time-evaluation/gen-proxy/${guid}/${startDateStr}/${endDateStr}`, {}, function () {
+                    swal(
+                        'Generate Proxy Success!',
+                        'Proxy has been generated.',
+                        'success'
+                    );
+                });
+            });
+
+            hub.on("progress", (progress, message) => {
+                $("#title").text(message);
+                $("#progress").text(progress + '%');
+
+                if (progress == 100) {
+                    swal(
+                        'Generate Success!',
+                        'Your file has been generated.',
+                        'success'
+                    )
+                }
+            });
+
+            hub.start()
+               .then(_ => hub.invoke("AssociateJob", guid))
+               .catch(err => console.error(err.toString()));
+
+            $(function () {
+                if ($monthDdl.length > 0) {
+                    $monthDdl.on("change", function () {
+                        $("#grid").data("kendoGrid").dataSource.read();
+                    });
+                }
+
+                if ($yearDdl.length > 0) {
+                    $yearDdl.on("change", function () {
+                        $("#grid").data("kendoGrid").dataSource.read();
+                    });
+
+                    $monthDdl.val("@currentMonth");
+                    $yearDdl.val("@yearNow");
+                }
+            });
+        })(jQuery, app);
+    </script>
+    <script id="detail-template" type="text/kendo-tmpl">
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeManagementView>()
+            .Name("sub-grid-#=NoReg#")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.WorkingDate).Title("Date")
+                    .ClientTemplate(@"<div class=""d-none d-md-block text-center"">\#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')\#</div><div class=""d-block d-md-none""><h6 class=""bold mb-0"">Date</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')\#</span><h6 class=""bold mb-0"">Proxy In</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')\#</span><h6 class=""bold mb-0"">Proxy Out</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')\#</span><h6 class=""bold mb-0"">Description</h6><span class=""small mb-2 d-block"">\#:$.toDefault(Description, '-')\#</span></div>");
+
+                columns.Bound(c => c.WorkingTimeIn).Title("Proxy In")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Proxy In<br/><small>\#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')\#</small>")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.WorkingTimeOut).Title("Proxy Out")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Proxy Out<br/><small>\#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')\#</small>")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.Description).Title("Description")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"\#:$.toDefault(Description, '-')\#")
+                    .Width("35rem")
+                    .MinScreenWidth(700);
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/monitoring-report/gets")).Data(@<text>function() { return { noreg: "#=NoReg#", keyDate: $("\#monthDdl").val() + "/1/" + $("\#yearDdl").val(), checkMonth: true } }</text>))
+                .Sort(sort =>
+                {
+                    sort.Add("WorkingDate").Ascending();
+                })
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+            .ToClientTemplate()
+        )
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Time Evaluation List"]
+                </h3>
+                <div class="heading-elements">
+                    <div class="pull-right">
+                        <div class="d-inline">
+                            <select id="yearDdl" style="margin:0;padding:0;border:1px solid #0094ff">
+                                @for (var i = yearNow; i >= retro; i--)
+                                {
+                                    <option>@i</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="d-inline">
+                            <select id="monthDdl" style="margin:0;padding:0;border:1px solid #0094ff">
+                                @foreach (var month in monthNames)
+                                {
+                                    <option value="@(++counter)">@Localizer[month]</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeEvaluationStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { @class = "table-w-padding" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title("Employee").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body d-none d-sm-block"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                </div>
+                            </div>
+                            <div class=""pull-right ml-3 mt-1"">
+                                <span class=""small d-block"">#:OffDays# " + Localizer["Off"].Value + @"</span>
+                            </div>
+                            <div class=""pull-right ml-3 mt-1"">
+                                <span class=""small d-block"">#:WorkDays# " + Localizer["Work Days"].Value + @"</span>
+                                <span class=""small d-block"">#:Absent# " + Localizer["Absent"].Value + @"</span>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/time-evaluation/gets")).Data(@<text>function() { return { month: $("#monthDdl").val(), year: $("#yearDdl").val() } }</text>))
+                        .Sort(sort =>
+                        {
+                            sort.Add("Name").Ascending();
+                        })
+                    )
+                    .ClientDetailTemplateId("detail-template")
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,117 @@
+﻿[
+  {
+    "outputFileName": "wwwroot/css/core.bundle.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/bootstrap.css",
+      "wwwroot/css/layout.css",
+      "wwwroot/css/vertical-layout.css",
+      "wwwroot/css/button.css",
+      "wwwroot/css/card.css",
+      "wwwroot/css/menu.css",
+      "wwwroot/css/components.css",
+      "wwwroot/css/table.css",
+      "wwwroot/css/color.css",
+      "wwwroot/css/scrollbar.css",
+      "wwwroot/css/calendar.css",
+      "wwwroot/css/bootstrap-custom.css",
+      "wwwroot/plugins/kendo/styles/kendo.bootstrap-v4.min.css",
+      "wwwroot/css/kendo.bootstrap-custom.css"
+    ],
+    "minify": { "enabled": false }
+  },
+  {
+    "outputFileName": "wwwroot/css/core.min.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/core.bundle.css"
+    ],
+    "minify": { "enabled": true }
+  },
+  {
+    "outputFileName": "wwwroot/css/login.bundle.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/bootstrap.css",
+      "wwwroot/css/button.css",
+      "wwwroot/css/card.css",
+      "wwwroot/css/components.css",
+      "wwwroot/css/color.css",
+      "wwwroot/css/login-layout.css"
+    ],
+    "minify": { "enabled": false }
+  },
+  {
+    "outputFileName": "wwwroot/css/login.min.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/login.bundle.css"
+    ],
+    "minify": { "enabled": true }
+  },
+  {
+    "outputFileName": "wwwroot/css/error.bundle.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/bootstrap.css",
+      "wwwroot/css/card.css",
+      "wwwroot/css/components.css"
+    ],
+    "minify": { "enabled": false }
+  },
+  {
+    "outputFileName": "wwwroot/css/error.min.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/error.bundle.css"
+    ],
+    "minify": { "enabled": true }
+  },
+  {
+    "outputFileName": "wwwroot/css/maintenance.bundle.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/bootstrap.css",
+      "wwwroot/css/card.css",
+      "wwwroot/css/components.css",
+      "wwwroot/css/color.css"
+    ],
+    "minify": { "enabled": false }
+  },
+  {
+    "outputFileName": "wwwroot/css/maintenance.min.css",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/css/maintenance.bundle.css"
+    ],
+    "minify": { "enabled": true }
+  },
+  {
+    "outputFileName": "wwwroot/js/app-core.min.js",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/js/app-core.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  },
+  {
+    "outputFileName": "wwwroot/js/app.min.js",
+    "includeInProject": true,
+    "inputFiles": [
+      "wwwroot/js/app-core.js",
+      "wwwroot/js/app-menu.js",
+      "wwwroot/js/app-notification.js",
+      "wwwroot/js/app-init.js",
+      "wwwroot/js/app-idle-timeout.js"
+    ],
+    "minify": {
+      "enabled": true,
+      "renameLocals": true
+    },
+    "sourceMap": false
+  }
+]

@@ -1,0 +1,303 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualLeavePlanningService annualLeavePlanningService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    IEnumerable<AnnualLeavePlanningSummaryPdfStoredEntity> summary = annualLeavePlanningService.GetAnnualLeavePlanningSummaryPdfData(Model.DocumentApproval.Id);
+    AnnualLeavePlanningSummaryPdfStoredEntity totalWorkingDay = null;
+    AnnualLeavePlanningSummaryPdfStoredEntity totalPublicLeave = null;
+    AnnualLeavePlanningSummaryPdfStoredEntity totalAnnualLeave = null;
+    AnnualLeavePlanningSummaryPdfStoredEntity totalLongLeave = null;
+    IEnumerable<EventsCalendar> publicLeave = null;
+    EmployeeLeave employeeLeave = null;
+    IEnumerable<AnnualLeavePlanningDetailView> details = annualLeavePlanningService.GetDetails(Model.DocumentApproval.Id).OrderBy(a => a.StartDate);
+
+    if (summary.Count() > 0)
+    {
+        totalWorkingDay = summary.Where(s => s.Category == "working-day").FirstOrDefault();
+        totalPublicLeave = summary.Where(s => s.Category == "event-public-leave").FirstOrDefault();
+        totalAnnualLeave = summary.Where(s => s.Category == "cuti").FirstOrDefault();
+        totalLongLeave = summary.Where(s => s.Category == "cutipanjang").FirstOrDefault();
+        employeeLeave = annualLeavePlanningService.GetLeave("absence", totalWorkingDay.NoReg);
+
+        if(totalPublicLeave != null)
+        {
+            publicLeave = coreService.GetEventsCalendars(totalPublicLeave.YearPeriod).Where(e => e.EventTypeCode == "event-public-leave").OrderBy(e => e.StartDate);
+        }
+    }
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .bg-light-blue {
+        background-color: rgb(221, 235, 247);
+    }
+
+    .bg-dark-blue {
+        background-color: rgb(47, 117, 181);
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+
+<table class="tableizer-table bold" style="font-family:'Segoe UI'; font-size:12px; width: 100%;" border="1" cellspacing="0" cellpadding="0">
+    <tr>
+        <td colspan="14" style="text-align: center;"><h2>@Localizer["ANNUAL LEAVE PLANNING"]</h2></td>
+    </tr>
+
+    <tr>
+        <td colspan="14" style="text-align: center;"><h3>@Localizer["Division: " + Model.OrgInfo.OrgName]</h3></td>
+    </tr>
+
+    <tr>
+        <td rowspan="2" style="width: 9%"></td>
+        <td colspan="13" style="text-align: center;">@(totalAnnualLeave == null ? string.Empty : totalAnnualLeave.YearPeriod.ToString())</td>
+    </tr>
+
+    <tr>
+        <td style="width: 7%">@Localizer["Jan"]</td>
+        <td style="width: 7%">@Localizer["Feb"]</td>
+        <td style="width: 7%">@Localizer["Mar"]</td>
+        <td style="width: 7%">@Localizer["Apr"]</td>
+        <td style="width: 7%">@Localizer["May"]</td>
+        <td style="width: 7%">@Localizer["Jun"]</td>
+        <td style="width: 7%">@Localizer["Jul"]</td>
+        <td style="width: 7%">@Localizer["Aug"]</td>
+        <td style="width: 7%">@Localizer["Sep"]</td>
+        <td style="width: 7%">@Localizer["Oct"]</td>
+        <td style="width: 7%">@Localizer["Nov"]</td>
+        <td style="width: 7%">@Localizer["Dec"]</td>
+        <td style="width: 7%">@Localizer["Total"]</td>
+    </tr>
+
+    <tr class="bg-light-blue">
+        <td>@Localizer["Total Working Day"]</td>
+        @if (totalWorkingDay != null)
+        {
+            <td style="text-align: right">@totalWorkingDay.Jan</td>
+            <td style="text-align: right">@totalWorkingDay.Feb</td>
+            <td style="text-align: right">@totalWorkingDay.Mar</td>
+            <td style="text-align: right">@totalWorkingDay.Apr</td>
+            <td style="text-align: right">@totalWorkingDay.May</td>
+            <td style="text-align: right">@totalWorkingDay.Jun</td>
+            <td style="text-align: right">@totalWorkingDay.Jul</td>
+            <td style="text-align: right">@totalWorkingDay.Aug</td>
+            <td style="text-align: right">@totalWorkingDay.Sep</td>
+            <td style="text-align: right">@totalWorkingDay.Oct</td>
+            <td style="text-align: right">@totalWorkingDay.Nov</td>
+            <td style="text-align: right">@totalWorkingDay.Dec</td>
+            <td style="text-align: right">@(totalWorkingDay.Jan + totalWorkingDay.Feb + totalWorkingDay.Mar + totalWorkingDay.Apr + totalWorkingDay.May + totalWorkingDay.Jun + totalWorkingDay.Jul + totalWorkingDay.Aug + totalWorkingDay.Sep + totalWorkingDay.Oct + totalWorkingDay.Nov + totalWorkingDay.Dec)</td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr class="bg-light-blue">
+        <td rowspan="5">@Localizer["Cuti Bersama"]</td>
+    </tr>
+
+    <tr>
+        <td colspan="13" style="text-align: center;">@Localizer["JUMLAH HARI (CUTI BERSAMA)"]</td>
+    </tr>
+
+    <tr class="bg-light-blue">
+        @if (totalPublicLeave != null)
+        {
+            <td style="text-align: right">@totalPublicLeave.Jan</td>
+            <td style="text-align: right">@totalPublicLeave.Feb</td>
+            <td style="text-align: right">@totalPublicLeave.Mar</td>
+            <td style="text-align: right">@totalPublicLeave.Apr</td>
+            <td style="text-align: right">@totalPublicLeave.May</td>
+            <td style="text-align: right">@totalPublicLeave.Jun</td>
+            <td style="text-align: right">@totalPublicLeave.Jul</td>
+            <td style="text-align: right">@totalPublicLeave.Aug</td>
+            <td style="text-align: right">@totalPublicLeave.Sep</td>
+            <td style="text-align: right">@totalPublicLeave.Oct</td>
+            <td style="text-align: right">@totalPublicLeave.Nov</td>
+            <td style="text-align: right">@totalPublicLeave.Dec</td>
+            <td style="text-align: right">@(totalPublicLeave.Jan + totalPublicLeave.Feb + totalPublicLeave.Mar + totalPublicLeave.Apr + totalPublicLeave.May + totalPublicLeave.Jun + totalPublicLeave.Jul + totalPublicLeave.Aug + totalPublicLeave.Sep + totalPublicLeave.Oct + totalPublicLeave.Nov + totalPublicLeave.Dec)</td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr>
+        <td colspan="13" style="text-align: center;">@Localizer["TANGGAL CUTI BERSAMA"]</td>
+    </tr>
+
+    <tr class="bg-light-blue">
+        @if (publicLeave != null && publicLeave.Count() > 0)
+        {
+            @for (int i = 1; i <= 12; i++)
+            {
+                <td style="text-align: right">
+                    @if (publicLeave.Where(p => p.StartDate.Month == i) != null && publicLeave.Where(p => p.StartDate.Month == i).Count() > 0)
+                    {
+                        @foreach (EventsCalendar eventCalendar in publicLeave.Where(p => p.StartDate.Month == i))
+                        {
+                            @eventCalendar.StartDate.ToString("dd MMM")
+                            <br />
+                        }
+                    }
+                </td>
+            }
+            <td></td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr class="bg-dark-blue">
+        <td colspan="14" style="text-align: center;">@Localizer["ANNUAL LEAVE PLANNING " + (totalWorkingDay == null ? string.Empty : totalWorkingDay.YearPeriod.ToString())]</td>
+    </tr>
+
+    <tr>
+        <td rowspan="7" style="text-align: center;">
+            @if (employeeLeave != null)
+            {
+                @Model.OrgInfo.Name
+                <br />
+                @Localizer["Sisa Cuti Tahunan: " + employeeLeave.AnnualLeave.ToString()]
+                <br />
+                @Localizer["Sisa Cuti Panjang: " + employeeLeave.LongLeave.ToString()]
+            }
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="13" style="text-align: center;">@Localizer["JUMLAH HARI (RENCANA CUTI TAHUNAN & CUTI BESAR)"]</td>
+    </tr>
+
+    <tr>
+        @if (totalPublicLeave != null)
+        {
+            <td style="text-align: right">@(totalAnnualLeave.Jan + totalLongLeave.Jan)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Feb + totalLongLeave.Feb)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Mar + totalLongLeave.Mar)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Apr + totalLongLeave.Apr)</td>
+            <td style="text-align: right">@(totalAnnualLeave.May + totalLongLeave.May)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Jun + totalLongLeave.Jun)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Jul + totalLongLeave.Jul)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Aug + totalLongLeave.Aug)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Sep + totalLongLeave.Sep)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Oct + totalLongLeave.Oct)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Nov + totalLongLeave.Nov)</td>
+            <td style="text-align: right">@(totalAnnualLeave.Dec + totalLongLeave.Dec)</td>
+            <td style="text-align: right">
+                @(
+                totalAnnualLeave.Jan + totalAnnualLeave.Feb + totalAnnualLeave.Mar + totalAnnualLeave.Apr + totalAnnualLeave.May + totalAnnualLeave.Jun +
+                totalAnnualLeave.Jul + totalAnnualLeave.Aug + totalAnnualLeave.Sep + totalAnnualLeave.Oct + totalAnnualLeave.Nov + totalAnnualLeave.Dec +
+                totalLongLeave.Jan + totalLongLeave.Feb + totalLongLeave.Mar + totalLongLeave.Apr + totalLongLeave.May + totalLongLeave.Jun +
+                totalLongLeave.Jul + totalLongLeave.Aug + totalLongLeave.Sep + totalLongLeave.Oct + totalLongLeave.Nov + totalLongLeave.Dec
+            )
+            </td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr>
+        <td colspan="13" style="text-align: center;">@Localizer["TANGGAL RENCANA CUTI TAHUNAN"]</td>
+    </tr>
+
+    <tr>
+        @if (details != null)
+        {
+            @for (int i = 1; i <= 12; i++)
+            {
+                <td style="text-align: right">
+                    @if (details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cuti") != null && details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cuti").Count() > 0)
+                    {
+                        @foreach (AnnualLeavePlanningDetailView detail in details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cuti"))
+                        {
+                            for(DateTime dt = detail.StartDate; dt <= detail.EndDate; dt = dt.AddDays(1))
+                            {
+                                @dt.ToString("dd MMM")
+                                <br />
+                            }
+                        }
+                    }
+                </td>
+            }
+            <td></td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+
+    <tr>
+        <td colspan="13" style="text-align: center;">@Localizer["TANGGAL RENCANA CUTI BESAR"]</td>
+    </tr>
+
+    <tr>
+        @if (details != null)
+        {
+            @for (int i = 1; i <= 12; i++)
+            {
+                <td style="text-align: right">
+                    @if (details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cutipanjang") != null && details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cutipanjang").Count() > 0)
+                    {
+                        @foreach (AnnualLeavePlanningDetailView detail in details.Where(p => p.StartDate.Month == i && p.AbsenceType == "cutipanjang"))
+                        {
+                            for(DateTime dt = detail.StartDate; dt <= detail.EndDate; dt = dt.AddDays(1))
+                            {
+                                @dt.ToString("dd MMM")
+                                <br />
+                            }
+                        }
+                    }
+                </td>
+            }
+            <td></td>
+        }
+        else
+        {
+            <td colspan="13" style="text-align: center;">@Localizer["No Data Available"]</td>
+        }
+    </tr>
+</table>

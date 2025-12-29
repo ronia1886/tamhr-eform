@@ -1,0 +1,131 @@
+﻿@model TAMHR.ESS.Domain.EmployeeAnnualLeave
+@{
+    //var isNew = Model.Id == default(Guid);
+    var now = DateTime.Now;
+    int periodYear = now.Month != 12 ? now.Year : now.Year + 1;
+
+    int periodNextYear = periodYear + 1;
+}
+<form>
+    <script>
+        function onDataBound(e) {
+            var rows = e.sender.tbody.children();
+            for (var i = 0; i < rows.length; i++) {
+                var row = $(rows[i]);
+                var dataItem = e.sender.dataItem(row);
+                var period = dataItem.get("Period");
+                var btnDeleteAnnualLeave = row.find(".btn-delete-annual-leave");
+                if(parseInt(period) <= parseInt(@periodYear)){
+                    btnDeleteAnnualLeave.hide();
+                } else {
+                    btnDeleteAnnualLeave.show();
+                }
+            }
+        }
+
+        app.registerHandler("saveHandler", function (data) {
+            var viewModel = {
+                    NoReg : '@Model.NoReg',
+                    Period : $('#Period').val(),
+                    AnnualLeave : $('#AnnualLeave').val()
+            }
+
+            var dataSource = $('#history-grid').data("kendoGrid").dataSource.data();
+
+            var temp = dataSource.filter(function (el){
+                if(el.Period == $('#Period').val()){
+                    return el;
+                }
+            });
+
+            if(temp.length > 0){
+                viewModel.Id = temp[0].Id;
+                viewModel.CreatedOn = temp[0].CreatedOn;
+            } else {
+                viewModel.CreatedOn = kendo.toString(new Date(), "yyyy-MM-dd HH:mm:ss");
+            }
+
+            viewModel.ModifiedOn = kendo.toString(new Date(), "yyyy-MM-dd HH:mm:ss");
+
+            var saveUrl = app.resolveUrl("~/api/employee-annual-leave/create");
+
+            $.post(saveUrl, viewModel, function () {
+                app.success(app.translate("Success update items"), "Success");
+                $('#employee-annual-leave-modal').modal('hide')
+            }).fail(function (xhr, status, error) {
+                console.log(xhr);
+            });
+
+        });
+    </script>
+
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Employee"]</label>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @data_validation_for = "Name", @placeholder = Localizer["Please input name"].Value, @disabled=true })
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-6">
+            <div class="form-group">
+                <label>@Localizer["Period"]</label>
+                @(Html.Kendo().TextBox()
+                    .Name("Period")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Period", @placeholder = Localizer["Please input period"].Value })
+                    .Deferred()
+                )
+            </div>
+        </div>
+         <div class="col-6">
+            <div class="form-group">
+                <label>@Localizer["Annual Leave"]</label>
+                @(Html.Kendo().TextBox()
+                    .Name("AnnualLeave")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "AnnualLeave", @placeholder = Localizer["Please input annual leave"].Value })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeAnnualLeave>()
+                .Name("history-grid")
+                .Columns(columns =>
+                {
+                    columns.Bound(c => c.Id).HtmlAttributes(new { @class = "id-employee-annual-leave" }).Hidden(true);
+                    columns.Bound(c => c.Period).Title("Period").HtmlAttributes(new { @class = "text-center" }).ClientTemplate("#:$.toDefault(Period, '-')#");
+                    columns.Bound(c => c.AnnualLeave).Title("Annual Leave").HtmlAttributes(new { @class = "text-center" }).ClientTemplate("#:$.toDefault(AnnualLeave, '-')#");     
+                    columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <div class=""btn-group btn-delete-annual-leave"">" +
+                            @"<a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/employee-annual-leave/delete"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-trash""></i>
+                            </a>" 
+                        + "</div>").Width(80);
+                })
+                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/employee-annual-leave/getbynoreg"))
+                    .Data(@<text>function() { return { noreg: "@Model.NoReg" } }</text>))
+                    .PageSize(5)
+                    //.Sort(sort => sort.Add("Period").Descending())
+                )
+                .Pageable(options =>
+                {
+                    options.Input(true);
+                    options.Numeric(false);
+                    options.AlwaysVisible(false);
+                })
+                .Events(e => e.DataBound("onDataBound"))
+            )
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="handler" data-handler="saveHandler">@Localizer["Save"]</a>
+    </div>
+</form>

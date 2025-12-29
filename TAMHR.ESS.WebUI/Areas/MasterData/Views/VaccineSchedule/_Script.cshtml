@@ -1,0 +1,95 @@
+﻿@{
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart");
+}
+<script type="text/javascript">
+    function orderCount(VaccineScheduleId, uid) {
+        $.get("@Url.Content("~/api/vaccineschedule/get-detail-sum")?vaccineScheduleId=" + VaccineScheduleId, function (data) {
+            if (data.Data.length == 0) {
+                $("#grid").find("[data-uid=" + uid + "]").css("background-color","yellow");
+            }
+
+        });
+        return "loading...";
+    }
+
+    app.registerHandler("uploadHandler", function () {
+        var $this = $(this),
+            allowedExtensions = ['xls', 'xlsx'],
+            $fileInputWrapper = $("#UploadExcelPath"),
+            $fileInput = $this.closest("form").find("input[type='file']"),
+            fileName = $fileInput.val();
+        console.log($this);
+        if (fileName.length === 0) {
+            app.warning("Mohon pilih file.");
+
+            return;
+        }
+        else {
+            var extension = fileName.replace(/^.*\./, '');
+
+            if ($.inArray(extension, allowedExtensions) === -1) {
+                app.warning("Mohon pilih hanya file excel.");
+
+                return;
+            }
+        }
+
+        var formData = new FormData();
+        formData.append("file", $fileInput[0].files[0]);
+
+        app.blockUI({ boxed: true });
+        $.ajax({
+            url: app.resolveUrl("~/api/vaccineschedule/upload"),
+            data: formData,
+            cache: false,
+            contentType: false,
+            processData: false,
+            type: 'POST'
+        }).done(function (data) {
+            if (data.TotalSuccess === data.TotalUpload && data.TotalSuccess > 0) {
+                app.success(app.translate("Success upload all data"));
+            }
+            else if (data.TotalSuccess < data.TotalUpload && data.TotalSuccess > 0) {
+                app.warning(kendo.format(app.translate("Success upload {0} of {1} data, with warning"), data.TotalSuccess, data.TotalUpload) + ":<br/>" + data.Messages.join("<br/>"));
+            }
+            else {
+                app.error(app.translate("Failed upload Vaccine Schedule") + ":<br/>" + data.Messages.join("<br/>"));
+            }
+
+            $fileInput.val("");
+            $fileInputWrapper.val("");
+            app.refreshControl("grid");
+            app.unblockUI();
+            $("#vaccineScheduleModal").modal("hide");
+        });
+    });
+
+    $("input[type='file']").change(function () {
+        var fileName = $(this).val();
+        $("#UploadExcelPath").val(fileName);
+    });
+</script>
+
+<script type="text/x-kendo-template" id="detailGridVaccineSchedule">
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccineScheduleDetailGridStoredEntity>()
+    .Name("DetailGrid_#=Id#")
+    .Columns(columns =>
+    {
+        columns.Bound(c => c.HospitalName).Title("Hospital").Width(507);
+        columns.Bound(c => c.Qty).Title("Limit Quota").Width(150);
+        columns.Bound(c => c.RemainingQty).Title("Remaining Quota");
+    })
+    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+    .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/vaccineschedule/get-detail-grids")).Data("function() { return { 'vaccineScheduleId': '#=Id#' } }"))
+        .Sort(sort =>
+        {
+            sort.Add("HospitalName");
+        })
+    )
+    .ToClientTemplate()
+
+
+)
+</script>

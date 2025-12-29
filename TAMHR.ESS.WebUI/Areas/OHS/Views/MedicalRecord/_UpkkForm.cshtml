@@ -1,0 +1,380 @@
+﻿@model TAMHR.ESS.Domain.VisitUpkkView
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+
+@{
+
+
+    var isNew = Model.Id == default(Guid);
+}
+
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+    <h4 class="modal-title">@Localizer["Input UPKK"]</h4>
+</div>
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/ohs/medical-record/insertUpkk" : "~/api/ohs/medical-record/updateUpkk")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="modal-body">
+        <div class="row">
+            <!-- Noreg -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["No Reg"]</label>
+                    @*@(Html.Kendo().ComboBox()
+                    .Name("NoregUpkk")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisiCode", @required = "required" })
+                    .DataTextField("Noreg")
+                    .DataValueField("Noreg")
+                    .Placeholder(Localizer["NoReg"].Value)
+                    .Value(Model.Noreg == default(string) ? string.Empty : Model.Noreg)
+                    //.Value(Model.DivisiCode.ToString())
+                    .Events(events =>
+                    {
+                    events.Change("onchangeNoregUpkk");
+                    })
+
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-Noreg")))
+                    )
+                    .SelectedIndex(-1)
+                    )*@
+                    <input type="text" name="NoregUpkk" id="NoregUpkk" class="form-control" readonly="readonly" value="@Model.Noreg" />
+                    @*@Html.TextBoxFor(x => x.Noreg, new { @id = "NoregUpkk",Name="NoregUpkk", @required = "required", @class = "form-control" })*@
+
+                </div>
+            </div>
+            <!-- Nama -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Nama"]</label>
+                    <input type="text" name="NamaUpkk" id="namaUpkk" class="form-control" readonly="true" value="@Model.Noreg" />
+                    @*@Html.TextBoxFor(x => x.NoReg, new { @required = "required", @class = "form-control", @data_validation_for = "Province", @placeholder = Localizer["Please input province"].Value, @readonly = "readonly" })*@
+                </div>
+            </div>
+            <!-- Kategori Penyakit -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Kategori Penyakit"]</label>
+                    @*@Html.TextBoxFor(x => x.KategoriPenyakit, new { @class = "form-control", @data_validation_for = "NamaArea" })*@
+                    @(Html.Kendo().ComboBox()
+                        .Name("KategoriPenyakit")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("KategoriPenyakit")
+                        .DataValueField("KategoriPenyakit")
+                        .Placeholder(Localizer["Please select"].Value)
+                        .Value(Model.KategoriPenyakit == default(string) ? string.Empty : Model.KategoriPenyakit)
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-kp")))
+                        .Sort(sort => sort.Add("KategoriPenyakit"))
+                        ))
+
+                </div>
+            </div>
+            <!-- Spesifik Pemyakit -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Spesifik Penyakit"]</label>
+                    @*@Html.TextBoxFor(x => x.SpesifikPenyakit, new { @class = "form-control", @data_validation_for = "NamaArea" })*@
+                    @(Html.KendoComboBoxAutocompleteFor(x => x.SpesifikPenyakit, Url.Content("~/api/ohs/medical-record/get-SpesifikPenyakit"), "function() { return { 'code': $('#SpesifikPenyakit').val() } }", pageSize: int.MaxValue)
+                        .AutoBind(false)
+                        .DataValueField("Name")
+                        .DataTextField("Name")
+                        .SelectedIndex(-1)
+                        .CascadeFrom("KategoriPenyakit")
+                        .CascadeFromField("Type")
+
+
+                        )
+
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- Lokasi UPKK -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Lokasi UPKK"]</label>
+                    @*@Html.TextBoxFor(x => x.LokasiUPKK, new { @class = "form-control", @data_validation_for = "NamaArea", @placeholder = Localizer["Please input Nama Area"].Value })*@
+                    @(Html.Kendo().ComboBox()
+                        .Name("LokasiUPKK")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("Klinik")
+                        .DataValueField("Klinik")
+                        .Placeholder(Localizer["Please select Area"].Value)
+                        .Value(Model.LokasiUPKK == default(string) ? string.Empty : Model.LokasiUPKK)
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-UpkkDropDown")))
+                        .Sort(sort => sort.Add("Klinik"))
+                        ))
+
+                </div>
+            </div>
+            <!-- Jenis Kelamin -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Jenis Kelamin"]</label>
+                    <input type="text" name="genderUpkk" id="genderUpkk" class="form-control" readonly="readonly" value="@Model.Noreg" />
+                    @*@Html.TextBoxFor(x => x.NoReg, new { @required = "required", @class = "form-control", @data_validation_for = "Province", @placeholder = Localizer["Please input province"].Value, @readonly = "readonly" })*@
+                </div>
+            </div>
+            <!-- TdSistole -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["TD Sistole"]</label>
+                    @Html.TextBoxFor(x => x.TDSistole, new { @class = "form-control", @data_validation_for = "NamaArea"})
+
+                </div>
+            </div>
+            <!-- Kategori kunjungan-->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Kategori kunjungan"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("KategoriKunjungan")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "Berobat", "Pemeriksaan Kesehatan" })
+                        .Value(Model.KategoriKunjungan ?? "")
+                        .SelectedIndex(-1)
+                        )
+
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Umur -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Umur"]</label>
+                    @Html.TextBoxFor(x => x.Usia, new { @class = "form-control", @data_validation_for = "NamaArea" })
+
+                </div>
+            </div>
+            <!-- Jenis Kasus -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Jenis Kasus"]</label>
+                    @(
+                        Html.Kendo().ComboBox()
+                        .Name("JenisKasus")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "Baru", "Lama" })
+                        .Value(Model.JenisKasus ?? "")
+                        .SelectedIndex(-1)
+                        )
+
+                </div>
+            </div>
+
+            <!-- TD Diastole-->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["TD Diastole"]</label>
+                    @Html.TextBoxFor(x => x.TDDiastole, new { @class = "form-control" })
+
+                </div>
+            </div>
+            <!-- Nadi -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Nadi"]</label>
+                    @Html.TextBoxFor(x => x.Nadi, new { @class = "form-control", @data_validation_for = "NamaArea" })
+
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Division -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Division"]</label>
+                    @*@Html.TextBoxFor(x => x.Divisi, new { @class = "form-control"})*@
+                    <input type="text" name="DivisiUpkk" id="DivisiUpkk" class="form-control" readonly="readonly" value="@Model.Noreg" />
+
+                </div>
+            </div>
+            <!-- Tanggal Kunjugan -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Tanggal Kunjungan"]</label>
+                    @(Html.Kendo().DatePicker()
+                        .Name("TanggalKunjungan")
+                        .Value(Model.TanggalKunjungan)
+                        .Format("dd/MM/yyyy")
+                        .HtmlAttributes(new { @class = "form-control", placeHolder = Localizer["Tanggal"].Value })
+                        //.Deferred()
+                        )
+
+                </div>
+            </div>
+            <!-- Suhu -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Suhu"]</label>
+                    @Html.TextBoxFor(x => x.Suhu, new { @class = "form-control" })
+
+                </div>
+            </div>
+            <!-- Respirasi-->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Respirasi"]</label>
+                    @Html.TextBoxFor(x => x.Respirasi, new { @class = "form-control"})
+
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- Company -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Company"]</label>
+                    @(Html.Kendo().ComboBox()
+                        .Name("Company")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "TAM" })
+                        .Value(Model.Company ?? "")
+                        .SelectedIndex(-1)
+                        )
+
+                </div>
+            </div>
+            <!-- Lokasi Kerja/Area -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Lokasi Kerja"]</label>
+                    @*@Html.TextBoxFor(x => x.LokasiKerja, new { @class = "form-control"});*@
+                    <input type="text" name="LokasiKerja" id="LokasiKerja" hidden="hidden" class="form-control" value="@Model.LokasiKerja" />
+                    @(Html.Kendo().ComboBox()
+                        .Name("AreaId")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("NamaArea")
+                        .DataValueField("Id")
+                        .Placeholder(Localizer["Please select Area"].Value)
+                        .Value(Model.AreaId == default(string) ? string.Empty : Model.AreaId)
+                        .Events(events =>
+                        {
+                            events.Change("onchangeLokasiKerja");
+                        })
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/ohs/gets-AreaDropDown")))
+                        .Sort(sort => sort.Add("NamaArea"))
+                        ))
+
+                </div>
+            </div>
+            <!-- Diagnosa -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Diagnosa"]</label>
+                    @Html.TextBoxFor(x => x.Diagnosa, new { @class = "form-control"})
+
+                </div>
+            </div>
+            <!-- Teratment-->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Treatment/Nama Obat"]</label>
+                    @Html.TextBoxFor(x => x.Treatment, new { @class = "form-control" })
+
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <!-- JenisPekerjaan -->
+            <div class="col-3">
+                <div class="form-group">
+                    <label>@Localizer["Jenis Pekerjaan"]</label>
+                    @(Html.Kendo().ComboBox()
+                        .Name("JenisPekerjaan")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "Office", "Operation" })
+                        .Value(Model.JenisPekerjaan ?? "")
+                        .SelectedIndex(-1)
+                        )
+
+                </div>
+                <!-- NamaPemeriksa -->
+                <div class="form-group">
+                    <label>@Localizer["Nama Pemeriksa"]</label>
+                    @Html.TextBoxFor(x => x.NamaPemeriksa, new { @class = "form-control" })
+
+                </div>
+
+            </div>
+            <!-- Pemeriksa -->
+            <div class="col-sm-3">
+                <div class="form-group">
+                    <label>@Localizer["Pemeriksa"]</label>
+                    @(Html.Kendo().ComboBox()
+                        .Name("Pemeriksa")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "Dokter", "Perawat" })
+                        .Value(Model.Pemeriksa ?? "")
+                        .SelectedIndex(-1)
+                        )
+                </div>
+                <!-- Hasil Akhir -->
+                <div class="form-group">
+                    <label>@Localizer["Hasil Akhir"]</label>
+                    
+                    @(Html.Kendo().ComboBox()
+                        .Name("HasilAkhir")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .BindTo(new[] { "Tertangani di UPKK", "Pulang", "Rujuk ke Rumah Sakit" })
+                        .Value(Model.HasilAkhir ?? "")
+                        .SelectedIndex(-1)
+                        )
+
+                    </div>
+            </div>
+            <!-- Keluhan -->
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label>@Localizer["Keluhan"]</label>
+                    @Html.TextAreaFor(x => x.Keluhan, new { @class = "form-control", rows = 6 })
+
+                </div>
+            </div>
+
+        </div>
+
+
+    </div>
+
+</form>
+<div class="actions modal-footer">
+    <a href="javascript:;" id="submitFormUpkk" class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+</div>
+
+
+<script>
+
+    $(function () {
+        function prosesDataUpkk() {
+            // Simulasi proses async (contoh: AJAX, setTimeout, dsb.)
+            setTimeout(function () {
+                console.log("Proses selesai");
+
+                // Setelah proses selesai, refresh grid
+                $("#UpkkGrid").data("kendoGrid").dataSource.read();
+            }, 2000); // Simulasi proses selama 2 detik
+        }
+
+        //setInterval(refreshGrid, 2000);
+
+        $("#submitFormUpkk").click(function () {
+            //alert('ffff');
+            //$("#McuGrid").data("kendoGrid").dataSource.read();  //Refresh grid
+            prosesDataUpkk();
+        });
+    });
+
+
+</script>

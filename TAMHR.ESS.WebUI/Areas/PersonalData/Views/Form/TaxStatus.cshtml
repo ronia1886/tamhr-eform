@@ -1,0 +1,183 @@
+﻿@model DocumentRequestDetailViewModel<TaxStatusViewModel>
+@inject AclHelper AclHelper
+@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService PersonalDataService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ProfileService ProfileService
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    var NoReg = User.GetClaim("NoReg");
+    if (!isCanEdit)
+            {
+                NoReg = this.Model.Requester;
+            }
+    var ExistingNPWP = PersonalDataService.GetExistingNPWP(NoReg);
+    var ExistingKTP = ProfileService.GetProfile(NoReg).Nik;
+}
+<style type="text/css">
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+</style>
+@section scripts {
+    <script type="text/javascript">
+        $(() => {
+            if ('@isCanEdit' == 'True') $('#Object_NPWPNumber').val('@ExistingKTP');
+        });
+    if ('@isCanEdit' == 'True') {
+        $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/personaldata/getinfo'),
+                dataType: 'json',
+                //data: {  },
+                success: function (data) {
+                    if (data.Total > 0) {
+                        $('#Object_StatusTax').val(data.Data[0].TaxStatus);
+                    } else {
+                        $('#Object_StatusTax').val("K3");
+                    }
+
+                }
+            });
+    }
+
+    $('#Object_NPWPNumber').focusout(function () {
+        var value = $("#Object_NPWPNumber").val();
+        //var formatted = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{1})(\d{3})(\d{3}).*/, '$1.$2.$3.$4-$5.$6');
+        var formatted = value;
+        var valid = true;
+        var validateText = "";
+        if (formatted.length != 16) {
+            validateText = "NPWP must be 16 digit";
+            valid = false;
+        }
+        if (new RegExp("0{16}").test(formatted)) {
+            validateText = "NPWP can't be 16 digit zero";
+            valid = false;
+        }
+        if (valid) {
+            $(".float-right").children("button").show();
+            $(".float-right").children(".btn-primary").removeClass("disabled")
+            $('#npwpError').hide();
+            $('#npwpError').text("");
+        } else {
+            $(".float-right").children("button").hide();
+            $(".float-right").children(".btn-primary").addClass("disabled")
+            $('#npwpError').text(validateText);
+            $('#npwpError').show();
+        }
+        $('#Object_NPWPNumber').val(formatted)
+
+    });
+
+    $('#Object_NPWPNumber').focusin(function () {
+        var value = $("#Object_NPWPNumber").val();
+        var str = value.toString()
+        var newStr = value.replace(/\.|-/g, '');
+        $('#Object_NPWPNumber').val(newStr)
+    });
+
+    //$('#Object_NPWPNumber').keypress(function () {
+    //    if (this.value.length >= 15)
+    //        return false;
+    //});
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Tax Status Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Tax Status Data"]</legend>
+                                <div class="form-group">
+                                    <div class="row">
+                                        <div class="form-group col-md-6">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Existing NPWP"]</label>
+                                        </div>
+                                        <div class="form-group col-md-6">
+                                            <label style="text-align:right; font-size:12px"><i>@ExistingNPWP</i></label>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="form-group col-md-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["NPWP Number (KTP)"]<br/>
+                                            <span class="required" aria-required="true"> * <i>@Localizer["If the NPWP is not the same as the NIK, please update it in the Personal Data - Address menu"]</i></label>
+                                        </div>
+                                    </div>
+                                    @Html.TextBoxFor(x => x.Object.NPWPNumber, ApplicationHelper.Enable(new
+                                    {
+                                   @class = "form-control",
+                                   data_validation_for = "Object.NPWPNumber",
+                                   placeholder = Localizer["Input NPWP Number"].Value,
+                                   @readonly = "readonly"
+                               }, isCanEdit))
+                                    <p id="npwpError" style="display:none;color: red;"></p>
+                                </div>
+
+                                <div class="form-group">
+                                    <Label><span class="required" aria-required="true"> * </span>@Localizer["Tax Status"]</Label>
+                                    @Html.TextBoxFor(x => x.Object.StatusTax, ApplicationHelper.Enable(new
+                                    {
+                                        @class = "form-control",
+                                        data_validation_for = "Object.StatusTax",
+                                        placeholder = Localizer["Tax Status"].Value,
+                                        @readonly = "readonly"
+                                    }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Supporting Attachment (NPWP Card Digital Photo)"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportingAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                                                <br />
+                                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportingAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    <br />
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new
+                                    {
+                                   @class = "form-control",
+                                        placeholder = Localizer["Input Notes"].Value
+                                    }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

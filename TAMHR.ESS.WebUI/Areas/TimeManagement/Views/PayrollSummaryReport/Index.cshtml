@@ -1,0 +1,223 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree");
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+
+    string todayMonthYear = DateTime.Now.AddMonths(1).ToString("MMMM yyyy");
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />
+
+}
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>       
+      .legend-item
+      {
+        font: 12px 'Noto Sans';  
+        margin: 2px;
+        cursor:pointer;  
+      }
+      .legend-item .legend-marker
+      {
+        display:inline-block;
+        width:8px;
+        height:8px;
+      }
+
+      .k-grid-header .k-grid-header-wrap th.k-header {
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow: visible;
+            white-space: normal;
+        }
+    </style>
+}
+
+@* //ADD CHART SUMMARY TO THE TABLE
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-12">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Report Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Report summary by absence code"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12 analytic-block">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Orientation(ChartLegendOrientation.Vertical)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+*@
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title" id="titleSummary">@Localizer["PAYROLL PERIOD"] @todayMonthYear</h4>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                                    @Localizer["Download"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label>@Localizer["Division"]</label>
+                            
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .ClearButton(false)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("division selected");
+                                        
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                //.Events(e =>
+                                //    {
+                                //        e.Change("$.OnChangeDivision");
+                                //    })
+                                .Deferred()
+                            )
+                        
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Periode"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("periode")
+                                .Value(DateTime.Now.Date)
+                                .Start(CalendarView.Year)
+                                .Depth(CalendarView.Year)
+                                .Format("MMMM yyyy")
+                                .Footer(false)
+                                .HtmlAttributes(new { placeholder = "Select Month", style = "width:100%" })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3" style="text-align:right">
+                            <label>&nbsp;</label>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="$.onSearch();"><span class="ft-search"></span> Search</button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">&nbsp;</div>
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.PayrollSummaryReportStoredEntity>
+                    ()
+                    .Name("gridReport")
+                    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" }) 
+                    .Pageable(options =>
+                        {
+                            options.Input(true);
+                            options.Numeric(false);
+                            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                        })
+                    .HtmlAttributes(new { style = "height:600px;" })
+                    .Sortable()
+                    .Resizable(resizable => resizable.Columns(true))
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Scrollable()
+                    .Columns(columns =>
+                    {
+                        columns.Group(groupAll => groupAll
+                            .Title(Localizer["TIME MANAGEMENT MONTHLY SUMMARY REPORT"].Value)
+                            .Columns(infoAll =>
+                            {
+                                infoAll.Bound(x => x.Division).Title("Division").Width(200);
+                                infoAll.Bound(x => x.TotalMP).Title("Total MP").Width(35);
+                                infoAll.Bound(x => x.TotalWorkingDay).Title("Total Working Day").Width(45);
+                                infoAll.Group(group =>
+                                    group
+                                    .Title("Lost Hour")
+                                    .Columns(
+                                        info => {
+                                            info.Bound(x => x.LHTotalMP).Title("Total MP").Width(35);
+                                            info.Bound(x => x.LHTotalLostHour).Title("Total Lost Hour").Width(70);
+                                        }
+                                    )
+                                );
+                                infoAll.Group(group =>
+                                    group
+                                    .Title("Total OT")
+                                    .Columns(
+                                        info => {
+                                            info.Bound(x => x.OTTotalMP).Title("Total MP").Width(35);
+                                            info.Bound(x => x.OTTotalOvertime).Title("Total OT Hour").Width(70);
+                                        }
+                                    )
+                                );
+                                infoAll.Bound(x => x.ActualWorkHour).Title("Actual Work Hour").Width(70);
+                            })
+                        );
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/payroll-summary/get-reports"))
+                        .Data("$.getDataReport")
+                        )
+                        .PageSize(20)
+                    )
+                    //.Events(events =>
+                    //{
+                    //    events.DataBound("$.onDataBound");
+                    //})
+                    .Deferred()
+                    )
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

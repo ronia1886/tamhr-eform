@@ -1,0 +1,355 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataQueryService service;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    var data = Model.ViewData;
+
+    var completed = Model.DocumentApproval.DocumentStatusCode == DocumentStatus.Completed;
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    var Atasan = "";
+    var Requester = "";
+    var Diketahui = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Atasan = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Known")
+        {
+            Diketahui = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 30px">
+        <col style="width: 100px">
+        <col style="width: 300px">
+        <col style="width: 100px">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr style="height:50px">
+        <th colspan="4"><p style="font-size:18px">FORM PERUBAHAN DATA</p></th>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NoReg<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.NoReg</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.Name</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Divisi<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Departemen<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Seksi<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Ext<label style="float:right">:</label></td>
+        <td class="border-bottom"></td>
+        <td></td>
+    </tr>
+    <tr style="height:30px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="bold" colspan="4">I. Perubahan Status Keluarga</td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("marriage-status") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Pernikahan</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy buku/akta nikah)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("family-registration") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>
+            Kelahiran anak ke :
+            @if (typeof(BirthRegistrationViewModel) == obj.GetType())
+            {
+                var birthRegistration = (obj as BirthRegistrationViewModel);
+                <span>@birthRegistration.AnakKe</span>
+            }
+        </td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy akta kelahiran/fotocopy kartu keluarga)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("condolance") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>
+            Kematian dari :
+            @if (typeof(DismembermentViewModel) == obj.GetType())
+            {
+                var birthRegistration = (obj as DismembermentViewModel);
+                if (birthRegistration.IsMainFamily == "tidak")
+                {
+                    var getName = service.GetNameNonMainFamily(birthRegistration.NonFamilyRelationship).FirstOrDefault();
+                    var value = getName.GetType().GetProperty("Name").GetValue(getName).ToString();
+                    <span> (@value)</span>
+
+                }
+                else
+                {
+                    string OtherFamilyName = birthRegistration.OtherFamilyName;
+                    char karakterPembagi = '-';
+                    string[] HasilPembagi = OtherFamilyName.Split(karakterPembagi);
+                    string NamaHubungan = HasilPembagi[1];
+                    <span>( @NamaHubungan )</span>
+                }
+            }
+
+        </td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy surat keterangan kematian)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("divorce") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Perceraian</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy keterangan cerai)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="bold" colspan="4">II. Perubahan Tempat Tinggal</td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("address") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Alamat</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy KK/KTP sesuai dengan domisili baru)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="bold" colspan="4">III. Perubahan Pendidikan</td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("education") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Pendidikan</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy ijazah terakhir)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="bold" colspan="4">IV. Lain - lain</td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("insurance") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Jamsostek</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy KTP)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("insurance") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Asuransi</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy KTP dan KK)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("insurance") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>NPWP</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy KTP)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    <td style="width:100%" align="center" valign="middle">@Html.Raw((formKey.Equals("bank-account") ? " <span>&#10003;</span>" : "&nbsp"))</td>
+                </tr>
+            </table>
+        </td>
+        <td>Rekening Bank</td>
+        <td style="padding-left:60px">(Dilampirkan fotocopy buku rekening)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td class="bold" colspan="4">Keterangan</td>
+    </tr>
+    <tr>
+        <td colspan="4" style="border: solid 1px;" valign="top" height="70px">
+            @if (typeof(MarriageStatusViewModel) == obj.GetType())
+            {
+                var marriage = (obj as MarriageStatusViewModel);
+                <span>@marriage.Remarks</span>
+            }
+            @if (typeof(BirthRegistrationViewModel) == obj.GetType())
+            {
+                var birthRegistration = (obj as BirthRegistrationViewModel);
+                <span>@birthRegistration.Remarks</span>
+            }
+            @if (typeof(DismembermentViewModel) == obj.GetType())
+            {
+                var dismemberment = (obj as DismembermentViewModel);
+                <span>@dismemberment.Remarks</span>
+            }
+            @if (typeof(DivorceViewModel) == obj.GetType())
+            {
+                var divorce = (obj as DivorceViewModel);
+                <span>@divorce.Remarks</span>
+            }
+            @if (typeof(AddressViewModel) == obj.GetType())
+            {
+                var address = (obj as AddressViewModel);
+                <span>@address.Remarks</span>
+            }
+            @if (typeof(BankDetailViewModel) == obj.GetType())
+            {
+                var bank = (obj as BankDetailViewModel);
+                <span>@bank.Remarks</span>
+            }
+            @if (typeof(EducationViewModel) == obj.GetType())
+            {
+                var education = (obj as EducationViewModel);
+                <span>@education.Remarks</span>
+            }
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="4">Demikian Konfirmasi data ini kami buat dengan sebenar - benarnya, untuk digunakan sebagaimana mestinya.<br>Jika data yang diberikan tidak sesuai, maka akan dikenakan sanksi yang sudah diatur di dalam PKB tahun 2017 - 2019.<br>Jakarta, ......<br></td>
+    </tr>
+    <tr>
+        <td colspan="4" height="100px" style="padding-top:20px">
+            <table style="width:100%; font-size:12px" cellspacing="50">
+                <colgroup>
+                    <col style="width: 30%;" />
+                    <col style="width: 30%;" />
+                    <col style="width: 30%;" />
+                </colgroup>
+                <tr>
+                    <td align="center">
+                        <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Requester) ? "signed" : "")</div>
+                        @Requester
+                        <hr>
+                        Pemohon
+                    </td>
+                    <td align="center">
+                        <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Atasan) ? "signed" : "")</div>
+                        @Atasan
+                        <hr>
+                        Disetujui
+                    </td>
+                    <td align="center">
+                        <div style="margin-bottom: 20px; font-style: italic;">@(completed && !string.IsNullOrEmpty(Diketahui) ? "signed" : "")</div>
+                        @Diketahui
+                        <hr>
+                        Diketahui
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="3">Note : Untuk setiap informasi perubahan data, mohon dapat dilampirkan dokumen pendukung (Fotocopy KK, Fotocopy KTP, dll.)</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

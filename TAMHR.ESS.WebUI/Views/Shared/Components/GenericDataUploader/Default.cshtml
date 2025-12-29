@@ -1,0 +1,58 @@
+﻿@{ 
+    var apiUrl = (string)ViewBag.ApiUrl;
+    var formId = "Form-" + Guid.NewGuid().ToString();
+}
+<form id="@formId" role="form" enctype="multipart/form-data" method="post" action="@Url.Content(apiUrl + "/merge")">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" required="required" />
+        <label class="custom-file-label">Choose file...</label>
+    </div>
+    <div class="list-group"></div>
+</form>
+<div class="actions">
+    <a href="@Url.Content(apiUrl + "/download-template")" class="btn green-haze">@Localizer["Download Template"]</a>
+    <a class="btn red-haze action-upload-merge" data-trigger="handler" data-handler="uploadDataHandler">@Localizer["Upload & Merge"]</a>
+</div>
+<script type="text/javascript">
+    (function ($, app) {
+        let $form = $("#@formId"),
+            $actionsWrapper = $form.next(".actions"),
+            $uploadBtn = $actionsWrapper.find(".action-upload-merge"),
+            oldText = $uploadBtn.text(),
+            $actionsBtn = $actionsWrapper.find(".btn"),
+            $file = $form.find("input[type='file']");
+
+        $file.on("change", function () {
+            var $this = $(this),
+                fileName = $this.val();
+
+            if (fileName) {
+                $this.next("label").text(fileName);
+            }
+        });
+
+        app.registerHandler("uploadDataHandler", function () {
+            let formData = new FormData();
+            formData.append("file", $file[0].files[0]);
+
+            $actionsBtn.addClass("disabled");
+            $uploadBtn.text("@Localizer["Uploading, please wait..."].Value");
+
+            $.ajax({
+                url: $form.attr("action"),
+                data: formData,
+                context: document.body,
+                cache: false,
+                contentType: false,
+                processData: false,
+                type: 'POST'
+            }).always(function (data) {
+                app.success(app.translate("Success upload and merge data"));
+                $file.val("");
+                $file.next("label").text(app.translate("Please choose a file"));
+                $actionsBtn.removeClass("disabled");
+                $uploadBtn.text(oldText);
+            });
+        });
+    })(jQuery, app);
+</script>

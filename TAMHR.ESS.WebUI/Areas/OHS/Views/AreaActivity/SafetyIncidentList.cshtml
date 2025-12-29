@@ -1,0 +1,602 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+	// Layout = "~/Views/Shared/_Layout.cshtml";
+	ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+	//var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+	var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+	var now = DateTime.Now;
+	var start = new DateTime(now.Year, now.Month, 1);
+	var end = start.AddMonths(1).AddDays(-1);
+	var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+}
+@section styles {
+	<style type="text/css">
+		.k-grid th {
+		white-space: nowrap;
+		text-align: center !important;
+		vertical-align: middle !important;
+		}
+
+		td {
+		white-space: nowrap;
+		}
+
+		.adjustment {
+		width: 40px;
+		text-align: center;
+		}
+
+		.fixed-header {
+		top: 50px;
+		position: fixed;
+		width: auto;
+		z-index: 1;
+		}
+
+		.k-grid-header {
+		width: auto !important;
+		padding-right: 0 !important;
+		border-right: 0px solid #fff !important;
+		}
+
+		.k-grid-content.k-auto-scrollable {
+		overflow-y: hidden !important;
+		}
+
+		.k-grid-content-locked {
+		border-right: 1px solid #ddd;
+		height: 100% !important;
+		}
+
+		.custom-control-label::before, .custom-control-label::after {
+		left: -1.13rem;
+		}
+	</style>
+}
+@section scripts {
+	<script type="text/javascript" src="~/js/pages/ayo-sekolah-report.js"></script>
+	<script type="text/javascript">
+		function getParameters() {
+		var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+		endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+		return { startDate: startDate, endDate: endDate };
+		}
+
+			$('#myModal').on('hidden.bs.modal', function () {
+			// Reset form di dalam modal
+			$(this).find('form').trigger('reset');
+
+			// Jika ada elemen Kendo atau lainnya, reset di sini
+			resetKendoWidgets("#myModal");
+		});
+	</script>
+}
+
+<div class="col-md-12">
+	<nav class="navbar navbar-light justify-content-between">
+		<ul class="nav nav-tabs" role="tablist" id="dynamicButtons">
+			<li class="nav-item ml-2">
+				<a class="btn btn-secondary btn-sm active" id="btnnearmiss" data-toggle="tab" href="#near_miss" role="tab" aria-controls="kp" aria-selected="true">Near Miss</a>
+			</li>
+			<li class="nav-item">
+				<a class="btn btn-secondary btn-sm" id="btnpropertydamage" data-toggle="tab" href="#property_damage" role="tab" aria-controls="area" aria-selected="false">Property Damage</a>
+			</li>
+			<li class="nav-item">
+				<a class="btn btn-secondary btn-sm" id="btnworkingaccident" data-toggle="tab" href="#working_accident" role="tab" aria-controls="equipment" aria-selected="false">Working Accident</a>
+			</li>
+			<li class="nav-item">
+				<a class="btn btn-secondary btn-sm" id="btntrafficaccident" data-toggle="tab" href="#traffic_accident" role="tab" aria-controls="klinik" aria-selected="false">Traffic Accident</a>
+			</li>
+		</ul>
+	</nav>
+</div>
+<div class="row tab-content">
+	<div id="near_miss" class="col-md-12 tab-pane fade show active">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Near Miss"]</h3>
+			<div class="heading-elements">
+				<ul id="nearmiss-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "IncidentDateSearch", "Subject", "Remark"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Subject">@Localizer["Subject"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="IncidentDateSearch">@Localizer["Incident Date"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Remark"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_near_miss" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Near Miss" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadNearMiss">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.SafetyIncidentViewModel>()
+		.Name("grid_near_miss")
+		.HtmlAttributes(new { data_filter = "nearmiss-filter" })
+		.Columns(columns =>
+		{
+			columns.Bound(o => o.IncidentDescription).Title("Incident Description").HtmlAttributes(new { @class = "text-center" }).Width(200);
+			columns.Bound(o => o.DivisionName).Title("Division").HtmlAttributes(new { @class = "text-center" }).Width(180);
+			columns.Bound(o => o.NamaArea).Title("Area").HtmlAttributes(new { @class = "text-center" }).Width(180);
+
+			// Date column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Date")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'dd/MM/yyyy') #").Width(100);
+
+			// Time column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Time")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'HH:mm:ss') #").Width(100);
+
+			columns.Bound(o => o.Subject).Title("Subject").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.Remark).Title("Remark").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.Attachment).Title(Localizer["Attachment"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+			# if (Attachment) { #
+			<a class='btn green-jungle btn-sm' href='javascript:void(0);' onclick='getDownloadUrl(""#:Attachment#"")'>
+			<i class='ft-download'></i>
+			</a>
+			# } #
+			").Width(100);
+			// Action column
+			columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+			<div class=""btn-group"">
+			<a class=""btn btn-sm blue-sharp"" data-target=""grid_near_miss"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Near Miss"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadNearMiss"" data-parameters-id=""#:Id#"">
+					<i class=""ft-edit""></i>
+				</a>
+			</div>
+			<div class=""btn-group"">
+			<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteSafetyIncident"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+					<i class=""ft-trash""></i>
+				</a>
+			</div>")
+			.Width(150);
+		})
+		.DataSource(dataSource => dataSource
+		.Ajax()
+		.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/safety-incident/gets"))
+		.Data("filterGridByUrlParameters"))
+		.PageSize(20)
+		.Sort(sort =>
+		{
+			sort.Add("CreatedOn").Descending();
+		})
+		.Filter(filter =>
+		{
+			filter.Add(f => f.IncidentTypeCode)
+			.IsEqualTo("near_miss");
+		})
+		)
+		.Resizable(resize => resize.Columns(true))
+		.Pageable(options =>
+		{
+			options.Input(true);
+			options.Numeric(false);
+			options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+		})
+		.Events(events => events.DataBound("onDataBound"))
+		.Scrollable(scrollable => scrollable.Height("auto"))
+		.Deferred()
+		)
+	</div>
+	<div id="property_damage" class="col-md-12 tab-pane fade">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Property Damage"]</h3>
+			<div class="heading-elements">
+				<ul id="propertyDamage-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "IncidentDateSearch", "PropertyType", "Remark"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="PropertyType">@Localizer["Property Type"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="IncidentDateSearch">@Localizer["Incident Date"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Remark"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_property_damage" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Property Damage" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadPropertyDamage">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.SafetyIncidentViewModel>()
+		.Name("grid_property_damage")
+		.HtmlAttributes(new { data_filter = "propertyDamage-filter" })
+		.Columns(columns =>
+		{
+			columns.Bound(o => o.IncidentDescription).Title("Incident Description").HtmlAttributes(new { @class = "text-center" }).Width(200);
+			columns.Bound(o => o.DivisionName).Title("Division").HtmlAttributes(new { @class = "text-center" }).Width(180);
+			columns.Bound(o => o.NamaArea).Title("Area").HtmlAttributes(new { @class = "text-center" }).Width(180);
+
+			// Date column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Date")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'dd/MM/yyyy') #").Width(100);
+
+			// Time column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Time")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'HH:mm:ss') #").Width(100);
+			columns.Bound(o => o.PropertyType).Title("Property Type").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.TotalLoss).Title("Total Loss (Rupiah)").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.Remark).Title("Remark").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.Attachment).Title(Localizer["Attachment"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+			# if (Attachment) { #
+			<a class='btn green-jungle btn-sm' href='javascript:void(0);' onclick='getDownloadUrl(""#:Attachment#"")'>
+			<i class='ft-download'></i>
+			</a>
+			# } #
+			").Width(100);
+
+			// Action column
+			columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+		<div class=""btn-group"">
+		<a class=""btn btn-sm blue-sharp"" data-target=""grid_property_damage"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Property Damage"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadPropertyDamage"" data-parameters-id=""#:Id#"">
+		<i class=""ft-edit""></i>
+		</a>
+		</div>
+		<div class=""btn-group"">
+		<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteSafetyIncident"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+		<i class=""ft-trash""></i>
+		</a>
+		</div>").Width(150);
+		})
+		.DataSource(dataSource => dataSource
+		.Ajax()
+		.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/safety-incident/gets"))
+				.Data("filterGridByUrlParameters"))
+		.PageSize(20)
+		.Sort(sort =>
+		{
+			sort.Add("CreatedOn").Descending();
+		})
+		.Filter(filter =>
+		{
+			filter.Add(f => f.IncidentTypeCode)
+			.IsEqualTo("property_damage");
+		})
+		)
+		.Resizable(resize => resize.Columns(true))
+		.Pageable(options =>
+		{
+			options.Input(true);
+			options.Numeric(false);
+			options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+		})
+		.Events(events => events.DataBound("onDataBound"))
+		.Scrollable(scrollable => scrollable.Height("auto"))
+		.Deferred()
+		)
+	</div>
+	<div id="working_accident" class="col-md-12 tab-pane fade">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Working Accident"]</h3>
+			<div class="heading-elements">
+				<ul id="WorkingAccident-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "IncidentDateSearch", "PropertyType", "Remark"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="PropertyType">@Localizer["Property Type"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="IncidentDateSearch">@Localizer["Incident Date"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Remark"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_working_accident" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Working Accident" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadWorkingAccident">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.SafetyIncidentViewModel>()
+		.Name("grid_working_accident")
+		.HtmlAttributes(new { data_filter = "WorkingAccident-filter" })
+		.Columns(columns =>
+		{
+			columns.Bound(o => o.IncidentDescription).Title("Incident Description").HtmlAttributes(new { @class = "text-center" }).Width(200);
+			columns.Bound(o => o.DivisionName).Title("Division").HtmlAttributes(new { @class = "text-center" }).Width(180);
+			columns.Bound(o => o.NamaArea).Title("Area").HtmlAttributes(new { @class = "text-center" }).Width(180);
+
+			// Date column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Date")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'dd/MM/yyyy') #").Width(100);
+
+			// Time column
+			columns.Bound(o => o.IncidentDate)
+			.Title("Time")
+			.HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'HH:mm:ss') #").Width(100);
+			
+			columns.Bound(o => o.Subject).Title("Subject").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.AccidentType).Title("Accident Type").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.TotalVictim).Title("Total Victim").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.LossTime).Title("Loss Time(Day)").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.TotalLoss).Title("Total Loss(Rupiah)").HtmlAttributes(new { @class = "text-center" }).Width(100);
+			columns.Bound(o => o.Attachment).Title(Localizer["Attachment"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+			# if (Attachment) { #
+			<a class='btn green-jungle btn-sm' href='javascript:void(0);' onclick='getDownloadUrl(""#:Attachment#"")'>
+			<i class='ft-download'></i>
+			</a>
+			# } #
+				").Width(100);
+
+
+			// Action column
+			columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+			.ClientTemplate(@"
+			<div class=""btn-group"">
+				<a class="" btn btn-sm blue-sharp"" data-target=""grid_property_damage"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Working Accident"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadWorkingAccident"" data-parameters-id="" #:Id#"">
+			<i class=""ft-edit""></i>
+			</a>
+			</div>
+			<div class=""btn-group"">
+			<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteSafetyIncident"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+			<i class=""ft-trash""></i>
+			</a>
+			</div>").Width(150);
+				})
+		.DataSource(dataSource => dataSource
+		.Ajax()
+		.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/safety-incident/gets"))
+		.Data("filterGridByUrlParameters"))
+		.PageSize(20)
+		.Sort(sort =>
+		{
+					sort.Add("CreatedOn").Descending();
+		})
+		.Filter(filter =>
+		{
+			filter.Add(f => f.IncidentTypeCode)
+			.IsEqualTo("working_accident");
+		})
+		)
+		.Resizable(resize => resize.Columns(true))
+		.Pageable(options =>
+		{
+			options.Input(true);
+			options.Numeric(false);
+			options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+		})
+		.Events(events => events.DataBound("onDataBound"))
+		.Scrollable(scrollable => scrollable.Height("auto"))
+		.Deferred()
+		)
+	</div>
+	<div id="traffic_accident" class="col-md-12 tab-pane fade">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Traffic Accident"]</h3>
+			<div class="heading-elements">
+				<ul id="TrafficAccident-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "IncidentDateSearch", "PropertyType", "Remark"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="PropertyType">@Localizer["Property Type"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="IncidentDateSearch">@Localizer["Incident Date"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Remark"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_working_accident" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Traffic Accident" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadTrafficAccident">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.SafetyIncidentViewModel>()
+			.Name("grid_traffic_accident")
+			.HtmlAttributes(new { data_filter = "TrafficAccident-filter" })
+			.Columns(columns =>
+			{
+					columns.Bound(o => o.IncidentDescription).Title("Incident Description").HtmlAttributes(new { @class = "text-center" }).Width(200);
+					columns.Bound(o => o.DivisionName).Title("Division").HtmlAttributes(new { @class = "text-center" }).Width(180);
+					columns.Bound(o => o.NamaArea).Title("Area").HtmlAttributes(new { @class = "text-center" }).Width(180);
+					// Date column
+					columns.Bound(o => o.IncidentDate)
+					.Title("Date")
+					.HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'dd/MM/yyyy') #").Width(100);
+
+					// Time column
+					columns.Bound(o => o.IncidentDate)
+					.Title("Time")
+					.HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate("#= kendo.toString(kendo.parseDate(IncidentDate), 'HH:mm:ss') #").Width(100);
+
+					columns.Bound(o => o.Subject).Title("Subject").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.AccidentType).Title("Accident Type").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.TotalVictim).Title("Total Victim").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.LossTime).Title("Loss Time(Day)").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.Attachment).Title(Localizer["Attachment"].Value).HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate(@"
+					# if (Attachment) { #
+					<a class='btn green-jungle btn-sm' href='javascript:void(0);' onclick='getDownloadUrl(""#:Attachment#"")'>
+					<i class='ft-download'></i>
+					</a>
+					# } #
+					").Width(100);
+
+					// Action column
+					columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate(@"
+				<div class=""btn-group"">
+		<a class="" btn btn-sm blue-sharp"" data-target=""grid_traffic_accident"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Traffic Accident"" data-modal-ajax="" true"" data-ajax-url=""~/ohs/areaactivity/LoadTrafficAccident"" data-parameters-id="" #:Id#"">
+				<i class=""ft-edit""></i>
+				</a>
+				</div>
+				<div class=""btn-group"">
+		<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteSafetyIncident"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+		<i class=""ft-trash""></i>
+		</a>
+				</div>").Width(150);
+			})
+			.DataSource(dataSource => dataSource
+			.Ajax()
+			.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/safety-incident/gets"))
+				.Data("filterGridByUrlParameters"))
+			.PageSize(20)
+			.Sort(sort =>
+			{
+					sort.Add("CreatedOn").Descending();
+			})
+			.Filter(filter =>
+			{
+				filter.Add(f => f.IncidentTypeCode)
+				.IsEqualTo("traffic_accident");
+			})
+			)
+			.Resizable(resize => resize.Columns(true))
+			.Pageable(options =>
+			{
+				options.Input(true);
+				options.Numeric(false);
+				options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+			})
+				.Events(events => events.DataBound("onDataBound"))
+			.Scrollable(scrollable => scrollable.Height("auto"))
+			.Deferred()
+			)
+	</div>
+</div>
+
+<script type="text/javascript">
+	var currentValue;
+	function Grid_onLoad(e) {
+		var grid = $(this).data("tGrid");
+		currentValue = grid.editing.defaultDataItem.SEQUENCE;
+	}
+
+	function Grid_onEdit(e) {
+		if (e.mode == "insert") {
+			$(e.form).find("#SEQUENCE ").val(++currentValue);
+		}
+	}
+
+	function getDownloadUrl(attachmentId) {
+		// alert('hahaha');
+		const currentPath = window.location.pathname;
+		const baseUrlWithEssOhs = `${window.location.origin}/ess_v2/api/files/download?id=${attachmentId}`;
+		const baseUrlWithoutEssOhs = `${window.location.origin}/api/files/download?id=${attachmentId}`;
+
+		let url = currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+
+		window.location.href = url;
+	}
+
+</script>

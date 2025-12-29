@@ -1,0 +1,303 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("grid", "combobox", "pdfviewer", "datepicker");
+
+    var now = DateTime.Now.Date;
+    var currentPeriod = now.Year;
+    var currentMonth = now.Month;
+    var offsetYear = 2020;
+
+    var periods = Enumerable.Range(offsetYear, (currentPeriod - offsetYear) + 1)
+        .OrderByDescending(x => x);
+
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+}
+@section scripts {
+    <partial name="_Script" />
+    <partial name="_ActionScript" />
+    <partial name="ModalFeedback" />
+    <partial name="ModalLiveChat" />
+    <partial name="ModalNewConsult" />
+    <script type="text/javascript" src="~/plugins/A/Axios/axios.min.js"></script>
+    <script type="text/javascript" src="~/plugins/M/Moment/moment.js"></script>
+}
+@await Html.PartialAsync("ModalSelectService")
+@Html.AntiForgeryToken()
+<script type="text/javascript">
+    var Clear = () => {
+        $("#IfName").val("");
+        $("#IfNoreg").val("");
+        Search();
+    };
+    function getPeriod() {
+        var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+            endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+        return [{
+            field: "CreatedOnSearch",
+            operator: "gte",
+            value: startDate
+        }, {
+            field: "CreatedOnSearch",
+            operator: "lte",
+            value: endDate
+        }];
+    }
+    var IsWorkingTime = () => {
+        var Result = false;
+        if (moment().day() < 6 && moment().isAfter(moment().hour(8).minute(0)) && moment().isBefore(moment().hour(17).minute(0))) {
+            Result = true;
+        }
+        return Result;
+    };
+    var IsNotWorkingTime = () => {
+        return !IsWorkingTime();
+    };
+    function FilterCategory() {
+        var data = ["Konsultasi Kesehatan", "Konsultasi Asuransi"];
+        var option = '';
+        data.forEach(e => {
+            option += `<option value='${e}'>${e}</option>`;
+        });
+        $("#fCategory").html(option);
+        if ('@User.GetClaim("Role")'.includes('OHS_PIC_ASURANSI'))
+            $("#fCategory").val("Konsultasi Asuransi")
+        if ('@User.GetClaim("Role")'.includes('OHS_PIC_KESEHATAN'))
+            $("#fCategory").val("Konsultasi Kesehatan")
+    }
+    var Search = () => {
+        var $grid = $("#grid").data("kendoGrid");
+
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+
+        var dataSource = $grid.dataSource,
+                fCategory = $("#fCategory").val(),
+                Name = $("#IfName").val(),
+                Noreg = $("#IfNoreg").val(),
+                filters = [...[{
+                    field: 'KategoriLayanan',
+                    operator: 'contains',
+                    value: fCategory
+                }, {
+                    field: 'Nama',
+                    operator: 'contains',
+                    value: Name
+                }, {
+                    field: 'Noreg',
+                    operator: 'contains',
+                    value: Noreg
+                }, {
+                    field: 'DoctorId',
+                    operator: 'contains',
+                    value: '@User.GetClaim("Id")'
+                }],...getPeriod()];
+
+            dataSource.filter(filters);
+        };
+    document.addEventListener("DOMContentLoaded", function (event) {
+        FilterCategory();
+        function showOutOfService() {
+            Swal.fire({
+                title: "Perhatian",
+                html: '<div style="white-space: pre-line;">Selamat datang di layanan TanyaOHS\nMohon maaf. Tenaga Kesehatan sedang tidak tersedia.\nLayanan TanyaOHS tersedia Senin-Jumat, pk.08.00-17.00 (kec.hari libur)\nTinggalkan pesan Anda dan pesan tersebut akan  segera kami balas\nTerimakasih</div>',
+                icon: "success",
+                showConfirmButton: false
+            });
+        }
+        if (IsNotWorkingTime()) showOutOfService();
+        var TBCreate = $("#TBCreate");
+        TBCreate.click(() => {
+            axios.post('/api/tanyaohs/new-consult', {
+                "Id": "00000000-0000-0000-0000-000000000000",
+                "Nama": "Abnormality Absence",
+                "Noreg": "480923",
+                "Keluhan": "480923",
+                "Tanggal": "480923",
+                "Solve": "480923",
+                "Rating": "480923",
+                "Reply_Feedback": "480923"
+            }, {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            })
+                .then(function (response) {
+                    console.log(response);
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        })
+    });
+</script>
+<script>
+    var SetupPicStatus = () => {
+        var GetPicStatus = () => {
+            axios.get('../../api/tanyaohs/GetPicStatus', {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            })
+                .then((response) => {
+                    var Result = response.data.Result;
+                    $("#PicStatus").val(Result.Status);
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        }
+        GetPicStatus();
+        $("#PicStatus").change(() => {
+            axios.post('../../api/tanyaohs/ChangePicStatus', {
+                "Status": $("#PicStatus").val()
+            }, {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            }).then(function (response) { })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        });
+    }
+    document.addEventListener("DOMContentLoaded", function (event) {
+        $.filterChange = () => Search();
+        $("#IbSearch").click(() => Search());
+        $("#fCategory").change(() => { $.filterChange() });
+        SetupPicStatus();
+    });
+</script>
+<div class="card">
+    <div class="card-header bordered">
+        <div class="row">
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group">
+                    <label>Kategori Layanan</label>
+                    <select id="fCategory" class="form-control" disabled="disabled">
+                        <option value="">All</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <label>Nama</label>
+                            <input id="IfName" class="form-control" />
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <label>Noreg</label>
+                            <input id="IfNoreg" class="form-control" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group">
+                    <label>Date Range</label>
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            @(Html.Kendo().DatePicker()
+                                .Name("StartDate")
+                                .Value(start)
+                                .Events(e => e.Change("$.filterChange"))
+                                .Format("dd/MM/yyyy")
+                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                .Deferred()
+                                )
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            @(Html.Kendo().DatePicker()
+                                .Name("EndDate")
+                                .Value(end)
+                                .Events(e => e.Change("$.filterChange"))
+                                .Format("dd/MM/yyyy")
+                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                .Deferred()
+                                )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-10 col-sm-12">
+            </div>
+            <div class="col-md-2 col-sm-12">
+                <div class="row">
+                    <button id="IbSearch" class="btn btn-primary">Search</button>
+                    <button id="IbClear" onclick="Clear()" class="btn btn-primary">Clear</button>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 col-sm-12">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="PicStatus" class="form-control">
+                        <option value="Available">Available</option>
+                        <option value="Dalam Penanganan">Dalam Penanganan</option>
+                        <option value="Tidak Available">Tidak Available</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div class="col-md-12">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TanyaOhs>
+                ()
+                .Name("grid")
+                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                .Columns(columns => {
+                        columns.Template("" +
+                        "#:Nama# <button class=\"btn btn-danger\" onclick=\"OpenChat('#:Id#')\" style=\"#if(IsKonsultasiReadPic == 1) {# display:none # }#\">" +
+                        "<i class=\"fa fa-exclamation-triangle\"></i>" +
+                        "</button>").Title("Nama").Width(200);
+                        columns.Bound(c => c.Noreg).Title("Noreg").Width(100);
+                        columns.Bound(c => c.Keluhan).Title("Keluhan").Width(100);
+                        columns.Bound(c => c.KategoriLayanan).Title("Kategori Layanan").Width(100);
+                        columns.Bound(c => c.CreatedOn).Format("{0:dd/MM/yyyy}").Title("Tanggal").Width(100);
+                        columns.Bound(c => c.Solve).Title("Solve").Width(100);
+                        columns.Bound(c => c.Status).Title("Status").Width(100);
+                    columns.Template("" +
+                        "<button class=\"btn btn-primary\" onclick=\"OpenChat('#:Id#')\" style=\"#if(Status == 'Closed-disable') {# display:none # }#\">" +
+                        "<i class=\"icon-eye\"></i>" +
+                        "</button>").Title("Action").Width(100);
+                })
+                .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/tanyaOHS/gets")).Data("$.getData"))
+                .Sort(sort =>
+                {
+                })
+                .Filter(filter =>
+                {
+                    filter.Add(x => x.DoctorId).IsEqualTo(User.GetClaim("Id"));
+                    if (User.GetClaim("Role").Contains("OHS_PIC_KESEHATAN"))
+                        filter.Add(x => x.KategoriLayanan).IsEqualTo("Konsultasi Kesehatan");
+                    if (User.GetClaim("Role").Contains("OHS_PIC_ASURANSI"))
+                        filter.Add(x => x.KategoriLayanan).IsEqualTo("Konsultasi Asuransi");
+                })
+                .PageSize(20)
+                )
+                .Pageable(options =>
+                {
+                    options.Input(true);
+                    options.Numeric(false);
+                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                })
+                .HtmlAttributes(new { style = "height:600px;" })
+                .Sortable()
+                .Resizable(resizable => resizable.Columns(true))
+                .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                .Scrollable()
+                .Events(events =>
+                {
+                    events.DataBound("$.onDataBound");
+                })
+                .Deferred()
+                )
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,215 @@
+﻿
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox");
+}
+
+<style>
+    .k-grid,
+    .k-grid-header-wrap,
+    .k-grid-header th,
+    .k-grid-content > table > tbody > tr > td {
+        border: 0 !important;
+    }
+
+        .k-grid td {
+            border-width: 1px 0 0 0 !important;
+        }
+
+        .k-grid tr {
+            background-color: transparent !important;
+        }
+
+        .k-grid .k-alt {
+            background-color: transparent !important;
+        }
+</style>
+
+@section scripts {
+    <script type="text/javascript">
+        app.registerHandler("executeHandler", function (parameters) {
+            var grid = $("#grid").data("kendoGrid");
+
+            if (grid.tbody.find("input:checked").closest("tr").length === 0) {
+                app.warning("Please select request data.");
+            } else {
+                var selections = [];
+                grid.tbody.find("input:checked").closest("tr").each(function (idx, row) {
+                    var data = grid.dataItem(row);
+                    selections.push(data.Id);
+                });
+
+                app.confirm("Are you sure want to execute selected request", function (d) {
+                    if (!d.value) return;
+
+                    if (parameters.action === 'approve') {
+                        $.post(app.resolveUrl("~/api/workflow/multipleApprove"), selections, function () {
+                            window.sessionStorage.setItem("flashMessage", "Success");
+                            window.location.reload();
+                        });
+                    } else {
+                        $.post(app.resolveUrl("~/api/workflow/multipleReject"), selections, function () {
+                            window.sessionStorage.setItem("flashMessage", "Success");
+                            window.location.reload();
+                        });
+                    }
+                });
+            }
+        });
+
+        function filterGrid() {
+            $("#grid").data("kendoGrid").dataSource.filter({
+                logic: "and",
+                filters: [
+                    {
+                        field: "Reason",
+                        operator: "startswith",
+                        value: $("#Reason").val()
+                    },
+                    {
+                        field: "Status",
+                        operator: "startswith",
+                        value: $("#Status").val()
+                    },
+                    {
+                        field: "Name",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    },
+                    {
+                        field: "Date",
+                        operator: function (item) {
+                            var filterVal = $("#str-date").data("kendoDatePicker").value();
+                            if (filterVal === null)
+                                return true;
+                            else
+                                return item >= filterVal;
+                        },
+                        value: $("#str-date").data("kendoDatePicker").value()
+                    },
+                    {
+                        field: "Date",
+                        operator: function (item) {
+                            var filterVal = $("#end-date").data("kendoDatePicker").value();
+                            if (filterVal === null)
+                                return true;
+                            else
+                                return item <= filterVal;
+                        },
+                        value: $("#end-date").data("kendoDatePicker").value()
+                    }
+                ]
+            });
+        }
+
+        function dataBound(e) {
+            $("#btnApprove").hide();
+            $("#btnReject").hide();
+            
+            $.each(this.dataSource.view(), function (i, o) {
+                if (o.Approver !== null) {
+                    if (o.Approver.indexOf("(@User.GetClaim("Username"))") !== -1) {
+                        $("#btnApprove").show();
+                        $("#btnReject").show();
+                    }
+                }
+            });
+        }
+    </script>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-header bordered">
+                    <div class="row">
+                        <div class="form-group col-md-4">
+                            @(Html.KendoComboBox("Reason", "", "", "Name", "Name")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Select Reason"].Value)
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/masterdata/absence/gets")))
+                                )
+                                .Events(e => e.Change("filterGrid"))
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="form-group col-md-2">
+                            @Html.Kendo().DatePicker().Name("str-date").HtmlAttributes(new { placeholder = "From", style = "width:100%" }).Events(e => e.Change("filterGrid")).Deferred()
+                        </div>
+                        <div class="form-group col-md-2">
+                            @Html.Kendo().DatePicker().Name("end-date").HtmlAttributes(new { placeholder = "To", style = "width:100%" }).Events(e => e.Change("filterGrid")).Deferred()
+                        </div>
+                        <div class="form-group col-md-2">
+                            @(Html.KendoComboBox("Status", "", "", "Value", "Text")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Status"].Value)
+                                .BindTo(new List<SelectListItem>() {
+                                    new SelectListItem() {
+                                        Text = "Approve", Value = "completed"
+                                    },
+                                    new SelectListItem() {
+                                        Text = "In Progress", Value = "inprogress"
+                                    },
+                                    new SelectListItem() {
+                                        Text = "Rejected", Value = "rejected"
+                                    },
+                                    new SelectListItem() {
+                                        Text = "Cancel", Value = "cancelled"
+                                    }
+                                })
+                                .Events(e => e.Change("filterGrid"))
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="form-group col-md-2">
+                            <input id="nama" placeholder="@Localizer["Employee Name"]" class="form-control" onkeyup="filterGrid()" />
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="form-group col-md-12" style="overflow-x: auto;">
+                            @(Html.Kendo().Grid<AbsenceReportViewModel>()
+                                .Name("grid")
+                                .Columns(columns =>
+                                {
+                                    columns.Select().Width(10).ClientHeaderTemplate(@"<input class='k-checkbox' data-role='checkbox' id='cb-all' aria-label='Select row' aria-checked='false' type='checkbox'><label for='cb-all' class='k-checkbox-label'>" + @Localizer["All"].Value + "</label>")
+                                    .HtmlAttributes(new { @style = "vertical-align: middle" });
+                                    columns.Template("<label class='label-report'>#:Noreg#</label>");
+                                    columns.Template("<label class='label-report'>#:Name#</label>");
+                                    columns.Template("<label class='label-report'>#:Reason#</label><br/><small class='d-block'># if (kendo.toString(StartDate,'yyyyMMdd') === kendo.toString(EndDate,'yyyyMMdd')) { # #:kendo.toString(StartDate, 'dd/MM/yyyy')# # } else { # #:kendo.toString(StartDate, 'dd/MM/yyyy')# - #:kendo.toString(EndDate, 'dd/MM/yyyy')# # } #</small>");
+                                    columns.Template("<label class='label-report'>#= Status == 'completed' ? 'Approve' : Status == 'rejected' ? 'Rejected' : (Status == 'cancelled' ? 'Cancel' : 'In Progress') #</label>");
+                                    columns.Template(@"<a href='" + Url.Content($"~/core/form/view?formKey=absence&id=#:Id#") + @"' class='btn btn-xs'>View</a>").Title(" ");
+                                })
+                                .Events(e => e.DataBound("dataBound"))
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>No Absence report found</div>"))
+                                .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                                    .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/absence-report/getlistabsence"))))
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bordered">
+                    <div class="float-right" style="margin-bottom:10px">
+                        <a id="btnApprove" hide class="btn btn-sm blue-sharp" style="margin-bottom:20px" data-trigger="handler" data-handler="executeHandler" data-parameters-action="approve">
+                            <span class="d-none d-sm-inline">Approve</span>
+                        </a>
+                        <a id="btnReject" hide class="btn btn-sm red-soft" style="margin-bottom:20px" data-trigger="handler" data-handler="executeHandler" data-parameters-action="reject">
+                            <span class="d-none d-sm-inline">Reject</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

@@ -1,0 +1,99 @@
+﻿@model TAMHR.ESS.Domain.UserImpersonationView
+<form method="put" action="~/api/user-impersonation">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    @Html.HiddenFor(x => x.PostCode)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Impersonator"]</label>
+                @(Html.Kendo().AutoComplete()
+                    .Name("noregAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Value(Model.Name)
+                    .Placeholder(Localizer["Find user..."].Value)
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/gets"))))
+                            .PageSize(10)
+                            .Sort(sort => sort.Add("Name"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+
+                        $("#NoReg").val(dataItem.NoReg);
+                    }</text>))
+                )
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                @(Html.Kendo().AutoComplete()
+                    .Name("postCodeAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Value(Model.ImpersonateName)
+                    .Placeholder(Localizer["Find user..."].Value)
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/gets"))))
+                            .PageSize(10)
+                            .Sort(sort => sort.Add("Name"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+
+                        $("#PostCode").val(dataItem.PostCode);
+                    }</text>))
+                )
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Start Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.StartDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "StartDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="StartDate"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                @(Html.Kendo().DatePickerFor(x => x.EndDate)
+                    .Format("dd/MM/yyyy")
+                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "EndDate", placeholder = Localizer["Please select a date"].Value })
+                )
+                <span class="invalid" data-validation-for="EndDate"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.Description, new { @class = "form-control", @placeholder = Localizer["Please input description if any"].Value })
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

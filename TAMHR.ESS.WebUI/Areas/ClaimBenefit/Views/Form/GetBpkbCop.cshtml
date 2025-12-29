@@ -1,0 +1,134 @@
+﻿@model DocumentRequestDetailViewModel<GetBpkbCopViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("grid");
+}
+
+@section scripts {
+    <script type="text/javascript">
+        app.registerHandler("selectBpkb", function (parameters) {
+            $("input[name='Object.BpkpId']").val(parameters.id);
+            $("input[name='Object.BpkpNo']").val(parameters.nobpkb);
+            $("input[name='Object.PoliceNumber']").val(parameters.licenseplat);
+            $("input[name='Object.Type']").val(parameters.type);
+            $("Input[name='Object.Model']").val(parameters.model);
+            $("Input[name='Object.ProductionYear']").val(parameters.createdyear);
+            $("Input[name='Object.Color']").val(parameters.color);
+            $("Input[name='Object.FrameNumber']").val(parameters.vinno);
+            $("Input[name='Object.MachineNumber']").val(parameters.engineno);
+            $("Input[name='Object.Name']").val(parameters.vehicleowner);
+            $("#Object_Address").val(parameters.address);
+            $("#app-modal-instance-1").modal('toggle');
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Take PKB Request Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["BPKB Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["License Plate"]</label>
+                                    <div class="row">
+                                        <div class="col-md-7">
+                                            @Html.HiddenFor(x => x.Object.BpkpId)
+                                            @Html.HiddenFor(x => x.Object.BPKBNo)
+                                            @Html.TextBoxFor(x => x.Object.PoliceNumber, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.PoliceNumber", @readonly = "readonly" }, isCanEdit))
+                                        </div>
+                                        <div class="col-md-1">
+                                            @if (isCanEdit)
+                                            {
+                                                <a href="#" data-trigger="modal" data-modal-title="Data BPKB" data-modal-ajax="true" data-ajax-url="~/core/bpkb/loadgrid">
+                                                    <i class="fa fa-search"></i>
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Brand/Type"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Type, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.Type", @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Variety/Model"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Model, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.Model", @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Production Year"]</label>
+                                    @Html.TextBoxFor(x => x.Object.ProductionYear, ApplicationHelper.Enable(new {@class = "form-control", data_validation_for = "Object.ProductionYear", @readonly = "readonly"}, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Color"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Color, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Color", @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Frame Number"]</label>
+                                    @Html.TextBoxFor(x => x.Object.FrameNumber, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.FrameNumber",
+                                   @readonly = "readonly"
+                               }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Machine Number"]</label>
+                                    @Html.TextBoxFor(x => x.Object.MachineNumber, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.MachineNumber",
+                                   @readonly = "readonly"
+                               }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["On Behalf Of"].Value</label>
+                                    @Html.TextBoxFor(x => x.Object.Name, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.Name",
+                                   @readonly = "readonly"
+                               }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Address"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Address, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.Address",
+                                   @readonly = "readonly"
+                               }, isCanEdit))
+                                </div>
+                            </fieldset>
+
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+
+                            <fieldset>
+                                <legend class="w-auto">@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value
+                               }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

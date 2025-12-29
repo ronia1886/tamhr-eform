@@ -1,0 +1,306 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\core\\views\\settings\\news.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\core\\views\\settings\\news.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\core\\views\\shared\\_newsform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\core\\views\\shared\\_newsform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\masterdata\\views\\shared\\_lettertemplateform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\masterdata\\views\\shared\\_lettertemplateform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\core\\views\\shared\\_emailtemplateform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\core\\views\\shared\\_emailtemplateform.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\masterdata\\views\\lettertemplate\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\masterdata\\views\\lettertemplate\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\core\\views\\settings\\emailtemplates.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\core\\views\\settings\\emailtemplates.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\claimbenefit\\controllers\\formcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\claimbenefit\\controllers\\formcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\areas\\claimbenefit\\controllers\\ayosekolahreportcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\areas\\claimbenefit\\controllers\\ayosekolahreportcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{AD572A0A-7F56-408A-B79F-324DC5D37220}|TAMHR.ESS.Infrastructure.Web\\TAMHR.ESS.Infrastructure.Web.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.infrastructure.web\\mvc\\formcontrollerbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{AD572A0A-7F56-408A-B79F-324DC5D37220}|TAMHR.ESS.Infrastructure.Web\\TAMHR.ESS.Infrastructure.Web.csproj|solutionrelative:tamhr.ess.infrastructure.web\\mvc\\formcontrollerbase.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4717B4EA-BF48-0DBE-D7D9-56405AFC07BA}|TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\TAMHR.ESS.RenamePDFService.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.bupotscheduler\\tamhr.ess.renamepdfservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4717B4EA-BF48-0DBE-D7D9-56405AFC07BA}|TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\TAMHR.ESS.RenamePDFService.csproj|solutionrelative:tamhr.ess.bupotscheduler\\tamhr.ess.renamepdfservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4717B4EA-BF48-0DBE-D7D9-56405AFC07BA}|TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\TAMHR.ESS.RenamePDFService.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.bupotscheduler\\tamhr.ess.renamepdfservice\\helpers\\renamepdfservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4717B4EA-BF48-0DBE-D7D9-56405AFC07BA}|TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\TAMHR.ESS.RenamePDFService.csproj|solutionrelative:tamhr.ess.bupotscheduler\\tamhr.ess.renamepdfservice\\helpers\\renamepdfservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FF488CEB-4364-4734-B678-9A68DEC98435}|TAMHR.ESS.BackgroundTask\\TAMHR.ESS.BackgroundTask.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.backgroundtask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{FF488CEB-4364-4734-B678-9A68DEC98435}|TAMHR.ESS.BackgroundTask\\TAMHR.ESS.BackgroundTask.csproj|solutionrelative:tamhr.ess.backgroundtask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.webui\\wwwroot\\plugins\\jquery-3.7.1.min.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{2E4FFDB4-B9DD-4B7E-A0A1-5FB1286FC367}|TAMHR.ESS.WebUI\\TAMHR.ESS.WebUI.csproj|solutionrelative:tamhr.ess.webui\\wwwroot\\plugins\\jquery-3.7.1.min.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{FF488CEB-4364-4734-B678-9A68DEC98435}|TAMHR.ESS.BackgroundTask\\TAMHR.ESS.BackgroundTask.csproj|d:\\code\\tamhr.ess-master-revamp\\tamhr.ess.backgroundtask\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{FF488CEB-4364-4734-B678-9A68DEC98435}|TAMHR.ESS.BackgroundTask\\TAMHR.ESS.BackgroundTask.csproj|solutionrelative:tamhr.ess.backgroundtask\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 13,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:14:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:15:0:{2456bd12-ecf7-4988-a4a6-67d49173f565}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:16:0:{57d563b6-44a5-47df-85be-f4199ad6b651}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:6:0:{57d563b6-44a5-47df-85be-f4199ad6b651}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:10:0:{57d563b6-44a5-47df-85be-f4199ad6b651}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{57d563b6-44a5-47df-85be-f4199ad6b651}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "EmailTemplates.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\EmailTemplates.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\EmailTemplates.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\EmailTemplates.cshtml",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\EmailTemplates.cshtml",
+              "ViewState": "AgIAADYAAAAAAAAAAAAAAEQAAABDAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-29T21:36:35.148Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "_LetterTemplateForm.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\Shared\\_LetterTemplateForm.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\Shared\\_LetterTemplateForm.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\Shared\\_LetterTemplateForm.cshtml",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\Shared\\_LetterTemplateForm.cshtml",
+              "ViewState": "AgIAACYAAAAAAAAAAAAewEsAAAA9AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-29T21:31:08.231Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "_NewsForm.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_NewsForm.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_NewsForm.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_NewsForm.cshtml",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_NewsForm.cshtml",
+              "ViewState": "AgIAAD4AAAAAAAAAAAAswHQAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-29T20:56:05.499Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "_EmailTemplateForm.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_EmailTemplateForm.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_EmailTemplateForm.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_EmailTemplateForm.cshtml",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Shared\\_EmailTemplateForm.cshtml",
+              "ViewState": "AgIAAFoAAAAAAAAAAAAswGkAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-29T06:42:48.894Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "News.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\News.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\News.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\News.cshtml",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\Core\\Views\\Settings\\News.cshtml",
+              "ViewState": "AgIAABcAAAAAAAAAAAAcwB0AAAAEAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-25T12:58:44.706Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\LetterTemplate\\Index.cshtml",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\LetterTemplate\\Index.cshtml",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\LetterTemplate\\Index.cshtml [Read Only]",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\MasterData\\Views\\LetterTemplate\\Index.cshtml [Read Only]",
+              "ViewState": "AgIAABAAAAAAAAAAAAAwwB8AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2025-11-25T12:59:05.101Z",
+              "EditorCaption": " [Read Only]"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "FormControllerBase.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure.Web\\Mvc\\FormControllerBase.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.Infrastructure.Web\\Mvc\\FormControllerBase.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.Infrastructure.Web\\Mvc\\FormControllerBase.cs",
+              "RelativeToolTip": "TAMHR.ESS.Infrastructure.Web\\Mvc\\FormControllerBase.cs",
+              "ViewState": "AgIAACoBAAAAAAAAAAAswCsBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-28T09:26:59.154Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "FormController.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\FormController.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\FormController.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\FormController.cs",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\FormController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-28T10:58:53.072Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "AyoSekolahReportController.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\AyoSekolahReportController.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\AyoSekolahReportController.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\AyoSekolahReportController.cs",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Areas\\ClaimBenefit\\Controllers\\AyoSekolahReportController.cs",
+              "ViewState": "AgIAAKwAAAAAAAAAAAAzwKwAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-28T10:39:46.852Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Program.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\Program.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\Program.cs",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\Program.cs",
+              "ViewState": "AgIAAA4AAAAAAAAAAAAMwBkAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-24T15:32:17.409Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Program.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Program.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Program.cs",
+              "RelativeToolTip": "TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-25T10:43:20.597Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "RenamePdfService.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Helpers\\RenamePdfService.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Helpers\\RenamePdfService.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Helpers\\RenamePdfService.cs",
+              "RelativeToolTip": "TAMHR.ESS.BupotScheduler\\TAMHR.ESS.RenamePDFService\\Helpers\\RenamePdfService.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-25T10:43:01.532Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "bootstrap.js",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BackgroundTask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js",
+              "RelativeDocumentMoniker": "TAMHR.ESS.BackgroundTask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BackgroundTask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js",
+              "RelativeToolTip": "TAMHR.ESS.BackgroundTask\\wwwroot\\lib\\bootstrap\\dist\\js\\bootstrap.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAABGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2025-11-25T07:20:57.634Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "jquery-3.7.1.min.js",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\wwwroot\\plugins\\jquery-3.7.1.min.js",
+              "RelativeDocumentMoniker": "TAMHR.ESS.WebUI\\wwwroot\\plugins\\jquery-3.7.1.min.js",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.WebUI\\wwwroot\\plugins\\jquery-3.7.1.min.js",
+              "RelativeToolTip": "TAMHR.ESS.WebUI\\wwwroot\\plugins\\jquery-3.7.1.min.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2025-11-24T15:28:50.13Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BackgroundTask\\Program.cs",
+              "RelativeDocumentMoniker": "TAMHR.ESS.BackgroundTask\\Program.cs",
+              "ToolTip": "D:\\Code\\TAMHR.ESS-MASTER-REVAMP\\TAMHR.ESS.BackgroundTask\\Program.cs",
+              "RelativeToolTip": "TAMHR.ESS.BackgroundTask\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAhAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-24T15:16:07.556Z"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{99b8fa2f-ab90-4f57-9c32-949f146f1914}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,429 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService personalDataService
+@model DocumentRequestDetailViewModel<BirthRegistrationViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var genderObj = personalDataService.GetGender(requester).FirstOrDefault();
+    var gender = genderObj.GetType().GetProperty("GenderCode").GetValue(genderObj);
+}
+@section scripts {
+    <partial name="Components/_FamilyRegistrationTermAndConditions" />
+    <script type="text/javascript" src="~/js/pages/termconditions.js"></script>
+    <script type="text/javascript">
+        var taxStatus = "";
+        if ('@Model.Object.IsOtherPlaceOfBirthCode' == 'True') {
+            $("#DivOtherPlaceOfBirthCode").show();
+            $("#DivPlaceOfBirthCode").hide();
+            $("#Object_IsOtherPlaceOfBirthCode").prop("checked", true);
+        } else {
+            $("#DivOtherPlaceOfBirthCode").hide();
+            $("#DivPlaceOfBirthCode").show();
+            $("#Object_IsOtherPlaceOfBirthCode").prop("checked", false);
+        }
+
+        $('input[type=checkbox][id=Object_IsOtherPlaceOfBirthCode]').change(function () {
+
+            if ($(this).is(':checked')) {
+                $("#DivOtherPlaceOfBirthCode").show();
+                $("#DivPlaceOfBirthCode").hide();
+                $("#Object_PlaceOfBirthCode").data("kendoComboBox").value("");
+                $("#Object_OtherPlaceOfBirthCode").val("");
+            }
+            else {
+                $("#DivOtherPlaceOfBirthCode").hide();
+                $("#DivPlaceOfBirthCode").show();
+                $("#Object_OtherPlaceOfBirthCode").val("");
+                $("#Object_PlaceOfBirthCode").data("kendoComboBox").value("");
+            }
+        });
+
+        if ('@Model.Object.IsOtherNation' == 'True') {
+            $("#DivOtherNation").show();
+            $("#DivNationCode").hide();
+            $("#Object_IsOtherNation").prop("checked", true);
+        } else {
+            $("#DivOtherNation").hide();
+            $("#DivNationCode").show();
+            $("#Object_IsOtherNation").prop("checked", false);
+        }
+
+        $('input[type=checkbox][id=Object_IsOtherNation]').change(function () {
+            if ($(this).is(':checked')) {
+                $("#DivOtherNation").show();
+                $("#DivNationCode").hide();
+                $("#Object_NationCode").data("kendoComboBox").value("");
+                $("#Object_OtherNation").val("");
+            }
+            else {
+                $("#DivOtherNation").hide();
+                $("#DivNationCode").show();
+                $("#Object_OtherNation").val("");
+                $("#Object_NationCode").data("kendoComboBox").value("");
+            }
+        });
+
+        if ('@isCanEdit' == 'True') {
+            $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/personaldata/GetCountChild'),
+                    dataType: 'json',
+                    data: { noreg: '@requester' },
+                    success: function (result) {
+
+                        $('#Object_AnakKe').val(result.Total + 1)
+                        console.log($('#Object_AnakKe').val())
+                    }
+                });
+            $("#textanda").show()
+            $("#anda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+            $("#anda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+            $("#anda").show()
+        }
+
+            $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/personaldata/getinfoemployee'),
+                    dataType: 'json',
+                    data: {
+                        noreg: '@requester'
+                    },
+                    success: function (data) {
+                        $('#id_User').text(data.Data[0].Name);
+                        $('#id_Kelas').text(data.Data[0].Kelas);
+                        $('#id_TaxStatus').text(data.Data[0].TaxStatus);
+
+                        var newtaxstatus = data.Data[0].TaxStatus;
+                        var val = newtaxstatus.slice(-1);
+                        var str = newtaxstatus.substring(0, newtaxstatus.length - 1);
+                        if (val == 3) {
+                            $("#changestatus").text(data.Data[0].TaxStatus);
+                        }
+                        else {
+                            var newvalue = parseInt(val) + 1;
+                            newtaxstatus = (str + newvalue);
+                            $("#changestatus").text(newtaxstatus);
+                        }
+
+                        if (data.Data[0].TaxStatus === 'K3' || data.Data[0].TaxStatus === 'TK3') {
+                            $('#bpk_text').hide();
+                            $('#bpjs_text').hide();
+                        } else {
+                            $.ajax(
+                                {
+                                    type: 'POST',
+                                    url: app.resolveUrl('~/api/personaldata/getinfomedicalbpk'),
+                                    dataType: 'json',
+                                    data: { np: data.Data[0].NP, newtaxstatus: newtaxstatus },
+                                    success: function (result) {
+                                        if ($.trim(result.Data)) {
+                                            $('#id_JumlahBpk').text('Rp. ' + app.formatNumber(result.Data[0].AmmountTunjangan));
+                                            $('#text_Description').text(result.Data[0].Description)
+                                        }
+                                        else {
+                                            $('#id_JumlahBpk').text('Rp. 0');
+                                            $('#text_Description').text(result.Data[0].Description)
+                                        }
+                                    }
+                                });
+                            $.ajax(
+                                {
+                                    type: 'POST',
+                                    url: app.resolveUrl('~/api/personaldata/getinfobpjs'),
+                                    dataType: 'json',
+                                    success: function (result) {
+                                        $('#id_BPJS').text(result.Data[0].Name);
+                                    }
+                                });
+
+                        }
+
+                        $.ajax(
+                            {
+                                type: 'POST',
+                                url: app.resolveUrl('~/api/personaldata/getinfoaviva'),
+                                dataType: 'json',
+                                success: function (result) {
+                                    $('#id_AVIVA').text(result.Data[0].Name);
+                                }
+                            });
+                    }
+                });
+        $('#id_Module').text('@Localizer["Family Registration"].Value');
+
+        if ("@gender" == 'perempuan') {
+            $("#perubahanstatus").hide();
+        }
+    </script>
+}
+<a id="termAndConditionsBtn" class="hidden" data-trigger="modal" data-modal="term-and-conditions-modal" data-modal-title="Term and Conditions" data-modal-ajax="true" data-ajax-url="~/core/form/termandconditions" data-modal-callback="contentCallback" data-parameters='{ "documentApprovalId": "@Model.DocumentApprovalId" }'></a>
+<div class="row" id="divHeader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='id_User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='id_Kelas'></b>. If <label id='anda'>you</label> complete <b class='font-red' id='id_Module'></b> form, then there are changes in data & allowance as follows:"]</span>
+                    <ul class="list-style-icons margin-top-10">
+                        <li id="perubahanstatus">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of Tax Status from <b class='font-red' id='id_TaxStatus'></b> to <b class='font-red' id='changestatus'></b>"]
+                        </li>
+                        <li id="bpk_text">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of <span id='text_Description'></span> to <b class='font-red' id='id_JumlahBpk'></b>"]
+                        </li>
+                        <li id="bpjs_text">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Get membership of <b class='font-red' id='id_BPJS'></b>"]
+                        </li>
+                        <li id="aviva_text">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Get membership of <b class='font-red' id='id_AVIVA'></b> Insurance"]
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row" id="divContent">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Family Registration Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Family Registration Data"]</legend>
+                                @Html.HiddenFor(x => x.Object.AnakKe)
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Child Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.ChildName, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.ChildName", placeholder = Localizer["Input Child Name"].Value
+                               }, isCanEdit))
+
+                                </div>
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Nationality"] </label>
+                                <div class="row">
+                                    <div id="DivNationCode" class="col-md-8 col-sm-6 form-group">
+                                        @(Html.KendoComboBoxFor(x => x.Object.NationCode, "NationCode")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.NationCode" })
+                                            .Placeholder(Localizer["Select Nationality"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("Code")
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=Nationality")))
+                                            )
+                                            .SelectedIndex(-1)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div id="DivOtherNation" class="col-md-8 col-sm-6 form-group">
+                                        @Html.TextBoxFor(x => x.Object.OtherNation, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OtherNation", placeholder = Localizer["Please Input Nationality"].Value }, isCanEdit))
+                                    </div>
+                                    <div class="col-md-3 col-sm-3 exclude form-group">
+                                        <div class="mt-checkbox-inline">
+                                            <label class="mt-checkbox green mt-checkbox-outline">
+                                                @Localizer["Other"]
+                                                <input type="checkbox" id="Object_IsOtherNation" name="Object.IsOtherNation" class="form-control" ,
+                                                       data_validation_for="Object.IsOtherNation" @(!isCanEdit ? "disabled" : "") />
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Place of Birth"]</label>
+                                <div class="row">
+                                    <div id="DivPlaceOfBirthCode" class="col-md-8 col-sm-6 form-group">
+                                        @(Html.KendoComboBoxFor(x => x.Object.PlaceOfBirthCode, "PlaceOfBirthCode")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PlaceOfBirthCode" })
+                                            .Placeholder(Localizer["Select Place of Birth"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("Code")
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Sort(s => s.Add("Name").Descending())
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=birthplace")))
+                                            )
+                                            .SelectedIndex(-1)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div id="DivOtherPlaceOfBirthCode" class="col-md-8 col-sm-6 form-group">
+                                        @Html.TextBoxFor(x => x.Object.OtherPlaceOfBirthCode, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.OtherPlaceOfBirthCode", placeholder = Localizer["Please Input Place of Birth"].Value }, isCanEdit))
+                                    </div>
+                                    <div class="col-md-3 col-sm-3 exclude form-group">
+                                        <div class="mt-checkbox-inline">
+                                            <label class="mt-checkbox green mt-checkbox-outline ">
+                                                @Localizer["Other"]
+                                                <input type="checkbox" id="Object_IsOtherPlaceOfBirthCode" name="Object.IsOtherPlaceOfBirthCode" class="form-control" ,
+                                                       data_validation_for="Object.IsOtherPlaceOfBirthCode" @(!isCanEdit ? "disabled" : "") />
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Date of Birth"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.DateOfBirth)
+                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DateOfBirth", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                        .Format("dd/MM/yyyy")
+                                        .Enable(isCanEdit)
+                                        .Max(DateTime.Now)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12 col-sm-12 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Citizenship"]</label>
+                                        <div class="mt-radio-inline">
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Indonesian"]
+                                                @Html.RadioButtonFor(x => x.Object.NationalityCode, "wni", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.NationalityCode" }, isCanEdit))
+
+                                                <span></span>
+                                            </label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Foreign"]
+                                                @Html.RadioButtonFor(x => x.Object.NationalityCode, "wna", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.NationalityCode" }, isCanEdit))
+
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12 col-sm-12 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Gender"]</label>
+                                        <div class="mt-radio-inline">
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Male"]
+                                                @Html.RadioButtonFor(x => x.Object.GenderCode, "lakilaki", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                <span></span>
+                                            </label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Female"]
+                                                @Html.RadioButtonFor(x => x.Object.GenderCode, "perempuan", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.GenderCode" }, isCanEdit))
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Religion"]</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.ReligionCode, "ReligionCode")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.ReligionCode" })
+                                            .Placeholder(Localizer["Select Religion"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("Code")
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=religion")))
+                                            )
+                                            .SelectedIndex(-1)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="col-md-12 form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Blood Type"]</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.BloodTypeCode, "BloodTypeCode")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BloodTypeCode" })
+                                            .Placeholder(Localizer["Select Blood Type"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("Code")
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=bloodType")))
+                                            )
+                                            .SelectedIndex(-1)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Child Status"]</label>
+                                    <div class="mt-radio-inline">
+                                        <label class="mt-radio green mt-radio-outline">
+                                            @Localizer["Biological Children"]
+                                            @Html.RadioButtonFor(x => x.Object.ChildStatus, "anakkandung", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.ChildStatus" }, isCanEdit))
+                                            <span></span>
+                                        </label>
+                                        <label class="mt-radio green mt-radio-outline">
+                                            @Localizer["Adopted Children"]
+                                            @Html.RadioButtonFor(x => x.Object.ChildStatus, "anakangkat", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.ChildStatus" }, isCanEdit))
+                                            <span></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="form-group exclude">
+                                    <label>@Localizer["Attachment of Birth Certificate"] <label style="font-size:12px">(<span class="required" aria-required="true"> * </span>@Localizer["For Adopted Child, please attach court letter"] )</label></label>
+
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.BirthCertificatePath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "BirthCertificatePath" })
+                                        }
+                                    }
+                                </div>
+
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group inline">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

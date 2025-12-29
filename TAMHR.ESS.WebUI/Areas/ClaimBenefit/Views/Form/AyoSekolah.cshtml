@@ -1,0 +1,157 @@
+﻿@model DocumentRequestDetailViewModel<AyoSekolahViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@{
+    var isCanEdit = AclHelper.CanEdit();
+    var requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+
+    if (Model.Id == Guid.Empty)
+    {
+        Model.Object.RegNumber = requester;
+        var organizationStructures = MdmService.GetEmployeeOrganizationObjects(requester).Where(x=>x.Staffing==100).ToList();
+
+        foreach (var item in organizationStructures)
+        {
+            if (string.IsNullOrEmpty(Model.Object.Name))
+            {
+                Model.Object.Name = item.Name;
+            }
+
+            if (item.ObjectDescription == "Division")
+            {
+                Model.Object.Division = item.ObjectText;
+            }
+            else if (item.ObjectDescription == "Department")
+            {
+                Model.Object.Department = item.ObjectText;
+            }
+            else if (item.ObjectDescription == "Section")
+            {
+                Model.Object.Section = item.ObjectText;
+            }
+        }
+    }
+}
+@section scripts {
+    <script type="text/javascript">
+        $(function () {
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+                dataType: 'json',
+                data: {
+                    noreg: '@requester', type: 'ayosekolah', subtype: '' 
+                },
+                success: function (result) {
+                    $('#User').text(result.Name);
+                    $('#Kelas').text(result.Kelas.trim());
+                    $('#AyoSekolah').text(result.Ammount == 0 ? '?' : ('Rp. ' + app.formatNumber(result.Ammount)));
+                    $("#Object_Class").val(result.Kelas);
+                }
+            });
+
+            if ('@isCanEdit' == 'True') {
+                $("#textanda").show();
+                $("#anda").show();
+            } else if ('@isCanEdit' == 'False' && '@Model.Requester' != '@User.GetClaim("NoReg")') {
+                $("#textanda").hide();
+                $("#anda").hide();
+            } else if('@isCanEdit' == 'False' && '@Model.Requester' == '@User.GetClaim("NoReg")') {
+                $("#textanda").show();
+                $("#anda").show();
+            }
+        });
+    </script>
+}
+
+<div class="row" id="divHeader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title"><i class="ft-info" style="font-size: 0.95rem;"></i> @Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>. Ayo Sekolah Loan that will be obtained is worth <b class='font-red' id='AyoSekolah'></b>"]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Ayo Sekolah Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Ayo Sekolah Rules"]</legend>
+                                <div class="form-group">
+                                    <label>No Reg</label>
+                                    @Html.TextBoxFor(x => x.Object.RegNumber, new { @class = "form-control", @readonly = "readonly" , data_validation_for = "Object.RegNumber" })
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Name, new { @class = "form-control", @readonly = "readonly" , data_validation_for = "Object.Name" })
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Division"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Division, new { @class = "form-control", @readonly = "readonly" ,data_validation_for = "Object.Division" })
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Department"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Department, new { @class = "form-control", @readonly = "readonly" ,data_validation_for = "Object.Department" })
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Section"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Section, new { @class = "form-control", @readonly = "readonly" ,data_validation_for = "Object.Section" })
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Class"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Class, new { @class = "form-control", @readonly = "readonly" ,data_validation_for = "Object.Class" })
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

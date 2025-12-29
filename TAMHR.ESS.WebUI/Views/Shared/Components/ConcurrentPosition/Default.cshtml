@@ -1,0 +1,24 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.ActualOrganizationStructure>
+@{ 
+    var count = Model.Count();
+    var counter = 0;
+}
+<div class="row">
+    <div class="col">
+        <ul class="list-unstyled">
+            @foreach (var actualOrganizationStructure in Model)
+            {
+                var cssClass = actualOrganizationStructure.Staffing == 0 ? "font-blue-sharp" : string.Empty;
+                <li class="media @(++counter < count ? "mb-4" : string.Empty) @cssClass">
+                    <a href="javascript:;" data-trigger="handler" data-handler="switchOrganizationHandler" data-parameters-postcode="@actualOrganizationStructure.PostCode">
+                        <i class="ft-log-in font-large-2 @cssClass"></i>
+                    </a>
+                    <div class="media-body ml-2">
+                        <h5 class="mt-0 mb-0">@actualOrganizationStructure.PostName</h5>
+                        @actualOrganizationStructure.JobName
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>

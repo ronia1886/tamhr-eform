@@ -1,0 +1,153 @@
+﻿@model DocumentRequestDetailViewModel<IdeBerkonsepViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitQueryService ClaimBenefitQueryService
+@{
+    // Determine whether current user session can edit this form or not.
+    bool isCanEdit = AclHelper.CanEdit();
+
+    // Get minimum concept idea allowance value.
+    var minimumValue = ClaimBenefitQueryService.GetMiniumConceptIdeaAllowance();
+
+    // Get maximum concept idea allowance value.
+    var maximumValue = ClaimBenefitQueryService.GetMaximumConceptIdeaAllowance();
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Concept Idea Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Concept Idea Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Criteria"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.CriretiaCode, "CriretiaCode")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.CriretiaCode" })
+                                        .Placeholder(Localizer["Select Criteria"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Name")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=JenisIdeBerkonsep")))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Title, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Title", placeholder = Localizer["Input Title"].Value }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <div class="row">
+                                        <div class="form-group col-md-4">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Score"]</label>
+                                            @(Html.Kendo().NumericTextBox<decimal>()
+                                                .Name("Object.Value")
+                                                .HtmlAttributes(new { @class = "form-control", maxlength = maximumValue.ToString().Length, @data_validation_for = "Object.Value" })
+                                                .Placeholder(Localizer["Input Amount"].Value)
+                                                .Value(string.IsNullOrEmpty(Model.Object.Value) ? null : Math.Floor(decimal.Parse(Model.Object.Value)) as decimal?)
+                                                .Spinners(true)
+                                                .Min(minimumValue)
+                                                .Max(maximumValue)
+                                                .Format("#")
+                                                .Decimals(0)
+                                                .Round(false)
+                                                .Events(x => x.Change("onChangeValue"))
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group col-md-8">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Amount"]</label>
+                                            @(Html.Kendo().NumericTextBoxFor(x => x.Object.Amount)
+                                                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.Amount" , @readonly = "readonly"})
+                                                .Placeholder(Localizer["Input Amount"].Value)
+                                                .Value(Math.Floor(Model.Object.Amount))
+                                                .Format("##,#")
+                                                .Decimals(0)
+                                                .Min(0)
+                                                .Spinners(false)
+                                                .Min(0)
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group inline">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Proposal Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.ProposalPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "ProposalPath" })
+                                        }
+                                    }
+                                    <small class="font-red">* @Localizer["Please submit original proposals to HR Training"]</small>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section scripts {
+    <script type="text/javascript">
+        function onChangeValue() {
+            if ($("#Object_Value").val() == null || $("#Object_Value").val() == "") {
+                $("#Object_Amount").val(0)
+            }
+            else {
+                $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/claimbenefit/getinfoammountconceptidea'), 
+                    dataType: 'json',
+                    data: {
+                        value: $("#Object_Value").val(), type: 'IdeaConceptMatrix'
+                    },
+                    success: function (result) {
+                        var $amount = $("#Object_Amount"),
+                            $numeric = $amount.data("kendoNumericTextBox");
+
+                        $numeric.value(0)
+                        $numeric.value(result.Data[0].Ammount);
+                        $amount.focusout();
+                    }
+                });
+            }
+        }
+    </script>
+}

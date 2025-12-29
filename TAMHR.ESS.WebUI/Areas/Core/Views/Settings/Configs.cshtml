@@ -1,0 +1,129 @@
+﻿@{ 
+    ScriptManager.RegisterReferences("combobox", "datepicker", "numeric");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="config-modal" data-modal-title="Create new Config" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-handler="config">
+                    @Localizer["Create Config"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/config/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            $.onConfigChangeDataType = function () {
+                let value = this.value(),
+                    $form = this.element.closest("form"),
+                    oldValue = $form.find("input[name='ConfigValue']").val(),
+                    $inputWrapper = $form.find(".input-wrapper"),
+                    firstLoad = typeof $inputWrapper.data("loaded") === "undefined";
+
+                $inputWrapper.html("<input name='ConfigValue' class='form-control' data-validation-for='ConfigValue' placeholder='@Localizer["Please input config value"]' />");
+
+                let $configValue = $inputWrapper.find("input[name='ConfigValue']");
+                console.log($configValue);
+                switch (value) {
+                    case "bool":
+                        $configValue.kendoComboBox({
+                            dataTextField: "text",
+                            dataValueField: "value",
+                            dataSource: [
+                                { text: "True", value: "True" },
+                                { text: "False", value: "False" }
+                            ],
+                            change: $.commonComboBoxChange,
+                            filter: "contains"
+                        });
+
+                        if (firstLoad) {
+                            let $cb = $configValue.data("kendoComboBox");
+                            $cb.value(oldValue);
+                            $cb.trigger("change");
+                        }
+                        break;
+                    case "int":
+                        $configValue.addClass("text-right");
+                        $configValue.kendoNumericTextBox({
+                            value: firstLoad ? oldValue : "",
+                            format: "#.##"
+                        });
+                        break;
+                    case "date":
+                        $configValue.kendoDatePicker({
+                            value: firstLoad ? oldValue : "",
+                            format: "yyyy-MM-dd"
+                        });
+                        break;
+                    default:
+                        if (firstLoad) {
+                            $configValue.val(oldValue);
+                        }
+                        break;
+                }
+
+                $inputWrapper.data("loaded", true);
+            };
+        })(jQuery, app);
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Configs"]</h3>
+                <div class="heading-elements">
+                    <partial name="Components/_ConfigsToolbars" />
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<Config>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "configs-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Config").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-2"">
+                                    <small class=""d-block""><b>#:ConfigText# (#:ConfigKey#)</b> config with <b>#:DataTypeCode#</b> as data type</small>
+                                    <small class=""d-block"">Config value: <b>#:ConfigValue#</b></small>
+                                    <small class=""d-block""># if (ModifiedOn != null) { #<b>Last modified - </b> #:kendo.toString(ModifiedOn, 'dd/MM/yyyy HH:mm')# # } #</small>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""config-modal"" data-modal-title=""Edit Config - #:ConfigKey#"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-handler=""config"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/config"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width("5rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/config/gets")))
+                        .Group(group => group.Add(x => x.ModuleCode))
+                        .Sort(sort => sort.Add(x => x.ConfigText))
+                    )
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

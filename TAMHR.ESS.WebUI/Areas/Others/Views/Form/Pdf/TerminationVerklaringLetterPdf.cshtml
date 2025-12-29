@@ -1,0 +1,234 @@
+﻿@using TAMHR.ESS.Infrastructure
+@using TAMHR.ESS.Domain
+@inject ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.TerminationService terminationService;
+@model DocumentApproval
+@{
+    Layout = null;
+    var postCode = ConfigService.GetConfig("Termination.HRGADivHead.PostCode").ConfigValue;
+    var documentInformation = terminationService.GetTermination(Model.Id);
+    var noReg = documentInformation.NoReg;
+    var endDate = documentInformation.EndDate;
+    var employeeInformation = terminationService.GetTerminationPdfEmployeeInfo(noReg.ToString()).ToList();
+    var name = employeeInformation.FirstOrDefault().Name;
+    var kelas = employeeInformation.FirstOrDefault().Class;
+    var startDate = employeeInformation.FirstOrDefault().StartDate;
+    var position = employeeInformation.FirstOrDefault().Position;
+    var datetimenow = DateTime.Now.ToString("dd/MM/yyyy");
+    var divisionData = employeeInformation.Where(x => x.ObjectDescription == "Division").FirstOrDefault();
+    var division = divisionData == null ? "-" : divisionData.ObjectText; ;
+    var sectionData = employeeInformation.Where(x => x.ObjectDescription == "Section").FirstOrDefault();
+    var sections = sectionData == null ? "-" : sectionData.ObjectText;
+    var departmentData = employeeInformation.Where(x => x.ObjectDescription == "Department").FirstOrDefault();
+    var department = departmentData == null ? "-" : departmentData.ObjectText;
+    string month = endDate.ToString("MM");
+    string year = endDate.ToString("yyyy");
+    string documentNumber = Model.DocumentNumber;
+    string runningNumber = documentNumber.Substring(documentNumber.LastIndexOf("/") + 1);
+    var divHeadInformation = terminationService.GetHRGADivHeadByPostCode(postCode);
+    var divHeadName = divHeadInformation.Name;
+    var orgName = divHeadInformation.OrgName;
+    var jobName = divHeadInformation.JobName;
+
+    month = month == "01" ? "I" : month;
+    month = month == "02" ? "II" : month;
+    month = month == "03" ? "III" : month;
+    month = month == "04" ? "IV" : month;
+    month = month == "05" ? "V" : month;
+    month = month == "06" ? "VI" : month;
+    month = month == "07" ? "VII" : month;
+    month = month == "08" ? "VIII" : month;
+    month = month == "09" ? "IX" : month;
+    month = month == "10" ? "X" : month;
+    month = month == "11" ? "XI" : month;
+    month = month == "12" ? "XII" : month;
+}
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px dotted black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .breakhere {
+        page-break-after: always
+    }
+    .capitalize {
+        text-transform: capitalize;
+    }
+</style>
+<br />
+<br />
+<br />
+<br />
+<br />
+<br />
+<div style="text-align: center; width: 90%; margin-left: 70px; margin-right: 40px">
+    <table border="0" class="tableizer-table" style="font-family: 'Segoe UI'; font-size: large; width: 100%;" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 10%;" />
+            <col style="width: 15%;" />
+            <col style="width: 15%;" />
+            <col style="width: 12%;" />
+            <col style="width: 5%;" />
+            <col style="width: 40%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: 20px; border-top: 0px !important;" colspan="6" align="center">
+                    <u><b>S U R A T&nbsp;&nbsp;&nbsp;K E T E R A N G A N</b></u>
+                    <br />
+                    No:@runningNumber/HRGA/HRMIR/EXT/TRM/@month/@year
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: large; border-top: 0px !important;" colspan="6" align="left">
+                    Division Head Human Resources & General Affairs Division PT. TOYOTA-ASTRA MOTOR, dengan ini menerangkan bahwa:
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    Nama<label style="float: right;">:</label>
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@name</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    No.Reg<label style="float: right;">:</label>
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@noReg</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    Jabatan<label style="float: right;">:</label>
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@position</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    Bagian<label style="float: right;">:</label>
+                </td>
+                <td class="capitalize" style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@sections.ToLower() Section,</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <label style="float: right;"></label>
+                </td>
+                <td class="capitalize" style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@department.ToLower() Department,</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <label style="float: right;"></label>
+                </td>
+                <td class="capitalize" style="font-size: large; border-top: 0px !important;" colspan="4" align="left">
+                    <b>@division.ToLower() Division</b>
+                </td>
+            </tr>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: large; border-top: 0px !important;" colspan="6" align="left">
+                    Benar pernah bekerja di PT. TOYOTA-ASTRA MOTOR sejak tanggal <b>@startDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</b> sampai dengan tanggal <b>@endDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID")).</b>
+                </td>
+            </tr>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: large; border-top: 0px !important;" colspan="6" align="left">
+                    Selama berkerja, yang bersangkutan telah melaksanakan tugasnya dengan baik dan penuh dedikasi. Atas segala kontribusi yang telah diberikan pada perusahaan, kami mengucapkan terima kasih.
+                </td>
+            </tr>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: large; border-top: 0px !important;" colspan="6" align="left">
+                    Demikian surat keterangan ini dibuat agar dapat dipergunakan sebagaimana mestinya.
+                </td>
+            </tr>
+            <tr class="tableizer-firstrow" style="height:90px">
+                <td style="font-size: large; border-top: 0px !important;" colspan="5" align="right">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <b>Jakarta, @endDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("id-ID"))</b>
+                </td>
+            </tr>
+            <tr class="tableizer-firstrow" style="height:70px">
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="5" align="right">
+                </td>
+                <td style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <b><u>@divHeadName</u></b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="5" align="right">
+                </td>
+                <td class="capitalize" style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <b>@jobName.ToLower()</b>
+                </td>
+            </tr>
+            <tr>
+                <td style="font-size: large; border-top: 0px !important;" colspan="5" align="right">
+                </td>
+                <td class="capitalize" style="font-size: large; border-top: 0px !important;" colspan="1" align="left">
+                    <b>@orgName.ToLower()</b>
+                </td>
+            </tr>
+        </tbody>
+        <tr>
+            <td colspan="11" height="50px"></td>
+        </tr>
+        <tr class="tableizer-firstrow">
+            <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="11" align="left"><h3 style="text-align:left !important"></h3></td>
+        </tr>
+    </table>
+</div>

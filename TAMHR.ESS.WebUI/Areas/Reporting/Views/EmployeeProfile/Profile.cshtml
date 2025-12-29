@@ -1,0 +1,880 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "upload");
+    //ScriptManager.RegisterReferences("grid");
+    //var PersonalData = ViewData["PersonalData"] as List<EmployeeeOrganizationObjectStoredEntity>;
+    var PersonalData = ViewData["PersonalData"] as List<EmployeeOrganizationObjectStoredEntityNew>;
+    var ProfileData = ViewData["ProfileData"] as PersonalDataAttributeStroredEntity;
+    var ListProfileData = new List<PersonalDataAttributeStroredEntity>();
+    ListProfileData.Add(ProfileData);
+    var eduData = ViewData["Education"] as IEnumerable<ProfileDataEducationStoreEntity>;
+    var HBC = ViewData["HistoryBenefitClaim"] as IEnumerable<HistoryClaimStoreEntity>;
+    var Educations = Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["Education"] as List<ProfileDataEducationStoreEntity>);
+    var HistoryBenefitClaim = Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["HistoryBenefitClaim"] as IEnumerable<HistoryClaimStoreEntity>);
+    var famData = ViewData["FamilyMember"] as IEnumerable<PersonalDataFamilyMemberStoredEntity>;
+    var FamilyMembers = Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["FamilyMember"] as List<PersonalDataFamilyMemberStoredEntity>);
+    var organizationalAssignments = ViewData["OrganizationalAssignment"] as IEnumerable<OrganizationalAssignmentStoredEntity>;
+    var DataTraining = Newtonsoft.Json.JsonConvert.SerializeObject(ViewData["DataTraining"]);
+    var claimTypes = ViewData["claimType"] as IEnumerable<string>;
+    var training = ViewData["DataTraining"] as IEnumerable<object>;
+    var photo = ViewData["Photo"];
+    var maxFileSize = 5 * 1000000;
+    var ds = @Html.Raw(HistoryBenefitClaim);
+    var status = ViewData["Status"];
+    var contract = ViewData["Contract"];
+    //var claimTypes = ViewData["claimType"];
+    
+}
+
+@section scripts {
+    <partial name="_Style" />
+        <script id="dataBenefitClaim-template" type="text/x-kendo-template">
+            # var obj = JSON.parse(JsonObject); #
+            <table class="table-bordered">
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px; border: 1px solid;">Tipe Benefit Claim</th>
+                    <td style="border: 1px solid;">#: AllowanceType #</td>
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Bulan Tahun Transaksi Claim</th>
+                    <td style="border-width: 0 0 0 0px;">#: monthActivity # #: yearActivity #</td>
+                </tr>
+                # if (AllowanceType == 'Reimburse RS') { #
+                # if (obj.FamilyType == 'rspasangan' || obj.FamilyType == 'rskaryawan') { #
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Nama Pasien</th>
+                    <td style="border-width: 0 0 0 0px;">#: obj.FamilyName #</td>
+                </tr>
+                # if (obj.FamilyType == 'rspasangan') { #
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Hubungan</th>
+                    <td style="border-width: 0 0 0 0px;">Pasangan</td>
+                </tr>
+                # } } else if (obj.FamilyType == 'rsanak') { #
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Nama Pasien</th>
+                    <td style="border-width: 0 0 0 0px;">#: obj.FamilyName #</td>
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Hubungan</th>
+                    <td style="border-width: 0 0 0 0px;">Anak</td>
+                </tr>
+                # } #
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Tipe Reimburse</th>
+                    <td style="border-width: 0 0 0 0px;">#: (obj.ReimburseType == 'rawatjalankontrol' ? 'Rawat Jalan / Kontrol' : 'Perawatan / Inap') #</td>
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Nama Rumah Sakit</th>
+                    <td style="border-width: 0 0 0 0px;">#: obj.HospitalName #</td>
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Tanggal Perawatan</th>
+                    <td style="border-width: 0 0 0 0px;">#: (obj.DateIn == obj.DateOut ? obj.DateIn : (obj.DateIn + " - " + obj.DateOut)) #</td>
+                </tr>
+                # } #
+                <tr>
+                    <th class="font-weight-bold" style="width: 300px;border: none;">Amount Transaksi Claim</th>
+                    <td style="border-width: 0 0 0 0px;">Rp #= kendo.toString(amount , 'n0') # </td>
+                </tr>
+            </table>
+
+        </script>
+    <script type="text/javascript">
+        var anakke = 0;
+        function BindAnak() {
+            anakke += 1
+            return anakke;
+        }
+
+        function openCity(evt, cityName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(cityName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        function BindGrid() {
+            var dataClaimBenefit = @Html.Raw(HistoryBenefitClaim);
+            $("#benefitClaimGrid1").kendoGrid({
+                columns: [{
+                    field: "Noreg",
+                    template: kendo.template($("#dataBenefitClaim-template").html())
+                }],
+                noRecords: {
+                    template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+                },
+                dataSource: dataClaimBenefit,
+                pageable: {
+                    input: true,
+                    numeric: false,
+                    alwaysVisible: false,
+                    pageSize: 5,
+                },
+            });
+        }
+
+        function filterGrid() {
+            $("#benefitClaimGrid1").data("kendoGrid").dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    }
+                ]
+            });
+        }
+
+        function filterGrid1() {
+            var selectedClaimType = $("#claimTypeDropdown").val();
+
+            $("#HCBGrid").data("kendoGrid").dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "eq",
+                        value: selectedClaimType
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "eq",
+                        value: selectedClaimType
+                    }
+                ]
+            });
+        }
+
+        function filterGrid23() {
+            var selectedClaimType = $("#claimTypeDropdown").val();
+            var grid = $("#HCBGrid").data("kendoGrid");
+            var namaPasienColumn = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Nama Pasien";
+                return column.field === "JsonObject" && column.title === "Patient's name";
+            })[0];
+            var namaHospitalColumn = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Nama Rumah Sakit";
+                return column.field === "JsonObject" && column.title === "Hospital Name";
+            })[0];
+            var namaTipeReimburse = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Tipe Reimburse";
+                return column.field === "JsonObject" && column.title === "Reimbursement Type";
+            })[0];
+            var namaTanggalPerawatan = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Tanggal Perawatan";
+                return column.field === "JsonObject" && column.title === "Date of Treatment";
+            })[0];
+            var namaHubungan = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Hubungan";
+                return column.field === "JsonObject" && column.title === "Relationshiop";
+            })[0];
+
+            if (selectedClaimType === "Reimburse RS") {
+                // Menampilkan kolom "Nama Pasien"
+                //console.log("test1");
+                grid.showColumn(namaPasienColumn);
+                //console.log("test2");
+                grid.showColumn(namaHospitalColumn);
+                grid.showColumn(namaTipeReimburse);
+                grid.showColumn(namaTanggalPerawatan);
+                grid.showColumn(namaHubungan);
+            } else {
+                // Menyembunyikan kolom "Nama Pasien"
+                //console.log("test-1");
+                grid.hideColumn(namaPasienColumn);
+                //console.log("test1-2");
+                grid.hideColumn(namaHospitalColumn);
+                grid.hideColumn(namaTipeReimburse);
+                grid.hideColumn(namaTanggalPerawatan);
+                grid.hideColumn(namaHubungan);
+            }
+
+            grid.dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "eq",
+                        value: selectedClaimType
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "eq",
+                        value: selectedClaimType
+                    }
+                ]
+            });
+        }
+
+        /*function toggleGridVisibility() {
+            var selectedClaimType = $("#claimTypeDropdown1").val();
+            var reimburseGrid = $("#HCBGridReimburseRS").data("kendoGrid");
+            var rs = document.getElementById("HCBGridReimburseRS");
+            var nonReimburseGrid = $("#HCBGridOther").data("kendoGrid");
+
+            if (selectedClaimType === "Reimburse RS") {
+                console.log(selectedClaimType);
+                console.log("Sebelum mengubah visibilitas");
+                reimburseGrid.show();
+                nonReimburseGrid.hide();
+                console.log("Setelah mengubah visibilitas");
+            } else {
+                console.log(selectedClaimType);
+                console.log("Sebelum mengubah visibilitas1");
+                //reimburseGrid.wrapper.hide();
+                //rs.style.display = "none";
+                $("#HCBGridReimburseRS").hide();
+                $("#HCBGridOther").show();
+                //nonReimburseGrid.wrapper.show();
+                console.log("Setelah mengubah visibilitas1");
+            }
+        }
+
+        $("#toggleGridButton").click(function() {
+            toggleGridVisibility();
+        });*/
+        
+
+        $(document).ready(function () {
+            BindGrid();
+            //toggleGridVisibility();
+            $("#uploadButton").click(function () {
+                var formData = new FormData();
+                var fileInput = document.getElementById("fileInput");
+                var noreg = @Html.Encode(ProfileData.NoReg);
+                formData.append("photo", fileInput.files[0]);
+                formData.append("noreg", noreg);
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/employe-profile/upload"),
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        // Handle success response from the API
+                        console.log(response);
+                    },
+                    error: function (error) {
+                        // Handle error response from the API
+                        console.error(error);
+                    }
+                });
+            });
+        });
+
+        $("#fileInput").change(function () {
+            var fileInput = document.getElementById("fileInput");
+            var noreg = @Html.Encode(ProfileData.NoReg);
+
+            if (fileInput.files && fileInput.files.length > 0) {
+                var formData = new FormData();
+                formData.append("photo", fileInput.files[0]);
+                formData.append("noreg", noreg);
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/employe-profile/upload"),
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        // Handle success response from the API
+                        //console.log(response);
+                        location.reload();
+                    },
+                    error: function (error) {
+                        // Handle error response from the API
+                        console.error(error);
+                    }
+                });
+            }
+        });
+
+        function onDataBoundMcuGrid(e) {
+            var grid = $("#medicalHistoryGrid").data("kendoGrid");
+            var data = grid.dataSource.data();
+
+            //if (data.length > 0) {
+                var classKaryawan = @PersonalData[0]?.NP; // Ambil Class karyawan dari data pertama
+
+                // Tampilkan kolom berdasarkan Class
+                if (classKaryawan >= 3 && classKaryawan <= 6) {
+                    grid.showColumn("HasilPapsmear");
+
+                }
+                if (classKaryawan >= 7 && classKaryawan <= 8) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("Ca125");
+                    grid.showColumn("PSA");
+                }
+                if (classKaryawan >= 9 && classKaryawan <= 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+                if (classKaryawan > 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("CEA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+            //}
+        }
+
+
+    </script>
+ }
+
+@section styles{
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-sm-12 text-center d-flex align-items-center">
+                                @if (ProfileData != null && !string.IsNullOrEmpty(ProfileData.NoReg))
+                                {
+                                    
+                                    if (photo != null)
+                                    {
+                                        <form class="center-image d-flex" method="post" enctype="multipart/form-data" class="addphoto">
+                                            <img alt="Profile Picture" class="photo" src="@Url.Content($"~/api/employe-profile/download/{ProfileData.NoReg}")">
+                                            <input type="file" name="photo" accept=".jpg, .jpeg, .png" style="display: none;" id="fileInput">
+                                            <label for="fileInput" style="cursor: pointer; margin-left: -25px;margin-top: 100px;"><i class="fa fa-plus-circle"></i></label>
+
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <form class="center-image d-flex" method="post" enctype="multipart/form-data" class="addphoto">
+                                            <img alt="Profile Picture" class="photo" src="@ConfigService.ResolveAvatar(ProfileData.NoReg)">
+                                            <input type="file" name="photo" accept=".jpg, .jpeg, .png" style="display: none;" id="fileInput">
+                                            <label for="fileInput" style="cursor: pointer; margin-left: -25px;margin-top: 100px;"><i class="fa fa-plus-circle"></i></label>
+                                        </form>
+                                    }
+                                    
+                                        
+                                }
+                                else
+                                {
+                                    <i class="fas fa-user-circle" style="font-size: 7rem;"></i>
+                                }
+                            </div>
+                            <div class="col-sm-12" style="margin-top:30px;">
+                                <h5 class='font-weight-bold'>@ProfileData?.Name</h5>
+                                <div class="row left-side" style="margin-top:30px;">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-pencil-square-o"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["No Reg"]</label>
+                                                <p class='font-weight-bold'>@ProfileData?.NoReg</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-clipboard"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Class"]</label>
+                                                <p class='font-weight-bold'>@ProfileData?.EmployeeSubgroupText</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-calendar-o"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Entry Date"]</label>
+                                                <p class='font-weight-bold'>@PersonalData[0]?.EntryDate.ToString("dd/MM/yyyy")</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-industry"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Pers. Area"]</label>
+                                                <p class='font-weight-bold'>@PersonalData[0]?.PersonnelArea</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-university"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Subarea"]</label>
+                                                <p class='font-weight-bold'>@PersonalData[0]?.EmployeeSubGroupText</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-tag"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Employee Category"]</label>
+                                                <p class='font-weight-bold'>@status</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row left-side">
+                                    <div class="col-sm-12">
+                                        <div class="row">
+                                            <div class="col-sm-2 icon-size">
+                                                <i class="fa fa-user"></i>
+                                            </div>
+                                            <div class="col-sm-10">
+                                                <label>@Localizer["Employee Status"]</label>
+                                                <p class='font-weight-bold'>@contract</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="tab">
+                            <button class="tablinks active" onclick="openCity(event, 'PersonalData')">@Localizer["Personal Data"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'OA')">@Localizer["Organization Assignment"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'Education')">@Localizer["Education"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'Family')">@Localizer["Family Member"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'TE')">@Localizer["Training & Event"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'MH')">@Localizer["Medical History"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'PD')">@Localizer["Personal Development"]</button>
+                            <button class="tablinks" onclick="openCity(event, 'HBC')">@Localizer["History Benefit Claim"]</button>
+                        </div>
+
+                        <div id="PersonalData" class="tabcontent" style="display: block;">
+                            <div class="card-body">
+                                @(
+                                    Html.Kendo().Grid<PersonalDataAttributeStroredEntity>(ListProfileData)
+                                    .Name("personaldataGrid")
+                                    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                    .HtmlAttributes(new { @style = "font-size:0.8rem" })
+                                    .Columns(columns =>
+                                    {
+                                        columns.Template(@"
+                                    <div class="" container"" style=""margin-left: -25px;"">
+                                    <div class=""row"">
+                                    <div class=""col-md-12"" style=""margin-right:auto;"">
+                                    <table>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Name</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;max-width: 175px;vertical-align:top;'>#: Name == null ? '-' : Name #</td>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Nationality</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: Nationality == null ? '-' : Nationality#</td>
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Place Of Birth</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;max-width: 175px;vertical-align:top;'>#: BirthPlace == null ? '-' : BirthPlace#</td>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Identity Number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: Nik == null ? '-' : Nik#</td>
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Date Of Birth</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: kendo.toString(kendo.parseDate(BirthDate), 'dd/MM/yyyy') #</td>
+                                        <th style='width: 175px;border: none;vertical-align:top;'>Family Card Number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: KKNumber == null ? '-' : KKNumber #</td>
+                               
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Gender</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: Gender == null ? '-' : Gender#</td>
+                                        <th style='width: 175px;border: none;vertical-align:top;'>NPWP</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: Npwp == null ? '-' : Npwp#</td>
+                               
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th  style='width: 175px;border: none;vertical-align:top;'>Address</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>
+                                    #: Address == null ? '' : Address ##= Address == null || Address == '' ? '-' : '<br/>' #
+                                    # if (Rt != null) { #
+                                    RT #:$.toDefault(Rt, '-')# / RW #:$.toDefault(Rw,'-') # <br/>
+                                    # } #
+                                    #: SubDistrict == null ? '' : 'Kel. '##: SubDistrict == null ? '' : SubDistrict##= SubDistrict == null || SubDistrict == '' ? '' : '<br/>'#
+                                    #: District == null ? '' : 'Kec. '##: District == null ? '' : District##= District == null | District == '' ? '' : '<br/>'#
+                                    #: CityCode == null ? '' : 'Kota ' ##: CityCode == null ? '' : CityCode ##: PostalCode != null && CityCode != null ? ', ' : '' # #: PostalCode != null && CityCode != null ? PostalCode : '' # #= CityCode == null || CityCode == '' ? '' : '<br/>' #
+                                    #: Region == null ? '' : 'Provinsi ' ##: Region == null ? '' : Region #
+                                    </td>
+                                     <th style='width: 175px;border: none;'>Account Number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: AccountNumber == null ? '-' : AccountNumber#</td>
+                                  
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th  style='width: 175px;border: none;'>Email</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;max-width: 175px;vertical-align:top;'>#: Email == null ? '-' : Email#</td>
+                                    <th style='width: 175px;border: none;'>Branch</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: BankName == null ? '-' : BankName#</td>
+                               
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;'>Status</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: MartalStatus == null ? '-' : MartalStatus#</td>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Tax Status</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: TaxStatus == null ? '-' : TaxStatus#</td>
+                                  
+                                    </tr>
+                                    <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Religion</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: Religion == null ? '-' : Religion#</td>
+                                     <th style='width: 175px;border: none;vertical-align:top;'>BPJS Health Number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: BpjsNumber == null ? '-' : BpjsNumber #</td>
+                                  
+                                    </tr>
+                                    <tr>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>Blood Group</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;width: 175px;vertical-align:top;'>#: BloodType == null ? '-' : BloodType#</td>
+                                          <th style='width: 175px;border: none;vertical-align:top;'>BPJS Employment number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: BpjsKetenagakerjaan == null ? '-' : BpjsKetenagakerjaan #</td>
+                            
+                                    </tr>
+                                      <tr style='vertical-align:top'>
+                                    <th style='width: 175px;border: none;vertical-align:top;'>No Dana Pensiun</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: DanaPensiunAstra == null ? '-' : DanaPensiunAstra #</td>
+                                      <th style='width: 175px;border: none;vertical-align:top;'>Insurance Number</th>
+                                    <td class='font-weight-bold' style='border-width: 0 0 0 0px;vertical-align:top;'>#: InsuranceNumber == null ? '-' : InsuranceNumber#</td>
+                                    </tr>
+                                  
+                                    </table>
+                                    </div>
+                                    </div>
+                                    </div>
+                                ").Title(" ");
+                                    })
+                                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                    .Deferred()
+                                    )
+                            </div>
+                            <div class="col-sm-12">
+                                <div class="p-0 table-responsive">
+                                    
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="OA" class="tabcontent">
+                            @(
+                                Html.Kendo().Grid(organizationalAssignments)
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Name("organizationGrid")
+                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(x => x.OrgName).Title("Organization");
+                                    columns.Bound(x => x.JobName).Title("Job");
+                                    columns.Bound(x => x.PostName).Title("Position");
+                                    columns.Bound(x => x.StartDate).Title("Start Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" });
+                                    columns.Bound(x => x.EndDate).Title("End Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" });
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                .Deferred()
+                                )
+                        </div>
+
+                        <div id="Education" class="tabcontent">
+                            @(
+                                Html.Kendo().Grid(eduData)
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Name("educationGrid")
+                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(x => x.EducationTypeCode).Title("Education");
+                                    columns.Bound(x => x.InstituteName).Title("Name").ClientTemplate(@"
+                            <text>#: InstituteName == '' ? Institute : InstituteName#</text>
+                            ");
+                                    columns.Bound(x => x.Major).Title("Major");
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                .Deferred()
+                                )
+                        </div>
+                        <div id="Family" class="tabcontent">
+                            @(
+                                Html.Kendo().Grid(famData)
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Name("familyGrid")
+                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(x => x.FamilyTypeCode).Title("Family Type").ClientTemplate(@"<text>
+                            #: FamilyTypeCode == 'Pasangan' && GenderCode== 'Perempuan' ? 'Istri' : FamilyTypeCode == 'Pasangan' && GenderCode== 'Laki - Laki' ? 'Suami' : FamilyTypeCode#
+                            </text>
+                            ").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.Name).Title("Name").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.BirthPlace).Title("Birth Place").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.BirthDate).Title("Birth Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.GenderCode).Title("Gender").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.FamilyTypeCode).Title("Child").ClientTemplate(@"<text>
+                            #= FamilyTypeCode == 'Anak Kandung' || FamilyTypeCode == 'Anak Angkat' ? BindAnak(): '-'#
+                            </text>").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.BpjsNumber).Title("BPJS Health").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                    columns.Bound(x => x.InsuranceNumber).Title("Insurance Number").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                .Deferred()
+                                )
+                        </div>
+                        <div id="TE" class="tabcontent">
+                            @(
+                                Html.Kendo().Grid(training)
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Name("trainingEventGrid")
+                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Columns(columns =>
+                                {
+
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                .Deferred()
+                                )
+                        </div>
+                        <div id="MH" class="tabcontent">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.PersonalDataMedicalHistory>()
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                .Name("medicalHistoryGrid")
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(c => c.YearPeriod).Title("Tahun MCU").Width(100);
+                                    columns.Bound(c => c.LokasiMCU).Title("Lokasi MCU").Width(170);
+                                    columns.Bound(c => c.Usia).Title("Usia").Width(70);
+                                    columns.Bound(c => c.Berat).Title("BB (KG)").Width(100);
+                                    columns.Bound(c => c.Tinggi).Title("TB (CM)").Width(100);
+                                    columns.Bound(c => c.StatusBMI).Title("BMI").Width(100);
+                                    columns.Bound(c => c.TekananDarah).Title("TD").Width(120);
+                                    columns.Bound(c => c.KolesterolTotal).Title("Cholesterol").Width(120);
+                                    columns.Bound(c => c.LDL).Title("LDL").Width(120);
+                                    columns.Bound(c => c.HDL).Title("HDL").Width(120);
+                                    columns.Bound(c => c.Triglyceride).Title("TRYGLICERID").Width(120);
+                                    columns.Bound(c => c.GlukosaPuasa).Title("GDP").Width(120);
+                                    columns.Bound(c => c.HbA1c).Title("HBA1C").Width(120);
+                                    columns.Bound(c => c.SGOT).Title("SGOT").Width(120).Hidden(true);
+                                    columns.Bound(c => c.SGPT).Title("SGPT").Width(120).Hidden(true);
+                                    columns.Bound(c => c.GammaGT).Title("GGT").Width(120).Hidden(true);
+                                    columns.Bound(c => c.Ureum).Title("UREUM").Width(120);
+                                    columns.Bound(c => c.Kreatinin).Title("CREATININ").Width(120);
+                                    columns.Bound(c => c.GFR).Title("GFR").Width(120);
+                                    columns.Bound(c => c.AsamUrat).Title("URID ACID").Width(120);
+                                    columns.Bound(c => c.HBsAg).Title("HBSAG").Width(120);
+                                    columns.Bound(c => c.HasilEKG).Title("EKG").Width(120);
+                                    columns.Bound(c => c.HasilRontgen).Title("PARU").Width(120);
+                                    columns.Bound(c => c.HasilPapsmear).Title("PAPSMEAR (WANITA)").Width(170).Hidden(true);
+                                    columns.Bound(c => c.KesimpulanTreadmill).Title("TREADMIL").Width(120).Hidden(true);
+                                    columns.Bound(c => c.VitD25OH).Title("VIT D-25 OH").Width(120).Hidden(true);
+                                    columns.Bound(c => c.HasilUsgMammae).Title("USG").Width(120).Hidden(true);
+                                    columns.Bound(c => c.CEA).Title("CEA").Width(120).Hidden(true);
+                                    columns.Bound(c => c.PSA).Title("PSA (PRIA)").Width(170).Hidden(true);
+                                    columns.Bound(c => c.Ca125).Title("Ca-125 (WANITA)").Width(170).Hidden(true);
+                                })
+                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                .Events(e => e.DataBound("onDataBoundMcuGrid"))
+                                .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/employe-profile/get-medical-histories-1")).Data(@<text>function() { return { noreg: "@ProfileData.NoReg" }; }</text>))
+                                .Sort(sort => sort.Add("YearPeriod").Descending())
+                                ).Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Resizable(resizable => resizable.Columns(true))
+                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                .Deferred()
+                                )
+                        </div>
+                        <div id="PD" class="tabcontent">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.PerformanceDevelopment>()
+                                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                .Name("performanceDevelopmentGrid")
+                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                .Columns(columns =>
+                                                {
+                                                    columns.Bound(x => x.Period).Title("Period").Width(70);
+                                                    columns.Bound(x => x.AreaDevelopment).Title("Area Development").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                    columns.Bound(x => x.GeneralDevCategory).Title("Dev. Category").Width(250);
+                                                    columns.Bound(x => x.DevelopmentActivity).Title("Dev. Activity").Width(250);
+                                                    columns.Bound(x => x.Mentor).Title("Mentor").Width(250);
+                                                    columns.Bound(x => x.Target).Title("Target").Width(250);
+                                                    columns.Bound(x => x.StartDate).Title("StartDate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                    columns.Bound(x => x.EndDate).Title("EndDate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                })
+                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/employe-profile/get-performance-developments")).Data(@<text>function() { return { noreg: "@ProfileData.NoReg" }; }</text>))
+                                                .Sort(sort => sort.Add("Period").Descending())
+                                                )
+                                                .Pageable(options =>
+                                                {
+                                                    options.Input(true);
+                                                    options.Numeric(false);
+                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                })
+                                                .Resizable(resizable => resizable.Columns(true))
+                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                .Deferred()
+                                                )
+                        </div>
+                        <div id="HBC" class="tabcontent">
+                            <div id="historyBenefitClaim" aria-labelledby="headingThree">
+                                <div class="card-body">
+                                    <div class="form-group">
+                                        <div class="row">
+                                            <label style="margin-right: 5px;">Claim Type:</label>
+                                            <select id="claimTypeDropdown">
+                                                @foreach (var claimType in claimTypes)
+                                                {
+                                                    <option>@claimType</option>
+                                                }
+                                            </select>
+                                        </div>
+                                        <div style="margin-bottom:62px;margin-top:10px;">
+                                            <a class="btn btn-primary" onclick="filterGrid23();" style="color: #fff; float:right;">
+                                                <i class="ft-search"></i> &nbsp;@Localizer["Search"]
+                                            </a>
+                                        </div>
+                                    </div>
+                                    @*<div id="benefitClaimGrid1"></div>*@
+                                    @(Html.Kendo().Grid<HistoryClaimStoreEntity>(HBC)
+                                            .Name("HCBGrid")
+                                            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                            .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                            .Pageable(options =>
+                                            {
+                                                options.Input(true);
+                                                options.Numeric(false);
+                                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                            })
+                                            .Scrollable(s => s.Enabled(true).Height("auto"))
+                                            .Resizable(resizable => resizable.Columns(true))
+                                            .Columns(columns =>
+                                            {
+                                                columns.Bound(x => x.AllowanceType).Title("Type of Benefit Claim").Width(150);
+                                                columns.Bound(x => x.Noreg).Title("Claim Transactions").ClientTemplate(@"#= monthActivity # #= yearActivity#").Width(200);
+                                                columns.Bound(x => x.JsonObject).Title("Patient's name").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: obj.FamilyName #</text>").Hidden().HtmlAttributes(new { id = "namaPasienColumn" }).Width(200);
+                                                columns.Bound(x => x.JsonObject).Title("Relationshiop").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#if (obj.FamilyType === 'rspasangan') { #
+                                                    Pasangan
+                                                # } else if (obj.FamilyType === 'rskaryawan') { #
+                                                    Diri Sendiri
+                                                # } else if (obj.FamilyType === 'rsanak') { #
+                                                    Anak
+                                                # }  #</text>").Hidden().HtmlAttributes(new { id = "namaHubunganColumn" }).Width(200);
+                                                columns.Bound(x => x.JsonObject).Title("Reimbursement Type").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: (obj.ReimburseType == 'rawatjalankontrol' ? 'Rawat Jalan / Kontrol' : 'Perawatan / Inap') #</text>").Hidden().HtmlAttributes(new { id = "namaTipeReimburse"}).Width(200);
+                                                columns.Bound(x => x.JsonObject).Title("Hospital Name").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: obj.HospitalName#</text>").Hidden().HtmlAttributes(new {id = "namaHospitalColumn"}).Width(200);
+                                                columns.Bound(x => x.JsonObject).Title("Date of Treatment").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: (obj.DateIn == obj.DateOut ? obj.DateIn : (obj.DateIn)) #</text>").Hidden().HtmlAttributes(new {id = "namaTanggal Perawatan"}).Width(200);
+                                                columns.Bound(x => x.amount).Title("Amount Transaction Claims").Format("Rp.{0:n0}").Width(150);
+                                            })
+                                        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No History Benefit Claim found"].Value + "</div>"))
+                                        .Deferred()
+                                    )
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

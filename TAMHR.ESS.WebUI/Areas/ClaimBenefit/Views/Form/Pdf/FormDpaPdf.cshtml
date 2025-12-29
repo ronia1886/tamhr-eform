@@ -1,0 +1,1062 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitQueryService claimBenefitService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService service;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var dpa = (obj as DpaRegisterViewModel);
+    var formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    var countDpa = claimBenefitService.GetDpaMembers(Model.DocumentApproval.CreatedBy)?.ToList().Count;
+    var personalData = service.GetPdfInfoPersonal(org.NoReg).FirstOrDefault();
+    var bankData = service.GetDataBank(org.NoReg, Model.DocumentApproval.CreatedOn.Date).FirstOrDefault();
+    var codept = service.GetOthers("DPA.CompanyCode").FirstOrDefault();
+    var dpaCompany = service.GetOthers("DPA.CompanyName").FirstOrDefault();
+    var address = personalData.GetType().GetProperty("Address").GetValue(personalData).ToString();
+    var gender = personalData.GetType().GetProperty("Gender").GetValue(personalData).ToString();
+    var accountNumber = bankData.AccountNumber;
+    var rt = personalData.GetType().GetProperty("RT").GetValue(personalData).ToString();
+    var rw = personalData.GetType().GetProperty("RW").GetValue(personalData).ToString();
+    var city = personalData.GetType().GetProperty("City").GetValue(personalData).ToString();
+    var postalCode = personalData.GetType().GetProperty("PostalCode").GetValue(personalData).ToString();
+    var bankName = bankData.BankName;
+    var branch = bankData.Branch;
+    var codePt = codept.GetType().GetProperty("ConfigValue").GetValue(codept).ToString();
+    var companyName = dpaCompany.GetType().GetProperty("ConfigValue").GetValue(dpaCompany).ToString();
+    var BirthDate = Convert.ToDateTime(personalData.GetType().GetProperty("BirthDate").GetValue(personalData).ToString());
+    var StartDate = Convert.ToDateTime(personalData.GetType().GetProperty("StartDate").GetValue(personalData).ToString());
+
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    var DepartmentHead = "";
+    var Requester = "";
+
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+@if (countDpa.HasValue && countDpa.Value > 0)
+{
+
+    <style type="text/css">
+        .border-bottom-dotted {
+            border-bottom: 1px solid black;
+            border-style: dotted;
+        }
+
+        td {
+            padding: 2px;
+        }
+
+        .border-bottom {
+            border-bottom: 1px solid black
+        }
+
+        .border-top {
+            border-top: 1px solid black
+        }
+
+        .border-left {
+            border-left: 1px solid black
+        }
+
+        .border-right {
+            border-right: 1px solid black
+        }
+
+        .border {
+            border: 1px solid black
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        .bg-gray {
+            background: #efefef
+        }
+
+        .bold {
+            font-weight: bold
+        }
+    </style>
+
+    <hr />
+
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="0" cellpadding="0">
+        <thead>
+            <tr>
+                <td style="height:50px"></td>
+            </tr>
+            <tr class="tableizer-firstrow">
+                <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="10" align="center">FORMULIR PERUBAHAN DATA PESERTA</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="height:20px"></td>
+            </tr>
+            <tr>
+                <td colspan="2">Yang bertanda tangan dibawah ini</td>
+            </tr>
+            <tr>
+                <td style="width: 13%;">Nama Perusahaan <label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="7" class="border-bottom-dotted bold">
+                    <span>@companyName</span>
+                </td>
+                <td style="width: 15%;" align="center">Kode PT</td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="4" cellpadding="2">
+                        <tr>
+                            <td style="width:100% ;" align="center" valign="middle" height="25px">
+                                <span>@codePt</span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 13%;">Nama Karyawan <label style="float:right">:</label></td>
+                <td style="width: 28%;" colspan="7" class="border-bottom-dotted bold">@org.Name</td>
+                <td style="width: 15%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+            </tr>
+            <tr>
+                <td style="width: 13%;">Nomor Peserta <label style="float:right">:</label></td>
+                <td style="width: 28%;" colspan="7" class="border-bottom-dotted"></td>
+                <td style="width: 15%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+            </tr>
+            <tr>
+                <td style="width: 15%;">Nomor PokokPeserta <label style="float:right">:</label></td>
+                <td style="width: 28%;" colspan="11" class="border-bottom-dotted bold">@org.NoReg</td>
+            </tr>
+            <tr>
+                <td style="width: 13%;">Jenis Perubahan Data <label style="float:right">:</label></td>
+                <td colspan="11">
+                    <table style="font-family:'Segoe UI'; font-size:12px" border="0" cellspacing="0" cellpadding="1">
+                        <colgroup>
+                            <col style="width: 10px;" />
+                            <col style="width: 50px;" />
+                            <col style="width: 10px;" />
+                            <col style="width: 50px;" />
+                            <col style="width: 10px;" />
+                            <col style="width: 50px;" />
+                            <col style="width: 50px;" />
+                        </colgroup>
+                        <tr>
+                            <td width="25px">
+                                <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td width="100px">Nama</td>
+                            <td width="25px">
+                                <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td width="100px">
+                                Tanggal Lahir
+                            </td>
+                            <td width="25px">
+                                <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td>Lainnya</td>
+                            <td width="300px" class="border-bottom-dotted"></td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td height="20px"></td>
+            </tr>
+            <tr>
+                <td style="width: 13%;"></td>
+                <td colspan="11">
+                    <table border="1" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+                        <tbody>
+                            <tr>
+                                <td style="width: 300px;" align="center"><b>Data Yang Tercatat di DPA</b></td>
+                                <td style="width: 300px;" align="center"><b>Perubahan Data</b></td>
+                            </tr>
+                            <tr>
+                                <td style="height: 100px;" valign="top">
+                                    @{ var index = 1;}
+                                    @foreach (var ot in dpa.AhliWarisLama.Where(X => X != null))
+                                    {
+                                        @index <span>.</span>
+                                        @ot.Name <span>-</span>
+                                        @ot.BrithDate?.ToString("dd/MM/yyyy")
+                                        @if (!string.IsNullOrEmpty(ot.GenderCode))
+                                        {
+                                            @if (ot.GenderCode.ToLower() == "perempuan")
+
+                                            {<span> - <b>P</b></span>}
+                                            else if (ot.GenderCode.ToLower() == "lakilaki")
+                                            { <span> - <b>L</b></span>}
+                                            else
+                                            { <span>&nbsp;</span>}
+                                        }<span>-</span>
+                                        @ot.FamilyRelation
+                                        <br />
+                                        index++;
+                                    }
+                                </td>
+                                <td style="height: 100px;" valign="top">
+                                    @{ var number = 1;}
+                                    @foreach (var ot in dpa.AhliWaris.Where(X => X != null))
+                                    {
+                                        @number <span>.</span>
+                                        @ot.Name <span>-</span>
+                                        @ot.BrithDate?.ToString("dd/MM/yyyy")
+                                        @if (!string.IsNullOrEmpty(ot.GenderCode))
+                                        {
+                                            @if (ot.GenderCode.ToLower() == "perempuan")
+
+                                            {<span> - <b>P</b></span>}
+                                            else if (ot.GenderCode.ToLower() == "lakilaki")
+                                            { <span> - <b>L</b></span>}
+                                            else
+                                            { <span>&nbsp;</span>}
+                                        }<span>-</span>
+                                        @ot.FamilyRelation
+                                        <br />
+                                        number++;
+                                    }
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 50%;" />
+            <col style="width: 5%;" />
+            <col style="width: 45%;" />
+        </colgroup>
+        <tbody>
+            <tr>
+                <td height="20px"></td>
+            </tr>
+            <tr>
+                <td colspan="3" class="border-top border-left border-right">Data Kelengkapan</td>
+            </tr>
+            <tr>
+                <td class="border-left">&#9679; Untuk perubahan nama dan Tanggal Lahir</td>
+                <td>
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle">1</td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="border-right">Foto copy KTP</td>
+            </tr>
+            <tr>
+                <td class="border-left">&#9679; Perubahan Tanggal Lahir</td>
+                <td>
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle">2</td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="border-right">Foto copy Akte Kelahiran / Ijasah Terakhir SD</td>
+            </tr>
+            <tr>
+                <td class="border-left border-bottom">&#9679; Lainnya  .....................................</td>
+                <td class="border-bottom">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle">3</td>
+                        </tr>
+                    </table>
+                </td>
+                <td class="border-bottom border-right">Data Pendukung Lainnya</td>
+            </tr>
+            <tr>
+                <td style="height:30px"></td>
+            </tr>
+        </tbody>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 30%;" />
+            <col style="width: 40%;" />
+            <col style="width: 30%;" />
+        </colgroup>
+        <tr>
+            <td align="center">Mengetahui,</td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
+            <td align="center" class="bold">Personel Dept. Head</td>
+            <td align="center"></td>
+            <td align="center">Tanda Tangan</td>
+        </tr>
+        <tr>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center" class="bold">Peserta</td>
+        </tr>
+        <tr>
+            <td align="center" style="height: 90px;"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
+            <td align="center" class="border-bottom-dotted">@DepartmentHead</td>
+            <td align="center"></td>
+            <td align="center" class="border-bottom-dotted">@Requester</td>
+        </tr>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 10%;" />
+            <col style="width: 15%;" />
+            <col style="width: 30%;" />
+            <col style="width: 10%;" />
+            <col style="width: 15%;" />
+        </colgroup>
+        <tr>
+            <td colspan="5" style="height:20px"></td>
+        </tr>
+        <tr>
+            <td colspan="5" style="background-color:darkgray; color:white">Di isi oleh Dana Pensiun Astra</td>
+        </tr>
+        <tr>
+            <td colspan="5" style="height:20px"></td>
+        </tr>
+        <tr>
+            <td>Tanggal Terima<label style="float:right">:</label></td>
+            <td class="border-bottom"></td>
+            <td></td>
+            <td>Tanggal Process<label style="float:right">:</label></td>
+            <td class="border-bottom"></td>
+        </tr>
+        <tr>
+            <td colspan="5" style="height:40px"></td>
+        </tr>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+        </colgroup>
+        <tr>
+            <td></td>
+            <td align="center" class="border-top border-right border-left">Diterima Oleh :</td>
+            <td></td>
+            <td align="center" class="border-top border-right border-left">Disetujui Oleh :</td>
+            <td></td>
+            <td align="center" class="border-top border-right border-left">Diubah Oleh :</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td style="height: 100px" class="border-right border-left"></td>
+            <td></td>
+            <td style="height: 100px" class="border-right border-left"></td>
+            <td></td>
+            <td style="height: 100px" class="border-right border-left"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td align="center" class="border-right border-left border-bottom">Customer Service</td>
+            <td></td>
+            <td align="center" class="border-right border-left border-bottom">Head of Kepesertaan</td>
+            <td></td>
+            <td align="center" class="border-right border-left border-bottom">Kepesertaan</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td height="20px"></td>
+            <td align="center" class="border-right border-left border-bottom"></td>
+            <td></td>
+            <td align="center" class="border-right border-left border-bottom"></td>
+            <td></td>
+            <td align="center" class="border-right border-left border-bottom"></td>
+            <td></td>
+        </tr>
+    </table>
+
+}
+else
+{
+
+    <style type="text/css">
+        td {
+            padding: 2px;
+        }
+
+        .border-bottom {
+            border-bottom: 1px solid black;
+        }
+
+        .border-bottom-dotted {
+            border-bottom: 1px solid black;
+            border-style: dotted;
+        }
+
+        .border-top {
+            border-top: 1px solid black
+        }
+
+        .border-left {
+            border-left: 1px solid black
+        }
+
+        .border-right {
+            border-right: 1px solid black
+        }
+
+        .border {
+            border: 1px solid black
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        .bg-gray {
+            background: #efefef
+        }
+
+        .bold {
+            font-weight: bold
+        }
+    </style>
+
+    <hr />
+
+
+
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <thead>
+            <tr>
+                <td style="height:50px"></td>
+            </tr>
+            <tr class="tableizer-firstrow">
+                <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="10" align="center">PENDAFTARAN PESERTA BARU</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="height:20px"></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Nama Perusahaan <label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="7" class="border-bottom-dotted">
+                    <span>@companyName</span>
+                </td>
+                <td style="width: 15%;" align="center">Kode PT</td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="4" cellpadding="2">
+                        <tr>
+                            <td style="width:100%" align="center" valign="middle" height="25px">
+                                <span>@codePt</span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Nomor Pokok Karyawan <label style="float:right">:</label></td>
+                <td style="width: 28%;" colspan="7" class="border-bottom-dotted">@org.NoReg</td>
+                <td style="width: 15%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+                <td style="width: 3%;"></td>
+            </tr>
+            <tr>
+                <td height="5px"></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Nomor Peserta <label style="float:right">:</label></td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 15%;" colspan="5"><b><em>(diisi oleh Dana Pensiun Astra)</em></b></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Nama Karyawan*<label style="float:right">:</label></td>
+                <td style="width: 28%;" colspan="7" class="border-bottom-dotted">@org.Name</td>
+                <td style="width: 5%;" colspan="4"></td>
+            </tr>
+            <tr>
+                <td height="5px"></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Jenis Kelamin<label style="float:right">:</label></td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @if (!string.IsNullOrEmpty(gender))
+                                {
+                                    @if (gender.ToLower() != "perempuan")
+                                    {
+                                        <span><b>&#10003;</b></span>
+                                    }
+                                }
+
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 9%;" colspan="3"><em>Laki-laki</em></td>
+                <td style="width: 3%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @if (!string.IsNullOrEmpty(gender))
+                                {
+                                    @if (gender.ToLower() == "perempuan")
+                                    {
+                                        <span><b>&#10003;</b></span>
+                                    }
+                                }
+
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 13%;" colspan="6"><em>Perempuan</em></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;" valign="top">Status Keluarga<label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="11">
+                    <table style="width: 83%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="0" cellpadding="1">
+                        <colgroup>
+                            <col style="width: 11px">
+                            <col style="width: 40px">
+                            <col style="width: 11px">
+                            <col style="width: 50px">
+                            <col style="width: 11px">
+                            <col style="width: 50px">
+                        </colgroup>
+                        <tr>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Tidak Kawin</em></td>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Kawin Tanpa Anak</em></td>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Kawin - 1 Anak</em></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Kawin - 2 Anak</em></td>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Kawin - 3 Anak</em></td>
+                            <td>
+                                <table style="width:100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                                    <tr>
+                                        <td align="center" valign="middle" height="25px"></td>
+                                    </tr>
+                                </table>
+                            </td>
+                            <td><em>Kawin - > 3 anak</em></td>
+                        </tr>
+                    </table>
+
+                </td>
+                @*<td style="width: 3%;" colspan="3">Tidak Kawin</td>
+                    <td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 3%;" colspan="3">Kawin Tanpa Anak</td>
+                    <td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>*@
+            </tr>
+            @*<tr>
+                    <td style="width: 29%;"></td>
+                    <td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 3%;" colspan="3">Kawin - 2 anak</td>
+                    <td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 3%;" colspan="3">Kawin - 3 anak</td>
+                    <td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>*@
+            <tr>
+                <td style="width: 29%;">Alamat Tempat Tanggal / Surat Menyurat*<label style="float:right">:</label></td>
+                <td style="width: 33%;" colspan="11" class="border-bottom-dotted">
+                    <span>@address , @rt/@rw, @city (@postalCode)</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">Alamat Email<label style="float:right">:</label></td>
+                <td style="width: 33%;" colspan="11" class="border-bottom-dotted">
+                    <span>@dpa.Email</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">No Telp Rumah<label style="float:right">:</label></td>
+                <td style="width: 33%;" colspan="11" class="border-bottom-dotted">
+                    <span>@dpa.HouseNumber</span>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">No Handphone<label style="float:right">:</label></td>
+                <td style="width: 33%;" colspan="11" class="border-bottom-dotted">
+                    <span>@dpa.MobilePhoneNumber</span>
+                </td>
+            </tr>
+            <tr>
+                <td height="5px"></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;" valign="top">Tanggal Lahir*<label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @BirthDate.ToString("dd")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @BirthDate.ToString("MM")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 10%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @BirthDate.ToString("yyyy")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;"></td>
+                <td style="width: 3%; text-align: center;" colspan="2">tgl</td>
+                <td style="width: 3%; text-align: center;"></td>
+                <td style="width: 3%; text-align: center;" colspan="2">bln</td>
+                <td style="width: 3%; text-align: center;"></td>
+                <td style="width: 10%; text-align: center;">tahun</td>
+            </tr>
+            <tr>
+                <td style="width: 29%;" valign="top">Tanggal Masuk Perusahaan<label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @StartDate.ToString("dd")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @StartDate.ToString("MM")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 10%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px">
+                                @StartDate.ToString("yyyy")
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td style="width: 29%;"></td>
+                <td style="width: 3%; text-align: center;" colspan="2">tgl</td>
+                <td style="width: 3%; text-align: center;">&nbsp;</td>
+                <td style="width: 3%; text-align: center;" colspan="2">bln</td>
+                <td style="width: 3%; text-align: center;">&nbsp;</td>
+                <td style="width: 10%; text-align: center;">tahun</td>
+            </tr>
+            <tr>
+                <td style="width: 29%;" valign="top">Tanggal Masuk Kepesertaan DPA<label style="float:right">:</label></td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px; background-color:darkgray" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                @*<td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>*@
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 3%;" colspan="2">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px; background-color:darkgray" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                @*<td style="width: 3%;">
+                        <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="1">
+                            <tr>
+                                <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                            </tr>
+                        </table>
+                    </td>*@
+                <td style="width: 3%; text-align: center;">/</td>
+                <td style="width: 10%;">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px; background-color:darkgray" border="1" cellspacing="0" cellpadding="1">
+                        <tr>
+                            <td style="width: 100%;" align="center" valign="middle" height="25px"></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 3%;" colspan="4"><em>(Diisi Oleh HRD)</em></td>
+            </tr>
+            <tr>
+                <td style="width: 29%;">&nbsp;</td>
+                <td style="width: 3%; text-align: center;" colspan="2">tgl</td>
+                <td style="width: 3%; text-align: center;">&nbsp;</td>
+                <td style="width: 3%; text-align: center;" colspan="2">bln</td>
+                <td style="width: 3%; text-align: center;">&nbsp;</td>
+                <td style="width: 10%; text-align: center;">tahun</td>
+                <td style="width: 3%;" colspan="4">&nbsp;</td>
+            </tr>
+            <tr>
+                <td height="20px">&nbsp;</td>
+            </tr>
+            <tr>
+                <td class="bold">Data Keluarga Yang Sah/Ahli Waris<label style="float:right">:</label></td>
+            </tr>
+            <tr>
+                <td><em>(KK harap di lampirkan)</em></td>
+            </tr>
+        </tbody>
+    </table>
+
+
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 20%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+            <col style="width: 35%;" />
+        </colgroup>
+        <tbody>
+            <tr>
+                <td colspan="6">
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="4" cellpadding="2">
+                        <colgroup>
+                            <col style="width: 5%;" />
+                            <col style="width: 25%;" />
+                            <col style="width: 10%;" />
+                            <col style="width: 10%;" />
+                            <col style="width: 20%;" />
+                            <col style="width: 20%;" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <td align="center">NO</td>
+                                <td align="center">NAMA</td>
+                                <td align="center">Tgl Lahir</td>
+                                <td align="center">Jenis Kelamin</td>
+                                <td align="center">Hubungan Keluarga</td>
+                                <td align="center">Pekerjaan</td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @{ var index = 1;}
+                            @foreach (var ot in dpa.AhliWaris.Where(X => X != null))
+                            {
+                                <tr>
+                                    <td height="20px" align="center">@index</td>
+                                    <td height="20px">@ot.Name</td>
+                                    <td height="20px" align="center">@ot.BrithDate?.ToString("dd/MM/yyyy")</td>
+                                    <td height="20px" align="center">
+                                        @if (ot.GenderCode.ToLower() == "perempuan")
+                                        {<span><b>P</b></span>}
+                                        else if (ot.GenderCode.ToLower() == "lakilaki")
+                                        { <span><b>L</b></span>}
+                                        else
+                                        { <span>&nbsp;</span>}
+                                    </td>
+                                    <td height="20px" align="center">@ot.FamilyRelation</td>
+                                    <td height="20px"></td>
+                                </tr>
+                                index++;
+                            }
+                        </tbody>
+                    </table>
+                    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+                        <tr>
+                            <td colspan="6" style="height:20px;"></td>
+                        </tr>
+                        <tr>
+                            <td colspan="6" style="background-color:black; color:white">
+                                Dengan ini saya menyatakan data tersebut diatas adalah benar dan dengan menandatangani form ini, saya bersedia untuk dipotong gaji saya setiap bulannya sebesar 3,2% sebagai iuran Dana Pensiun sesuai dengan ketentuan yang berlaku dan apabila saya mengundurkan diri dari Perusahaan dengan masa kepesertaan saya di Dana Pensiun Astra masih dibawah 3 tahun, maka Hak Manfaat Pensiun saya sesuai dengan Peraturan Dana Pensiun Astra Dua, harap ditransfer ke rekening bank yang sama dengan rekening bank penerimaan gaji saya, yaitu:
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 35%;" />
+            <col style="width: 65%;" />
+        </colgroup>
+        <tbody>
+            <tr>
+                <td style="height:20px"></td>
+            </tr>
+            <tr>
+                <td>Nama Pemilik Rekening <label style="float:right">:</label></td>
+                <td class="border-bottom-dotted">
+                    @if (dpa.AccountType == "rekening")
+                    {
+                        <span>@org.Name</span>
+                    }
+                    else
+                    {
+                        <span>@dpa.AccountName</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td>Nama Bank <label style="float:right">:</label></td>
+                <td class="border-bottom-dotted">
+                    @if (dpa.AccountType == "rekening")
+                    {
+                        <span>@bankName</span>
+                    }
+                    else
+                    {
+                        <span>@dpa.BankCode</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td>Cabang Bank <label style="float:right">:</label></td>
+                <td class="border-bottom-dotted">
+                    @if (dpa.AccountType == "rekening")
+                    {
+                        <span>@branch</span>
+                    }
+                    else
+                    {
+                        <span>@dpa.Branch</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td>Nomor Rekening** <label style="float:right">:</label></td>
+                <td class="border-bottom-dotted">
+                    @if (dpa.AccountType == "rekening")
+                    {
+                        <span>@accountNumber</span>
+                    }
+                    else
+                    {
+                        <span>@dpa.AccountNumber</span>
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td style="height:40px"></td>
+            </tr>
+        </tbody>
+
+    </table>
+
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 30%;" />
+            <col style="width: 40%;" />
+            <col style="width: 30%;" />
+        </colgroup>
+        <tr>
+            <td align="center">Mengetahui,</td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
+            <td align="center" class="bold">Personel Dept. Head</td>
+            <td align="center"></td>
+            <td align="center">Tanda Tangan</td>
+        </tr>
+        <tr>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center" class="bold">Peserta</td>
+        </tr>
+        <tr>
+            <td align="center" style="height: 90px"></td>
+            <td align="center"></td>
+            <td align="center"><br></td>
+        </tr>
+        <tr>
+            <td align="center" class="border-top"><b><em>@DepartmentHead</em></b></td>
+            <td align="center"></td>
+            <td align="center" class="border-top"><b><em>@Requester</em></b></td>
+        </tr>
+    </table>
+    <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="4" cellpadding="2">
+        <colgroup>
+            <col style="width: 1000%;" />
+        </colgroup>
+        <tr>
+            <td height="20px"></td>
+        </tr>
+        <tr>
+            <td class="bold">* Mohon diisi sesuai KTP dan lampirkan Foto Copy KTP</td>
+        </tr>
+        <tr>
+            <td class="bold">** Bisa diisi dengan rekening Payroll atau Rekening pribadi peserta.</td>
+        </tr>
+    </table>
+
+}

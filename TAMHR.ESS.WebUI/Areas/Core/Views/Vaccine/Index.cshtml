@@ -1,0 +1,88 @@
+﻿@{
+    ScriptManager.RegisterReferences("upload", "numeric", "maskedtextbox", "datepicker");
+}
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService
+@section scripts {
+    <partial name="_Script" />
+}
+
+<div class="fancy-alert vaccineAlertClass hidden">
+    <a href="javascript:;" class="fancy-alert-close d-none d-md-block" data-dismiss="alert">
+        <svg class="fancy-alert-close" width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.426 6.001l4.278-4.279A1.008 1.008 0 1 0 10.278.296L6 4.574 1.723.296A1.008 1.008 0 1 0 .295 1.722l4.278 4.28-4.279 4.277a1.008 1.008 0 1 0 1.427 1.426L6 7.427l4.278 4.278a1.006 1.006 0 0 0 1.426 0 1.008 1.008 0 0 0 0-1.426L7.425 6.001z" fill-rule="evenodd"></path>
+        </svg>
+    </a>
+    <div class="fancy-alert-icon bg-red-flamingo-opacity">
+        <i class="fa fa-warning"></i>
+    </div>
+    <div class="fancy-alert-info vaccineAlertInfo">
+        @Localizer["Vaccine.Alert.Info"]
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Daftar Anggota Keluarga"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap ">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccineSummaryStoredEntity>()
+                    .Name("vaccineGrid")
+                    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header",data_filter = "vaccines-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Name).Title("Nama").HeaderHtmlAttributes(new { @class="text-center" }).Width(250);
+                        columns.Bound(c => c.FamilyStatus).Title("Status Keluarga").HeaderHtmlAttributes(new { @class = "text-center" }).Width(150);
+                        columns.Bound(c => c.SHAStatus).Title("Kelayakan Untuk Divaksin COVID-19").ClientTemplate(@"
+                        #if (SHAStatus==true) { #<span>siap vaksin</span> # } else if (SHAStatus==false) { #<span>tidak siap vaksin</span> # } else { #&nbsp;#}#
+                        ").HeaderHtmlAttributes(new { @class = "text-center" }).Width(250);
+                        columns.Bound(c => c.Status).Title("Status").HeaderHtmlAttributes(new { @class = "text-center" });
+                        columns.Bound(c => c.NoReg).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""vaccine-modal"" data-modal-title=""Edit"" data-modal-ajax=""true"" data-ajax-url=""~/core/vaccine/load"" data-parameters-NoReg=""#:NoReg#"" data-parameters-Name=""#:Name#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+
+                            </div>
+                        ").Width(150).HeaderHtmlAttributes(new { @class = "text-center" });
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/vaccine/gets")))
+                        .Sort(sort =>
+                        {
+                            sort.Add("NoReg");
+                            sort.Add("OrderRank");
+                        })
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Scrollable(scrollable => scrollable.Height("auto"))
+                    .Resizable(resizable => resizable.Columns(true))
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
+<script type="text/javascript" src="~/plugins/jquery-3.7.1.min.js"></script>
+<script type="text/javascript">
+    setTimeout(function () {
+        var dataGrid = $("#vaccineGrid").data().kendoGrid.dataSource.view();
+        $.each(dataGrid, function (i, dt) {
+            if (dt.SHAStatus == false) {
+                $(".vaccineAlertClass").removeClass("hidden");
+            }
+        });
+    },1200);
+
+</script>

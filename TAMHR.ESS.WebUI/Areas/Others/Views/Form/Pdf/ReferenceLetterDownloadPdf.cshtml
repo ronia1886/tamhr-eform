@@ -1,0 +1,104 @@
+﻿@model PdfViewModel
+@using TAMHR.ESS.Infrastructure.DomainServices
+@inject ConfigService ConfigService
+@inject ProfileService ProfileService
+@inject MdmService MdmService
+@{
+    Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as ReferenceLetterViewModel;
+    var purpose = Localizer[ConfigService.GetGeneralCategory(obj.ReferenceLetterPurposeCode)?.Name].Value;
+    var culture = new System.Globalization.CultureInfo("id-ID");
+    var noreg = org.NoReg;
+    var name = org.Name;
+    var division = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText;
+    var department = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText;
+    var sectionText = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText;
+    var hrDivisionHead = Model.PrintoutMatrix.FirstOrDefault(x => x.ApproverLocation == "HRDivisionHead")?.Name.Replace("Ig. ", string.Empty);
+    var personalData = ProfileService.GetProfile(noreg);
+    var remarks = obj.Remarks;
+    var date = DateTime.Now.ToString("d MMMM yyyy", culture);
+    var address = personalData?.Address;
+    var rt = personalData?.Rt;
+    var rw = personalData?.Rw;
+    var subDistrict = personalData?.SubDistrict;
+    var district = personalData?.District;
+    var city = personalData?.CityCode;
+    var postalCode = personalData?.PostalCode;
+    var region = personalData?.Region;
+
+    var workingDate = MdmService.GetDateSpecification(noreg).AstraDate.ToString("d MMMM yyyy", culture);
+}
+<div style="display: block; width: 690px; text-align:center; margin: 0 auto; padding-top: 120px;">
+    <h2 style="margin: 0in 0in 0.0001pt; text-align: center; font-size: 17pt; font-family: Arial, serif;" align="center"><span style="color: #000000;"><u><span style="font-size: 20.0pt;">SURAT KETERANGAN</span></u></span></h2>
+    <p style="margin: 0in 0in 0.0001pt; text-align: center; line-height: 157%;" align="center"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">No. @obj.ReferenceLetterNumber</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: center; line-height: 157%;" align="center"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p><p style="line-height: 150%; margin: 0in 0in 0.0001pt; text-align: justify; font-size: 14pt; font-family: Arial, sans-serif;"><span style="font-size: 14.0pt; line-height: 150%;">Yang&nbsp; &nbsp;bertanda &nbsp; &nbsp;tangan&nbsp; &nbsp;dibawah&nbsp; &nbsp;ini&nbsp; </span><span style="font-size: 14.0pt; line-height: 150%;">Division&nbsp; &nbsp; Head&nbsp; &nbsp;&ndash;&nbsp; &nbsp;HR&nbsp; &nbsp;&amp;&nbsp; &nbsp;GA&nbsp; &nbsp;Division</span><span style="font-size: 14.0pt; line-height: 150%;"> <strong>PT. TOYOTA - ASTRA MOTOR</strong>, dengan ini menerangkan bahwa :</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+    <table style="width: 100%; border-collapse: collapse; font-family: Arial, serif; font-size: 14pt" border="0">
+        <tbody>
+            <tr>
+                <td style="width: 28.8203%; padding-left: 40px;"><span style="font-size: 14pt; line-height: 150%;">Nama</span></td>
+                <td style="width: 2.49151%;"><span style="font-size: 14pt; line-height: 150%;">:</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">@name</span></td>
+            </tr>
+            <tr>
+                <td style="padding-left: 40px;"><span style="font-size: 14pt; line-height: 150%;">No. Registrasi</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">:</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">@noreg</span></td>
+            </tr>
+            <tr>
+                <td style="padding-left: 40px;"><span style="font-size: 14pt; line-height: 150%;">Divisi</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">:</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">@division</span></td>
+            </tr>
+            <tr style="vertical-align: top">
+                <td style="padding-left: 40px;"><span style="font-size: 14pt; line-height: 150%;">Alamat</span></td>
+                <td><span style="font-size: 14pt; line-height: 150%;">:</span></td>
+                <td>
+                    <span style="font-size: 14pt; line-height: 150%;">@address</span>
+                    @if (!string.IsNullOrEmpty(rt))
+                    {
+                        <span style="font-size: 14pt; line-height: 150%;">@string.Format(", {0}/{1}", rt, rw)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(subDistrict))
+                    {
+                        <br />
+                        <span style="font-size: 14pt; line-height: 150%;">@string.Format("Kel. {0}", subDistrict)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(district))
+                    {
+                        <br />
+                        <span style="font-size: 14pt; line-height: 150%;">@string.Format("Kec. {0}", district)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(city))
+                    {
+                        <br />
+                        <span style="font-size: 14pt; line-height: 150%;">@string.Format("Kota {0}, {1}", city, postalCode)</span>
+                    }
+                    @if (!string.IsNullOrEmpty(region))
+                    {
+                        <br />
+                        <span style="font-size: 14pt; line-height: 150%;">@string.Format("Provinsi {0}", region)</span>
+                    }
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;">&nbsp;</p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">Adalah benar karyawan tetap PT. TOYOTA &ndash; ASTRA MOTOR yang bekerja sejak tanggal &nbsp;<b>@workingDate</b> sampai dengan saat ini.</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">Demikian surat keterangan ini dibuat untuk digunakan sebagai permohonan persyaratan pengajuan <strong>@purpose</strong>.</span></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: justify; line-height: 157%;"><strong><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></strong></p>
+    <p style="margin: 0in 0in 0.0001pt; text-align: right; line-height: 157%;" align="right"><strong><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></strong></p>
+    <div style="float: right;">
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">Jakarta, @date</span></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">HR &amp; GA Division</span></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">&nbsp;</span></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><u><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;"><b>@hrDivisionHead</b></span></u></p>
+        <p style="margin: 0in 0in 0.0001pt; line-height: 157%; text-align: left;" align="right"><span style="font-size: 14pt; line-height: 157%; font-family: Arial, serif;">Division Head</span></p>
+    </div>
+</div>

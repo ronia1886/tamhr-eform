@@ -1,0 +1,332 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string Requester = "";
+    string FinanceAccounting = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "FinanceAccounting")
+        {
+            FinanceAccounting = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .border-all {
+        border: 1px solid black
+    }
+</style>
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 30px">
+        <col style="width: 100px">
+        <col style="width: 300px">
+        <col style="width: 100px">
+    </colgroup>
+    <tr style="height:20px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr style="height:50px">
+        <th colspan="4"><p style="font-size:18px">FORM PEMINJAMAN BPKB COP</p></th>
+    </tr>
+    <tr>
+        <td colspan="2">Kepada Yth,</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2">Finance Administration Division</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2">Human Resources Dept.</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr style="height:30px"></tr>
+    <tr>
+        <td colspan="2">Yang bertanda tangan dibawah ini : </td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NoReg<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.NoReg</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.Name</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Divisi<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="4">
+            Bermaksud meminjam BPKB COP atas kendaraan :
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>No. Polisi<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.PoliceNumber</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Merk/Type<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.Type</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Jenis/Model<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.Model</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Tahun Pembuatan<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.ProductionYear</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Warna<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.Color</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>No Rangka<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.FrameNumber</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>No Mesin<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.MachineNumber</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Atas Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.Name</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Dengan Alamat<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var cop = (obj as ReturnBpkbCOPViewModel);
+                <span>@cop.Address</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2">Untuk Keperluan (*)<label style="float:right">:</label></td>
+        <td colspan="2">
+            <table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+                <colgroup>
+                    <col style="width: 30px">
+                    <col style="width: 100px">
+                    <col style="width: 30px">
+                    <col style="width: 100px">
+                </colgroup>
+                <tr>
+                    <td>
+                        <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                            <tr>
+                                <td style="width:100%" align="center" valign="middle" height="25px">
+                                    @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+                                    {
+                                        var bpkb = (obj as ReturnBpkbCOPViewModel);
+                                        if (bpkb.IsOtherNecessity == false)
+                                        {
+                                            <span><b>&#10003;</b></span>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td>Perpanjangan STNK</td>
+                    <td>
+                        <table style="width:100%" border="1" cellpadding="1" cellspacing="0">
+                            <tr>
+                                <td style="width:100%" align="center" valign="middle" height="25px">
+                                    @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+                                    {
+                                        var bpkb = (obj as ReturnBpkbCOPViewModel);
+                                        if (bpkb.IsOtherNecessity == true)
+                                        {
+                                            <span><b>&#10003;</b></span>
+                                        }
+                                    }
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td>
+                        Lain-Lain :
+                        @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+                        {
+                            var bpkb = (obj as ReturnBpkbCOPViewModel);
+                            if (bpkb.IsOtherNecessity == true)
+                            {
+                                <span>@bpkb.OtherNecessity</span>
+                            }
+                        }
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="4">
+            Bpkb tersebut saya pinjam mulai
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var bpkb = (obj as ReturnBpkbCOPViewModel);
+                string formated_date = bpkb.LoanDate.HasValue ? bpkb.LoanDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                <span><u>@formated_date</u></span>
+            }
+            dan akan dikembalikan ke HRD paling lambat tanggal
+            @if (typeof(ReturnBpkbCOPViewModel) == obj.GetType())
+            {
+                var bpkb = (obj as ReturnBpkbCOPViewModel);
+                string formated_date = bpkb.ReturnDate.HasValue ? bpkb.ReturnDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                <span><u>@formated_date</u></span>
+            }
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="4">Demikian permohonan ini kami ajukan, atas perhatian dan kerjasamanya kami ucapkan banyak terima kasih. <br><br><br>Jakarta, @DateTime.Now.ToString("dd MMMM yyyy")<br></td>
+    </tr>
+    <tr>
+        <td colspan="4" height="50px">
+            <table cellspacing="0" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+                <tbody>
+                    <tr>
+                        <td style="text-align: left; width: 26%;" align="center">Pemohon</td>
+                        <td style="width: 27.9324%;" align="center"></td>
+                        <td style="text-align: left; width: 22.0676%;" align="center">Menyetujui,</td>
+                        <td style="width: 22%;" align="center">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left; width: 26%;" align="center"></td>
+                        <td style="width: 27.9324%;" align="center"></td>
+                        <td style="width: 22.0676%; text-align: center;" align="center" class="border-all">FAD</td>
+                        <td style="width: 22%;" align="center" class="border-all">HRGA</td>
+                    </tr>
+                    <tr style="height:100px">
+                        <td style="text-align: left; width: 26%;" align="center" valign="bottom">@Requester</td>
+                        <td style="width: 27.9324%;" align="center"></td>
+                        <td style="width: 22.0676%; text-align: center;" align="center" class="border-all" valign="bottom">@FinanceAccounting</td>
+                        <td style="width: 22%;" align="center" class="border-all" valign="bottom">@Approver</td>
+                    </tr>
+                    <tr>
+                        <td class="border-top" style="text-align: left; width: 26%;" align="center">(tanda tangan &amp; nama jelas)</td>
+                        <td style="width: 27.9324%;" align="center"></td>
+                        <td class="border-top" style="text-align: left; width: 22.0676%;" align="center"></td>
+                        <td class="border-top" style="width: 22%;" align="center"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </td>
+    </tr>
+</table>

@@ -1,0 +1,96 @@
+﻿@using TAMHR.ESS.Domain;
+@using TAMHR.ESS.Infrastructure.Helpers;
+
+@model DocumentApproval
+@inject TAMHR.ESS.Infrastructure.DomainServices.FormService service;
+@{
+    Layout = null;
+    var hideHeader = Context.Request.Query.ContainsKey("hide") ? Context.Request.Query["hide"] == "1" : false;
+    var aa = service.GetIsoNumber(Model.FormKey);
+    var bb = aa;
+    var dicts = new Dictionary<string, object>();
+    dicts.Add("noreg", Model.CreatedBy);
+    //dicts.Add("name", user.Name);
+    dicts.Add("day", DateTime.Now.Day);
+    dicts.Add("month", DateTime.Now.Month);
+    dicts.Add("year", DateTime.Now.Year);
+
+    var isoNumber = StringHelper.Format(bb, dicts);
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        function subst() {
+            var vars = {};
+            var x = document.location.search.substring(1).split('&');
+            for (var i in x) { var z = x[i].split('=', 2); vars[z[0]] = unescape(z[1]); }
+            var x = ['frompage', 'topage', 'page', 'webpage', 'section', 'subsection', 'subsubsection'];
+            for (var i in x) {
+                var y = document.getElementsByClassName(x[i]);
+                for (var j = 0; j < y.length; ++j) y[j].textContent = vars[x[i]];
+
+                @if (hideHeader)
+                {
+                    @:if (vars["page"] > 1) { document.getElementById("header").style.display = 'none'; }
+                }
+            }
+        }
+    </script>
+</head>
+
+
+
+<body style="border: 0; margin: 0; font-size:14px; font-family:'Segoe UI'" onload="subst()">'
+    @if (Model.FormKey == "dpa-register")
+    {
+        <table style="width: 100%">
+            <colgroup>
+                <col style="width: 10%;" />
+                <col style="width: 90%;" />
+            </colgroup>
+            <tr>
+                <td style="font-size:20px;font-weight:bold" rowspan="6"><img class="" src="~/img/logo-dpa.png"></td>
+            </tr>
+            <tr>
+                <td style="font-size:12px"><b>DANA PENSIUN ASTRA DUA</b></td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">Gd. Grha Sera Lantai 8</td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">Jl. Mitra Sunter Boulevard Kav. 90 Blok.C2</td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">Sunter Jaya, Jakarta Utara 14350.</td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">Phone : 021-65309009 Fax : 021-65306006</td>
+            </tr>
+        </table>
+    }
+    else
+    {
+        <table id="header" style="width: 100%">
+
+            <tr>
+                <td style="font-size:20px;font-weight:bold">PT. TOYOTA ASTRA MOTOR</td>
+                <td style="font-size:12px" align="right">@isoNumber</td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">HUMAN RESOURCE AND GENERAL AFFAIRS DIVISION</td>
+                <td style="font-size:12px" align="right">REVISI 1</td>
+            </tr>
+            <tr>
+                <td style="font-size:12px">HUMAN RESOURCE INFORMATION SYSTEM &amp; PAYROLL SECTION</td>
+                <td style="font-size:12px" align="right">Hal <span class="page"></span> / <span class="topage"></span></td>
+            </tr>
+        </table>
+
+    }
+
+
+</body>
+
+
+</html>

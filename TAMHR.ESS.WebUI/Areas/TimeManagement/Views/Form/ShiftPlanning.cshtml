@@ -1,0 +1,1301 @@
+﻿@model DocumentRequestDetailViewModel<ShiftPlanningViewModel>
+@{
+    var obj = Model;
+    var org = ViewData["OrganizationInfo"] as IEnumerable<EmployeeeOrganizationObjectStoredEntity>;
+    bool isCanEdit = AclHelper.CanEdit();
+
+    var divisionName = org.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText;
+    var divisionCode = org.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectID;
+
+    var departmentName = org.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText;
+    var departmentCode = org.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectID;
+
+    var sectionName = org.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText;
+    var sectionCode = org.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectID;
+
+    var dataRequest = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Object?.Request);
+
+    var now = DateTime.Now.Date.AddMonths(-1);
+    var enUs = new System.Globalization.CultureInfo("en-US");
+}
+
+@section styles{
+
+    <style type="text/css">
+        /*.active-shift-date {
+            box-shadow: rgb(156, 183, 3) 0px -4px 0px 0px inset;
+            border-radius: 0 !important;
+        }*/
+        .shift-date {
+            box-shadow: rgb(156, 183, 3) 0px -4px 0px 0px inset;
+            border-radius: 0 !important;
+        }
+    </style>
+
+}
+@section scripts{
+    <script type="text/javascript">
+        //initiate form
+        var request = [];
+        $("#btnDownloadTemplate").hide();
+        @if (Model.Object?.Request != null)
+        {
+            @: request = @Html.Raw(dataRequest);
+        }
+
+        $.each(request, function (i, o) {
+            request[i].date = kendo.parseDate(o.date);
+        });
+
+        $(".detail-shift").hide();
+        $(".show-detail").hide();
+        @if (ApplicationHelper.IsDefault(Model.Id))
+        {
+          @:$("input[value='upload']").prop("checked", true);
+          @:$("#divUpload").show();
+          @:$("#divForm").hide();
+        }
+
+        if ('@Model.Object.TypeShift' == 'form') {
+            $("#divUpload").hide();
+            $("#divForm").show();
+            $("#Object_TypeShift").prop("checked", true);
+        }
+        else if ('@Model.Object.TypeShift' == 'upload') {
+            $("#divUpload").show();
+            $("#divForm").hide();
+            $(".show-detail").hide();
+            $("#Object_TypeShift").prop("checked", false);
+        }
+        else {
+            $("#divUpload").hide();
+            $("#divForm").show();
+            $("#Object_TypeShift").prop("checked", true);
+        }
+
+        function onYearBound(e) {
+            if ('@Model.Object.Year' != '') {
+
+            } else {
+                e.sender.value(@DateTime.Now.Year);
+            }
+        }
+
+        function onMonthBound(e) {
+            if ('@Model.Object.Month' != '') {
+
+            } else {
+                e.sender.value("@DateTime.Now.Month");
+            }
+        }
+
+
+        $('input[type=radio][id=Object_TypeShift]').change(function () {
+            request = [];
+            generateSummary();
+            generateInputRequest();
+            if (this.value === "upload") {
+                $("#divUpload").show();
+                $("#divForm").hide();
+                $("#Object_Year").data("kendoComboBox").value("");
+                $("#Object_Month").data("kendoComboBox").value("");
+                $("#btnDownloadTemplate").show();
+            }
+            if (this.value === "form") {
+                $("#divUpload").hide();
+                $("#divForm").show();
+                $("#Object_Year").data("kendoComboBox").value("");
+                $("#Object_Month").data("kendoComboBox").value("");
+                $("#btnDownloadTemplate").hide();
+            }
+        });
+
+        function generateInputRequest() {
+            var input = '';
+            $(".input-container").html('');
+            $.each(request, function (i, o) {
+                input = $('<input type="hidden" name="Object.Request[' + i + '][date]" value="' + kendo.toString(o.date, "yyyy-MM-dd") + '">');
+                $(".input-container").append(input);
+
+                input = $('<input type="hidden" name="Object.Request[' + i + '][noreg]" value="' + o.noreg + '">');
+                $(".input-container").append(input);
+
+                input = $('<input type="hidden" name="Object.Request[' + i + '][name]" value="' + o.name + '">');
+                $(".input-container").append(input);
+
+                input = $('<input type="hidden" name="Object.Request[' + i + '][shift]" value="' + o.shift + '">');
+                $(".input-container").append(input);
+            });
+        }
+
+        function generateSummary(defaulfMonth, defaultYear) {
+            var listDate = [];
+            var viewAs = $("input[name='ViewBy']:checked").val();
+            if (request != null || request != undefined) {
+                if (viewAs === 'shift')
+                    listDate = request.map(function (x) { return x.date; });
+                else {
+                    var noregEmp = $("#combo-view-by-employee").data("kendoComboBox").value();
+
+                    var listShift = $.grep(request, function (obj) {
+                        return obj.noreg === noregEmp;
+                    });
+
+                    listDate = listShift.map(function (x) { return x.date; });
+                }
+            }
+            //$("#SummaryDate").data("kendoCalendar").selectDates(listDate);
+
+            var calendar = $("#SummaryDate").data("kendoCalendar");
+            if (calendar !== undefined) {
+                calendar.destroy();
+                $("#SummaryDate > table").remove();
+                $("#SummaryDate > div").remove();
+
+            }
+
+            $("#SummaryDate").kendoCalendar({
+                dates: listDate,
+                weekNumber: false,
+                month: {
+                    content: '# if (InSelected(data.date, data.dates) >= 0) { #' +
+                        '<div class="shift-date">#= data.value #</div>' +
+                        '# } else { #' +
+                        '#= data.value #' +
+                        '# } #',
+                    weekNumber: '<a class="italic">#= data.weekNumber #</a>'
+                },
+                change: function () {
+                    var formated = [];
+                    if (request != null || request != undefined) {
+                        formated = request.map(function (e) { return kendo.toString(e.date, "yyyy-MM-dd"); });
+                    }
+
+
+                    var viewAs = $("input[name='ViewBy']:checked").val();
+                    if (request != null || request != undefined) {
+                        if (viewAs === 'shift')
+                            formated = request.map(function (x) { return kendo.toString(x.date, "yyyy-MM-dd"); });
+                        else {
+                            var noregEmp = $("#combo-view-by-employee").data("kendoComboBox").value();
+
+                            var listShift = $.grep(request, function (obj) {
+                                return obj.noreg === noregEmp;
+                            });
+
+                            formated = listShift.map(function (x) { return kendo.toString(x.date, "yyyy-MM-dd"); });
+                        }
+                    }
+                    var selectedDate = this._value;
+                    var active = $.inArray(kendo.toString(selectedDate, "yyyy-MM-dd"), formated)
+                    $(".shift-detail-modal").html("");
+                    viewAs = $("input[name='ViewBy']:checked").val();
+                    if (active >= 0) {
+                        if (viewAs === 'shift') {
+
+                        }
+
+                        var ul = $("<ul></ul>");
+                        $(".shift-detail-modal").append(ul);
+
+                        var listShift = $.grep(request, function (obj) {
+                            return kendo.toString(obj.date, "yyyy-MM-dd") === kendo.toString(selectedDate, "yyyy-MM-dd");
+                        });
+                        var listShiftCode = app.unique(listShift.map(function (x) { return x.shift; }));
+
+                        $.each(listShiftCode, function (i, o) {
+                            var head = $("<li id='shift-code-'" + o + "></li>").text("Shift : " + o).appendTo(ul);
+                            var listEmp = $.grep(listShift, function (obj) {
+                                return obj.shift === o;
+                            });
+
+                            var sub = $("<ul></ul>");
+                            $.each(listEmp, function (ii, oo) {
+                                $("<li></li>").text(oo.noreg + " - " + oo.name).appendTo(sub);
+                            });
+                            head.append(sub);
+                        });
+                        $('#summaryModal').modal('toggle');
+                    }
+                },
+                footer: false
+            });
+
+            if (defaulfMonth !== undefined && defaultYear !== undefined) {
+                $("#SummaryDate").data("kendoCalendar").value(new Date(defaultYear, defaulfMonth));
+            }
+
+            createReview();
+        }
+
+        function createReview() {
+
+            $(".shift-header").html("");
+            $(".shift-data").html("");
+
+            //create header
+            var listDate = [];
+            var uniqeDate = [];
+            listDate = request.map(function (x) { return kendo.toString(kendo.parseDate(x.date), "dd"); });
+
+            var th = $('<th style="white-space: nowrap">No Reg</th><th style="white-space: nowrap">Nama Karyawan</th>');
+            $(".shift-header").append(th);
+            $.each(listDate, function (i, o) {
+                if ($.inArray(o, uniqeDate) == -1) {
+                    th = $('<th class="shiftdate date-' + o + '" style="white-space: nowrap"></th>').html(o);
+                    $(".shift-header").append(th);
+
+                    uniqeDate.push(o);
+                }
+            });
+            //table content
+            var colDate = $(".shift-header").find("th.shiftdate");
+            $.each(request, function (i, o) {
+                var currNoregRow = $(".shift-data > tr").find("td.noreg-" + o.noreg);
+                if (currNoregRow.length == 0) {
+                    var td = "<td class='noreg-" + o.noreg + "' style='white-space: nowrap'>" + o.noreg + "</td><td class='review-name' style='white-space: nowrap'>" + o.name + "</td>";
+                    //create default list td date for this employee
+                    $.each(uniqeDate, function (ii, oo) {
+                        if (oo == kendo.toString(kendo.parseDate(o.date), "dd")) {
+                            td = td + "<td class='shift-" + o.noreg + "-" + oo + "' style='white-space: nowrap'>" + o.shift + "</td>";
+                        } else {
+                            td = td + "<td class='shift-" + o.noreg + "-" + oo + "' style='white-space: nowrap'></td>";
+                        }
+                    })
+
+                    $(".shift-data").append("<tr>" + td + "</tr>");
+                } else {
+                    //find cell shift and date employee
+                    var currCell = $(".shift-data > tr").find("td.shift-" + o.noreg + "-" + kendo.toString(kendo.parseDate(o.date), "dd"))
+                    currCell.html(o.shift);
+                }
+            });
+
+            $(".show-detail").show();
+        }
+
+        function createRequest() {
+            //initiate value
+            var noreg = $("#Employee").data("kendoComboBox").value();
+            var name = $("#Employee").data("kendoComboBox").text();
+            var shiftCode = $("#ShiftCode").data("kendoComboBox").value();
+            var dates = $("#ShiftDate").data("kendoCalendar").selectDates();
+            //validate input
+            if (!noreg) {
+                app.warning("Mohon pilih karyawan.", "Perhatian");
+                return false;
+            }
+            if (!shiftCode) {
+                app.warning("Mohon pilih shift.", "Perhatian");
+                return false;
+            }
+            if (dates === null || dates.length === 0) {
+                app.warning("Mohon pilih jadwal shift.", "Perhatian");
+                return false;
+            }
+
+            //data request
+            $.each(dates, function (i, o) {
+                var isFound = false;
+
+                for (var idx in request) {
+                    if (request[idx].date.toString() === o.toString() && request[idx].noreg === noreg) {
+                        request[idx].shift = shiftCode;
+                        isFound = true;
+                        break;
+                    }
+                }
+
+                if (!isFound) {
+                    request.push({
+                        date: o,
+                        noreg: noreg,
+                        name: name,
+                        shift: shiftCode
+                    });
+                }
+            });
+            //create summary
+            generateSummary();
+            generateInputRequest();
+        }
+
+        function InSelected(date, array) {
+            var formated = [];
+            if (request != null || request != undefined) {
+                formated = request.map(function (e) { return kendo.toString(e.date, "yyyy-MM-dd"); });
+            }
+
+
+            var viewAs = $("input[name='ViewBy']:checked").val();
+            if (request != null || request != undefined) {
+                if (viewAs === 'shift')
+                    formated = request.map(function (x) { return kendo.toString(x.date, "yyyy-MM-dd"); });
+                else {
+                    var noregEmp = $("#combo-view-by-employee").data("kendoComboBox").value();
+
+                    var listShift = $.grep(request, function (obj) {
+                        return obj.noreg === noregEmp;
+                    });
+
+                    formated = listShift.map(function (x) { return kendo.toString(x.date, "yyyy-MM-dd"); });
+                }
+            }
+
+            return $.inArray(kendo.toString(date, "yyyy-MM-dd"), formated);
+        }
+
+        $("input[name='ViewBy']").change(function () {
+            if (this.value === 'employee') {
+                var employees = $.map(request, function (o, i) {
+                    return { NoReg: o.noreg, Name: o.name};
+                });
+                var dataEmp = employees.reduce(function (memo, e1) {
+                    var matches = memo.filter(function (e2) {
+                        return e1.NoReg === e2.NoReg && e1.Name === e2.Name
+                    });
+                    if (matches.length === 0)
+                        memo.push(e1);
+                    return memo;
+                }, []);
+
+                var dataSource = new kendo.data.DataSource({
+                    data: dataEmp
+                });
+
+                $("#combo-view-by-employee").kendoComboBox({
+                    dataTextField: "Name",
+                    dataValueField: "NoReg",
+                    dataSource: dataSource,
+                    filter: "contains",
+                    suggest: true,
+                    index: -1,
+                    change: function () {
+                        generateSummary();
+                    }
+                });
+                $(".view-by-employee").show();
+            } else {
+                $(".view-by-employee").hide();
+            }
+
+            generateSummary();
+        });
+
+        $('#btnUpload').on('click', function () {
+            $(".show-detail").hide();
+
+            var fileExtension = ['xls', 'xlsx'];
+            var filename = $('#fUpload').val();
+            if (filename.length == 0) {
+                app.warning("Mohon pilih file.", "Perhatian");
+                return false;
+            }
+            else {
+                var extension = filename.replace(/^.*\./, '');
+                if ($.inArray(extension, fileExtension) == -1) {
+                    app.warning("Mohon pilih hanya file excel.", "Perhatian");
+                    return false;
+                }
+            }
+            var fdata = new FormData();
+            var fileUpload = $("#fUpload").get(0);
+            var files = fileUpload.files;
+            fdata.append(files[0].name, files[0]);
+
+            var periodStr = $("#Object_Year").val() + "-" + (("00" + $("#Object_Month").val()).slice(-2)) + "-01";
+
+            var period = kendo.parseDate(periodStr);
+
+            if (period === undefined || period === null) {
+                app.error("Invalid Period", "Terjadi Kesalahan");
+                return false;
+            }
+
+            fdata.append("Period", periodStr);
+
+            app.blockUI({ message: app.translate("Loading content...") });
+            $.ajax({
+                type: "POST",
+                url: app.resolveUrl("~/api/shift-planning/import"),
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("XSRF-TOKEN",
+                        $('input:hidden[name="__RequestVerificationToken"]').val());
+                },
+                data: fdata,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    console.log(response)
+                    if (response.datarequest === undefined)
+                        app.error('Some error occured while uploading', "Terjadi Kesalahan");
+                    else {
+                        request = response.datarequest;
+                        $.each(request, function (i, o) {
+                            request[i].date = kendo.parseDate(o.date);
+                        });
+                        generateSummary();
+                        generateInputRequest();
+                        createReview();
+
+                        if (response.MsgError !== '') {
+                            app.error(response.MsgError, "Terjadi Kesalahan");
+                        }
+                    }
+                    app.unblockUI();
+                },
+                error: function (e) {
+                    app.error(e.responseText, "Terjadi Kesalahan");
+                    app.unblockUI();
+                }
+            });
+        });
+
+        $("#fUpload").change(function () {
+            var filename = $('#fUpload').val();
+            $("#Object_UploadExcelPath").val(filename);
+        });
+
+        $(".show-detail").click(function () {
+
+            //if ($('.shift-data').find("tr").length === 0) {
+            //    app.warning("Data masih kosong.", "Perhatian");
+            //    return false;
+            //}
+
+            $(".detail-shift").show();
+            $(".form-shift").hide();
+        });
+
+        $("#search").on("keyup", function () {
+            var value = $(this).val().toLowerCase();
+            $(".shift-data tr").filter(function () {
+                $(this).toggle($(this).find("td.review-name").text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        $(".show-form").click(function () {
+
+            $(".detail-shift").hide();
+            $(".form-shift").show();
+        });
+
+        @{
+            if (!string.IsNullOrEmpty(Model.Object.Month) && !string.IsNullOrEmpty(Model.Object.Year))
+            {
+                var month = 1;
+                try
+                {
+                    month = DateTime.ParseExact(Model.Object.Month, "MMMM", enUs).Month;
+                }
+                catch
+                {
+                    month = int.Parse(Model.Object.Month);
+                }
+
+                <text>
+            generateSummary('@(month - 1)', '@Model.Object.Year');
+            </text>
+            }
+            else {
+                <text>
+            generateSummary();
+            </text>
+            }
+        }
+
+
+        generateInputRequest();
+        createReview();
+
+        @*var today = new Date(),
+            events = [
+            ];
+        var request = {
+            Shifts: []
+        };
+        var AllDates = [];
+
+        $(".detail-shift").hide();
+        $(".show-detail").hide();
+
+        function onYearBound(e) {
+            e.sender.value(@DateTime.Now.Year);
+        }
+
+        function onMonthBound(e) {
+            e.sender.value("@System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.GetValue(DateTime.Now.Month -1)");
+        }
+
+        $(".show-detail").click(function () {
+
+            if ($('.shift-data').find("tr").length === 0) {
+                app.warning("Data masih kosong.", "Perhatian");
+                return false;
+            }
+
+            $(".detail-shift").show();
+            $(".form-shift").hide();
+        });
+
+        $(".show-form").click(function () {
+
+            $(".detail-shift").hide();
+            $(".form-shift").show();
+        });
+
+        $("#fUpload").change(function () {
+            var filename = $('#fUpload').val();
+            $("#Object_UploadExcelPath").val(filename);
+        });
+
+        if ('@Model.Object.TypeShift' == 'form') {
+            $("#divUpload").hide();
+            $("#divForm").show();
+            $("#Object_TypeShift").prop("checked", true);
+        }
+        else if ('@Model.Object.TypeShift' == 'upload') {
+            $("#divUpload").show();
+            $("#divForm").hide();
+            $("#Object_TypeShift").prop("checked", false);
+        }
+        else {
+            $("#divUpload").hide();
+            $("#divForm").show();
+            $("#Object_TypeShift").prop("checked", true);
+        }
+
+        $('input[type=radio][id=Object_TypeShift]').change(function () {
+
+            $(".input-container").html("");
+            $(".shift-data").html("");
+
+            if (this.value == "upload") {
+                $("#divUpload").show();
+                $("#divForm").hide();
+                $("#Object_Year").data("kendoComboBox").value("");
+                $("#Object_Month").data("kendoComboBox").value("");
+            }
+            if (this.value == "form") {
+                $("#divUpload").hide();
+                $("#divForm").show();
+                $("#Object_Year").data("kendoComboBox").value("");
+                $("#Object_Month").data("kendoComboBox").value("");
+            }
+        });
+
+        $('#btnUpload').on('click', function () {
+
+            $(".show-detail").hide();
+
+            var fileExtension = ['xls', 'xlsx'];
+            var filename = $('#fUpload').val();
+            if (filename.length == 0) {
+                app.warning("Mohon pilih file.", "Perhatian");
+                return false;
+            }
+            else {
+                var extension = filename.replace(/^.*\./, '');
+                if ($.inArray(extension, fileExtension) == -1) {
+                    app.warning("Mohon pilih hanya file excel.", "Perhatian");
+                    return false;
+                }
+            }
+            var fdata = new FormData();
+            var fileUpload = $("#fUpload").get(0);
+            var files = fileUpload.files;
+            fdata.append(files[0].name, files[0]);
+
+            var periodStr = $("#Object_Month").val() + " 01 " + $("#Object_Year").val();
+
+            var period = kendo.parseDate(periodStr);
+
+
+            if (period === undefined || period === null) {
+                app.error("Invalid Period", "Terjadi Kesalahan");
+                return false;
+            }
+
+            fdata.append("Period", kendo.toString(period, "yyyy-MM-dd"));
+
+            $.ajax({
+                type: "POST",
+                url: "/api/shift-planning/import",
+                beforeSend: function (xhr) {
+                    xhr.setRequestHeader("XSRF-TOKEN",
+                        $('input:hidden[name="__RequestVerificationToken"]').val());
+                },
+                data: fdata,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+
+                    if (response.Shifts === undefined ||  response.Shifts.length === 0)
+                        app.error('Some error occured while uploading', "Terjadi Kesalahan");
+                    else {
+
+                        create_table(response);
+                    }
+                },
+                error: function (e) {
+                    app.error(e.responseText, "Terjadi Kesalahan");
+                }
+            });
+        });
+
+        $("#search").on("keyup", function () {
+            var value = $(this).val().toLowerCase();
+            $(".shift-data tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+        function prepareData() {
+            var options = @Html.Raw(shifts);
+            create_table(options);
+        }
+
+        function create_table(data) {
+
+            $(".shift-header").html("");
+            $(".shift-data").html("");
+            console.log(data)
+            if (data !== undefined && data !== null && data.Dates !== undefined && data.Dates !== null ) {
+
+                var th = $('<th style="text-align:center" width="100">No Reg</th><th style="text-align:center">Nama Karyawan</th>');
+                $(".shift-header").append(th);
+
+                $.each(data.Dates, function (i, o) {
+
+                    var d = kendo.toString(kendo.parseDate(o),"dd");
+                    th = $('<th style="text-align:center" width="100"></th>').html(d);
+
+                    var input = $('<input type="hidden" name="Object.Request[Dates][' + i + ']" value="' + o + '">');
+                    $(".detail-shift").append(input);
+
+                    $(".shift-header").append(th);;
+                });
+
+                $.each(data.Shifts, function (i, o) {
+                    var tr = $("<tr><td align='center'>" + o.NoReg + "</td><td style='padding: 5px;'>" + o.Name + "</td></tr>");
+
+                    var input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][NoReg]" value="' + o.NoReg + '">');
+                    $(".detail-shift").append(input);
+
+                    input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Name]" value="' + o.Name + '">');
+                    $(".detail-shift").append(input);
+
+                    $.each(o.Shifts, function (ii, oo) {
+
+                        input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Shifts][' + ii + '][ShiftDate]" value="' + oo.ShiftDate + '">');
+                        $(".detail-shift").append(input);
+
+                        input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Shifts][' + ii + '][ShiftCode]" value="' + oo.ShiftCode + '">');
+                        $(".detail-shift").append(input);
+
+                        $("<td valign='center' align='center'>" + oo.ShiftCode + "</td>").appendTo(tr);
+                    });
+
+                    $(".shift-data").append(tr);
+
+
+                });
+                $(".show-detail").show();
+
+            }
+        }
+
+        function InSelected(date, array) {
+            var formated = array.map(function (e) { return kendo.toString(e, "yyyy-MM-dd"); });
+            return $.inArray(kendo.toString(date, "yyyy-MM-dd"), formated);
+        }
+
+
+        function ShiftDateChange() {
+            events = $(this).get(0).selectDates();
+        }
+
+        function ShiftDateNavigate() { }
+
+        $("input[name='ViewBy']").change(function () {
+            if (this.value === 'employee') {
+                var employees = $.map(request.Shifts, function (o, i) {
+                    return { NoReg: o.NoReg, Name: o.Name };
+                });
+
+                var dataSource = new kendo.data.DataSource({
+                    data: employees
+                });
+
+                $("#combo-view-by-employee").kendoComboBox({
+                    dataTextField: "Name",
+                    dataValueField: "NoReg",
+                    dataSource: dataSource,
+                    filter: "contains",
+                    suggest: true,
+                    index: -1,
+                    change: function () {
+                        var noReg = this.value();
+                        var empExist = request.Shifts.map(function (x) { return x.NoReg.toString(); }).indexOf(noReg.toString());
+                        if (empExist >= 0) {
+                            var data = request.Shifts[empExist];
+                            var dates = data.Shifts.map(function (d) { return d.ShiftDate });
+                            createSummary(dates);
+                        }
+                    }
+                });
+                $(".view-by-employee").show();
+            } else {
+                $(".view-by-employee").hide();
+                var shiftDates = request.Shifts.map(function (x) { return x.Shifts.map(function (y) { return y.ShiftDate }) });
+                for (var i = 0; i < shiftDates.length; i++) {
+                    AllDates = merge_array(AllDates, shiftDates[i])
+                }
+                console.log(AllDates);
+                createSummary(AllDates);
+            }
+        });
+
+        function createSummary(dates) {
+            $(".summary-shift").hide();
+            $(".input-container").html("");
+
+            var calendar = $("#SummaryDate").data("kendoCalendar");
+            if (calendar !== undefined) {
+                calendar.destroy();
+                $("#SummaryDate > table").remove();
+                $("#SummaryDate > div").remove();
+
+            }
+
+            if (dates === undefined || dates === null) return;
+            var viewAs = $("input[name='ViewBy']:checked").val();
+
+            if (viewAs === "shift") {
+                var shiftDates = request.Shifts.map(function (x) { return x.Shifts.map(function (y) { return y.ShiftDate }) });
+                for (var i = 0; i < shiftDates.length; i++) {
+                    dates = merge_array(dates, shiftDates[i])
+                }
+            }
+
+
+            $("#SummaryDate1").kendoCalendar({
+                dates: dates,
+                weekNumber: false,
+                month: {
+                    content: '# if (InSelected(data.date, data.dates) >= 0) { #' +
+                        '<div class="shift-date">#= data.value #</div>' +
+                        '# } else { #' +
+                        '#= data.value #' +
+                        '# } #',
+                    weekNumber: '<a class="italic">#= data.weekNumber #</a>'
+                },
+                change: function () {
+                    var $this = this;
+                    var active = $($this._cell[0].children[0]).hasClass("active-shift-date");
+                    var selectedDate = this._value;
+
+                    $(".shift-detail-modal").html("");
+                    viewAs = $("input[name='ViewBy']:checked").val();
+                    if (active) {
+                        if (viewAs === 'shift') {
+
+                            var codes = [];
+                            var shiftCodes = request.Shifts.map(function (x) { return x.Shifts.map(function (y) { return y.ShiftCode }) });
+                            for (var i = 0; i < shiftCodes.length; i++) {
+                                codes = merge_array(codes, shiftCodes[i])
+                            }
+
+                            var AllShifts = [];
+                             request.Shifts.map(function (x) {
+                                return x.Shifts.map(function (obj) {
+                                    obj.NoReg = x.NoReg;
+                                    obj.Name = x.Name;
+                                    AllShifts.push(obj);
+                                });
+                            });
+
+                            var ShiftTree = [];
+
+                            var ul = $("<ul></ul>");
+                            $(".shift-detail-modal").append(ul);
+
+
+                            $.each(codes, function (i, o) {
+                                if (!ShiftTree[o]) {
+                                    ShiftTree[o] = {
+                                        Employess : []
+                                    };
+                                }
+
+                                var head = $("<li id='shift-code-'" + o + "></li>").text("Shift : " + o).appendTo(ul).hide();
+
+                                var emps = $.grep(AllShifts, function (obj) {
+                                    return kendo.toString(obj.ShiftDate, "yyyy-MM-dd") === kendo.toString(selectedDate, "yyyy-MM-dd") && obj.ShiftCode === o;
+                                });
+
+                                if (emps !== null && emps.length > 0) {
+                                    var sub = $("<ul></ul>");
+                                    $.each(emps, function (i, e) {
+                                      if (e.ShiftCode === o) {
+                                          $("<li></li>").text(e.NoReg + " - " + e.Name).appendTo(sub);
+                                      }
+                                    });
+                                    head.show();
+                                    head.append(sub);
+                                }
+                            });
+
+
+                            $('#summaryModal').modal('toggle');
+                        }
+                    }
+
+                },
+                footer: false
+            });
+
+            $('.shift-date').parents('a').addClass('active-shift-date');
+            $(".summary-shift").show();
+
+            $("#datesContainer").html('');
+            $.each(dates, function (i, o) {
+                console.log(o)
+                var input = $('<input type="hidden" name="Object.Request[Dates][' + i + ']" value="' + kendo.toString(o, "yyyy-MM-dd") + '">');
+                $("#datesContainer").append(input);
+            });
+
+            $.each(request.Shifts, function (i, o) {
+
+                var input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][NoReg]" value="' + o.NoReg + '">');
+                $(".input-container").append(input);
+                input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Name]" value="' + o.Name + '">');
+                $(".input-container").append(input);
+
+                $.each(o.Shifts, function (ii, oo) {
+                    input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Shifts][' + ii + '][ShiftDate]" value="' + kendo.toString(oo.ShiftDate,"yyyy-MM-dd") + '">');
+                    $(".input-container").append(input);
+                    input = $('<input type="hidden" name="Object.Request[Shifts][' + i + '][Shifts][' + ii + '][ShiftCode]" value="' + oo.ShiftCode + '">');
+                    $(".input-container").append(input);
+                });
+
+            });
+
+        }
+
+        function EmployeeChange() {
+            var noReg = $("#Employee").data("kendoComboBox").value();
+            var empExist = request.Shifts.map(function (x) { return x.NoReg.toString(); }).indexOf(noReg.toString());
+            if (empExist >= 0) {
+                var data = request.Shifts[empExist];
+                events = data.Shifts.map(function (d) { return d.ShiftDate });
+                createSummary(events);
+            } else {
+                events = [];
+                createSummary(null);
+            }
+        }
+
+        function createRequest() {
+
+            var noReg = $("#Employee").data("kendoComboBox").value();
+            var name = $("#Employee").data("kendoComboBox").text();
+            if (!noReg) {
+                app.warning("Mohon pilih karyawan.", "Perhatian");
+                return false;
+            }
+
+            var shiftCode = $("#ShiftCode").data("kendoComboBox").value();
+
+            if (!shiftCode) {
+                app.warning("Mohon pilih shift.", "Perhatian");
+                return false;
+            }
+
+            var dates = $("#ShiftDate").data("kendoCalendar").selectDates();
+
+            if (dates === null || dates.length === 0) {
+                app.warning("Mohon pilih jadwal shift.", "Perhatian");
+                return false;
+            }
+
+            events = dates;
+
+            var shifts = dates.map(function (d) {
+                return {
+                    ShiftDate: d,
+                    ShiftCode: shiftCode
+                };
+            });
+
+            var shiftData = {
+                NoReg: noReg,
+                Name: name,
+                Shifts: shifts
+            };
+
+            var empExist = request.Shifts.map(function (x) { return x.NoReg.toString(); }).indexOf(noReg.toString());
+
+            if (empExist >= 0) {
+                request.Shifts[empExist] = shiftData;
+            } else {
+                request.Shifts.push(shiftData);
+            }
+
+            createSummary(dates);
+        }
+
+        function merge_array(array1, array2) {
+            const result_array = [];
+            const arr = array1.concat(array2);
+            let len = arr.length;
+            const assoc = {};
+
+            while (len--) {
+                const item = arr[len];
+
+                if (!assoc[item]) {
+                    result_array.unshift(item);
+                    assoc[item] = true;
+                }
+            }
+
+            return result_array;
+        }
+
+        prepareData();
+
+        @if (ApplicationHelper.IsDefault(Model.Id))
+        {
+          @:$("input[value='upload']").prop("checked", true);
+          @:$("#divUpload").show();
+          @:$("#divForm").hide();
+          @:$(".summary-shift").hide();
+        }*@
+
+    </script>
+}
+
+<div class="input-container">
+
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Shift Planning Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+
+                        <div class="form-shift col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Shift Planning"]</legend>
+                                <div class="mt-radio-inline form-group">
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["Input Form"]
+                                        @Html.RadioButtonFor(x => x.Object.TypeShift, "form", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.TypeShift" }, isCanEdit))
+                                        <span></span>
+                                    </label>
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["Upload Shift"]
+                                        @Html.RadioButtonFor(x => x.Object.TypeShift, "upload", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.TypeShift" }, isCanEdit))
+                                        <span></span>
+                                    </label>
+
+                                </div>
+                                <div id="divForm">
+                                    <div class="form-group">
+                                        <table cellspacing="5">
+                                            <tr>
+                                                <td width="100">@Localizer["Division"]</td>
+                                                <td style="font-size: 13px;">@divisionName</td>
+                                            </tr>
+                                            <tr>
+                                                <td>@Localizer["Department"]</td>
+                                                <td style="font-size: 13px;">@departmentName</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                                        @(Html.KendoComboBox("Employee", "", "")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Employee" })
+                                            .Placeholder(Localizer["Select Employee"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("NoReg")
+                                            //.Events(x => x.Change("EmployeeChange"))
+                                            .DataSource(dataSource => dataSource
+                                                .ServerFiltering(false)
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content($"~/api/organization/employee-by-dept-combo-shift?orgCode={sectionCode}")))
+                                                .Sort(sort => sort.Add("Name"))
+                                            )
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Shift"]</label>
+                                        @(Html.KendoComboBox("ShiftCode", "", "")
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.ShiftCode" })
+                                            .Placeholder(Localizer["Select Shift"].Value)
+                                            .SelectedIndex(0)
+                                            .DataTextField("NameDesc")
+                                            .DataValueField("NameDesc")
+                                            .DataSource(dataSource => dataSource
+                                                .ServerFiltering(false)
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content($"~/api/category/getsbycategorycustomshift?category=ShiftCode")))
+                                            )
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                        <small class="font-red-haze">@Localizer["Note: (P) is for Jadwal Kerja Puasa"]</small>
+                                    </div>
+                                    <div class="form-group">
+                                        <div style="text-align: center;">
+                                            <h5><span class="required" aria-required="true"> * </span>@Localizer["Shift Schedule"]</h5>
+                                            @if (isCanEdit)
+                                            {
+                                                @(Html.Kendo().Calendar()
+                                                              .Name("ShiftDate")
+                                                              //.Events(e => e.Change("ShiftDateChange").Navigate("ShiftDateNavigate"))
+                                                              .HtmlAttributes(new { @style = "width:100%" })
+                                                              .WeekNumber(false)
+                                                              .Selectable("multiple")
+                                                              .Min(new DateTime(now.Year, now.Month, 1))
+                                                              .Footer("")
+                                                              .Deferred()
+                                                )
+                                            }
+                                            else
+                                            {
+                                                @(Html.Kendo().Calendar()
+                                                              .Name("ShiftDate")
+                                                              //.Events(e => e.Change("ShiftDateChange").Navigate("ShiftDateNavigate"))
+                                                              .HtmlAttributes(new { @style = "width:100%" })
+                                                              .WeekNumber(false)
+                                                              .Selectable("multiple")
+                                                              .Footer("")
+                                                              .Deferred()
+                                                )
+                                            }
+
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        @if (isCanEdit)
+                                        {
+                                            <a href="javascript:void(0)" class="btn btn-block btn-info" onclick="createRequest()">@Localizer["Save"]</a>
+                                        }
+                                    </div>
+
+                                </div>
+                                <div id="divUpload">
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Tahun</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.Year, "Year")
+                                                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Year" })
+                                                                            .Placeholder("Pilih Tahun")
+                                                                            .DataTextField("Years")
+                                                                            .DataValueField("Years")
+                                                                            .DataSource(dataSource => dataSource
+                                                                                .Ajax()
+                                                                                .Read(read => read.Url(Url.Content("~/api/period/years_shift")))
+                                                                            )
+                                                                            .Events(events => events.DataBound("onYearBound"))
+                                                                            .Enable(isCanEdit)
+                                                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Bulan</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.Month, "Month")
+                                                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Month" })
+                                                                            .Placeholder("Pilih Bulan")
+                                                                            .DataTextField("Month")
+                                                                            .DataValueField("id")
+                                                                            .DataSource(dataSource => dataSource
+                                                                                .Ajax()
+                                                                                .Read(read => read.Url(Url.Content("~/api/period/month")))
+                                                                            )
+                                                                            .Events(events => events.DataBound("onMonthBound"))
+                                                                            .Enable(isCanEdit)
+                                                                            .Deferred()
+                                        )
+                                    </div>
+
+                                    <div class="form-group">
+
+                                        <label><span class="required" aria-required="true"> * </span>Upload Excel</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+
+                                                <form method="post" enctype="multipart/form-data">
+
+                                                    <div class="file-group" name="Object.UploadExcelPath">
+                                                        <div class="input-group-area">
+                                                            <input asp-for="Object.UploadExcelPath" onfocus="this.blur()" onclick="$('#fUpload').click();" readonly="readonly" placeholder="Nama File" />
+                                                        </div>
+                                                        <div class="input-group-icon">
+                                                            <div class="file btn">
+                                                                <i class="ft-file"></i>
+                                                                <input class="file" type="file" data-validation-for="Object.UploadExcelPath" id="fUpload" data-auto-upload="false" name="Object.UploadExcelPath" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="input-group-icon">
+                                                            <div class="file btn">
+                                                                <i class="ft-upload"></i>
+                                                                <input class=file type="button" id="btnUpload" value="Upload" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </form>
+
+                                            }
+                                        }
+
+                                        <span name="Object.Request" class="validation-summary"></span>
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div>
+                                        <a class="fa fa-eye show-detail"> &nbsp;<u style="color:blue">Detail Shift</u></a>
+                                    </div>
+                                </div>
+                                <div id="btnDownloadTemplate">
+                                    @if (isCanEdit)
+                                    {
+                                        <div class="mt-3">
+                                            <a class="btn green-haze btn-sm" href="~/uploads/excel-template/shift-planning.xlsx">
+                                                <i class="ft-download"></i> Download Template
+                                            </a>
+                                        </div>
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="form-shift col-md-6 col-sm-12">
+                            <div class="summary-shift">
+                                <fieldset>
+                                    <legend>@Localizer["Summary"]</legend>
+                                    <div class="form-group">
+                                        <div class="mt-radio-inline">
+                                            <label>@Localizer["View By"]</label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Employee"]
+                                                @Html.RadioButton("ViewBy", "employee")
+                                                <span></span>
+                                            </label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                Shift
+                                                @Html.RadioButton("ViewBy", "shift", new { @checked = "checked" })
+                                                <span></span>
+                                            </label>
+                                        </div>
+
+                                        <div class="view-by-employee" style="display:none">
+                                            <div id="combo-view-by-employee"></div>
+                                        </div>
+
+                                    </div>
+
+                                    <div style="width:100%" id="SummaryDate"></div>
+                                    @*@(Html.Kendo().Calendar()
+                                            .Name("SummaryDate")
+                                            .Dates(Model.Object.Request?.Select(x => x.date).ToArray())
+                                            .HtmlAttributes(new { @style = "width:100%" })
+                                            .MonthTemplate(m => m.Content(@"# if (InSelected(data.date, data.dates) >= 0) { #
+                                                    <div class='shift-date'>#= data.value #</div>
+                                                    # } else { #
+                                                    #= data.value #
+                                                    # } #"))
+                                            .WeekNumber(false)
+                                            .Selectable("multiple")
+                                            .Events(e => e.Change("changeSummaryDate"))
+                                            .Footer("")
+                                            .Deferred()
+                                        )*@
+                                </fieldset>
+                            </div>
+
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    <br />
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.Remarks",
+                                   placeholder = Localizer["Input Notes"].Value
+                               }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+
+
+                        <div class="col-md-12 detail-shift">
+                            <a href="javascript:void(0)" class="show-form btn btn-primary">Kembali</a>
+                            <hr style="padding:0px" />
+                            <div class="form-group">
+                                <input type="text" id="search" class="form-control" placeholder="Cari Karyawan" />
+                            </div>
+                            <div class="table-responsive">
+                                <table id="table-shift" class="table table-bordered">
+                                    <thead>
+                                        <tr class="shift-header"></tr>
+                                    </thead>
+                                    <tbody class="shift-data"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="summaryModal" class="modal fade bs-modal-md" tabindex="-1" role="dialog" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Shift Detail</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="shift-detail-modal">
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn dark btn-outline" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

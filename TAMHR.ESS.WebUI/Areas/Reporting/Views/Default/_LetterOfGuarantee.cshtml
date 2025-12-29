@@ -1,0 +1,113 @@
+﻿@using TAMHR.ESS.Infrastructure.ViewModels
+@{ 
+    var now = DateTime.Now.Date;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Letter of Guarantee List"] <span class="date-detail">(@start.ToString("d MMM")@(start.Year != now.Year ? " " + start.Year : "") - @end.ToString("d MMM")@(end.Year != now.Year ? " " + end.Year : ""))</span>
+                </h3>
+                <div class="heading-elements">
+                    <ul id="letter-of-guarantee-filter" class="page-toolbars" data-role="filter">
+                        <li class="dropdown custom-filter">
+                            <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-filter"></i>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right" style="width: 250px;">
+                                <form class="form-horizontal p-2" role="form">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label>@Localizer["Start Date"]</label>
+                                                @(Html.Kendo().DatePicker()
+                                                    .Name("StartDate")
+                                                    .Value(start)
+                                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                )
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label>@Localizer["End Date"]</label>
+                                                @(Html.Kendo().DatePicker()
+                                                    .Name("EndDate")
+                                                    .Value(end)
+                                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                )
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr class="mt-1"/>
+                                    <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler">@Localizer["Search"]</a>
+                                </form>
+                            </div>
+                        </li>
+                        <li class="dropdown">
+                            <a data-form-key="letter-of-guarantee" href="~/api/letter-of-guarantee/download?startDate=@start.ToString("yyyy-MM-dd")&endDate=@end.ToString("yyyy-MM-dd")" class="font-green-haze download">
+                                <i class="fa fa-download"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<SimpleDocumentRequestDetailViewModel<LetterOfGuaranteeViewModel>>()
+                    .Name("letterOfGuaranteeGrid")
+                    .HtmlAttributes(new { @data_filter = "letter-of-guarantee-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.DocumentApprovalId).Title("Employee").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(Requester)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Requester# - #:RequesterName#</h6>
+                                    <a href=""" + Url.Content("~/core/form/redirectto?formKey=letter-of-guarantee&id=#:DocumentApprovalId#") + @""" target=""_blank""><span class=""d-block"">#:DocumentNumber# (#:DocumentStatusCode#)</span></a>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.Requester).Title("Details").ClientTemplate(@"
+                            <h6 class=""bold font-small-3 mb-0"">#:Object.FamilyRelationship == 'rschild' || Object.FamilyRelationship == 'Anak' ? 'Anak' : (Object.FamilyRelationship == 'rspasangan' || Object.FamilyRelationship == 'Pasangan' ? 'Pasangan' : 'Karyawan') #</h6>
+                            <small class=""d-block"">#:Object.FamilyRelationship == 'rschild' || Object.FamilyRelationship == 'Anak' ? Object.PatientChildName : Object.PatientName #</small>
+                            <small class=""d-block"">#: kendo.toString(new Date(Object.StartDateOfCare), 'dd/MM/yyyy') # - #: kendo.toString(new Date(Object.EndDateOfCare), 'dd/MM/yyyy') #</small>
+                            <small class=""d-block"">Submit on - #: SubmitOn != null ? kendo.toString(new Date(SubmitOn), 'dd/MM/yyyy') : '' #</small>
+                        ");
+
+                        columns.Bound(c => c.Requester).Title("Details").ClientTemplate(@"
+                            <h6 class=""bold font-small-3 mb-0"">#: Object.Hospital #</h6>
+                            <small class=""d-block"">#: Object.HospitalAddress #</small>
+                            <small class=""d-block"">Check up - #: Object.CheckUpCount #</small>
+                        ");
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/letter-of-guarantee/details-report")).Data("$.getFilter"))
+                        .Sort(sort => sort.Add("CreatedOn").Descending())
+                    )
+                    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                    })
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                )
+            </div>
+        </div>
+    </div>
+</div>

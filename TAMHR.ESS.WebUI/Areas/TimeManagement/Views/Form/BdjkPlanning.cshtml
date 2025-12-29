@@ -1,0 +1,489 @@
+﻿@model DocumentRequestDetailViewModel<BdjkPlanningViewModel>;
+@inject TAMHR.ESS.Infrastructure.DomainServices.TimeManagementService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@{
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox");
+
+    var requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var childs = ApprovalService.GetChilds(Model.DocumentApprovalId);
+    var offsetDay = ConfigService.GetConfigValue<int>("Bdjk.OffsetDay", 5);
+    var offsetMonth = ConfigService.GetConfigValue<int>("Bdjk.OffsetMonth", 1);
+    var minTime = TimeSpan.Parse(ConfigService.GetConfigs(true).Where(x => x.ModuleCode.Equals("timemanagement") && x.ConfigKey.Equals("Bdjk.Transport")).FirstOrDefault()?.ConfigValue);
+    bool isCanEdit = AclHelper.CanEdit();
+    var canClaimTransport = AclHelper.HasPermission("Bdjk.CanClaimTransport");
+    var now = DateTime.Now.Date;
+    var startNow = new DateTime(now.Year, now.Month, 1);
+    var day = now.Day;
+    var endMin = now.AddMonths(-offsetMonth);
+    var min = new DateTime(endMin.Year, endMin.Month, 1);
+
+    var max = startNow.AddMonths(1).AddDays(-1);
+
+    var defaultValue = Model.Object.Period == DateTime.MinValue ? now : Model.Object.Period;
+    var test = Model.Object.Period;
+
+    if (!isCanEdit)
+    {
+        min = Model.Object.Period;
+        max = Model.Object.Period;
+    }
+
+    
+    var canClaimBdjk = isCanEdit && defaultValue >= min && defaultValue <= max ;
+
+    var descriptions = ConfigService.GetGeneralCategories("bdjkcode");
+}
+@section scripts {
+    <script type="text/javascript">
+        $(".btn-custom").prop('disabled', true);
+
+        @{ if (childs.Count() > 0) {
+                                    @:$(".btn-custom").prop('disabled', false);
+            }
+        }
+
+        var module = (function ($, app) {
+            var canClaimTransport = @canClaimTransport.ToString().ToLower();
+
+            function replaceKey(key) {
+                var newKey = key;
+
+                $.each($(".cb-employee:checkbox:checked"), function (index, val) {
+                    if (key.indexOf("[" + index + "]") !== -1) {
+                        var $el = $(val),
+                            newIndex = $el.data("id");
+
+                        newKey = key.replace("[" + index + "]", "[" + newIndex + "]");
+                    }
+                });
+
+                return newKey;
+            }
+
+            app.registerHandler("bdjkErrorHandler", function ($form, errors) {
+                var newErrors = {};
+
+                for (var key in errors) {
+                    var newKey = replaceKey(key);
+                    newErrors[newKey.replace("Object.", "").replace(".", "[") + "]"] = errors[key];
+                }
+
+                $form.validate(newErrors);
+            });
+
+            var dataSource = new kendo.data.DataSource({
+                transport: {
+                    read: {
+                        type: "POST",
+                        url: '@Url.Content("~/api/category/getsbycategory?category=CategorySPKL")',
+
+                    }
+                },
+                schema: {
+                    data: function (response) {
+                        return response.Data;
+                    }
+                },
+                requestStart: function () {
+                    kendo.ui.progress($("#table-bdjk"), true);
+                },
+                requestEnd: function () {
+                    kendo.ui.progress($("#table-bdjk"), false);
+                },
+            });
+
+            dataSource.read();
+
+            function getEmployeeBdjk() {
+                var $tableBdjk = $("#table-bdjk");
+                var _year = @(Model.Object.Period != DateTime.MinValue ? Model.Object.Period.Year : DateTime.Now.Year );
+                var _month = @(Model.Object.Period != DateTime.MinValue ? Model.Object.Period.Month : DateTime.Now.Month );
+
+                var year = $("#Periode").data("kendoDatePicker") != undefined ? kendo.toString($("#Periode").data("kendoDatePicker")._value, "yyyy") : _year;
+                var month = $("#Periode").data("kendoDatePicker") != undefined ? kendo.toString($("#Periode").data("kendoDatePicker")._value, "MM") : _month;
+
+                $tableBdjk.html("");
+
+                kendo.ui.progress($tableBdjk, true);
+
+                $.get(app.resolveUrl("~/api/bdjk-planning/gets"), { noreg: "@requester", id: "@Model.DocumentApprovalId", year: year, month: month }, function (data) {
+                    if (data !== undefined && data !== null) {
+                        var canUpdateBdjk = '@canClaimBdjk.ToString()' === 'True';
+                        var len = data.length,
+                            selected = $.grep(data, function (obj) { return obj.Selected }).length;
+
+                        if (len > 0 && len == selected) {
+                            $('.select-all').prop("checked", true);
+                        }
+
+                        var data = $.grep(data, function (obj) {
+                            return obj.Overtime >= 2 && (canUpdateBdjk || (!canUpdateBdjk && obj.Selected));
+                        });
+
+                        $.each(data, function (i, o) {
+                            var code = o.BdjkCode,
+                                selected = o.Selected,
+                                value = o.ActivityCode,
+                                uangMakan = o.UangMakanDinas,
+                                uangTaksi = o.Taxi,
+                                dinasLuar = o.DinasLuar,
+                                UM = o.CanClaimUangMakanDinas,
+                                TR = o.CanClaimTaxi,
+                                remark = o.Remark,
+                                absentStatus = o.AbsentStatus;
+
+                            if (dinasLuar && absentStatus === 45) {
+                                UM = true;
+                                TR = true;
+                            }
+
+                            if (dinasLuar && absentStatus === 33) {
+                                TR = false;
+                            }
+
+                            if (!canClaimTransport) {
+                                TR = false;
+                            }
+
+                            let clockIn = o.ProxyIn == null ? '-' : kendo.toString(app.parseDate(o.ProxyIn), "HH:mm");
+                            let clockOut = o.ProxyOut == null ? '-' : kendo.toString(app.parseDate(o.ProxyOut), "HH:mm");
+
+                            var bdjkCodeHtml = '<div class="form-group mr-lg-2"><input type="hidden" value="' + code + '" name="Details[' + i + '][BdjkCode]" />' + code + '</div>';
+
+                            //if (dinasLuar) {
+                            //    var bdjkControlHtml = '<label class="mt-checkbox green mt-checkbox-outline">A<input id="cb-bdjk-' + i + '" type="checkbox" value="A" name="Details[' + i + '][BdjkCode]" ' + (o.BdjkCode === "A" ? "checked" : "") + ' class="form-control" disabled="disabled" /><span></span></label>';
+
+                            //    if (o.ShiftCode === 'OFF') {
+                            //        bdjkControlHtml = '<input type="hidden" style="width: 85px;" name="Details[' + i + '][BdjkCode]" class="bdjk-code" id="bdjk-code-dropdown-' + i + '" />';
+                            //    }
+
+                            //    bdjkCodeHtml = '<div class="form-group mr-lg-2" data-toggle="tooltip" title="BDJK Code">' +
+                            //        ('@canClaimBdjk' === "False" && o.BdjkCode !== null && o.BdjkCode !== '' ? o.BdjkCode : '') +
+                            //        ('@canClaimBdjk' === "True" ? bdjkControlHtml : '' ) + '</div>';
+                            //}
+
+                            var bdjk = '<div class="row">' + bdjkCodeHtml +
+                                '  <div class="form-group mr-lg-2" data-toggle="tooltip" title="Uang Makan">' +
+                                    (UM === true ?
+                                    ('@canClaimBdjk' === "False" && uangMakan === true ? 'D' : '') +
+                                    ('@canClaimBdjk' === "True" ? '<label class="mt-checkbox green mt-checkbox-outline">D<input id="cb-uang-makan-dinas-' + i + '" type="checkbox" disabled="disabled" name="Details[' + i + '][UangMakanDinas]" ' + (uangMakan ? "checked" : "") + ' class="form-control" /><span></span></label>' :'') +
+                                 '  </div>' : '') +
+                                    (TR === true ?
+                                    ('@canClaimBdjk' === "False" && uangTaksi === true ? 'T' : '') +
+                                    ('@canClaimBdjk' === "True" ? '<label class="mt-checkbox green mt-checkbox-outline">T<input id="cb-taxi-' + i + '" type="checkbox" disabled="disabled" name="Details[' + i + '][Taxi]" ' + (uangTaksi ? "checked" : "") + ' class="form-control" /><span></span></label>' :'') +
+                                '  </div>' : '')+
+                                '</div>';
+
+                            o.BdjkReason = o.BdjkReason === null ? "" : o.BdjkReason;
+
+                            var row = $(
+                                '<tr>' +
+                                '<td style="width:20px"><input @(canClaimBdjk ? "" : "disabled") name="Details[' + i + '][Selected]" class="cb-employee employee" type="checkbox" onchange="disableActivity(this)"  data-id="' + i + '" ' + (selected ? "checked" : "") + '/></td>' +
+                                '<td style="width:50px">'+ (remark == 'planned' ? '@Localizer["Planned"]' : '@Localizer["Not Planned"]') +'</td>' + 
+                                '<td style="width:50px"><input type="hidden" name="Details[' + i + '][WorkingDate]" id="scheduledate-' + i + '"  value="' + kendo.toString(new Date(o.WorkingDate), "yyyy-MM-dd") + '" />' + kendo.toString(new Date(o.WorkingDate), "dd/MM/yyyy") + (o.TotalRequest > 1 ? ("<br/><span class='font-small-1 bold font-red-flamingo'><i>*" + o.TotalRequest + "x Claim</i></span>") : "") + '</td>' +
+                                '<td style="width:40px"><input type="hidden" name="Details[' + i + '][ProxyIn]" id="proxyin-' + i + '"  value="' + clockIn + '" />' + clockIn + '</td>' +
+                                '<td style="width:40px"><input type="hidden" name="Details[' + i + '][ProxyOut]" id="proxyout-' + i + '" value="' + clockOut + '" />' + clockOut + '</td>' +
+                                '<td style="width:50px" id="bdjk-code-' + i + '">' + bdjk + '</td>' +
+                                '<td style="width:300px" class="form-group"><input type="hidden" style="width: 190px;" name="Details[' + i + '][ActivityCode]" class="activity" id="activity-' + i + '" /><span class="invalid" data-validation-for="Details[' + i + '][ActivityCode]"></span>' +
+                                '<td class="form-group"><textarea readonly="readonly" style="width:180px; height: 75px;" class="form-control" name="Details[' + i + '][BdjkReason]" id="description-' + i + '" data-validation-for="Details[' + i + '][BdjkReason]">' + o.BdjkReason +'</textarea><span class="invalid" data-validation-for="Details[' + i + '][BdjkReason]"></span>' +
+                                '</tr>');
+
+                            $tableBdjk.append(row);
+
+                            $("#bdjk-code-dropdown-" + i).kendoComboBox({
+                                dataSource: ['B', 'C'],
+                                autoWidth: true,
+                                enable: o.Selected && @(canClaimBdjk.ToString().ToLower()),
+                                value: o.BdjkCode
+                            });
+
+                            if (o.Selected && @(canClaimBdjk.ToString().ToLower())) {
+                                $("#description-" + i).prop("readonly", false);
+                                $("#cb-uang-makan-dinas-" + i).prop("disabled", false);
+                                $("#cb-taxi-" + i).prop("disabled", false);
+                                $("#cb-bdjk-" + i).prop("disabled", false);
+                            }
+
+                            $("#activity-" + i).kendoComboBox({
+                                autoWidth: true,
+                                dataSource: dataSource,
+                                dataTextField: "Name",
+                                dataValueField: "Code",
+                                enable: o.Selected && @(canClaimBdjk.ToString().ToLower()),
+                                value: value,
+                                //change: function (e) {
+                                //    if (this.select() < 0) {
+                                //        this.value("");
+                                //    }
+                                //},
+                                dataBound: function (e) {
+                                    var $wrapper = e.sender.wrapper;
+
+                                    $wrapper.addClass("form-control");
+                                    $wrapper.css("width", "200px;");
+                                }
+                            });
+                        });
+                    }
+
+                    kendo.ui.progress($tableBdjk, false);
+
+                    if (data.length == 0) {
+                        $tableBdjk.html('<tr><td colspan="7"><div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>@Localizer["No data found"].Value</div></td></tr>');
+                    }
+                });
+            }
+
+            $('.select-all').change(function () {
+                var objCheckAll = $(this);
+                $('#table-bdjk > tr').each(function (i) {
+                    var $this = $(this),
+                        checked = objCheckAll.is(":checked"),
+                        combobox = $this.find("#activity-" + i).data("kendoComboBox"),
+                        uangMakanDinas = $("#cb-uang-makan-dinas-" + i),
+                        taxi = $("#cb-taxi-" + i),
+                        bdjkCode = $("#cb-bdjk-" + i),
+                        remarks = $("#description-" + i),
+                        ddl = $this.find("#bdjk-code-dropdown-" + i);
+
+                    $this.find(".cb-employee").prop("checked", checked);
+
+                    remarks.prop("readonly", !checked);
+                    uangMakanDinas.prop("disabled", !checked);
+                    taxi.prop("disabled", !checked);
+                    bdjkCode.prop("disabled", !checked);
+
+                    combobox.enable(checked);
+
+                    if (ddl.length > 0) {
+                        ddl.data("kendoComboBox").enable(checked);
+                    }
+                });
+
+                if ($(".cb-employee:checkbox:checked").length > 0)
+                    $(".btn-custom").prop('disabled', false);
+                else
+                    $(".btn-custom").prop('disabled', true);
+
+                return false;
+            });
+
+            app.registerHandler("dataInterceptor", function (d) {
+                var documents = [],
+                    periode = kendo.toString($("#Periode").data("kendoDatePicker")._value, "MM");
+                if (Number(periode) === @min.Month && @now.Day > @offsetDay) {
+
+                     swal({
+                            title: '@Localizer["Cannot save or submit the period is over"].Value' ,
+                            //text: "Hybrid Work Schedule Plan Data submitted successfully",
+                            type: "warning"
+                        });
+
+                        return;
+                }
+
+                $.each(d.Details, function (key, item) {
+                    if (item.Selected) {
+                        documents.push(item);
+                    }
+                });
+
+                d.Object = {
+                    Period: kendo.toString($("#Periode").data("kendoDatePicker")._value, "yyyy-MM-dd"),
+                    Details: documents
+                };
+
+                return d;
+            });
+
+            return {
+                getEmployeeBdjk: getEmployeeBdjk
+            }
+        })(jQuery, app);
+
+
+        function disableActivity(obj) {
+            var id = $(obj).data("id"),
+                combobox = $("#activity-" + id).data("kendoComboBox"),
+                ddl = $("#bdjk-code-dropdown-" + id),
+                remarks = $("#description-" + id),
+                uangMakanDinas = $("#cb-uang-makan-dinas-" + id),
+                taxi = $("#cb-taxi-" + id),
+                bdjkCode = $("#cb-bdjk-" + id),
+                checked = $(obj).is(":checked"),
+                totalChecked = $(".cb-employee:checkbox:checked").length,
+                total = $(".cb-employee:checkbox").length;
+
+            combobox.enable(checked);
+
+            remarks.prop("readonly", !checked);
+            uangMakanDinas.prop("disabled", !checked);
+            taxi.prop("disabled", !checked);
+            bdjkCode.prop("disabled", !checked);
+
+            if (ddl.length > 0) {
+                ddl.data("kendoComboBox").enable(checked);
+            }
+
+            if ($(".cb-employee:checkbox:checked").length > 0) {
+                $(".btn-custom").prop('disabled', false);
+            }
+            else {
+                $(".btn-custom").prop('disabled', true);
+            }
+
+            $('.select-all').prop("checked", total > 0 && total == totalChecked);
+        }
+
+        module.getEmployeeBdjk();
+    </script>
+}
+@section pageHeader {
+    @if (isCanEdit && !canClaimBdjk)
+    {
+        <div class="bd-callout bd-callout-warning bg-white mt-0">
+            <h5 class="bold"><i class="fa fa-warning font-yellow-casablanca"></i> @Localizer["BDJK claim for the selected period is over"]</h5>
+            <p>@Localizer["You cannot save/submit BDJK claim because the selected period is over"]</p>
+        </div>
+    }
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["BDJK Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["BDJK Data"]</legend>
+                                @if (ApplicationHelper.IsDefault(Model.Id))
+                                {
+                                    <input id="Object_EmpName" name="Object.EmpName" type="hidden" value="@User.GetClaim("Name")">
+                                }
+                                else
+                                {
+                                    @*<input id="Object_EmpName" name="Object.EmpName" type="hidden" value="@Model.Object">*@
+                                }
+                                <div class="form-group">
+                                    <div class="form-group col-md-6">
+                                        <label>@Localizer["Periode"]</label>
+                                        @(Html.Kendo().DatePicker().Name("Periode")
+                                            .Start(CalendarView.Year)
+                                            .Depth(CalendarView.Year)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Choose Period"].Value })
+                                            .Format("MMMM yyyy")
+                                            .Events(e => e.Change("module.getEmployeeBdjk"))
+                                            .Value(defaultValue)
+                                            .Min(min)
+                                            .Max(max)
+                                            .Enable(canClaimBdjk)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                                <hr />
+                                <div class="col-md-12" style="overflow-x: auto;">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th width="20" class="align-middle text-center">
+                                                    @if (canClaimBdjk)
+                                                    {
+                                                        <input class="select-all" type="checkbox" />
+                                                    }
+                                                </th>
+                                                <th class="align-middle text-center">@Localizer["Remark"]</th>
+                                                <th class="align-middle text-center">@Localizer["Work Date"]</th>
+                                                <th class="align-middle text-center">@Localizer["Proxy In"]</th>
+                                                <th class="align-middle text-center">@Localizer["Proxy Out"]</th>
+                                                <th class="align-middle text-center">@Localizer["BDJK Code"]</th>
+                                                <th class="align-middle text-center">@Localizer["Activity"]</th>
+                                                <th class="align-middle text-center">@Localizer["Reason"]</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-bdjk"></tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-12 col-sm-12">
+                                    <label class="bold">@Localizer["Notes"] :</label>
+                                    @foreach (var description in descriptions)
+                                    {
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">@description.Name</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">@description.Description</label></div>
+                                        </div>
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions {
+    @if (isCanEdit)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanEdit() && canClaimBdjk)
+                                        {
+                                            <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-error-handler="bdjkErrorHandler" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanSubmit() && canClaimBdjk)
+                                        {
+                                            <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-error-handler="bdjkErrorHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}

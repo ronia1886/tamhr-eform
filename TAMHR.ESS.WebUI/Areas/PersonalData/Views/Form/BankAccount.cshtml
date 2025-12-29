@@ -1,0 +1,140 @@
+﻿@model DocumentRequestDetailViewModel<BankDetailViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("grid");
+
+}
+
+@section scripts {
+    <script type="text/javascript">
+        app.registerHandler("selectBank", function (parameters) {
+            $("input[name='Object.KeyBank']").val(parameters.code);
+            $("input[name='Object.BankName']").val(parameters.name);
+            $("input[name='Object.LocationBank']").val(parameters.address);
+            $("input[name='Object.BranchBank']").val(parameters.branch);
+            $("#app-modal-instance-1").modal('toggle');
+        });
+
+        //$('#Object_AccountNumber').keypress(function () {
+        //    if (this.value.length >= 16)
+        //        return false;
+        //});
+
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        };
+        
+        
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Account Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Account Data"]</legend>
+                                <div class="form-group">
+                                    <div>
+                                        <label>@Localizer["Bank Detail"]</label>
+                                    </div>
+                                    <div>
+                                        @if (isCanEdit)
+                                        {
+                                            <a href="#" data-trigger="modal" data-toggle="tooltip" title="klik to search" data-modal-title="Data Bank" data-modal-ajax="true" data-ajax-url="~/core/bank/loadgrid">
+                                                @Localizer["Find Bank"] <i class="fa fa-search"></i>
+                                            </a>
+                                        }
+
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Bank Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.BankName, ApplicationHelper.Enable(new {
+                                    @class = "form-control", data_validation_for = "Object.BankName", placeholder = Localizer["Bank Name"].Value, @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Branch"]</label>
+                                    @Html.TextBoxFor(x => x.Object.BranchBank, ApplicationHelper.Enable(new {
+                                    @class = "form-control", data_validation_for = "Object.BranchBank", placeholder = Localizer["Branch"].Value , @readonly = "readonly"}, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Location"]</label>
+                                    @Html.TextBoxFor(x => x.Object.LocationBank, ApplicationHelper.Enable(new {
+                                    @class = "form-control", data_validation_for = "Object.LocationBank", placeholder = Localizer["Location"].Value , @readonly = "readonly"}, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Bank Code"] </label>
+                                    @Html.TextBoxFor(x => x.Object.KeyBank, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.KeyBank", placeholder = Localizer["Bank Code"].Value, @readonly = "readonly"}, isCanEdit))
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Account Number"]</label>
+                                    @Html.TextBoxFor(x => x.Object.AccountNumber, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.AccountNumber", placeholder = @Localizer["Input Account Number"].Value, onkeydown = "return ValidateNumber(event);",
+                                   maxlength = "16"
+                               }, isCanEdit))
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Account Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.AccountName, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.AccountName", placeholder = Localizer["In The Name Of"].Value}, isCanEdit))
+
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Account Book Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportingAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportingAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group inline">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

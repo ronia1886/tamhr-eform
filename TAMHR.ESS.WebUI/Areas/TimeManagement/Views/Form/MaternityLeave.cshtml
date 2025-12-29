@@ -1,0 +1,447 @@
+﻿@using TAMHR.ESS.Infrastructure
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.TimeManagementService TimeManagementService
+@model DocumentRequestDetailViewModel<MaternityLeaveViewModel>
+@{
+    var permissions = Model.Permissions;
+    var canEditHpl = AclHelper.HasPermission("Form.MaternityLeave.EditHpl") && Model.DocumentStatusCode != DocumentStatus.Completed && !Model.Object.DayOfBirth.HasValue;
+    var canEdit = AclHelper.CanEdit();
+    var isCanEdit = canEdit || canEditHpl;
+    var isNew = Model.Id == Guid.Empty;
+    var maxWeeks = ConfigService.GetConfigValue<int>("Form.Maternity.MaxWeeks", 7);
+    var noreg = User.GetClaim("NoReg");
+
+
+    bool stat = TimeManagementService.PreValidateMarried(noreg);
+
+
+
+
+    if (canEdit && Model.Object.DayOfBirth.HasValue)
+    {
+        Model.Object.DayOfBirth = null;
+    }
+
+    if (!canEdit || canEditHpl)
+    {
+        maxWeeks = int.MaxValue;
+    }
+
+    var canEditDayOfBirth = permissions.Contains("(EditDayOfBirth)");
+}
+@section scripts {
+    <script type="text/javascript">
+        function onchange() {
+            if ($("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value() != null) {
+                $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value($(this).value)
+                var year = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getFullYear();
+                var month = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getMonth();
+                var day = $("#Object_EstimatedDayOfBirth").data("kendoDatePicker").value().getDate();
+                var targetDate = new Date(year, month, day, 1, 0, 0);
+
+                var newDate = kendo.date.addDays(targetDate, 4);
+
+                var StartMaternityLeave = kendo.date.addDays(targetDate, -45);
+                var StartHandoverOfWork = kendo.date.addDays(StartMaternityLeave, -30);
+                var BackToWork = kendo.date.addDays(targetDate, 45);
+
+                $("#Object_StartHandoverOfWork").data("kendoDatePicker").value(StartHandoverOfWork);
+                $("#Object_StartMaternityLeave").data("kendoDatePicker").value(StartMaternityLeave);
+                $("#Object_BackToWork").data("kendoDatePicker").value(BackToWork);
+            }
+        }
+
+        function onChangeDayOfBirth() {
+            var dayOfBirth = $("#Object_DayOfBirth").data("kendoDatePicker").value();
+
+            if (dayOfBirth != null) {
+                var backToWork = kendo.date.addDays(dayOfBirth, 45);
+                $("#Object_BackToWork").data("kendoDatePicker").value(backToWork);
+            }
+        }
+
+        $('#Object_GestationalAge').focusout(function (e) {
+            if ($('#Object_GestationalAge').val() > 40) {
+                $('#Object_GestationalAge').val(40);
+            }
+
+            if ($('#Object_GestationalAge').val() < 0) {
+                $('#Object_GestationalAge').val(0);
+            }
+        });
+
+        function onChangeMulaiKehamilan() {
+            $('#Object_EstimatedDayOfBirth').data("kendoDatePicker").value(null)
+
+            var tahun = $("#Object_Date").data("kendoDatePicker").value().getFullYear() + 1;
+            var tahun1 = $("#Object_Date").data("kendoDatePicker").value().getFullYear();
+            var bulan = $("#Object_Date").data("kendoDatePicker").value().getMonth();
+            var hari = $("#Object_Date").data("kendoDatePicker").value().getDate();
+
+            if (bulan == 1 && hari == 29) {
+                hari == 1;
+            }
+
+            var targetdate = new Date(tahun, bulan, hari, 1, 0, 0)
+            var mindate = new Date(tahun1, bulan, hari)
+            $('#Object_EstimatedDayOfBirth').kendoDatePicker({
+                min: mindate,
+                max: targetdate,
+                format: "dd/MM/yyyy"
+            });
+
+            $('#Object_EstimatedDayOfBirth').data("kendoDatePicker").readonly(false);
+        };
+    </script>
+
+
+    @if (canEditDayOfBirth)
+    {
+        <script type="text/javascript">
+            (function ($, app) {
+                app.interceptHandler("postHandler", x => x.action == "approve", function (parameters, callback) {
+                    let $form = $("#mainForm"),
+                        formData = $form.serializeObject(),
+                        data = {
+                            Id: formData.Id,
+                            DocumentApprovalId: formData.DocumentApprovalId,
+                            DayOfBirth: kendo.toString($("#Object_DayOfBirth").data("kendoDatePicker").value(), "yyyy-MM-dd"),
+                            BirthCertificatePath: formData.Object.BirthCertificatePath,
+                            Attachments: formData.Attachments
+                        };
+
+                    $.post("~/api/@Model.FormKey/update-dob", data, function (d) {
+                        callback();
+                    }).fail(function (xhr, status, error) {
+                        var obj = {};
+                        for (var key in xhr.responseJSON) {
+                            obj["Object." + key] = xhr.responseJSON[key];
+                        }
+                        $form.validate(obj);
+                    });
+                });
+            })(jQuery, app);
+        </script>
+    }
+}
+@if (!stat && AclHelper.CanSubmit())
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["You Dont have Access for create request"]</p>
+        <a href=@Url.Content("~/core/form/index?formKey=marriage-status") class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Go to Marriage"]</a>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">Detail Pernyataan Hamil</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>Data Pernyataan Hamil</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Usia Kehamilan</label>
+                                        <div class="row">
+                                            <div class="col-md-4 col-sm-4">
+                                                @(Html.Kendo().NumericTextBox<decimal>()
+                                                    .Name("Object.GestationalAge")
+                                                    .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", @data_validation_for = "Object.GestationalAge" }, !canEditHpl))
+                                                    .Value(string.IsNullOrEmpty(Model.Object.GestationalAge) ? null : decimal.Parse(Model.Object.GestationalAge) as decimal?)
+                                                    .Spinners(true)
+                                                    .Min(0)
+                                                    .Max(maxWeeks)
+                                                    .Format("#")
+                                                    .Decimals(0)
+                                                    .Round(false)
+                                                    .Enable(isCanEdit)
+                                                    .Deferred()
+                                                    )
+                                            </div>
+                                            <div class="col-md-2 col-sm-2">
+                                                <label>Minggu</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Tanggal Mulai kehamilan</label>
+                                        @if (!isNew)
+                                        {
+                                            <a class="d-inline font-red-flamingo" href="javascript:;" data-trigger="modal" data-modal-title="HPL - Change Tracking" data-modal-ajax="true" data-ajax-url="~/core/home/changetracker" data-parameters-id="@Model.DocumentApprovalId"><i class="ft-info"></i> details</a>
+                                        }
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.Date)
+                                            .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", @data_validation_for = "Object.Date", placeholder = "Pilih Tanggal (dd/mm/yyyy)" }, !canEditHpl))
+                                            .Format("dd/MM/yyyy")
+                                            .Enable(isCanEdit)
+                                            .Events(e =>
+                                            {
+                                                e.Change("onChangeMulaiKehamilan");
+                                            })
+                                            .Min(DateTime.Now.AddYears(-1))
+                                            .Max(DateTime.Now)
+                                            .Deferred()
+                                            )
+                                        <span class="invalid" data-validation-for="Object.Date"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        @if (!AclHelper.CanApprove())
+                                        {
+                                            <label><span class="required" aria-required="true"> * </span>Hari Perkiraan Lahir</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.EstimatedDayOfBirth)
+                                                .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", @data_validation_for = "Object.EstimatedDayOfBirth", placeholder = "Pilih Tanggal (dd/mm/yyyy)" }, Model.Object.Date.HasValue))
+                                                .Enable(isCanEdit)
+                                                .Format("dd/MM/yyyy")
+                                                .Min(DateTime.Now)
+                                                .Events(e =>
+                                                {
+                                                    e.Change("onchange");
+                                                })
+                                                .Deferred()
+                                                )
+                                            <span class="invalid" data-validation-for="Object.EstimatedDayOfBirth"></span>
+                                        }
+                                        else
+                                        {
+                                            <label><span class="required" aria-required="true"> * </span>Hari Perkiraan Lahir</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.EstimatedDayOfBirth)
+                                                .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", @data_validation_for = "Object.EstimatedDayOfBirth", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" }, Model.Object.Date.HasValue))
+                                                .Enable(isCanEdit)
+                                                .Format("dd/MM/yyyy")
+                                                .Min(DateTime.Now)
+                                                .Events(e =>
+                                                {
+                                                    e.Change("onchange");
+                                                })
+                                                .Deferred()
+                                                )
+                                            <span class="invalid" data-validation-for="Object.EstimatedDayOfBirth"></span>
+                                        }
+                                    </div>
+                                    @if (canEditDayOfBirth || Model.Object.DayOfBirth.HasValue)
+                                    {
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>Hari Kelahiran</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.DayOfBirth)
+                                                .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", @data_validation_for = "Object.DayOfBirth", placeholder = "Pilih Tanggal (dd/mm/yyyy)" }, Model.Object.EstimatedDayOfBirth.HasValue))
+                                                .Enable(canEditDayOfBirth)
+                                                .Format("dd/MM/yyyy")
+                                                .Min(Model.Object.StartMaternityLeave.Value)
+                                                .Value(Model.Object.DayOfBirth ?? Model.Object.EstimatedDayOfBirth.Value)
+                                                .Max(Model.Object.EstimatedDayOfBirth.Value.AddDays(45))
+                                                .Events(e =>
+                                                {
+                                                    e.Change("onChangeDayOfBirth");
+                                                })
+                                                .Deferred()
+                                                )
+                                            <span class="invalid" data-validation-for="Object.DayOfBirth"></span>
+                                        </div>
+                                    }
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Mulai Serah Terima Pekerjaan</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.StartHandoverOfWork)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StartHandoverOfWork", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Enable(isCanEdit)
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                    )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1 Bulan Kalender Sebelum Cuti)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Mulai Cuti Melahirkan</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.StartMaternityLeave)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StartMaternityLeave", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Enable(isCanEdit)
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                    )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1.5 Bulan Sebelum Melahirkan)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Kembali Bekerja</label>
+                                        <div class="row">
+                                            <div class="col-md-6 col-sm-6">
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.BackToWork)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.BackToWork", @readonly = "readonly", placeholder = "Pilih Tanggal (dd/mm/yyyy)" })
+                                                    .Enable(isCanEdit)
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                    )
+                                            </div>
+                                            <div class="col-md-6 col-sm-6">
+                                                <label style="font-size:16px">(1.5 Bulan Setelah Melahirkan)</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </fieldset>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>Lampiran Pendukung</legend>
+                                    <div class="form-group">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>Surat Keterangan Dokter</label>
+                                            @{
+                                                if (isCanEdit)
+                                                {
+                                                    @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.MedicalMertificatePath" })
+                                                }
+                                                else
+                                                {
+                                                    <br />
+                                                    @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "MedicalMertificatePath" })
+                                                }
+                                            }
+                                            <span class="invalid" data-validation-for="Object.MedicalMertificatePath"></span>
+                                        </div>
+                                    </div>
+                                    @if (canEditDayOfBirth || (Model.Attachments != null && Model.Attachments.Any(x => x.FieldCategory.Contains("BirthCertificatePath"))))
+                                    {
+                                        <div class="form-group">
+                                            <div class="form-group">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Birth Certificate"]</label>
+                                                @{
+                                                    if (canEditDayOfBirth)
+                                                    {
+                                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.BirthCertificatePath" })
+                                                    }
+                                                    else
+                                                    {
+                                                        <br />
+                                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "BirthCertificatePath" })
+                                                    }
+                                                }
+                                                <span class="invalid" data-validation-for="Object.BirthCertificatePath"></span>
+                                            </div>
+                                        </div>
+                                    }
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Catatan</legend>
+                                    <div class="form-group">
+                                        <label>Detail Catatan</label>
+                                        <br />
+                                        @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", placeholder = "Masukkan Detail Catatan" }, isCanEdit))
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
+@section formActions
+    {
+    @*@if ((AclHelper.CanViewAction() && stat) || (canEditHpl && stat))*@
+    @if ((AclHelper.CanViewAction()) && stat || (canEditHpl) && stat || AclHelper.CanApprove())
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-8 col-8">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanEdit() || canEditHpl)
+                                        {
+                                            <button name="btnAction" class="btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanSubmit())
+                                        {
+                                            <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            if (canEditHpl)
+                                            {
+                                                <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to approve this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="~/core/home/tasks">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-success" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                </a>
+                                            }
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    }
+}
+
+

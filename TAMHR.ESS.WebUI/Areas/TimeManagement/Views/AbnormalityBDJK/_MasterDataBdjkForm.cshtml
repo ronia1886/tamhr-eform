@@ -1,0 +1,245 @@
+﻿@model TAMHR.ESS.Domain.AbnormalityBdjk
+@{
+    var IsNew = !Model.WorkingTimeIn.HasValue;
+    if (IsNew)
+    {
+        Model.WorkingDate = DateTime.Now.Date.AddDays(-1);
+    }
+    else
+    {
+        var spBdjkCode = Model.BDJKCode.Split(" ");
+        Model.ListBdjkCode = spBdjkCode.ToList();
+    }
+
+    var maxDate = Model.WorkingDate;
+}
+<form method="post" action="~/api/abnormality-bdjk/request-master-data">
+    <script type="text/javascript">
+        var disabledDatesList = [];
+
+        var OnSelectEmployee = function(e){
+            var dataItem = this.dataItem(e.item.index());
+            e.sender.element.closest("form").find("input[name='NoReg']").val(dataItem.NoReg);
+
+            $.ajax({
+                url: app.resolveUrl("~/api/abnormality-bdjk/get-unavailable-date-noreg"),
+                type: 'POST',
+                data: { NoReg : dataItem.NoReg }
+            }).done(function (data) {
+                disabledDatesList = [];
+
+                JSON.parse(data).forEach((el) => {
+                    disabledDatesList.push(new Date(el))
+                });
+
+                var workingDate = $("#WorkingDate").data("kendoDatePicker");
+
+                workingDate.setOptions({
+                    disableDates: disableDatesFunc
+                });
+            });
+        }
+
+        function disableDatesFunc(date) {
+            if (date && compareDates(date, disabledDatesList)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        function compareDates(date, dates) {
+            for (var i = 0; i < dates.length; i++) {
+                if (dates[i].getDate() == date.getDate() &&
+                  dates[i].getMonth() == date.getMonth() &&
+                    dates[i].getYear() == date.getYear()) {
+                    return true
+                }
+            }
+        }
+
+        app.registerHandler("dataInterceptor", function (d) {
+            if(disabledDatesList.includes(new Date(kendo.toString($("#WorkingDate").data("kendoDatePicker").value(), 'yyyy-MM-ddTHH:mm:ss'))) || $("#WorkingDate").data("kendoDatePicker").value() == undefined){
+                app.error(app.translate("Disabled Date Chosen"));
+                return new Promise(() => {});
+            } else {
+                d.BDJKCode = $("#BdjkMulti").val().join(' ');
+
+                return d;
+            }
+        });
+    </script>
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Master Data BDJK Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+
+                                    @Html.HiddenFor(x => x.Id)
+                                    @Html.HiddenFor(x => x.UangMakanDinas)
+                                    @Html.HiddenFor(x => x.Taxi)
+                                    @Html.HiddenFor(x => x.BDJKDuration)
+                                    @Html.HiddenFor(x => x.Status)
+
+                                    @Html.HiddenFor(x => x.DocumentApprovalId)
+                                    @Html.HiddenFor(x => x.TimeManagementBdjkId)
+                                    @Html.HiddenFor(x => x.BDJKCode)
+                                    @Html.HiddenFor(x => x.Level)
+
+                                    <legend>@Localizer["Master Data BDJK"]</legend>
+
+                                    <div class="row">
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+
+                                            @Html.KendoComboBoxAutocompleteFor(x => x.NoReg, Url.Content("~/api/abnormality-bdjk/all-employee"), valueField: "NoReg", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Employee" }).Enable(IsNew).Events(evt => evt.Select("OnSelectEmployee"))
+                                            <span class="invalid" data-validation-for="NoReg"></span>
+                                        </div>
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Working Date"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.WorkingDate)
+                                                .HtmlAttributes(new {style = "width: 100%" })
+                                                .Format("dd/MM/yyyy")
+                                                .ParseFormats("dd/MM/yyyy HH:mm tt")
+                                                .Enable(IsNew)
+                                                .Value(Model.WorkingDate)
+                                                .Max(maxDate)
+                                                )
+                                            <span class="invalid" data-validation-for="WorkingDate"></span>
+                                        </div>
+                                        <div class="form-group col-md-6 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Proxy In"]</label>
+
+                                            @(Html.Kendo().TimePickerFor(x => x.WorkingTimeIn)
+                                            .HtmlAttributes(new { style = "width: 100%", @class = "form-control", @data_validation_for = "WorkingTimeIn", placeholder = "Pilih Waktu (HH:mm aa)", onkeydown = "return false;" })
+                                            .Format("HH:mm tt")
+                                            .ParseFormats("dd/MM/yyyy HH:mm tt")
+                                            .Enable(IsNew)
+
+                                            )
+                                            <span class="invalid" data-validation-for="WorkingTimeIn"></span>
+                                        </div>
+                                        <div class="form-group col-md-6 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Proxy Out"]</label>
+                                            @(Html.Kendo().TimePickerFor(x => x.WorkingTimeOut)
+                                                .HtmlAttributes(new { style = "width: 100%", @class = "form-control", @data_validation_for = "WorkingTimeOut", placeholder = "Pilih Waktu (HH:mm aa)", onkeydown = "return false;" })
+                                                .Format("HH:mm tt")
+                                                .ParseFormats("dd/MM/yyyy HH:mm tt")
+                                                .Enable(IsNew)
+
+                                                )
+                                            <span class="invalid" data-validation-for="WorkingTimeOut"></span>
+                                        </div>
+
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["BDJK Code"]</label>
+                                            @(Html.Kendo().MultiSelect()
+                                                              .Name("BdjkMulti")
+                                                              .DataTextField("Name")
+                                                              .DataValueField("Name")
+                                                              .Placeholder(Localizer["Please select BDJK Code"].Value)
+                                                              .DataSource(source => {
+                                                                  source.Read(read =>
+                                                                  {
+                                                                      read.Url(Url.Content("~/api/abnormality-bdjk/get-employee"));
+                                                                  })
+                                                                  .ServerFiltering(true);
+                                                              })
+                                                              .Height(400)
+
+                                                              .HeaderTemplate("<div class=\"dropdown-header k-widget k-header\">" +
+                                                                            "<span>BDJK Code</span>" +
+                                                                        "</div>")
+                                                              .FooterTemplate("Total <strong>#: instance.dataSource.total() #</strong> BDJK Code Found")
+                                                              .ItemTemplate("<span class=\"k-state-default\" style=\"background-image: url(\'#: data.Name #\');\"></span>" +
+                                                                        "<span class=\"k-state-default\">#: data.Name #</span>")
+                                                              .TagTemplate("<span>#: data.Name #</span>")
+                                                              //.Events(e => e.Select("selectEmployee").Deselect("deselectEmployee"))
+                                                              .Value(Model.ListBdjkCode)
+                                                              )
+                                            @*@Html.KendoComboBoxAutocompleteFor(x => x.BdjkCode, Url.Content("~/api/abnormality-bdjk/gets-general-category?category=BdjkCode"), valueField: "Name", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Bdjk Code" }).Enable(IsRequest)*@
+                                            <span class="invalid" data-validation-for="BDJKCode"></span>
+                                        </div>
+
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Activity"]</label>
+                                            @Html.KendoComboBoxAutocompleteFor(x => x.ActivityCode, Url.Content("~/api/abnormality-bdjk/gets-general-category?category=CategorySPKL"), valueField: "Code", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Activity" }).Enable(IsNew)
+                                            <span class="invalid" data-validation-for="ActivityCode"></span>
+                                        </div>
+                                    </div>
+
+                                </fieldset>
+                            </div>
+                            
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Notes"]</legend>
+                                    <div style="padding: 10px">
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">A</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Kerja Biasa Minimal 2 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">B</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Libur Minimal 2 Jam &gt; 5 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">C</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Hari Libur diatas 5 Jam</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">D</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Uang Makan Dinas Luar</label></div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">T</label></div>
+                                            <div class="col-md-10 col-sm-10"><label class="font-small-3">Uang Taksi diatas jam 21.00, untuk Kls 7 &amp; 8spv</label></div>
+                                        </div>
+                                    </div>
+
+
+                                </fieldset>
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+
+                                <fieldset>
+                                    <legend>@Localizer["Reason"]</legend>
+                                    <div class="form-group ">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Detail Reason"]</label>
+                                        <br />
+                                        @Html.TextAreaFor(x => x.BDJKReason, ApplicationHelper.Enable(new { @class = "form-control", rows = 5, data_validation_for = "BdjkReason", placeholder = Localizer["Input Notes"].Value }, IsNew))
+                                        <span class="invalid" data-validation-for="BdjkReason"></span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (IsNew)
+    {
+        <div class="actions">
+            <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="dataInterceptor">@Localizer["Save"]</a>
+        </div>
+    }
+</form>

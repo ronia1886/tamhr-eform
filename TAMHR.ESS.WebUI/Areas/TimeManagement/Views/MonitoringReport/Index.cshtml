@@ -1,0 +1,521 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    var pathUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var mode = (string)ViewBag.Mode;
+    var now = DateTime.Now;
+    var month = now.Month;
+    var year = now.Year;
+    var chief = (bool)ViewBag.IsChief;
+
+    ScriptManager.RegisterReferences("datepicker", "chart", "grid", "combobox");
+}
+@section pageToolbars {
+    @if (mode == "monthly")
+    {
+        var sd = new DateTime(now.Year, now.Month, 1);
+        var ed = sd.AddMonths(1).AddDays(-1);
+        var sdText = sd.ToString("yyyy-MM-dd");
+        var edText = ed.ToString("yyyy-MM-dd");
+
+        <div class="dropdown">
+            <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    @* <a id="reportDownload" href="@Url.Content("~/api/monitoring-report/time-management-details?startDate="+sdText+"&endDate="+edText)"> *@
+                    <a id="reportDownload" href="@pathUrl/api/monitoring-report/time-management-details?startDate=@sdText&endDate=@edText">
+                        @Localizer["Download Report"]
+                    </a>
+                </li>
+            </ul>
+        </div>
+    }
+    else if (mode == "daily" && chief)
+    {
+        <div class="dropdown">
+            <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    <a href="@pathUrl/api/monitoring-report/download-daily-monitoring">
+                        @Localizer["Download Report"]
+                    </a>
+                </li>
+            </ul>
+        </div>
+    }
+}
+@section scripts {
+    <script type="text/javascript">
+        function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { startDate: startDate, endDate: endDate };
+        }
+
+        $.toHour = function (minutes) {
+            var hours = Math.floor(minutes / 60);
+            var mins = minutes % 60;
+            var result = '';
+            if (hours > 0) {
+                result += hours + ' jam ';
+            }
+            if (mins > 0) {
+                result += mins + ' menit';
+            }
+            return result || '0 menit';
+        }
+
+        $.loadSummary = function () {
+            var checkMonth = @(mode == "monthly" ? "true" : "false"),
+                startDate = checkMonth ? getParameters().startDate : "@now.ToString("yyyy-MM-dd")",
+                endDate = checkMonth ? getParameters().endDate : "@now.ToString("yyyy-MM-dd")";
+
+            $.get("@pathUrl/api/monitoring-report/summary", { startDate: startDate, endDate: endDate }, function (d) {
+                app.fillData("summaryWrapper", d);
+            });
+        }
+
+        app.registerHandler("searchHandler", function () {
+            var date = getParameters();
+
+            if ($("#Name").length > 0) {
+                var $this = $(this),
+                    $filterWrapper = $this.closest("[data-role='filter']"),
+                    query = $filterWrapper.data("query") || {},
+                    name = $("#Name").val(),
+                    employeeClassList = $("#Class").val().split('.'),
+                    employeeClass = employeeClassList.length > 1 ? employeeClassList[1] : '',
+                    workContractList = $("#WorkContract").val().split('.'),
+                    workContract = workContractList.length > 1 ? workContractList[1] : '';
+
+                query.filter = {
+                    logic: "or",
+                    filters: [{
+                        field: 'NoReg',
+                        value: name,
+                        operator: 'contains'
+                    }, {
+                        field: 'Name',
+                        value: name,
+                        operator: 'contains'
+                    }]
+                };
+
+                var additionalQuery = [],
+                    additionalQueryParams = "";
+
+                if (employeeClass != "") {
+                    additionalQuery.push({
+                        field: 'EmployeeSubgroup',
+                        value: employeeClass,
+                        operator: 'eq'
+                    });
+                }
+
+                if (workContract != "") {
+                    additionalQuery.push({
+                        field: 'WorkContract',
+                        value: workContract,
+                        operator: 'eq'
+                    });
+                }
+
+                if (additionalQuery.length > 0) {
+                    query.filter.filters.push({
+                        logic: "and",
+                        filters: additionalQuery
+                    });
+
+                    additionalQueryParams = additionalQuery.map(function (item) {
+                        return item.field + "=" + item.value;
+                    }).join("&");
+                }
+
+                let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+                $.each($els, (key, el) => {
+                    let $el = $(el),
+                        ds = $el.data("kendoGrid").dataSource;
+
+                    let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                    ds.query(executeQuery);
+                });
+
+                $("#reportDownload").attr("href", "@pathUrl/api/monitoring-report/time-management-details?startDate=" + date.startDate + "&endDate=" + date.endDate + "&filter=" + name + (additionalQueryParams != "" ? ("&" + additionalQueryParams) : ""));
+                $filterWrapper.data("query", query);
+            }
+            else {
+                $("#reportDownload").attr("href", "@pathUrl/api/monitoring-report/time-management-details?startDate=" + date.startDate + "&endDate=" + date.endDate);
+                app.refreshControl("grid");
+            }
+
+            $.loadSummary();
+        });
+
+        (function ($, app) {
+            var checkMonth = @(mode == "monthly" ? "true" : "false");
+
+            $(function () {
+                $(document).on('click', '.k-link, li.k-item', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        })(jQuery, app);
+    </script>
+    <script id="detail-template" type="text/kendo-tmpl">
+    @if (mode == "daily")
+    {
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.ProxyDetailsStoredEntity>()
+            .Name("sub-grid-#=NoReg#")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.ProxyTime).Title("Proxy Time").ClientTemplate(@"Proxy at <b>\#:kendo.toString(ProxyTime, 'dd/MM/yyyy HH:mm:ss')\#</b>");
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(pathUrl+"/api/monitoring-report/get-proxy-details").Data(@<text>function() { return { noreg: "#:NoReg#" } }</text>))
+                .PageSize(int.MaxValue)
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+            .ToClientTemplate()
+        )
+    }
+    else if (mode == "monthly")
+    {
+        @(Html.Kendo().Chart<AbsenceSummaryStoredEntity>()
+            .Name("sub-chart-#=NoReg#")
+            .Title("Summary")
+            .HtmlAttributes(new { style = "max-height: 405px; position: relative;" })
+            .Legend(legend => legend
+                .Position(ChartLegendPosition.Bottom)
+                .Align(ChartLegendAlign.Center)
+                .Labels(labels => labels.Template(@"$\{ text \} ($\{ value \})"))
+            )
+            .DataSource(ds => ds
+                .Custom()
+                .Type("aspnetmvc-ajax")
+                .Transport(transport => transport.Read(read => read.Url(pathUrl + "/api/monitoring-report/absence-summary").Data(@<text>function() { return $.extend({ noreg: "#=NoReg#", category: "absence", showAll: false }, getParameters()) }</text>)))
+                .Schema(config => config.Data("Data").Total("Total"))
+            )
+            .SeriesColors(new[] { @"\#0A2F51", @"\#0E4D64", @"\#137177", @"\#188977", @"\#1D9A6C", @"\#99D492", @"\#5ABCC3", @"\#93D488", @"\#CDDD9E", @"\#9717A8", @"\#005A91", @"\#007FAD", @"\#00D3E4", @"\#FF96DA", @"\#FF7D81", @"\#E0FF4D" })
+            .Series(series => {
+                series.Donut(x => x.Total, x => x.Name)
+                    .ColorField("Color")
+                    .VisibleInLegendField("VisibleInLegend");
+            })
+            .Events(events => {
+            events.DataBound(@<text>function(e) { var view = e.sender.dataSource.view(); if (view.length === 0) { e.sender.element.hide(); } }</text>);
+            })
+            .Tooltip(tooltip => tooltip
+                .Visible(true)
+                .Template(@"$\{ category \}: $\{ value \}")
+            )
+            .ToClientTemplate()
+        )
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeManagementStoredEntity>()
+            .Name("sub-grid-#=NoReg#")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.WorkingDate).Title("Date")
+                    .ClientTemplate(@"<div class=""d-none d-md-block text-center"">\#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')\#</div><div class=""d-block d-md-none""><h6 class=""bold mb-0"">Date</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingDate, 'dd/MM/yyyy'), '-')\#</span><h6 class=""bold mb-0"">Proxy In</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')\#</span><h6 class=""bold mb-0"">Proxy Out</h6><span class=""small mb-2 d-block"">\#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')\#</span><h6 class=""bold mb-0"">Presence Code</h6><span class=""small mb-2 d-block"">\#:$.toDefault(AbsentStatus, '-')\#</span><h6 class=""bold mb-0"">Description</h6><span class=""small mb-2 d-block"">\#:$.toDefault(Description, '-')\#</span></div>");
+
+                columns.Bound(c => c.WorkingTimeIn).Title("Proxy In")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Proxy In<br/><small>\#:$.toDefault(kendo.toString(WorkingTimeIn, 'HH:mm'), '-')\#</small>")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+                columns.Bound(c => c.WorkingTimeInLocation).Title("WorkingTimeInLocation")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Location<br/>\#:$.toDefault(WorkingTimeInLocation, '-')\#")
+                    .Width("33rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.WorkingTimeOut).Title("Proxy Out")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Proxy Out<br/><small>\#:$.toDefault(kendo.toString(WorkingTimeOut, 'HH:mm'), '-')\#</small>")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.WorkingTimeOutLocation).Title("WorkingTimeOutLocation")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Location<br/>\#:$.toDefault(WorkingTimeOutLocation, '-')\#")
+                    .Width("33rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.AbsentStatus).Title("Presence Code")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Presence Code<br/><small>\#:$.toDefault(AbsentStatus, '-')\#</small>")
+                    .Width("10rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.Description).Title("Description")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"\#:$.toDefault(Description, '-')\#")
+                    .Width("33rem")
+                    .MinScreenWidth(700);
+                columns.Bound(c => c.WorkingHour).Title("WorkHour")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"Work Hour<br/><small>\#:$.toHour(WorkingHour)\#</small>")
+                    .Width("33rem")
+                    .MinScreenWidth(700);
+
+                //columns.Bound(c => c.WorkHour).Title("WorkHour")
+                //    .HtmlAttributes(new { @class = "text-center" })
+                //     .ClientTemplate(
+                //        @"(function(mins) { 
+                //            var hours = Math.floor(mins / 60); 
+                //            var minutes = mins % 60; 
+                //            var result = '';
+                //            if(hours > 0) { result += hours + ' jam '; }
+                //            if(minutes > 0) { result += minutes + ' menit'; }
+                //            return result || '0 menit';
+                //        })(#= WorkHour #)"
+                //    )
+                //    .Width("33rem")
+                //    .MinScreenWidth(700);
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+            .Events(events =>
+            {
+            events.DataBound(@<text>function(e) {
+                    var grid = this,
+                        currentRecords = grid.dataSource.view();
+
+                    $.each(currentRecords, function (index, rowItem) {
+                        if (currentRecords.length > 0) {
+
+                            var rows = e.sender.tbody.children();
+                            var row = $(rows[index]);
+                            console.log(rows.length,index);
+
+                            if ($.inArray(currentRecords[index].AbsentStatus, ["34", "35", "36", "37"]) >= 0)
+                            {
+                                row.addClass("font-red-flamingo");
+                            }
+                        }
+                    });
+                }</text>);
+            })
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(pathUrl + "/api/monitoring-report/gets").Data(@<text>function() { return $.extend({ noreg: "#=NoReg#" }, getParameters()) }</text>))
+                .Sort(sort =>
+                {
+                    sort.Add("WorkingDate").Ascending();
+                })
+                .PageSize(60)
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+            .ToClientTemplate()
+        )
+    }
+    </script>
+}
+@if (mode == "daily")
+{
+    @(await Html.PartialAsync("_DailyDashboard"))
+}
+else if (mode == "monthly")
+{
+    <div id="summaryWrapper">
+        <div class="row d-flex d-md-none">
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-overtime font-blue font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-blue" data-field="Late">0</h3>
+                                    <span class="font-dark">@Localizer["Late"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-absent font-red-haze font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-red-haze" data-field="Absent">0</h3>
+                                    <span class="font-dark">@Localizer["Absent"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row d-flex d-md-none">
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-absent font-green-haze font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-green-haze" data-field="EarlyLeave">0</h3>
+                                    <span class="font-dark">@Localizer["Early Leave"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-sign-out font-yellow font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-yellow" data-field="Leave">0</h3>
+                                    <span class="font-dark">@Localizer["Leave"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6" data-modal="abnormal-modal" data-modal-title="@Localizer["Abnormality"]" style="cursor: pointer;"> <!--#ABNORMALITYLOCK data-trigger="modal"-->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-exclamation-triangle font-red font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-red" data-field="Abnormality">0</h3>
+                                    <span class="font-dark">@Localizer["Abnormality"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row d-none d-md-flex">
+            <div class="col-2">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-overtime font-blue font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-blue" data-field="Late">0</h3>
+                                    <span class="font-dark d-md-none d-lg-block">@Localizer["Late"]</span>
+                                    <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer["Late"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-absent font-red-haze font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-red-haze" data-field="Absent">0</h3>
+                                    <span class="font-dark d-md-none d-lg-block">@Localizer["Absent"]</span>
+                                    <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer["Absent"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="iconmoon-absent font-green-haze font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-green-haze" data-field="EarlyLeave">0</h3>
+                                    <span class="font-dark d-md-none d-lg-block">@Localizer["Early Leave"]</span>
+                                    <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer["Early Leave"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-2">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-sign-out font-yellow font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-yellow" data-field="Leave">0</h3>
+                                    <span class="font-dark d-md-none d-lg-block">@Localizer["Leave"]</span>
+                                    <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer["Leave"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-4" data-modal="abnormal-modal" data-modal-title="@Localizer["Abnormality"]" style="cursor: pointer; "><!--#ABNORMALITYLOCK data-trigger="modal"-->
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="media d-flex">
+                                <div class="align-self-center position-absolute">
+                                    <i class="fa fa-exclamation-triangle font-red font-large-2 float-left"></i>
+                                </div>
+                                <div class="media-body text-right">
+                                    <h3 class="font-red" data-field="Abnormality">0</h3>
+                                    <span class="font-dark">@Localizer["Abnormality"]</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @(await Html.PartialAsync("_MonthlyDashboard"))
+}

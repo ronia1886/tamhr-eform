@@ -1,0 +1,442 @@
+﻿<script>
+    function ClearDropDownTree(id){
+        $("#"+id).data("kendoDropDownTree").enable(false);
+        $("#"+id).data("kendoDropDownTree").value("");
+    }
+    //$.OnChangeDirectorate = function (e) {
+    //    ClearDropDownTree("division");
+    //    ClearDropDownTree("department");
+    //    ClearDropDownTree("section");
+    //    ClearDropDownTree("line");
+    //    ClearDropDownTree("group");
+
+    //    var directorates = $("#directorate").data("kendoDropDownTree").value();
+
+    //    var directorateValue = [];
+
+    //    directorates.forEach(
+    //        Directorate =>
+    //            directorateValue.push(Directorate.split('#')[0])
+    //    )
+
+    //    var child = $("#division").data("kendoDropDownTree");
+    //    $.ajax({
+    //        method: "POST",
+    //        url: "@Url.Content("~/api/termination-report/get-division")",
+    //        dataType: "json",
+    //        data: { DirectorateList: directorateValue },
+    //        success: function (result) {
+    //            var listItem = [];
+    //            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+    //            var dataSource = new kendo.data.HierarchicalDataSource({
+    //                data:  listItem
+    //            });
+    //            child.setDataSource(dataSource);
+    //            child.enable(true);
+    //            child.trigger("change");
+    //        }
+    //    });
+    //}
+
+    //$.OnChangeDivision = function (e) {
+    //    ClearDropDownTree("department");
+    //    ClearDropDownTree("section");
+    //    ClearDropDownTree("line");
+    //    ClearDropDownTree("group");
+
+    //    var divisions = $("#division").data("kendoDropDownTree").value();
+
+    //    var divisionValue = [];
+
+    //    divisions.forEach(
+    //        Division =>
+    //            divisionValue.push(Division.split('#')[0])
+    //    )
+
+    //    var child = $("#department").data("kendoDropDownTree");
+    //    $.ajax({
+    //        method: "POST",
+    //        url: "@Url.Content("~/api/termination-report/get-department")",
+    //        dataType: "json",
+    //        data: { DivisionList: divisionValue },
+    //        success: function (result) {
+    //            var listItem = [];
+    //            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+    //            var dataSource = new kendo.data.HierarchicalDataSource({
+    //                data:  listItem
+    //            });
+    //            child.setDataSource(dataSource);
+    //            child.enable(true);
+    //            child.trigger("change");
+    //        }
+    //    });
+    //}
+
+    //$.OnChangeDepartment = function (e) {
+    //    ClearDropDownTree("section");
+    //    ClearDropDownTree("line");
+    //    ClearDropDownTree("group");
+
+    //    var departments = $("#department").data("kendoDropDownTree").value();
+
+    //    var departmentValue = [];
+
+    //    departments.forEach(
+    //        Department =>
+    //            departmentValue.push(Department.split('#')[0])
+    //    )
+
+    //    var child = $("#section").data("kendoDropDownTree");
+    //    $.ajax({
+    //        method: "POST",
+    //        url: "@Url.Content("~/api/termination-report/get-section")",
+    //        dataType: "json",
+    //        data: { DepartmentList: departmentValue },
+    //        success: function (result) {
+    //            var listItem = [];
+    //            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+    //            var dataSource = new kendo.data.HierarchicalDataSource({
+    //                data:  listItem
+    //            });
+    //            child.setDataSource(dataSource);
+    //            child.enable(true);
+    //            child.trigger("change");
+    //        }
+    //    });
+    //}
+
+    //$.OnChangeSection = function (e) {
+    //    ClearDropDownTree("line");
+    //    ClearDropDownTree("group");
+
+    //    var sections = $("#section").data("kendoDropDownTree").value();
+    //    var sectionValue = [];
+
+    //    sections.forEach(
+    //        Section =>
+    //            sectionValue.push(Section.split('#')[0])
+    //    )
+
+    //    var child = $("#line").data("kendoDropDownTree");
+    //    $.ajax({
+    //        method: "POST",
+    //        url: "@Url.Content("~/api/termination-report/get-line")",
+    //        dataType: "json",
+    //        data: { SectionList: sectionValue },
+    //        success: function (result) {
+    //            var listItem = [];
+    //            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+    //            var dataSource = new kendo.data.HierarchicalDataSource({
+    //                data:  listItem
+    //            });
+    //            child.setDataSource(dataSource);
+    //            child.enable(true);
+    //            child.trigger("change");
+    //        }
+    //    });
+    //}
+
+    //$.OnChangeLine = function (e) {
+    //    ClearDropDownTree("group");
+
+    //    var lines = $("#line").data("kendoDropDownTree").value();
+    //    var lineValue = [];
+
+    //    lines.forEach(
+    //        Line =>
+    //            lineValue.push(Line.split('#')[0])
+    //    )
+
+    //    var child = $("#group").data("kendoDropDownTree");
+    //    $.ajax({
+    //        method: "POST",
+    //        url: "@Url.Content("~/api/termination-report/get-group")",
+    //        dataType: "json",
+    //        data: { LineList: lineValue },
+    //        success: function (result) {
+    //            var listItem = [];
+    //            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+    //            var dataSource = new kendo.data.HierarchicalDataSource({
+    //                data:  listItem
+    //            });
+    //            child.setDataSource(dataSource);
+    //            child.enable(true);
+    //            child.trigger("change");
+    //        }
+    //    });
+    //}
+
+    function getGrid() {
+        return $("#grid").data("kendoGrid");
+    }
+
+    //function getChart() {
+    //    return $("#chart").data("kendoChart");
+    //}
+
+    $.getData = function () {
+        return {
+            dateFrom: kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            dateTo: kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+        };
+    };
+
+    function FilterData (){
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+        
+        dateFrom = $("#dateFrom").val();
+        dateTo = $("#dateTo").val();
+        Class = $("#class").val();
+        terminationType = $("#terminationType").val();
+        documentStatus = $("#documentStatus").val();
+
+        filters = [{
+
+        }];
+
+        var finalFilter = {
+            logic: "and",
+            filters: []
+        }
+
+        //DIVISION FILTER
+        if (divisionList.length > 0) {
+            var divisionFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+
+            divisionList.forEach(
+                division =>
+                    divisionFilter.filters.push(
+                        {
+                            field: 'Division',
+                            operator: 'eq',
+                            value: division.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(divisionFilter);  
+        }
+
+        if (Class != "") {
+            finalFilter.filters.push({
+                field: 'Class',
+                operator: 'eq',
+                value: Class
+            });
+        }
+
+        if (terminationType != "") {
+            finalFilter.filters.push({
+                field: 'TerminationType',
+                operator: 'eq',
+                value: terminationType
+            });
+        }
+
+        if (documentStatus != "") {
+            finalFilter.filters.push({
+                field: 'DocumentStatus',
+                operator: 'eq',
+                value: documentStatus
+            });
+        }
+        return finalFilter;
+    }
+    $.onSubmit = function () {
+        var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+        var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+        if($("#dateFrom").data("kendoDatePicker").value()==null || $("#dateTo").data("kendoDatePicker").value()==null){
+            swal({
+                title: "",
+                text: "Date From and Date To must filled",
+                type: "error"
+            });
+        }else if(DateFrom>DateTo){
+            swal({
+                title: "",
+                text: "Date From cannot higher than Date To",
+                type: "error"
+            });
+            //swal("warning","Date From cannot higher than Date To");
+        }else{
+            var $grid = getGrid();
+            if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+            var dataSource = $grid.dataSource;
+
+            finalFilter = FilterData();
+        
+            dataSource.filter(finalFilter);
+            //$.loadSummary();
+        }
+        
+    };
+
+    $.onClear = function () {
+        var d = new Date();
+        var month = d.getMonth()+1;
+        var day = d.getDate();
+
+        var DateFrom = '01' + '/' + (month<10 ? '0' : '') + month + '/' + d.getFullYear() + '/';
+        var DateTo = (day<10 ? '0' : '') + day + '/' + (month<10 ? '0' : '') + month + '/' + d.getFullYear() + '/';
+
+
+        $("#division").data("kendoDropDownTree").value("");
+        $("#dateFrom").data("kendoDatePicker").value(DateFrom);
+        $("#dateTo").data("kendoDatePicker").value(DateTo);
+        $("#terminationType").data("kendoComboBox").value("");
+        $("#class").data("kendoComboBox").value("");
+        $("#documentStatus").data("kendoComboBox").value("");
+    };
+
+    (function ($, app) {
+        $.getParameters = function () {
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var Category = $("#terminationType").val();
+            var ShowAll = (Category==""?true:false);
+            var emp_class = $("#class").val();
+            var documentStatus = $("#documentStatus").val();
+
+            var divisionValue = [];
+            var divisionList =  $("#division").data("kendoDropDownTree").value();
+
+            var divisions = "";
+            $.each(divisionList,function(i,dt){
+                divisions += dt.split("#")[1] + ",";
+            });
+
+            if(divisions!=""){
+                divisions = divisions.substring(0,divisions.length-1);
+            }
+            
+            return { divisions: divisions,startDate: DateFrom, endDate: DateTo, category: Category,showAll:ShowAll,emp_class: emp_class,documentStatus:documentStatus };
+        };
+
+        $.download = function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            window.open(app.resolveUrl("~/api/termination-report/download?EmployeeName='"+EmployeeName+"'DateFrom='" + DateFrom + "'&DateTo='" + DateTo + "'&whereClause=" + JSON.stringify($.filterDownload())), "_blank");
+        };
+
+        $.filterDownload = function () {
+            var divdata = andScript($("#division").data("kendoDropDownList").text().split("&"));
+            var entity = {
+                Name: $("#employeeName").val(),
+                Division: divdata,
+                Class: $("#class").val(),
+                TerminationType: $("#terminationType").val(),
+                DocumentStatus: $("#documentStatus").val()
+            };
+
+            return entity;
+        };
+
+        function andScript(arrData) {
+            var str = "";
+            for (var i = 0; i < arrData.length; i++) {
+                str = str + arrData[i] + "xtx";
+            }
+            return str.substring(0, str.length - 3);
+        }
+
+        $.loadSummary = function () {
+            var param = $.getParameters();
+            var ShowAll = (param.category==""?true:false);
+            
+            $.ajax({
+                method: "POST",
+                url: "@Url.Content("~/api/termination-report/termination-report-summary")",
+                dataType: "json",   
+                data: { divisions: param.divisions ,startDate: param.startDate, endDate: param.endDate, category: param.category, showAll:param.showAll, emp_class:param.emp_class, documentStatus:param.documentStatus},
+                success: function (result) {
+                    var chart = $("#chart").data("kendoChart");
+                    chart.setDataSource(result);
+                }
+            });
+        }
+
+        $.onDataBound = function () {
+            $.loadSummary();
+
+            var grid = $("#grid").data("kendoGrid");
+            var rows = grid.tbody.find("tr");
+            const listEnable = ["Completed", "In Progress"];
+
+            rows.each(function () {
+                var dataItem = grid.dataItem(this);
+                let status = dataItem.DocumentStatus;
+                //console.log(status);
+                let indexArray = listEnable.indexOf(status);
+                // If the ValidTo date is in the past, disable the button
+                if (indexArray === -1 ) {
+                    //console.log("disable");
+                    $(this).find(".k-grid-edit").prop("disabled", true).addClass("k-state-disabled");
+                }
+            });
+        };
+
+        app.registerHandler("downloadReportHandler", function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            var divisionValue = [];
+
+            divisionList.forEach(
+                Division =>
+                    divisionValue.push(Division.split('#')[1])
+            );
+
+            //var entity = {
+            //    Name: $("#employeeName").val(),
+            //    Division: divisionValue,
+            //    Class: $("#class").val(),
+            //    TerminationType: $("#terminationType").val(),
+            //    DocumentStatus: $("#documentStatus").val()
+            //};
+            //strEntity = JSON.stringify(entity);
+
+            window.open(app.resolveUrl("~/api/termination-report/download?dateFrom=" + DateFrom + "&dateTo=" + DateTo
+                + "&listDivision=" + encodeURIComponent(divisionValue) 
+                + "&className=" + $("#class").val()
+                +"&terminationType="+$("#terminationType").val()
+                +"&documentStatus="+$("#documentStatus").val()
+            ), "_blank");
+        });
+
+        app.registerHandler("downloadReportPdfHandler", function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            var divisionValue = [];
+
+            divisionList.forEach(
+                Division =>
+                    divisionValue.push(Division.split('#')[1])
+            );
+
+            //var entity = {
+            //    Name: $("#employeeName").val(),
+            //    Division: divisionValue,
+            //    Class: $("#class").val(),
+            //    TerminationType: $("#terminationType").val()
+            //};
+            //strEntity = JSON.stringify(entity);
+
+            window.open(app.resolveUrl("~/api/termination-report/download-pdf?dateFrom=" + DateFrom +"&dateTo=" + DateTo
+                + "&listDivision=" + encodeURIComponent(divisionValue) 
+                + "&className=" + $("#class").val()
+                +"&terminationType="+$("#terminationType").val()
+                +"&documentStatus="+$("#documentStatus").val()
+            ), "_blank");
+        });
+     })(jQuery, app);
+</script>

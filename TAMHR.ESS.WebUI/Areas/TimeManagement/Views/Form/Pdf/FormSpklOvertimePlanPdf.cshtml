@@ -1,0 +1,213 @@
+﻿@using Newtonsoft.Json
+@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.SpklService SpklService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityOverTimeService AbnormalityOverTimeService;
+@{
+    Layout = null;
+    DocumentRequestDetailViewModel<SpklOvertimeViewModel> requestDetail;
+    SpklRequestDetailView detail;
+    SpklOvertimeViewModel spkl;
+
+    if (Model.DocumentApproval.ParentId.HasValue)
+    {
+        requestDetail = ApprovalService.GetDocumentRequestDetailViewModel<SpklOvertimeViewModel>(Model.DocumentApproval.ParentId.Value, string.Empty);
+        detail = SpklService.GetSpklRequestDetailById(Model.DocumentApproval.Id);
+
+        spkl = requestDetail.Object;
+    } else
+    {
+        detail = new SpklRequestDetailView();
+
+        AbnormalityOverTimeViewModel ab = JsonConvert.DeserializeObject<AbnormalityOverTimeViewModel>(Model.DocumentApproval.ObjDocumentRequestDetail.ObjectValue);
+        AbnormalityOverTimeView ot = ab.Details[0];
+
+        detail.OvertimeDate = ot.OvertimeDate;
+        detail.EmployeeSubgroup = ot.EmployeeSubgroup;
+        detail.NoReg = ot.NoReg;
+        detail.Name = ot.Name;
+        detail.OvertimeIn = ot.OvertimeIn;
+        detail.OvertimeInAdjust = ot.OvertimeInAdjust;
+        detail.OvertimeOut = ot.OvertimeOut;
+        detail.OvertimeOutAdjust = ot.OvertimeOutAdjust;
+        detail.OvertimeBreak = ot.OvertimeBreak;
+        detail.OvertimeBreakAdjust = ot.OvertimeBreakAdjust;
+        detail.Duration = ot.Duration;
+        detail.DurationAdjust = ot.DurationAdjust;
+        detail.OvertimeCategory = ot.OvertimeCategory;
+        detail.OvertimeReason = ot.OvertimeReason;
+
+        spkl = new SpklOvertimeViewModel();
+        spkl.DivisionName = AbnormalityOverTimeService.GetDivisionByNoReg(ot.NoReg);
+        spkl.DepartmentName = AbnormalityOverTimeService.GetDepartmentByNoReg(ot.NoReg);
+        spkl.SectionName = AbnormalityOverTimeService.GetSectionByNoReg(ot.NoReg);
+    }
+
+    var org = Model.OrgInfo;
+    var completed = Model.DocumentApproval.DocumentStatusCode == TAMHR.ESS.Infrastructure.DocumentStatus.Completed;
+    var orgObjects = Model.OrgObjects;
+
+    var printoutMatrix = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string deptHead = printoutMatrix.FirstOrDefault(x => x.ApproverLocation == "DeptHead")?.Name;
+    string divHead = printoutMatrix.FirstOrDefault(x => x.ApproverLocation == "DivHead")?.Name;
+    string sectionHead = printoutMatrix.FirstOrDefault(x => x.ApproverLocation == "SectionHead")?.Name;
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:10px; margin-top: 0;" />
+<div style="text-align:center; width:100%;">
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%; margin-right: 5%;" border="0" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 20%;" />
+            <col style="width: 40%;" />
+            <col style="width: 15%;" />
+            <col style="width: 25%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="4" align="center">SURAT PERINTAH KERJA LEMBUR</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Document#<label style="float: right;">:</label></td>
+                <td colspan="2">@Model.DocumentApproval.DocumentNumber</td>
+            </tr>
+            <tr>
+                <td>Divisi<label style="float: right;">:</label></td>
+                <td>@spkl.DivisionName</td>
+                <td>OT Date<label style="float: right;">:</label></td>
+                <td>@detail.OvertimeDate.ToString("dd/MM/yyyy")</td>
+            </tr>
+            <tr>
+                <td>Department<label style="float: right;">:</label></td>
+                <td>@spkl.DepartmentName</td>
+                <td>Created Date<label style="float: right;">:</label></td>
+                <td>@Model.DocumentApproval.CreatedOn.ToString("dd/MM/yyyy HH:mm tt")</td>
+            </tr>
+            <tr>
+                <td>Section<label style="float: right;">:</label></td>
+                <td>@spkl.SectionName</td>
+                <td>Created By<label style="float: right;">:</label></td>
+                <td>@Model.DocumentApproval.CreatedBy</td>
+            </tr>
+        </tbody>
+        <tr>
+            <td colspan="11" height="50px"></td>
+        </tr>
+        <tr class="tableizer-firstrow">
+            <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="11" align="left"><h3 style="text-align:left !important">Overtime Planning</h3></td>
+        </tr>
+    </table>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">No</td>
+                <td style="text-align: center;">Noreg</td>
+                <td style="text-align: center;">Nama</td>
+                <td style="text-align: center;">Class</td>
+                <td style="text-align: center;">OT In</td>
+                <td style="text-align: center;">OT Out</td>
+                <td style="text-align: center;">Break</td>
+                <td style="text-align: center;">OT Hour</td>
+                <td style="text-align: center;">Category</td>
+                <td style="text-align: center;">Reason</td>
+                <td style="text-align: center;">Sign</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tableizer-firstrow" style="height:50px">
+                <td style="text-align: center;">1</td>
+                <td style="text-align: center;">@detail.NoReg</td>
+                <td style="text-align: center;">@detail.Name</td>
+                <td style="text-align: center;">@detail.EmployeeSubgroup</td>
+                <td style="text-align: center;">@(detail.OvertimeInAdjust.HasValue ? detail.OvertimeInAdjust.Value.ToString("HH:mm") : detail.OvertimeIn.ToString("HH:mm"))</td>
+                <td style="text-align: center;">@(detail.OvertimeOutAdjust.HasValue ? detail.OvertimeOutAdjust.Value.ToString("HH:mm") : detail.OvertimeOut.ToString("HH:mm"))</td>
+                <td style="text-align: center;">@(detail.OvertimeBreakAdjust.HasValue ? detail.OvertimeBreakAdjust.Value : detail.OvertimeBreak)</td>
+                <td style="text-align: center;">@(detail.DurationAdjust.HasValue ? detail.DurationAdjust.Value : detail.Duration)</td>
+                <td style="text-align: center;">@detail.OvertimeCategory</td>
+                <td style="text-align: center;">@detail.OvertimeReason</td>
+                <td style="text-align: center;">@(completed ? "signed" : string.Empty)</td>
+            </tr>
+        </tbody>
+    </table>
+    <br />
+    <h3 style="text-align:left !important;font-family: 'Segoe UI'; font-size: 14px;">Approved</h3>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 50%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">Division Head</td>
+                <td style="text-align: center;">Department Head</td>
+                <td style="text-align: center;">Section Head</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td style="text-align: center;">@(completed && !string.IsNullOrEmpty(divHead) ? "signed" : string.Empty)</td>
+                <td style="text-align: center;">@(completed && !string.IsNullOrEmpty(deptHead) ? "signed" : string.Empty)</td>
+                <td style="text-align: center;">@(completed && !string.IsNullOrEmpty(sectionHead) ? "signed" : string.Empty)</td>
+            </tr>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">@divHead</td>
+                <td style="text-align: center;">@deptHead</td>
+                <td style="text-align: center;">@sectionHead</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+

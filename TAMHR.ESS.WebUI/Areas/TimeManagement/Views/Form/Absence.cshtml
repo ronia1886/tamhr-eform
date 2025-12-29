@@ -1,0 +1,1194 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AbsenceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    var now = DateTime.Now.Date;
+    var periodYear = now.Year;
+    var currentUser = User.GetClaim("NoReg");
+    var canCancelAbsence = Model.DocumentStatusCode == DocumentStatus.Completed && Model.Requester == currentUser && Model.Object.StartDate > now && AclHelper.HasPermission("Core.DropAbsence");
+    var annualleaveplanningdetailid = Model.Object.AnnualLeavePlanningDetailId;
+
+}
+@section scripts {
+    <script type="text/javascript">
+        var typeLeave;
+
+        var maxAbsentDays = 0,
+            leaveType = '';
+
+        if ('@isCanEdit' === 'True') {
+
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/absence/getbynoreg"),
+                dataType: 'json',
+                data: {
+                    noreg: '@User.GetClaim("NoReg")',
+                    iddoc: '@Model.Id'
+                },
+                success: function (result) {
+                    let $sisaCuti = $('#sisacuti'),
+                        $remainingDaysOff = $('#Object_RemainingDaysOff'),
+                        $sisaCutiPanjang = $('#sisacutipanjang'),
+                        $remainingLongLeave = $('#Object_RemainingLongLeave');
+
+                    if (result !== null || result !== undefined) {
+                        $sisaCuti.text(result.AnnualLeave);
+                        $remainingDaysOff.val(result.AnnualLeave);
+                        $sisaCutiPanjang.text(result.LongLeave);
+                        $remainingLongLeave.val(result.LongLeave);
+                    } else {
+                        $sisaCuti.text("");
+                        $remainingDaysOff.val("");
+                        $sisaCutiPanjang.text("");
+                        $remainingLongLeave.val("");
+                    }
+                }
+            });
+        }
+
+        function onchangeStartDate() {
+            var $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                $totalAbsence = $("#Object_TotalAbsence"),
+                $sisaCuti = $('#sisacuti'),
+                $sisaCutiPanjang = $('#sisacutipanjang'),
+                $reasonType = $("#Object_ReasonType"),
+                startDate = $startDate.value(),
+                currentYear = new Date().getFullYear();
+
+            if (startDate !== null) {
+                $endDate.min(startDate);
+
+                if ($startDate.value() && $startDate.value().getFullYear() > currentYear && $reasonType.val() === "cuti") {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/absence/getstartdate-crossyear"),
+                        dataType: 'json',
+                        data: {
+                            startDate: $startDate.value().toUTCString()
+                        },
+                        success: function (result) {
+                            if (!result || result < 1) {
+                                $startDate.value('');
+                                return app.warning("You can't request leave, because you don't have any Annual Leave balance next year.");
+                              
+                            }
+                        }
+                    });
+                }
+
+                if (maxAbsentDays > 0) {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/absence/get-absence-end-date"),
+                        dataType: 'json',
+                        data: {
+                            startDate: startDate.toUTCString(),
+                            maxAbsentDays: maxAbsentDays
+                        },
+                        success: function (result) {
+                            $endDate.max(kendo.parseDate(result));
+                        }
+                    });
+                }
+
+                $endDate.value('');
+                $endDate.enable(true);
+            } else {
+                $endDate.value('');
+                $endDate.enable(false);
+            }
+
+            $totalAbsence.val(0);
+
+            var endDate = $endDate.value();
+            var total = 0;
+
+            if (startDate !== null && endDate !== null) {
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/absence/getinfocalculationloan"),
+                    dataType: 'json',
+                    data: {
+                        strDate: startDate.toUTCString(),
+                        endDate: endDate.toUTCString()
+                    },
+                    success: function (result) {
+                        var offDays = $.grep(result.Data, function (element, index) {
+                            return element.Off;
+                        });
+
+                        total = Math.round((endDate - startDate) / 1000 / 60 / 60 / 24) + 1 - offDays.length; //Difference in days
+
+                        if (total > maxAbsentDays && maxAbsentDays > 0) {
+                            $startDate.value('');
+                            $totalAbsence.val(0);
+
+                            app.warning("Max total absent is " + maxAbsentDays + " days.");
+                        } else if (leaveType == 'cuti' && total > $sisaCuti.text()) {
+                            $startDate.value('');
+                            $totalAbsence.val(0);
+
+                            app.warning("Max total absent is " + $sisaCuti.text() + " days.");
+                        } else if (leaveType == 'cutipanjang' && total > $sisaCutiPanjang.text()) {
+                            $startDate.value('');
+                            $totalAbsence.val(0);
+
+                            app.warning("Max total absent is " + $sisaCutiPanjang.text() + " days.");
+                        } else
+                            $totalAbsence.val(total);
+                    }
+                });
+            }
+
+        }
+
+        var dates = [];
+        $.ajax({
+            type: 'POST',
+            url: app.resolveUrl("~/api/absence/get-absence"),
+            dataType: 'json',
+            data: {
+                noreg: '@User.GetClaim("NoReg")',
+                period: '@periodYear'
+            },
+            success: function (result) {
+                //console.log(result);
+                if (result.Data.length > 0) {
+                    $.each(result.Data, function (i, data) {
+                        console.log("All disabled dates: ", dates.map(d => d.toDateString()));
+                        var x = getDates(data.StartDate, data.EndDate);
+                        $.each(getDates(data.StartDate, data.EndDate), function (i, dt) {
+                            dates.push(dt);
+                        });
+
+                    });
+                }
+                var typeReasoninit = $("#Object_ReasonId").data("kendoComboBox").text();
+                if (typeReasoninit.indexOf("Sakit") != -1) {
+                    $("#KategPenyakit").show();
+                    $("#DiagnosaLabel").show();
+                    $("#DescriptionLabel").hide();
+
+                }
+                else {
+                    $("#KategPenyakit").hide();
+                    $("#DiagnosaLabel").hide();
+                    $("#DescriptionLabel").show();
+                   
+                }
+            }
+        });
+
+        function disableDates(date) {
+            //console.log("Disabled dates: ", dates);
+            if (date && compareDates(date, dates)) {
+                return true;
+            } else {
+                return false;
+            }
+
+        }
+
+        function compareDates(date, dates) {
+            for (var i = 0; i < dates.length; i++) {
+                if (dates[i].getDate() == date.getDate() &&
+                    dates[i].getMonth() == date.getMonth() &&
+                    dates[i].getYear() == date.getYear()) {
+                    return true
+                }
+            }
+        }
+
+        function getDates(startDate, stopDate) {
+            var dateArray = [];
+            var currentDate = new Date(startDate);
+            stopDate = new Date(stopDate);
+
+            while (currentDate <= stopDate) {
+                dateArray.push(new Date(currentDate));
+                currentDate.setDate(currentDate.getDate() + 1); // cukup ini
+            }
+
+            return dateArray;
+        }
+
+        //function disableDate(date){
+        //    var dates = [];
+        //    $.ajax({
+        //        type:'POST',
+        //        url:app.resolveUrl("~/api/absence/getallrequestabsence"),
+        //        dataType:'json',
+        //        data: {
+        //            noreg: '@User.GetClaim("NoReg")',
+        //            iddoc: '@Model.Id'
+        //        },
+        //        success: function (result) {
+        //            dates = result;
+        //            console.log(dates);
+        //        }
+        //    });
+        //}
+            function onchangeEndDate() {
+                let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                    $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                    $totalAbsence = $("#Object_TotalAbsence"),
+                    $sisaCuti = $('#sisacuti'),
+                    $sisaCutiPanjang = $('#sisacutipanjang'),
+                    startDate = $startDate.value(),
+                    endDate = $endDate.value(),
+                    $reasonType = $("#Object_ReasonType"),
+                    currentYear = new Date().getFullYear(),
+                    total = 0,
+                    maxNextYearAbsence = 0,
+                    totalUsedNextYearAbsence = 0, // Track used leave for next year
+                    remainingNextYearAbsence = 0; // Final limit
+
+                if (startDate !== null && endDate !== null) {
+                    if ($endDate.value() && $endDate.value().getFullYear() > currentYear && $reasonType.val() === "cuti") {
+                        // **Step 1: Get the total annual leave limit for next year**
+                        $.ajax({
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/absence/getenddate-crossyear"),
+                            dataType: 'json',
+                            data: { endDate: $endDate.value().toUTCString() },
+                            success: function (result) {
+                                if (!result || result < 1) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                return app.warning("You can't request leave, because you don't have any Annual Leave balance next year.");
+                                }
+
+                                maxNextYearAbsence = result;
+                                calculateAbsenceInfo();
+
+                            }
+                        });
+                    } else {
+                        calculateAbsenceInfo();
+                    }
+                }
+
+                function calculateAbsenceInfo() {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/absence/getinfocalculationloan"),
+                        dataType: 'json',
+                        data: {
+                            strDate: startDate.toUTCString(),
+                            endDate: endDate.toUTCString()
+                        },
+                        success: function (result) {
+                            //console.log("result: ",result);
+
+                            var offDays = $.grep(result.Data, function (element) {
+                                return element.Off;
+                            });
+
+                            let currentYearTotal = 0;
+                            let nextYearTotal = 0;
+                            let tempDate = new Date(startDate);
+
+                            while (tempDate <= endDate) {
+                                let dayOfWeek = tempDate.getDay();
+                                let year = tempDate.getFullYear();
+
+                                if (year === currentYear) {
+                                    currentYearTotal++;
+                                } else if (year === currentYear + 1) {
+                                    if (dayOfWeek !== 6 && dayOfWeek !== 0) {
+                                        nextYearTotal++;
+                                    }
+                                }
+
+                                tempDate.setDate(tempDate.getDate() + 1);
+                            }
+
+                            currentYearTotal -= offDays.length;
+                            total = currentYearTotal + nextYearTotal;
+
+                        if ($reasonType.val() === 'cuti') {
+                            if (currentYearTotal === 0 && nextYearTotal > 0) {
+                                // Cuti hanya di tahun depan
+                                if (maxNextYearAbsence === 0) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                    return app.warning("You can't request leave, because you don't have any annual leave balance for next year.");
+                                } else if (nextYearTotal > maxNextYearAbsence) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                    return app.warning("Max total absence for next year is " + maxNextYearAbsence + " days.");
+                                }
+                            } else {
+                                // Cuti hanya tahun ini atau campuran
+                                if (parseInt($sisaCuti.text(), 10) === 0) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                    return app.warning("You can't request leave, because you don't have any annual leave balance.");
+                                } else if (currentYearTotal > parseInt($sisaCuti.text(), 10)) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                    return app.warning("Max total absent for this year is " + $sisaCuti.text() + " days.");
+                                } else if (nextYearTotal > maxNextYearAbsence) {
+                                    $endDate.value('');
+                                    $totalAbsence.val(0);
+                                    return app.warning("Max total absence for next year is " + maxNextYearAbsence + " days.");
+                                }
+                            }
+                        } else if ($reasonType.val() === 'cutipanjang') {
+                            if (currentYearTotal > parseInt($sisaCutiPanjang.text(), 10)) {
+                                $endDate.value('');
+                                $totalAbsence.val(0);
+                                return app.warning("Max total absent for this year is " + $sisaCutiPanjang.text() + " days.");
+                            }
+                        }
+
+                            $totalAbsence.val(total);
+                        }
+                    });
+                }
+            }
+
+
+        function selectReason() {
+            var typeReason = $("#Object_ReasonId").data("kendoComboBox").text();
+            if (typeReason.indexOf("Sakit") != -1) {
+                $("#KategPenyakit").show();
+                $("#DescriptionLabel").hide();
+                $("#DiagnosaLabel").show();
+
+            }
+            else {
+                $("#KategPenyakit").hide();
+                $("#DiagnosaLabel").hide();
+                $("#DescriptionLabel").show();
+            }
+
+            let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                $mandatoryAttachment = $("#Object_MandatoryAttachment"),
+                $totalAbsence = $("#Object_TotalAbsence"),
+                $reason = $("#Object_Reason"),
+                $reasonType = $("#Object_ReasonType"),
+                $reqAttachment = $("#reqattachment"),
+                value = this.value(),
+                text = this.text(),
+                $sisaCuti = $('#sisacuti'),
+                $sisaCutiPanjang = $('#sisacutipanjang'),
+                $annualLeavePlanning = $("#Object_AnnualLeavePlanningDetailId").data("kendoComboBox");
+
+            maxAbsentDays = 0;
+
+            $startDate.value('');
+            $startDate.min(new Date(1900, 0, 1));
+            $endDate.value('');
+            $endDate.enable(false);
+            $endDate.max(new Date(9999, 1, 1));
+            $mandatoryAttachment.val(false);
+            $totalAbsence.val(0);
+
+            if (value !== '' && value !== text) {
+                $reason.val(text);
+
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/masterdata/absence/getbyid"),
+                    dataType: 'json',
+                    data: { id: value },
+                    success: function (result) {
+                        maxAbsentDays = result.MaxAbsentDays == null ? 0 : result.MaxAbsentDays;
+                        
+                        if (typeLeave == 'planning') {
+                            //start perubahan validasi planned by : alfikri date : 10/10/2023----
+                            var minStartDate = new Date.today().addDays(1),
+                                minStartDate = result.SubmitApplicationStart != null
+                                    ? new Date.today().addDays(result.SubmitApplicationStart + 1)
+                                    : minStartDate;
+                            var maxStartDate = new Date(9999, 1, 1);
+                            //console.log("absence Type =" +result.AbsenceType);
+                            if (result.AbsenceType == 'cuti') {
+                                var date1 = (new Date).getDate();
+                                var date2 = (new Date).getFullYear();
+                                maxStartDate = new Date(2023, 12, 31);
+                                // console.log("test masuk" + date1);
+                                // console.log("test masuk" + date2);
+                                $endDate.max(maxStartDate);
+                                $startDate.max(maxStartDate);
+
+                            }
+                            if (result.Name == 'Ijin Absen Tanpa Upah' && ($sisaCuti.text() > '0' || $sisaCutiPanjang.text() > '0')) {
+                                //console.log(result.Name);
+                                swal("Warning", "@Localizer["Ijin Absen Tanpa Upah tidak dapat diajukan, karena sisa cuti masih ada"]", "warning");
+                                //alert($sisaCuti);
+                                //console.log($sisaCuti.text());
+                                //console.log($sisaCutiPanjang.text());
+                                let $reasonCb = $('#Object_ReasonId').data('kendoComboBox');
+                                $reasonCb.value("");
+                                $reasonCb.dataSource.read();
+                                //$annualPlanningDiv = $('#divAnnualPlan'),
+                                //$annualPlanningComboBox = $('#Object_AnnualLeavePlanningDetailId').data('kendoComboBox');
+                                //value= null;
+                                //result.val  = null;
+                                //$annualLeavePlanning.value('');
+                                //result.Name= '';
+                            }
+                            $startDate.min(minStartDate);
+                            $startDate.max(maxStartDate);
+                            //var minStartDate = new Date.today().addDays(1),
+                            //     minStartDate = result.SubmitApplicationStart != null
+                            //        ? new Date.today().addDays(result.SubmitApplicationStart+1)
+                            //        : minStartDate;
+                            //var maxStartDate = new Date(9999, 1, 1);
+                            //---end
+
+                            // ----start perubahan validasi unplanned by : alfikri date : 04/10/2023----
+                            //} else {
+                            //    var maxStartDate = new Date.today(),
+                            //        minStartDate = result.SubmitApplicationStart != null
+                            //            ? new Date.today().addDays(result.SubmitApplicationStart)
+                            //            : new Date((now.Year - 1), 0, 1);
+                        } else {
+                            var minStartDate = new Date.today().addDays(1),
+                                minStartDate = result.SubmitApplicationStart != null
+                                    ? new Date.today().addDays(result.SubmitApplicationStart + 1)
+                                    : minStartDate;
+                            var maxStartDate = new Date(9999, 1, 1);
+
+                            // ---- end -----
+                            //console.log("kondisi else = " + minStartDate)
+                            $startDate.min(minStartDate);
+                            $startDate.max(maxStartDate);
+                        }
+
+                        if (result.MandatoryAttachment == 1) {
+                            $mandatoryAttachment.val(true);
+                            $reqAttachment.show();
+                        } else {
+                            $mandatoryAttachment.val(false);
+                            $reqAttachment.hide();
+                        }
+
+                        $reasonType.val(result.AbsenceType);
+                        //console.log("LELELE: ",$reasonType.val());
+                        //-------start perubahan validasi cuti tahunan by : alfikri date : 13/11/2023----
+                        //if (result.AbsenceType === 'cuti' || result.AbsenceType === 'cutipanjang') {
+                        if ($reasonType.val() === 'cuti' || $reasonType.val() === 'cutipanjang') {
+                            //console.log('a');
+                            $startDate.enable(true);
+                            $('#divAnnualPlan').show();
+                            // Show annual leave plan list
+                            var dataSource = $annualLeavePlanning.dataSource;
+                            dataSource.read();
+                            //var date1 = (new Date).getDate();
+                            //var date2 =(new Date).getFullYear();
+                            //maxStartDate = new Date(date2, 12, 31);
+
+                            //fatih
+                            //var newMaxStartDate = new Date(new Date().getFullYear(), 11, 31);
+
+                            var currentYear = new Date().getFullYear();
+                            var maxStartDate = new Date(currentYear + 1, 11, 31);
+
+                            //console.log("test: ",currentYear)
+                            //console.log(date2);
+                            //.log(newMaxStartDate);
+                            $endDate.max(maxStartDate);
+                            $startDate.max(maxStartDate);
+                            //-------end perubahan validasi cuti tahunan by : alfikri date : 13/11/2023----
+                        } else {
+                            $('#divAnnualPlan').hide();
+                            $startDate.enable(true);
+
+                            var currentDate = new Date();
+                            var currentYear = currentDate.getFullYear();
+                            var minDate = currentDate;  
+                            var maxDate = new Date(currentYear, 11, 31); 
+                            
+                            //2025-603|Roni|comment sementara karena logic minDate sebelumnya jadi ke replace
+                            // $startDate.min(minDate);
+                            // $startDate.max(maxDate);
+                            // $endDate.min(minDate);
+                            // $endDate.max(maxDate);
+                        }
+
+                        $annualLeavePlanning.value('');
+                    }
+                });
+            }
+        }
+
+
+        // function selectReason() {
+        //     let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+        //         $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+        //         $mandatoryAttachment = $("#Object_MandatoryAttachment"),
+        //         $totalAbsence = $("#Object_TotalAbsence"),
+        //         $reason = $("#Object_Reason"),
+        //         $reasonType = $("#Object_ReasonType"),
+        //         $reqAttachment = $("#reqattachment"),
+        //         value = this.value(),
+        //         text = this.text(),
+        //         $sisaCuti = $('#sisacuti'),
+        //         $sisaCutiPanjang = $('#sisacutipanjang'),
+        //         $annualLeavePlanning = $("#Object_AnnualLeavePlanningDetailId").data("kendoComboBox");
+
+        //     maxAbsentDays = 0;
+
+        //     if (value !== '' && value !== text) {
+        //         $reason.val(text);
+
+        //         $.ajax({
+        //             type: 'POST',
+        //             url: app.resolveUrl("~/api/masterdata/absence/getbyid"),
+        //             dataType: 'json',
+        //             data: { id: value },
+        //             success: function (result) {
+        //                 maxAbsentDays = result.MaxAbsentDays == null ? 0 : result.MaxAbsentDays;
+
+        //                 if (result.AbsenceType === 'Cuti') {
+        //                     // Restrict selection to the current year
+        //                     let currentYear = new Date().getFullYear();
+        //                     let minYearStart = new Date(currentYear, 0, 1); // Jan 1st of current year
+        //                     let maxYearEnd = new Date(currentYear, 11, 31); // Dec 31st of current year
+
+        //                     $startDate.min(minYearStart);
+        //                     $startDate.max(maxYearEnd);
+        //                     $endDate.min(minYearStart);
+        //                     $endDate.max(maxYearEnd);
+        //                 } else {
+        //                     // Allow selecting any year (1900-9999)
+        //                     let minDate = new Date(1900, 0, 1);
+        //                     let maxDate = new Date(9999, 11, 31);
+
+        //                     $startDate.min(minDate);
+        //                     $startDate.max(maxDate);
+        //                     $endDate.min(minDate);
+        //                     $endDate.max(maxDate);
+        //                 }
+
+        //                 if (result.Name == 'Ijin Absen Tanpa Upah' && ($sisaCuti.text() > '0' || $sisaCutiPanjang.text() > '0')) {
+        //                     swal("Warning", "@Localizer["Since you have leave days remaining, Please use your current accrued leave before requesting unpaid leave."]", "warning");
+
+        //                     let $reasonCb = $('#Object_ReasonId').data('kendoComboBox');
+        //                     $reasonCb.value("");
+        //                     $reasonCb.dataSource.read();
+        //                     return;
+        //                 }
+
+        //                 if (result.MandatoryAttachment == 1) {
+        //                     $mandatoryAttachment.val(true);
+        //                     $reqAttachment.show();
+        //                 } else {
+        //                     $mandatoryAttachment.val(false);
+        //                     $reqAttachment.hide();
+        //                 }
+
+        //                 $reasonType.val(result.AbsenceType);
+
+        //                 if (result.AbsenceType === 'cuti') {
+        //                     $('#divAnnualPlan').show();
+        //                     let dataSource = $annualLeavePlanning.dataSource;
+        //                     dataSource.read();
+        //                 } else {
+        //                     $('#divAnnualPlan').hide();
+        //                 }
+
+        //                 $annualLeavePlanning.value('');
+        //             }
+        //         });
+        //     }
+        // }
+
+
+        function paramReason() {
+            var param = {
+                IsPlanning: $("input[name='Object.IsPlanning']:checked").val()
+            };
+
+            return param;
+        }
+
+        function selectAnnualLeavePlanning() {
+            let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                $totalAbsence = $("#Object_TotalAbsence"),
+                value = this.value(),
+                text = this.text();
+
+            maxAbsentDays = 0;
+
+            $startDate.value('');
+            $startDate.enable(true);
+            $endDate.value('');
+            $totalAbsence.val(0);
+
+            if (value !== '' && value !== text && value != '@Guid.Empty') {
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/annual-leave-planning/get-detail-by-id/" + value),
+                    dataType: 'json',
+                    success: function (result) {
+                        $totalAbsence.val(result.Days);
+                        $startDate.value(result.StartDate);
+                        $startDate.readonly(true);
+                        $endDate.value(result.EndDate);
+                        $endDate.readonly(true);
+                    }
+                });
+            }
+        }
+
+        function paramAnnualLeavePlanning() {
+            var absenceType = $("#Object_ReasonType").val();
+            var param = {
+                absenceType: absenceType,
+                noReg: '@((Model.Requester == currentUser || string.IsNullOrEmpty(Model.Requester)) ? currentUser : Model.Requester)'
+            };
+
+            return param;
+        }
+
+        function changePlan(type) {
+            let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                $mandatoryAttachment = $("#Object_MandatoryAttachment"),
+                $totalAbsence = $("#Object_TotalAbsence"),
+                $reasonCb = $('#Object_ReasonId').data('kendoComboBox'),
+                $annualPlanningDiv = $('#divAnnualPlan'),
+                $annualPlanningComboBox = $('#Object_AnnualLeavePlanningDetailId').data('kendoComboBox');
+
+            maxAbsentDays = 0;
+
+            $startDate.value('');
+            $startDate.min(new Date(1900, 0, 1));
+            $startDate.enable(false);
+            $endDate.value('');
+            $endDate.enable(false);
+            $endDate.max(new Date(9999, 1, 1));
+            $mandatoryAttachment.val(false);
+            $totalAbsence.val(0);
+
+            $reasonCb.value("");
+            $reasonCb.dataSource.read();
+
+            typeLeave = type;
+
+            if (type != 'planning') {
+                $annualPlanningDiv.hide();
+            }
+            $annualPlanningComboBox.value('');
+        }
+
+        if ($("#Object_MandatoryAttachment").val() == true) {
+            $("#reqattachment").show();
+        } else {
+            $("#reqattachment").hide();
+        };
+
+        //$(window).on('load', function () {
+        //    var disableStartDate = setInterval(function () {
+        //        let $startDate = $("#Object_StartDate").data("kendoDatePicker");
+        //
+        //        if ($startDate != undefined && $startDate != null) {
+        //            $startDate.enable(false);
+        //        }
+        //        clearInterval(disableStartDate);
+        //    }, 100);
+        //});
+
+        if ('@Model.Object.ReasonId' !== '') {
+            var checkExist = setInterval(function () {
+                let $startDate = $("#Object_StartDate").data("kendoDatePicker"),
+                    $endDate = $("#Object_EndDate").data("kendoDatePicker"),
+                    $reasonCb = $('#Object_ReasonId').data('kendoComboBox');
+
+                typeLeave = "@((Model.Object.IsPlanning ?? false) ? "planning" : "unplanning")";
+
+                if ($startDate !== undefined && $endDate !== undefined && $reasonCb !== undefined) {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/masterdata/absence/getbyid"),
+                        dataType: 'json',
+                        data: { id: $reasonCb.value() },
+                        success: function (result) {
+                            maxAbsentDays = result.MaxAbsentDays == null ? 0 : result.MaxAbsentDays;
+
+                            var startDate = $startDate.value();
+                            $endDate.min(startDate);
+
+                            if (maxAbsentDays > 0) {
+                                $.ajax({
+                                    type: 'POST',
+                                    url: app.resolveUrl("~/api/absence/get-absence-end-date"),
+                                    dataType: 'json',
+                                    data: {
+                                        startDate: startDate.toUTCString(),
+                                        maxAbsentDays: maxAbsentDays
+                                    },
+                                    success: function (result) {
+                                        $endDate.max(kendo.parseDate(result));
+                                    }
+                                });
+                            }
+                        }
+                    });
+
+                    clearInterval(checkExist);
+                }
+            }, 100);
+        }
+
+        @if (Model.Object.AnnualLeavePlanningDetailId.HasValue)
+        {
+            <text>
+                $('#divAnnualPlan').show();
+            if ('@Model.Object.AnnualLeavePlanningDetailId' != '@Guid.Empty') {
+                var checkAnnualPlanExists = setInterval(function () {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/annual-leave-planning/get-detail-by-id/@Model.Object.AnnualLeavePlanningDetailId"),
+                        dataType: 'json',
+                        success: function (result) {
+                            var $startDate = $('#Object_StartDate').data('kendoDatePicker');
+                            var $endDate = $('#Object_EndDate').data('kendoDatePicker');
+                            var $totalAbsence = $('#Object_TotalAbsence');
+
+                            $startDate.readonly(true);
+                            $endDate.readonly(true);
+                            $totalAbsence.val(result.Days);
+                        }
+                    });
+
+                    clearInterval(checkAnnualPlanExists);
+                }, 100);
+            }
+            </text>
+        }
+
+    </script>
+    @if (canCancelAbsence)
+    {
+        <script type="text/javascript">
+            (function ($, app) {
+                app.registerHandler("dropDocumentHandler", function (parameters) {
+                    app.confirm(app.translate("Are you sure want to drop this document?"), app.translate("You won't be able to revert this!"), function (d) {
+                        if (!d.value) return;
+
+                        $.delete(app.resolveUrl("~/api/absence/drop-document"), { id: parameters.id }, function () {
+                            app.flash(app.translate("Success drop document"));
+                            window.location.reload();
+                        });
+                    });
+                });
+            })(jQuery, app);
+        </script>
+    }
+}
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Absence Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-sm-12">
+                                <fieldset>
+                                    @Html.HiddenFor(x => x.Object.MandatoryAttachment)
+                                    @Html.HiddenFor(x => x.Object.ReasonType)
+                                    <legend>@Localizer["Absence Data"]</legend>
+                                    <div class="form-group">
+                                        <label>@Localizer["Remaining Annual Leave"] : <span id="sisacuti">@Model.Object.RemainingDaysOff</span> </label>
+                                        @Html.HiddenFor(x => x.Object.RemainingDaysOff)
+                                    </div>
+                                    <div class="form-group">
+                                        <label>@Localizer["Remaining Long Leave"] : <span id="sisacutipanjang">@Model.Object.RemainingLongLeave</span></label>
+                                        @Html.HiddenFor(x => x.Object.RemainingLongLeave)
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="mt-radio-inline">
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Planned"]
+                                                @Html.RadioButtonFor(m => m.Object.IsPlanning, true, ApplicationHelper.Enable(new
+                                            {
+                                            @class = "form-control",
+                                            data_validation_for = "Object.IsPlanning",
+                                            onchange = "changePlan('planning')"
+                                            }, isCanEdit))
+
+                                                @*<input type="radio" onchange="changePlan()" id="Object_IsPlanning" name="Object.IsPlanning" class="form-control" value="true",
+                                            data_validation_for="Object.IsPlanning" @(!isCanEdit ? "disabled" : "") />*@
+                                                <span></span>
+                                            </label>
+                                            <label class="mt-radio green mt-radio-outline">
+                                                @Localizer["Unplanned"]
+                                                @Html.RadioButtonFor(m => m.Object.IsPlanning, false, ApplicationHelper.Enable(new
+                                            {
+                                            @class = "form-control",
+                                            data_validation_for = "Object.IsPlanning",
+                                            onchange = "changePlan('unplanning')"
+                                            }, isCanEdit))
+                                                @*<input type="radio" onchange="changePlan()" id="Object_IsPlanning" name="Object.IsPlanning" class="form-control" value="false",
+                                            data_validation_for="Object.IsPlanning" @(!isCanEdit ? "disabled" : "") />*@
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Reason"]</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.ReasonId, "Reason")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.ReasonId" })
+                                        .Placeholder("Select Reason")
+                                        .DataTextField("Name")
+                                        .DataValueField("Id")
+                                        .Value(Model.Object.ReasonId.HasValue ? Model.Object.ReasonId.Value.ToString() : "")
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read
+                                        .Url(Url.Content(isCanEdit ? "~/api/masterdata/absence/getbyplan" : "~/api/masterdata/absence/gets")).Data("paramReason"))
+                                        )
+                                        //.SelectedIndex(-1)
+                                        //.AutoBind(false)
+                                        .Enable(isCanEdit)
+                                        .Events(e => e.Change("selectReason"))
+                                        .Deferred()
+                                        )
+                                    @Html.HiddenFor(x => x.Object.Reason)
+                                    <span class="invalid" data-validation-for="Object.ReasonId"></span>
+                                </div>
+                                <div class="form-group" id="divAnnualPlan" style="display:none;">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Annual Plan"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.AnnualLeavePlanningDetailId, "AnnualLeavePlanningDetail")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.AnnualLeavePlanningDetailId" })
+                                        .Placeholder("Select Annual Plan")
+                                        .DataTextField("DisplayText")
+                                        .DataValueField("Id")
+                                        .Value(Model.Object.AnnualLeavePlanningDetailId.HasValue ? Model.Object.AnnualLeavePlanningDetailId.Value.ToString() : "")
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read
+                                        .Url(Url.Content(annualleaveplanningdetailid.HasValue ? "~/api/absence/get-leave-plan" : "~/api/absence/get-available-leave-plan")).Data("paramAnnualLeavePlanning"))
+                                        )
+                                        .Enable(isCanEdit)
+                                        .Events(e => e.Change("selectAnnualLeavePlanning"))
+                                        .Deferred()
+                                        )
+                                    <span class="invalid" data-validation-for="Object.AnnualLeavePlanningDetailId"></span>
+                                </div>
+                                <div id="KategPenyakit" style="display:none;">
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Kategori Penyakit"]</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.KategoriPenyakit, "KategoriPenyakit")
+
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .DataTextField("KategoriPenyakit")
+                                            .DataValueField("KategoriPenyakit")
+                                            .Placeholder(Localizer["Please select"].Value)
+                                            .Value(Model.Object.KategoriPenyakit == default(string) ? string.Empty : Model.Object.KategoriPenyakit)
+                                            .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-kp")))
+                                            .Sort(sort => sort.Add("KategoriPenyakit")))
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+
+                                            )
+                                        <span class="invalid" data-validation-for="Object.KategoriPenyakit"></span>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>@Localizer["Spesifik Penyakit"]</label>
+                                        @*@Html.TextBoxFor(x => x.SpesifikPenyakit, new { @class = "form-control", @data_validation_for = "NamaArea" })*@
+                                        @*@(Html.KendoComboBoxAutocompleteFor(x => x.Object.SpesifikPenyakit, Url.Content("~/api/ohs/medical-record/get-SpesifikPenyakit"), "function() { return { 'code': $('#SpesifikPenyakit').val() } }", pageSize: int.MaxValue)
+                                        .AutoBind(false)
+                                        .DataValueField("Name")
+                                        .DataTextField("Name")
+                                        .SelectedIndex(-1)
+                                        .CascadeFrom("Object_KategoriPenyakit")
+                                        .CascadeFromField("Type")
+                                        .Enable(isCanEdit)
+                                        .Value(Model.Object.SpesifikPenyakit == default(string) ? string.Empty : Model.Object.SpesifikPenyakit)
+                                        .Deferred()
+
+
+                                        )*@
+                                        @Html.TextAreaFor(x => x.Object.SpesifikPenyakit, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Spesifik"].Value }, isCanEdit))
+
+                                    </div>
+
+                                </div>
+
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Start Date"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.StartDate)
+                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StartDate", placeholder = "Pilih Tanggal (dd/mm/yyyy)", onkeydown = "return false;" })
+                                        .Enable(isCanEdit)
+                                        .Format("dd/MM/yyyy")
+                                        .Min(Model.Object.IsPlanning.HasValue ? Model.Object.IsPlanning.Value == true ? DateTime.Now.AddDays(1) : DateTime.MinValue : DateTime.MinValue)
+                                        .DisableDates("disableDates")
+                                        .Max(Model.Object.IsPlanning.HasValue ? Model.Object.IsPlanning.Value == true ? DateTime.MaxValue : DateTime.Now : DateTime.MaxValue)
+                                        .Events(e =>
+                                        {
+                                            e.Change("onchangeStartDate");
+                                        })
+                                        .Deferred()
+                                        )
+                                    <span class="invalid" data-validation-for="Object.StartDate"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.EndDate)
+                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.EndDate", placeholder = "Pilih Tanggal (dd/mm/yyyy)", onkeydown = "return false;" })
+                                        .Enable(isCanEdit && Model.Object.EndDate.HasValue)
+                                        .Format("dd/MM/yyyy")
+                                        .DisableDates("disableDates")
+                                        //.Min(Model.Object.StartDate.HasValue ? Model.Object.StartDate.ToString() : "1/1/1900")
+                                        .Events(e =>
+                                        {
+                                            e.Change("onchangeEndDate");
+                                        })
+                                        .Deferred()
+                                        )
+                                    <span class="invalid" data-validation-for="Object.EndDate"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Total Absence Day"]</label>
+                                    @Html.TextBoxFor(x => x.Object.TotalAbsence, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.TotalAbsence", @readonly = "readonly" }, isCanEdit))
+                                    <span class="invalid" data-validation-for="Object.TotalAbsence"></span>
+                                </div>
+
+
+                                <div class="form-group">
+                                    <label id="DescriptionLabel">@Localizer["Description"]</label>
+                                    <label id="DiagnosaLabel" style="display:none;">@Localizer["Diagnosa"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Description, ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Input Description"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Supporting Attachment"]</legend>
+                                <div class="form-group">
+                                    <label><span id="reqattachment" class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.SupportingAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "SupportingAttachmentPath" })
+                                        }
+                                    }
+                                </div>
+
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Detail Notes"]</label>
+                                    <br />
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Remarks", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions
+    {
+    @if (canCancelAbsence)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-8 col-8">
+                                    <div class="float-right">
+                                        <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="dropDocumentHandler" data-parameters-id="@Model.DocumentApprovalId">
+                                            <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Document"]</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+
+        <style>
+            /* Custom Alert Box */
+            .customnealert {
+                max-width: 530px;
+                min-height: 250px;
+                display: none; 
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #fff;
+                padding: 25px;
+                border-radius: 12px;
+                text-align: center;
+                width: 90%;
+                z-index: 10000;
+                border: none;
+            }
+
+                /* Title */
+                .customnealert h2 {
+                    margin: 0 0 15px;
+                    font-size: 20px;
+                    font-weight: bold;
+                    color: #333;
+                }
+
+                /* Message */
+                .customnealert p {
+                    font-size: 16px;
+                    margin-bottom: 25px;
+                    color: #555;
+                }
+
+            /* Button Container */
+            .customnealert-buttons {
+                display: flex;
+                justify-content: center;
+                gap: 15px;
+            }
+
+                /* Buttons */
+                .customnealert-buttons button {
+                    padding: 10px 20px;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: bold;
+                    transition: all 0.2s ease-in-out;
+                }
+
+            .customnealert-bottom {
+                color: orange;
+                width: 120px;
+                height: 120px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                border: 5px solid orange; /* Only border, no background */
+                background: transparent;
+                margin: 0 auto; /* Centers the circle horizontally */
+            }
+
+
+            /* Confirm Button */
+            #confbtn {
+                background: #3085D6;
+                color: white;
+                font-size: 18px; /* Increased font size */
+                padding: 12px 24px; /* Increased padding */
+            }
+
+        </style>
+
+        <div id="customnealert" class="customnealert">
+            <p class="customnealert-bottom" style="font-size:90px; color:orange;">
+                !
+            </p>
+            <p>
+                Please note that the system will deduct your leave based on the year you selected in your application. <br />
+                (For example, if you are applying for leave for next year, the deduction will be taken from your next year's leave).
+            </p>
+
+            <div class="customnealert-buttons">
+                <button id="confbtn">OK</button>
+            </div>
+        </div>
+
+
+        <div id="currentViewActions">
+        @await Html.PartialAsync("Components/_ActionButtons")
+        </div>
+
+        <script>
+            document.addEventListener("DOMContentLoaded", function () {
+                document.querySelectorAll("#currentViewActions button, #currentViewActions a").forEach(function (element) {
+                    element.addEventListener("click", function (event) {
+
+                        const action = element.getAttribute("data-parameters-action");
+                        if (["approve", "reject", "revise", "cancel"].includes(action)) {
+                            console.log("Skipping custom alert for action:", action);
+                            return;
+                        }
+
+                        let endDateElement = document.querySelector("[name='Object.EndDate']");
+                        let reasonComboBox = $("#Object_ReasonId").data("kendoComboBox"); // Correctly target the Reason ComboBox
+
+                        if (!endDateElement || !reasonComboBox) return; // Ensure elements exist
+
+                        let endDateValue = endDateElement.value;
+                        let selectedReasonText = reasonComboBox.text(); // Get the selected text
+
+                        console.log("End Date Value:", endDateValue);
+                        console.log("Selected Reason:", selectedReasonText);
+
+                        if (endDateValue && selectedReasonText) {
+                            let endDate = new Date(endDateValue);
+                            let currentYear = new Date().getFullYear();
+
+                            console.log("Parsed End Date:", endDate);
+                            console.log("Current Year:", currentYear);
+
+                            // Check if reason is "Cuti Tahunan" and year is next year
+                            if (endDate.getFullYear() === currentYear + 1 && selectedReasonText === "Cuti Tahunan") {
+                                event.preventDefault(); // Stop default action
+
+                                let alertBox = document.getElementById("customnealert");
+                                alertBox.style.display = "block";
+
+                                // Handle confirmation (Execute clicked element inside div)
+                                document.getElementById("confbtn").onclick = function () {
+                                    alertBox.style.display = "none";
+                                    console.log("Confirmed action!");
+
+                                    // Simulate click on the originally clicked button/link
+                                    if (element.tagName.toLowerCase() === "a") {
+                                        window.location.href = element.href;
+                                    } else if (element.tagName.toLowerCase() === "button") {
+                                        element.click();
+                                    }
+                                };
+                            }
+                        }
+                    });
+                });
+            });
+        </script>
+     
+    }
+}

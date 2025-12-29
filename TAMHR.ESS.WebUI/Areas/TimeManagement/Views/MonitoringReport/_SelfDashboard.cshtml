@@ -1,0 +1,63 @@
+﻿<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Selft Monitoring"]</h3>
+                <div class="pull-right">
+                    <span>
+                        <i class="ft-calendar"></i>
+                        @DateTime.Now.ToString("dd MMMM yyyy")
+                    </span>
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeManagementView>()
+                    .Name("grid")
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Employee").ClientTemplate(@"
+                            <div class=""media"">
+                                <img class=""rounded"" src=""#:app.resolveImageUrl(NoReg)#"" style=""width: 3rem; height: 3rem;"" />
+                                <div class=""media-body ml-2"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                    <small>#:PostName#</small>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.WorkingTimeIn).Title("Proxy In")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"Proxy In<br/><small>#:WorkingTimeIn#</small>")
+                            .Width("8rem")
+                            .MinScreenWidth(700);
+
+                        columns.Bound(c => c.WorkingTimeOut).Title("Proxy Out")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"Proxy Out<br/><small>#:WorkingTimeIn#</small>")
+                            .Width("8rem")
+                            .MinScreenWidth(700);
+
+                        columns.Bound(c => c.Description).Title("Description")
+                            .HtmlAttributes(new { @class = "text-center" })
+                            .ClientTemplate(@"#:Description#")
+                            .Width("8rem")
+                            .MinScreenWidth(700);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/monitoring-report/gets")))
+                        .Sort(sort => sort.Add("Description").Ascending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

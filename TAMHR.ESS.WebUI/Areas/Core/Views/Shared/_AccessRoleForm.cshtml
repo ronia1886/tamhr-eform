@@ -1,0 +1,46 @@
+﻿@model TAMHR.ESS.Domain.AccessRoleView
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/access-role">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Type"]</label>
+                @Html.KendoListComboBoxFor(x => x.AccessTypeCode, new[] { "Job|job", "Gender|gender", "Employee Class|class", "Work Contract|workcontract" }).HtmlAttributes(new { @class = "form-control", @data_validation_for = "AccessTypeCode", placeholder = Localizer["Please select access type"].Value })
+                <span class="invalid" data-validation-for="AccessTypeCode"></span>
+            </div>
+        </div>
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Access Code"]</label>
+                @(Html.KendoComboBoxAutocompleteFor(x => x.AccessCode, Url.Content("~/api/access-role/get-mapping-query"), "function() { return { 'code': $('#AccessCode').val() } }", pageSize: int.MaxValue)
+                    .AutoBind(false)
+                    .SelectedIndex(-1)
+                    .Placeholder(Localizer["Please select access type"].Value)
+                    .CascadeFrom("AccessTypeCode")
+                    .CascadeFromField("Type")
+                )
+                <span class="invalid" data-validation-for="AccessCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Role"]</label>
+                @(Html.KendoComboBoxAutocompleteFor(x => x.RoleId, Url.Content("~/api/role/gets"), valueField: "Id", textField: "Title")
+                    .AutoBind(true)
+                    .SelectedIndex(-1)
+                    .Value(Model.RoleId == default(Guid) ? string.Empty : Model.RoleId.ToString())
+                    .Placeholder(Localizer["Please select role"].Value)
+                )
+                <span class="invalid" data-validation-for="RoleId"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

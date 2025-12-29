@@ -1,0 +1,127 @@
+﻿@section scripts {
+    <partial name="_Script" />
+}
+
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="vaccineschedule-modal" data-modal-title="Create new Schedule" data-modal-ajax="true" data-ajax-url="~/masterdata/vaccineschedule/load">
+                    @Localizer["Create Schedule"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/vaccineschedule/download/download-data">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="vaccineScheduleModal" data-modal-title="Upload Schedule" @*data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/vaccineschedule/download"*@>
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Schedule"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccineSchedule>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "vaccineschedules-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.VaccineNumber).Title("Batch").Width(520);
+                        columns.Bound(c => c.StartDateTime).Title("Start Date").ClientTemplate(@"
+                        #= kendo.toString(StartDateTime, ""dd/MM/yyyy"" )#
+                        ").Width(150);
+                        columns.Bound(c => c.EndDateTime).Title("End Date").ClientTemplate(@"
+                        #= kendo.toString(EndDateTime, ""dd/MM/yyyy"" )#
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""vaccineschedule-modal"" data-modal-title=""Edit Schedule"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/vaccineschedule/load"" data-parameters-id=""#:Id#"">
+                                    <i class="" ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/vaccineschedule"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width(150);
+                        columns.Bound(c => c.Id).Title("total QTY").ClientTemplate(@"#:orderCount(Id, uid)#").Hidden(true);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/vaccineschedule/gets")))
+                        .Sort(sort =>
+                        {
+                            sort.Add("VaccineNumber");
+                            sort.Add("StartDateTime");
+                        })
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .ClientDetailTemplateId("detailGridVaccineSchedule")
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
+<div id="vaccineScheduleModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss-modal="modal2">&times;</button>
+                <h4 class="modal-title">@Localizer["Jadwal Vaksin"]</h4>
+
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>@Localizer["Upload Schedule"]</label>
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="file-group">
+                            <div class="input-group-area">
+                                <input id="UploadExcelPath" onfocus="this.blur()" readonly="readonly" placeholder="Nama File" />
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Browse"]
+                                    <input class="file" type="file" id="fUpload" data-auto-upload="false" name="UploadExcelPath" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                </div>
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Upload"]
+                                    <input class="file" type="button" value="Upload" data-trigger="handler" data-handler="uploadHandler" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <a class="btn green-haze btn-sm" href="~/api/vaccineschedule/download/download-template">
+                            <i class="ft-download"></i> Download Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

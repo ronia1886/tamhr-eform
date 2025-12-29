@@ -1,0 +1,35 @@
+﻿@model TAMHR.ESS.Domain.SapGeneralCategoryMap
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/sap-category-map">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["General Category Code"]</label>
+                @Html.TextBoxFor(x => x.GeneralCategoryCode, new { @class = "form-control", @data_validation_for = "GeneralCategoryCode", @placeholder = Localizer["Please input code"].Value })
+                <span class="invalid" data-validation-for="GeneralCategoryCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["SAP Code"]</label>
+                @Html.TextBoxFor(x => x.SapCode, new { @class = "form-control", @data_validation_for = "SapCode", @placeholder = Localizer["Please input sap code"].Value })
+                <span class="invalid" data-validation-for="SapCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["SAP Category"]</label>
+                @Html.TextBoxFor(x => x.SapCategory, new { @class = "form-control", @data_validation_for = "SapCategory", @placeholder = Localizer["Please input sap category"].Value })
+                <span class="invalid" data-validation-for="SapCategory"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

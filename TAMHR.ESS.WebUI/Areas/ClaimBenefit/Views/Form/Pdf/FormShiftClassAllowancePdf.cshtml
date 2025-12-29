@@ -1,0 +1,162 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var mealAllowance = (obj as MealAllowanceViewModel);
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+
+    var index = 1;
+    var jumlahhari = mealAllowance.data.Count();
+    decimal uangmakan = 0;
+    decimal jumlah = 0;
+    string Bulan = "";
+    string Tahun = "";
+
+    foreach (var ot in mealAllowance.data)
+    {
+        uangmakan = ot.Amount;
+        jumlah = ot.Amount * mealAllowance.data.Count();
+        Bulan = ot.Date?.ToString("MMMM");
+        Tahun = ot.Date?.ToString("yyyy");
+    }
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string DepartmentHead = "";
+    string Requester = "";
+    string SectionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:50px;" />
+
+<h3 style="text-align:center; height:10px">FORMULIR PERMOHONAN PENGGANTIAN UANG MAKAN (KELAS 1-6)</h3>
+<h4 style="text-align:center; height:10px">DIVISI</h4>
+<h4 style="text-align:center; height:10px">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</h4>
+<h4 style="text-align:center; height:10px">BULAN/TAHUN : @Bulan.ToUpper()/@Tahun</h4>
+<table class="tableizer-table" border="1" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse ;font-family:'Segoe UI'; font-size:12px;">
+    <thead>
+        <tr class="tableizer-firstrow">
+            <th>No</th>
+            <th>Noreg</th>
+            <th>Nama Pegawai</th>
+            <th>Jml Hari</th>
+            <th>Jml Uang Makan</th>
+            <th>Total Uang Makan</th>
+        </tr>
+    </thead>
+    <tbody>
+
+
+        <tr>
+            <td align="center">@index</td>
+            <td>@org.NoReg</td>
+            <td>@org.Name</td>
+            <td align="center">@jumlahhari</td>
+            <td align="right">
+                @*@ot.Amount.ToString("N0")*@
+                @string.Format("{0:N}", uangmakan)
+            </td>
+            <td align="right">
+                @string.Format("{0:N}", jumlah)
+            </td>
+        </tr>
+
+
+
+        <tr>
+            <td colspan="3">TOTAL UANG MAKAN & JUMLAH HARI</td>
+            <td align="center">
+                @jumlahhari
+            </td>
+            <td align="right">
+                @string.Format("{0:N}", uangmakan)
+            </td>
+            <td align="right">
+                @string.Format("{0:N}", jumlah)
+            </td>
+        </tr>
+    </tbody>
+</table>
+<p>&nbsp;</p>
+
+<table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" cellspacing="0">
+    <tr>
+        <td style="width:40%">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px;">
+                <tr>
+                    <td colspan="2">Diisi Oleh Petugas HR</td>
+                </tr>
+                <tr>
+                    <td style="width:150px">Tanggal Diterima</td>
+                    <td style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td style="width:150px">Petugas</td>
+                    <td style="width:150px"></td>
+                </tr>
+            </table>
+        </td>
+
+        <td style="width:10%"></td>
+
+        <td style="width:50%">
+            <table border="1" cellpadding="0" cellspacing="0" style="font-family:'Segoe UI'; font-size:12px;">
+                <tr>
+                    <td style="width:150px" align="center">Di Setujui Oleh</td>
+                    <td style="width:150px" align="center">Di Cek Oleh</td>
+                    <td style="width:150px" align="center">Di Buat Oleh</td>
+                </tr>
+                <tr style="height:100px">
+                    <td valign="bottom" align="center"></td>
+                    <td valign="bottom" align="center"></td>
+                    <td valign="bottom" align="center"></td>
+                </tr>
+                <tr>
+                    <td valign="bottom" align="center">@DepartmentHead</td>
+                    <td valign="bottom" align="center">@SectionHead</td>
+                    <td valign="bottom" align="center">@Requester</td>
+                </tr>
+                <tr>
+                    <td align="center">Department Head</td>
+                    <td align="center">Section Head</td>
+                    <td align="center">Karyawan</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr style="height:15px"></tr>
+    <tr>
+        <td colspan="3">Note : Pengajuan Form Penggantian Uang Makan (Kelas 1-6) harus dilampirkan dengan Form Izin Meninggalkan Pekerjaan dan Pinjam Kendaraan (warna biru) yang telah di tanda tangan oleh security.</td>
+    </tr>
+</table>

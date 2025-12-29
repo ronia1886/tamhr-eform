@@ -1,0 +1,106 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker", "combobox", "timepicker", "grid", "panelbar");
+    @inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataservice;
+    var user = User.GetClaim("NoReg");
+    var menus = updatedataservice.GetMenuUpdateData();
+    var progress = updatedataservice.GetProgress(user).FirstOrDefault();
+}
+<style>
+    .accordion .card-header::after {
+        font-family: FontAwesome;
+        content: "\f068";
+        float: Left;
+        padding-top: 8px;
+    }
+
+    .accordion .card-header.collapsed::after {
+        content: "\f067";
+    }
+
+    .card-header {
+        padding: 4px 15px 0px 15px;
+    }
+
+    label {
+        font-weight: 500;
+        margin-bottom: 2px;
+    }
+
+    .back-to-top {
+        position: fixed !important;
+        bottom: 25px;
+        right: 25px;
+        display: none;
+        border-radius: 28px !important;
+    }
+</style>
+
+@section scripts {
+    <partial name="_script" />
+}
+<div class="row ">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Form Konfirmasi Pengkinian Data"]</h3>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-header bordered">
+                @(Html.Kendo().ProgressBar()
+                      .Name("fastAndFurious")
+                      .Type(ProgressBarType.Percent)
+                      .Value(@progress.Progress.HasValue ? @progress.Progress.Value : 0)
+                      .Animation(a => a.Duration(600))
+                      .HtmlAttributes(new { style = "width:100%" })
+                      .Deferred()
+
+                )
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+
+                @foreach (var item in menus.OrderBy(x => x.Title))
+                {
+                    <div class="card-header bordered accordion">
+                        <div class="row">
+
+                            <a class="col-md-4 card-header " data-toggle="collapse" href="#@item.ConfigText" role="button" aria-expanded="false" aria-controls="@item.ConfigText">
+                                <i class="@item.IconClass font-large-1" style="padding-left:20px"></i>
+                            </a>
+                            <a class=" col-md-4" style="padding: 4px 15px 0px 15px;" data-toggle="collapse" href="#@item.ConfigText" role="button" aria-expanded="false" aria-controls="@item.ConfigText">
+                                <small>@item.Title</small>
+                            </a>
+                            <a class="col-md-4 btn pull-right" href="/core/form/create?formKey=@item.ConfigText">
+                                <i class=" ft-edit"> &nbsp; Edit </i>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="collapse show" id="@item.ConfigText">
+                        <div>
+                            @{
+                                <partial name="_@item.ConfigText" />
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            @if (progress.Progress < 99)
+            {
+                <div class="card-header bordered">
+                    <div class="float-right">
+                        <a class="btn btn-primary mr-2" onclick="confirmAll()">
+                            <i class="ft-check"></i> <span class="d-none d-md-inline" style="color:white">@Localizer["Confirm"]</span>
+                        </a>
+                    </div>
+                </div>
+            }
+            @*<button onclick="topFunction()" id="myBtn" title="Go to top" style="border-radius:4px">Top</button>*@
+
+        </div>
+    </div>
+</div>
+
+<a id="back-to-top" onclick="topFunction()" href="#" class="btn btn-dark btn-lg back-to-top" role="button"><i class="fa fa-chevron-circle-up"></i></a>
+

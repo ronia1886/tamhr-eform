@@ -1,0 +1,52 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService profileservice;
+@{
+    var user = User.GetClaim("NoReg");
+    var data = profileservice.GetDataDivorce(user).FirstOrDefault();
+}
+@if (data != null)
+{
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset>
+                        <legend>Akte Cerai</legend>
+
+                        <div class="row">
+                            <label class="col-md-4">Nama Pasangan</label>
+                            <span class="col-md-8">: @data.Name</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4">Tanggal Cerai</label>
+                            <span class="col-md-8">: @data.DivorceDate.HasValue ?  @data.DivorceDate : @data.TanggalCerai</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4">No Akte Cerai</label>
+                            <span class="col-md-8">: @data.NoAkteCerai</span>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset>
+                    <legend>Document</legend>
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Akte Cerai</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(data?.NoReg)">
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+
+<hr />

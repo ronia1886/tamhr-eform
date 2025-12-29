@@ -1,0 +1,81 @@
+﻿@model TAMHR.ESS.Domain.LetterTemplate
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/letter-template">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Letter Key"]</label>
+                @Html.TextBoxFor(x => x.LetterKey, new { @class = "form-control", @data_validation_for = "LetterKey", @placeholder = Localizer["Please input letter key"].Value })
+                <span class="invalid" data-validation-for="LetterKey"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.Description, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Content"]</label>
+                @Html.TextAreaFor(x => x.LetterContent, new { @class = "form-control hidden", @rows = 3 })
+                <span class="invalid" data-validation-for="LetterContent"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    $(function () {
+
+        let $letterContent = $("#LetterContent"),
+            $modal = $letterContent.closest(".modal");
+
+        // Hapus instance jika sebelumnya pernah dibuka
+        if ($letterContent.next('.note-editor').length) {
+            $letterContent.summernote('destroy');
+        }
+
+        // Init Summernote
+        $letterContent.summernote({
+            height: 400,
+            focus: true,
+            dialogsInBody: true,
+            disableDragAndDrop: false,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'strikethrough', 'underline', 'color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['insert', ['link', 'picture','table']],
+                ['view', ['codeview']],
+
+            ]
+        });
+
+        $letterContent.removeClass("hidden");
+
+        // Hancurkan editor saat modal ditutup — setara tinyMCE.get(...).remove()
+        $modal.off('hidden.bs.modal').on('hidden.bs.modal', function () {
+            if ($letterContent.next('.note-editor').length) {
+                $letterContent.summernote('destroy');
+            }
+        });
+    });
+</script>

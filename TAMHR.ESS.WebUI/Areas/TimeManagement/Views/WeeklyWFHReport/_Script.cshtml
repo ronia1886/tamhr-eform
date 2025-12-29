@@ -1,0 +1,885 @@
+﻿@{
+    var strTotalEmployee = Localizer["Total Employee"];
+}
+<script>
+
+    $.filterDepartment = function () {
+
+        //return {
+        //    Division: $("#division").val()
+        //};
+    }
+
+    function ClearDropDownTree(id){
+        $("#"+id).data("kendoDropDownTree").enable(false);
+        $("#"+id).data("kendoDropDownTree").value("");
+    }
+
+    function EmployeeSelect(e)
+    {
+        var DataItem = this.dataItem(e.item.index());
+        $("#SelectedNoReg").val(DataItem.NoReg);
+        $("#SelectedPostCode").val(DataItem.PostCode);
+    }
+
+    $.OnChangeDirectorate = function (e) {
+        ClearDropDownTree("division");
+        ClearDropDownTree("department");
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var directorates = $("#directorate").data("kendoDropDownTree").value();
+
+        var directorateValue = [];
+
+        directorates.forEach(
+            Directorate =>
+                directorateValue.push(Directorate.split('#')[0])
+        )
+
+        var child = $("#division").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-division")",
+            dataType: "json",
+            data: { DirectorateList: directorateValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDivision = function (e) {
+        ClearDropDownTree("department");
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var divisions = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+
+        divisions.forEach(
+            Division =>
+                divisionValue.push(Division.split('#')[0])
+        )
+
+        var child = $("#department").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-department")",
+            dataType: "json",
+            data: { DivisionList: divisionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+
+        var secondChild = $("#section").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/weekly-wfh-report/get-section")",
+            dataType: "json",
+            data: { DivisionList: divisionValue},
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                secondChild.setDataSource(dataSource);
+                secondChild.enable(true);
+                secondChild.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDepartment = function (e) {
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var departments = $("#department").data("kendoDropDownTree").value();
+        var divisions = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+
+        var departmentValue = [];
+
+        departments.forEach(
+            Department =>
+                departmentValue.push(Department.split('#')[0])
+        )
+
+        divisions.forEach(
+            Division =>
+                divisionValue.push(Division.split('#')[0])
+        )
+
+        var child = $("#section").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/weekly-wfh-report/get-section")",
+            dataType: "json",
+            data: { DepartmentList: departmentValue ,DivisionList: divisionValue},
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeSection = function (e) {
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var sections = $("#section").data("kendoDropDownTree").value();
+        var sectionValue = [];
+
+        sections.forEach(
+            Section =>
+                sectionValue.push(Section.split('#')[0])
+        )
+
+        var child = $("#line").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-line")",
+            dataType: "json",
+            data: { SectionList: sectionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeLine = function (e) {
+        ClearDropDownTree("group");
+
+        var lines = $("#line").data("kendoDropDownTree").value();
+        var lineValue = [];
+
+        lines.forEach(
+            Line =>
+                lineValue.push(Line.split('#')[0])
+        )
+
+        var child = $("#group").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-group")",
+            dataType: "json",
+            data: { LineList: lineValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDate = function (e) {
+        var dates = kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd')
+
+        $.ajax({
+            url: app.resolveUrl("~/api/weekly-wfh-report/get-wfh-planning-date/" + kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd')),
+            type: 'POST',
+            contentType: 'application/json',
+            success: function (d) {
+                tempDate = d; 
+            },
+            error: function (error) {
+                console.error(error);
+            },
+            fail: function (error) {
+                console.error(error);
+            }
+        });
+    }
+
+    function getGrid() {
+        return $("#grid").data("kendoGrid");
+    }
+
+    //function getChart() {
+    //    return $("#chart").data("kendoChart");
+    //}
+
+    //$.getData = function () {
+    //    return {
+    //        employeeName: $("#employeeName").data("kendoAutoComplete").value(),
+    //        keyDate: kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+    //
+    //    };
+    //};
+
+    function FilterData (){
+        var directorateList = $("#directorate").data("kendoDropDownTree").value();
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+        var departmentList = $("#department").data("kendoDropDownTree").value();
+        var sectionList = $("#section").data("kendoDropDownTree").value();
+        var lineList = $("#line").data("kendoDropDownTree").value();
+        var groupList = $("#group").data("kendoDropDownTree").value();
+
+        Class = $("#class").val();
+
+        var selectedNoReg = $("#SelectedNoReg").val();
+        var selectedPostCode = $("#SelectedPostCode").val();
+
+        var actualLocation = $('#actualworkplace').val();
+        var planLocation = $('#planworkplace').val();
+
+        filters = [{
+
+        }];
+
+        var finalFilter = {
+            logic: "and",
+            filters: []
+        }
+        //DIRECTORATE FILTER
+        if (directorateList.length > 0) {
+            var directorateFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+
+            directorateList.forEach(
+                directorate =>
+                    directorateFilter.filters.push(
+                        {
+                            field: 'Directorate',
+                            operator: 'eq',
+                            value: directorate.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(directorateFilter);  
+        }
+
+        //DIVISION FILTER
+        if (divisionList.length > 0) {
+            var divisionFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+
+            divisionList.forEach(
+                division =>
+                    divisionFilter.filters.push(
+                        {
+                            field: 'Division',
+                            operator: 'eq',
+                            value: division.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(divisionFilter);  
+        }
+
+        //DEPARTMENT FILTER
+        if (departmentList.length > 0) {
+            var departmentFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            departmentList.forEach(
+                department =>
+                    departmentFilter.filters.push(
+                        {
+                            field: 'Department',
+                            operator: 'eq',
+                            value: department.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(departmentFilter);
+        }
+
+        //SECTION FILTER
+        if (sectionList.length > 0) {
+            var sectionFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            sectionList.forEach(
+                section =>
+                    sectionFilter.filters.push(
+                        {
+                            field: 'section',
+                            operator: 'eq',
+                            value: section.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(sectionFilter);
+        }
+
+        //LINE FILTER
+        if (lineList.length > 0) {
+            var lineFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            lineList.forEach(
+                line =>
+                    lineFilter.filters.push(
+                        {
+                            field: 'Line',
+                            operator: 'eq',
+                            value: line.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(lineFilter);
+        }
+
+        //GROUP FILTER
+        if (groupList.length > 0) {
+            var groupFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            groupList.forEach(
+                group =>
+                    groupFilter.filters.push(
+                        {
+                            field: 'Group',
+                            operator: 'eq',
+                            value: group.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(groupFilter);
+        }
+
+        if (Class != "") {
+            finalFilter.filters.push({
+                field: 'Class',
+                operator: 'eq',
+                value: Class
+            });
+        }
+
+        if(selectedNoReg != "" && $("#employeeName").data("kendoAutoComplete").value() != ''){
+            finalFilter.filters.push({
+                field: 'NoReg',
+                operator: 'contains',
+                value: selectedNoReg
+            });
+        }
+
+        if(selectedPostCode != "" && $("#employeeName").data("kendoAutoComplete").value() != ''){
+            finalFilter.filters.push({
+                field: 'PostCode',
+                operator: 'contains',
+                value: selectedPostCode
+            });
+        }
+
+        //if(actualLocation != "" || planLocation != ""){
+        //    $.ajax({
+        //        url: app.resolveUrl("~/api/weekly-wfh-report/get-wfh-planning-date/" + kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd')),
+        //        type: 'POST',
+        //        contentType: 'application/json',
+        //        success: function (d) {
+        //            var indexFound = 0;
+        //
+        //            var listDate = [];
+        //            
+        //            let loop = new Date(kendo.parseDate(d.StartDate));
+        //            var index = 0;
+        //            while (loop <= kendo.parseDate(d.EndDate)) {
+        //                
+        //                index++;
+        //
+        //                if(kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'dd/MM/yyyy') == kendo.toString(loop, 'dd/MM/yyyy') && indexFound == 0){
+        //                    indexFound = index;
+        //                } 
+        //
+        //                listDate.push(kendo.toString(loop, 'dd/MM/yyyy'));
+        //                let newDate = loop.setDate(loop.getDate() + 1);
+        //                loop = new Date(newDate);
+        //            }
+        //
+        //            var selectedField = "Day"+(indexFound);
+        //
+        //            var locationFilter =
+        //            {
+        //                logic: "and",
+        //                filters: []
+        //            };
+        //
+        //            var actualLocationFilter = {
+        //                logic: "and",
+        //                filters: []
+        //            };
+        //
+        //            var planLocationFilter = {
+        //                logic: "and",
+        //                filters: []
+        //            };
+        //
+        //            finalFilter.filters.push({
+        //                field: 'Type',
+        //                operator: 'contains',
+        //                value: 'Actual'
+        //            });
+        //
+        //            finalFilter.filters.push({
+        //                field: 'Type',
+        //                operator: 'contains',
+        //                value: 'Plan'
+        //            });
+        //
+        //            if(actualLocation != ""){
+        //                finalFilter.filters.push(
+        //                {
+        //                    field: selectedField,
+        //                    operator: 'contains',
+        //                    value: actualLocation
+        //                });
+        //            } else {
+        //                finalFilter.filters.push(
+        //                {
+        //                    field: selectedField,
+        //                    operator: 'isnotempty'
+        //                });
+        //            }
+        //
+        //            if(planLocation != ""){
+        //                finalFilter.filters.push(
+        //                {
+        //                    field: selectedField,
+        //                    operator: 'contains',
+        //                    value: planLocation
+        //                });
+        //            } else {
+        //                finalFilter.filters.push(
+        //                {
+        //                    field: selectedField,
+        //                    operator: 'isnotempty'
+        //                });
+        //            }
+        //
+        //            //finalFilter.filters.push(actualLocationFilter);
+        //            //finalFilter.filters.push(planLocationFilter);
+        //
+        //            //finalFilter.filters.push(locationFilter);
+        //        },
+        //        error: function (error) {
+        //            console.error(error);
+        //        },
+        //        fail: function (error) {
+        //            console.error(error);
+        //        }
+        //    });
+        //}
+
+        // console.log(finalFilter);
+
+        return finalFilter;
+    }
+
+
+    //$.onSubmit = function () {
+        
+    //    var $grid = getGrid();
+    //    if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+    //    var dataSource = $grid.dataSource,
+    //        employeeName = $("#employeeName").val();
+
+    //    //var $chart = getChart();
+    //    //if (typeof $chart === 'undefined' || typeof $chart.dataSource === 'undefined') return;
+    //    //var dataSource_chart = $chart.dataSource;
+
+    //    finalFilter = FilterData();
+
+    //    //Swal.showLoading();
+    //    //
+    //    //$.ajax({
+    //    //    url: app.resolveUrl("~/api/weekly-wfh-report/get-reports/" + kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd')),
+    //    //    type: 'POST',
+    //    //    contentType: 'application/json',
+    //    //    success: function (d) {
+    //    //        //d.forEach(function (data, index) {
+    //    //        //    data.Index = index;
+    //    //        //    let date = new Date(data.WorkingDate);
+    //    //        //    data.WorkingDate = kendo.toString(date, "dddd, dd-MMM-yyyy")
+    //    //        //});
+    //    //
+    //    //        var dataSource = new kendo.data.DataSource({
+    //    //            data: d
+    //    //        });
+    //    //
+    //    //        $grid.setDataSource(dataSource);
+    //    //
+    //    //        swal.close();
+    //    //    },
+    //    //    error: function (error) {
+    //    //        swal.close();
+    //    //        console.error(error);
+    //    //    },
+    //    //    fail: function (error) {
+    //    //        swal.close();
+    //    //        console.error(error);
+    //    //    }
+    //    //});
+        
+    //    dataSource.filter(finalFilter);
+
+    //    //dataSource_chart.filter(finalFilter);
+    //    //$("#chart").data("kendoChart").dataSource.filter(finalFilter);
+    //    //console.log($("#chart").data("kendoChart").dataSource);
+    //    //console.log("test search")
+    //};
+    var firstLoad = true;
+
+    $.getDataReport = function () {
+        var actualLocation = $('#actualworkplace').val();
+        var planLocation = $('#planworkplace').val();
+
+        var indexFound = 0;
+
+        var listDate = [];
+                    
+        let loop = new Date(kendo.parseDate(tempDate.StartDate));
+        var index = 0;
+        while (loop <= kendo.parseDate(tempDate.EndDate)) {
+                        
+            index++;
+
+            if(kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'dd/MM/yyyy') == kendo.toString(loop, 'dd/MM/yyyy') && indexFound == 0){
+                indexFound = index;
+            } 
+
+            listDate.push(kendo.toString(loop, 'dddd, dd/MM/yyyy'));
+            let newDate = loop.setDate(loop.getDate() + 1);
+            loop = new Date(newDate);
+        }
+
+        var selectedField = "Day"+(indexFound);
+
+        return {
+            actualLocation: actualLocation,
+            planLocation: planLocation,
+            selectedDay: selectedField,
+            keyDate: kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            firstLoad : firstLoad,
+            selectedNoReg: ($("#employeeName").data("kendoAutoComplete").value() != '') ? $("#SelectedNoReg").val() : '',
+            selectedPostCode: ($("#employeeName").data("kendoAutoComplete").value() != '') ? $("#SelectedPostCode").val() : ''
+        };  
+    };
+
+    function checkStandard(Day1, Day2, Day3, Day4, Day5, Day6, Day7, Day8, Day9, Day10, Day11, Day12, Day13, Day14, minWFOCount){
+        var w1ctr = 0;
+        var w2ctr = 0;
+
+        if(Day1 == "WFO" || Day1 == "WFF") w1ctr++;
+        if(Day2 == "WFO" || Day2 == "WFF") w1ctr++;
+        if(Day3 == "WFO" || Day3 == "WFF") w1ctr++;
+        if(Day4 == "WFO" || Day4 == "WFF") w1ctr++;
+        if(Day5 == "WFO" || Day5 == "WFF") w1ctr++;
+        if(Day6 == "WFO" || Day6 == "WFF") w1ctr++;
+        if(Day7 == "WFO" || Day7 == "WFF") w1ctr++;
+        if(Day8 == "WFO" || Day8 == "WFF") w2ctr++;
+        if(Day9 == "WFO" || Day9 == "WFF") w2ctr++;
+        if(Day10 == "WFO" || Day10 == "WFF") w2ctr++;
+        if(Day11 == "WFO" || Day11 == "WFF") w2ctr++;
+        if(Day12 == "WFO" || Day12 == "WFF") w2ctr++;
+        if(Day13 == "WFO" || Day13 == "WFF") w2ctr++;
+        if(Day14 == "WFO" || Day14 == "WFF") w2ctr++;
+
+        return w1ctr >= minWFOCount && w2ctr >= minWFOCount;
+    }
+
+    (function ($, app) {
+        $(function () {
+            $(document).on('click', '.k-link, li.k-item', function (e) {
+                e.stopPropagation();
+            });
+        });
+
+        $.getParameters = function () {
+            var KeyDate = kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var directorateList = $("#directorate").data("kendoDropDownTree").value();
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            var departmentList = $("#department").data("kendoDropDownTree").value();
+            var sectionList = $("#section").data("kendoDropDownTree").value();
+            var lineList = $("#line").data("kendoDropDownTree").value();
+            var groupList = $("#group").data("kendoDropDownTree").value();
+            var actualLocation = $('#actualworkplace').val();
+            var planLocation = $('#planworkplace').val();
+            Class = $("#class").val();
+
+            return { 
+            directorateList: directorateList,
+            divisionList: divisionList,
+            departmentList: departmentList,
+            sectionList: sectionList,
+            lineList: lineList,
+            groupList: groupList,
+            class:Class,
+            actualLocation: actualLocation,
+            planLocation: planLocation,
+            keyDate: KeyDate,
+            firstLoad : firstLoad,
+            selectedNoReg: ($("#employeeName").data("kendoAutoComplete").value() != '') ? $("#SelectedNoReg").val() : '',
+            selectedPostCode: ($("#employeeName").data("kendoAutoComplete").value() != '') ? $("#SelectedPostCode").val() : ''
+            };
+        };
+
+        function andScript(arrData) {
+            var str = "";
+            for (var i = 0; i < arrData.length; i++) {
+                str = str + arrData[i] + "xtx";
+            }
+            return str.substring(0, str.length - 3);
+        }
+
+        $.loadSummary = function () {
+            var param = $.getParameters();
+
+            $.ajax({
+                method: "POST",
+                url: "@Url.Content("~/api/weekly-wfh-report/schedule-summary")",
+                dataType: "json",   
+                data: { param },
+                success: function (result) {
+                    
+                    var filterActual = {
+                    logic: "and",
+                    filters: []
+                    }
+                    filterActual.filters.push(
+                        {
+                            field: 'Type',
+                            operator: 'eq',
+                            value: 'Actual'
+                        }
+                    )
+
+                    filterActual.filters.push(
+                        {
+                            field: 'Code',
+                            operator: 'neq',
+                            value: 'Other'
+                        }
+                    )
+
+                    var planSource = new kendo.data.DataSource({
+                        data: result,
+                        filter: { field: "Type", operator: "eq", value: "Plan" }
+                        });
+                    var actualSource = new kendo.data.DataSource({
+                        data: result,
+                        filter: filterActual
+                        });
+                    var chart = $("#chart").data("kendoChart");
+                    chart.setDataSource(planSource);
+                    document.getElementById('total-employee-text-chart').innerText = '@strTotalEmployee';
+                    // Calculate the total amount and display it
+                    planSource.fetch(function () {
+                        var totalAmount = 0
+                        var filteredData = this.view(); // Get the filtered data
+                        for (var i = 0; i < filteredData.length; i++) {
+                            totalAmount += filteredData[i].Total; // Assuming the data objects have a 'value' field to tally
+                        }
+                        document.getElementById('total-amount-chart').innerText = totalAmount;
+                    });
+                    
+                    
+
+                    var secondChart = $("#secondChart").data("kendoChart");
+                    secondChart.setDataSource(actualSource);
+                    document.getElementById('total-employee-text-secondchart').innerText = "@strTotalEmployee";
+                    // Calculate the total amount and display it
+                    actualSource.fetch(function () {
+                        var totalAmount = 0
+                        var filteredData = this.view(); // Get the filtered data
+                        for (var i = 0; i < filteredData.length; i++) {
+                            totalAmount += filteredData[i].Total; // Assuming the data objects have a 'value' field to tally
+                        }
+                        document.getElementById('total-amount-secondchart').innerText = totalAmount;
+                    });
+
+                    var actualLocationSource = new kendo.data.DataSource({
+                        data: result,
+                        filter: { field: "Type", operator: "eq", value: "ActualLocation" }
+                        });
+                    const Max = Math.max.apply(Math, result.map(function(o) { return o.Total; })) 
+                    var thirdChart = $("#thirdChart").data("kendoChart");
+                    if (Max <= 10) {
+                        thirdChart.options.valueAxis.majorUnit = 1;
+                    }else{
+                        thirdChart.options.valueAxis.majorUnit = undefined;
+                    }
+                    thirdChart.refresh();
+                    thirdChart.setDataSource(actualLocationSource);  
+                }
+            });
+
+            
+        }
+
+        $.onDataBound = function (d) {
+            $.loadSummary();
+            var $grid = getGrid();
+            
+            if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+            var dataSource = $grid.dataSource.view();
+            firstLoad = false;
+
+            var indexFound = 0;
+
+            var listDate = [];
+
+            let loop = new Date(kendo.parseDate(tempDate.StartDate));
+
+            var index = 0;
+            while (loop <= kendo.parseDate(tempDate.EndDate)) {
+                        
+                index++;
+
+                if(kendo.toString($("#keyDate").data("kendoDatePicker").value(), 'dd/MM/yyyy') == kendo.toString(loop, 'dd/MM/yyyy') && indexFound == 0){
+                    indexFound = index;
+                } 
+
+                listDate.push(kendo.toString(loop, 'dddd, dd/MM/yyyy'));
+                let newDate = loop.setDate(loop.getDate() + 1);
+                loop = new Date(newDate);
+            }
+
+            $('.headerDay').each(function (e) {
+                $(this).removeClass('selectedDay');
+            });
+
+            $('.headerDay').eq(indexFound-1).addClass('selectedDay');
+
+            $("#grid").kendoTooltip({
+                filter: "th", // Select the th elements of the Grid.
+                //position: "bottom-center",
+                width: 175,
+                content: function(e){
+                    if(e.target.text() > 0 || e.target.text() < 15){
+                        return listDate[e.target.text() - 1];
+                    } else {
+                        return '';
+                    }
+                }
+            }).data("kendoTooltip");
+
+        };
+
+        app.registerHandler("downloadReportHandler", function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#StartDateReport").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#EndDateReport").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            var directorateList = $("#directorate").data("kendoDropDownTree").value();
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            var departmentList = $("#department").data("kendoDropDownTree").value();
+            var sectionList = $("#section").data("kendoDropDownTree").value();
+            var lineList = $("#line").data("kendoDropDownTree").value();
+            var groupList = $("#group").data("kendoDropDownTree").value();
+
+            var selectedNoReg = "";
+            var selectedPostCode = "";
+
+            if($("#SelectedNoReg").val() != "" && $("#employeeName").data("kendoAutoComplete").value() != ''){
+                selectedNoReg = $("#SelectedNoReg").val();
+            }
+
+            if($("#SelectedPostCode").val() && $("#employeeName").data("kendoAutoComplete").value() != ''){
+                selectedPostCode = $("#SelectedPostCode").val();
+            }
+
+            var directorateValue = [];
+
+            directorateList.forEach(
+                Directorate =>
+                    directorateValue.push(Directorate.split('#')[1])
+            );
+
+            var divisionValue = [];
+
+            divisionList.forEach(
+                Division =>
+                    divisionValue.push(Division.split('#')[1])
+            );
+
+            var departmentValue = [];
+
+            departmentList.forEach(
+                Department =>
+                    departmentValue.push(Department.split('#')[1])
+            );
+
+            var sectionValue = [];
+
+            sectionList.forEach(
+                Section =>
+                    sectionValue.push(Section.split('#')[1])
+            );
+
+            var lineValue = [];
+
+            lineList.forEach(
+                Line =>
+                    lineValue.push(Line.split('#')[1])
+            );
+
+            var groupValue = [];
+
+            groupList.forEach(
+                Group =>
+                    groupValue.push(Group.split('#')[1])
+            );
+
+            window.open(app.resolveUrl("~/api/weekly-wfh-report/download?employeeName="+EmployeeName + "&noReg=" + selectedNoReg + "&postCode=" + selectedPostCode +"&dateFrom=" + DateFrom 
+            + "&dateTo=" + DateTo + "&listDirectorate=" + encodeURIComponent(directorateValue) 
+            + "&listDivision=" + encodeURIComponent(divisionValue) + "&listDepartment=" + encodeURIComponent(departmentValue) 
+            + "&listSection=" + encodeURIComponent(sectionValue) + "&listLine=" + encodeURIComponent(lineValue) 
+            + "&listGroup=" + encodeURIComponent(groupValue) + "&class=" + $("#class").val()), "_blank");
+        });
+     })(jQuery, app);
+</script>

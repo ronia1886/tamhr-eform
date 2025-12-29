@@ -1,0 +1,72 @@
+﻿@model TAMHR.ESS.Domain.FormQuestion
+@{ 
+    var hasParent = Model.ParentFormQuestionId.HasValue;
+
+    var dataSource = new[]
+    {
+        new { Text = "Previous Answer", Value = "previous-form-submission" }
+    };
+}
+<form action="~/api/form-question" method="@ApplicationHelper.Method(Model.Id)">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.FormId)
+    @Html.HiddenFor(x => x.ParentFormQuestionId)
+    <div class="row">
+        <div class="form-group col-md-@(hasParent ? 6 : 12)">
+            <label>@Localizer["Question Type"]<span class="required" aria-required="true"> * </span></label>
+            @Html.KendoComboBoxFor(x => x.QuestionTypeCode, "QuestionType").HtmlAttributes(new { @class = "form-control", data_validation_for = "QuestionTypeCode" })
+            <span class="invalid" data-validation-for="QuestionTypeCode"></span>
+        </div>
+        @if (hasParent)
+        {
+            <div class="form-group col-md-6">
+                <label>@Localizer["Question Type"]</label>
+                @(Html.Kendo().ComboBoxFor(x => x.DefaultValue)
+                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "DefaultValue" })
+                        .DataValueField("Value")
+                        .DataTextField("Text")
+                        .BindTo(dataSource)
+                )  
+                <span class="invalid" data-validation-for="DefaultValue"></span>
+            </div>
+        }
+    </div>
+    <div class="row">
+        <div class="form-group col-12">
+            <label>@Localizer["Key Code"]</label>
+            @Html.TextBoxFor(x => x.KeyCode, new { @class = "form-control", data_validation_for = "KeyCode" })
+            <span class="invalid" data-validation-for="Title"></span>
+        </div>
+        <div class="form-group col-12">
+            <label>@Localizer["Question"]<span class="required" aria-required="true"> * </span></label>
+            @Html.TextBoxFor(x => x.Title, new { @class = "form-control", data_validation_for = "Title" })
+            <span class="invalid" data-validation-for="Title"></span>
+        </div>
+        <div class="form-group col-12">
+            <input type="hidden" name="IsActive" value="@Model.IsActive.ToString()" />
+            <label>@Localizer["Active"]</label>
+            <div class="custom-control custom-switch">
+                @Html.CheckBox("chkIsActive", Model.IsActive, new { @class = "custom-control-input", id = "chkIsActive" })
+                <label class="custom-control-label" for="chkIsActive">@Localizer["Marked as active or not"]</label>
+            </div>
+            <span class="invalid" data-validation-for="IsActive"></span>
+        </div>
+        @{
+            if (Model.Id != Guid.Empty && Model.ParentFormQuestionId != null)
+            {
+                <div class="form-group col-md-12">
+                    <partial name="~/Areas/MasterData/Views/Shared/_FormQuestionDetailGrid.cshtml" model="Model" />
+                </div>
+            }
+        }
+
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script>
+    $("#chkIsActive").on("click", function () {
+        $("input[name='IsActive']").val($("#chkIsActive").is(":checked"));
+    });
+</script>

@@ -1,0 +1,464 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree");
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+
+    var now = DateTime.Now;
+    var minDate = new DateTime(now.Year, now.Month, 1);
+    var maxDate = minDate.AddMonths(1).AddDays(-1);
+
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />
+}
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>       
+      .legend-item
+      {
+        font: 12px 'Noto Sans';  
+        margin: 2px;
+        cursor:pointer;  
+      }
+      .legend-item .legend-marker
+      {
+        display:inline-block;
+        width:8px;
+        height:8px;
+      }
+      .k-grid-header .k-grid-header-wrap th.k-header {
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow: visible;
+            white-space: normal;
+        }
+    </style>
+}
+
+@* //ADD CHART SUMMARY TO THE TABLE
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-12">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Report Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Report summary by absence code"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12 analytic-block">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Orientation(ChartLegendOrientation.Vertical)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+*@
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title" id="titleSummary">@Localizer["Proxy Time Log"] @minDate.ToString("dd/MM/yyyy") - @maxDate.ToString("dd/MM/yyyy")</h4>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                                    @Localizer["Download"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        <input id="SelectedNoReg" hidden/>
+                        <div class="col-md-3">
+                            <label>@Localizer["Employee"]</label>
+                            @*@(Html.Kendo().TextBox()
+                            .Name("employeeName")
+                            .Deferred()
+                            )*@
+                            @(Html.Kendo().AutoComplete()
+                            .Name("employeeName")
+                            .DataTextField("Name")
+                            .Filter("contains")
+                            .Placeholder(Localizer["Find user..."].Value)
+                            .MinLength(3)
+                            .Delay(500)
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataSource(source =>
+                            {
+                                source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/getactives"))))
+                                    .PageSize(30)
+                                    .Sort(sort => sort.Add("Name"))
+                                    .Schema(config => config.Data("Data").Total("Total"));
+                            })
+                            .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                            .Events(events => events.Select("EmployeeSelect"))
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Directorate"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("directorate selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDirectorate");
+                                    })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Division"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("division selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDivision");
+                                    })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("department selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDepartment");
+                                    })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("section selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeSection");
+                                    })
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Line"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("line")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("line selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeLine");
+                                    })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select line"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Group"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("group")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("group selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select group"].Value)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Class"]</label>
+                            @(Html.Kendo().ComboBox()
+                        .Name("class")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .DataTextField("Class")
+                        .DataValueField("Class")
+                        .Placeholder(Localizer["Please select class"].Value)
+                        //.ClearButton(true)
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/absence-log-tracking/get-class")))
+                        .Sort(s => s.Add("Class"))
+                        )
+                        .SelectedIndex(-1)
+                        .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date From"]</label>
+                            @(Html.Kendo().DatePicker()
+                            .Name("startDate")
+                            .Value(minDate)
+                            .Format("dd/MM/yyyy")
+                            .HtmlAttributes(new { placeholder = "Please select date", style = "width:100%", @onchange = "ChangeFilterDate()" })
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date To"]</label>
+                            @(Html.Kendo().DatePicker()
+                            .Name("endDate")
+                            .Value(maxDate)
+                            .Format("dd/MM/yyyy")
+                            .HtmlAttributes(new { placeholder = "Please select date", style = "width:100%", @onchange = "ChangeFilterDate()" })
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Presence Code"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("presenceCode")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataTextField("ObjectText")
+                            .DataValueField("CodePresensi")
+                            .Placeholder(Localizer["Please select presence code"].Value)
+                            .ClearButton(true)
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/absence-log-tracking/get-presence-code")))
+                            .Sort(s => s.Add("ObjectText"))
+                            )
+                            .SelectedIndex(-1)
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Modified Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                            .Name("createdDate")
+                            .Format("dd/MM/yyyy")
+                            .HtmlAttributes(new { placeholder = "Please select date", style = "width:100%" })
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Modified By"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("createdName")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .Placeholder(Localizer["Please select modified by"].Value)
+                            .ClearButton(true)
+                            .Filter("contains")
+                            .SelectedIndex(-1)
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-9" style="text-align:right">
+                            <label>&nbsp;</label>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="$.onSearch();"><span class="ft-search"></span> Search</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.AbsenceLogTrackingStoredEntity>
+                    ()
+                    .Name("gridReport")
+                    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" }) 
+                    .Pageable(options =>
+                        {
+                            options.Input(true);
+                            options.Numeric(false);
+                            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                        })
+                    .HtmlAttributes(new { style = "height:600px;" })
+                    .Sortable()
+                    .Resizable(resizable => resizable.Columns(true))
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Scrollable()
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/absence-log-tracking/get-reports"))
+                        .Data("$.getDataReport")
+                        )
+                    )
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title(Localizer["Employee"].Value).ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(JobName, '-')#</span>
+                                </div>
+                            </div>
+                        ").Width(250)
+                        .Locked(true);
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Proxy In"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.ProxyIn).Title(Localizer["Before"].Value).Format("{0:dd/MM/yyyy HH:mm}").Width(200).ClientTemplate(@"
+                                    <span class=""font-red"">#:$.toDefault(kendo.toString(ProxyIn, 'dd/MM/yyyy HH:mm tt'), '?')#</span>
+                                ");
+                                col.Bound(o => o.MemoProxyIn).Title(Localizer["After"].Value).Format("{0:dd/MM/yyyy HH:mm}").Width(200).ClientTemplate(@"
+                                    <span class=""font-green-jungle"">#:$.toDefault(kendo.toString(MemoProxyIn, 'dd/MM/yyyy HH:mm tt'), '?')#</span>
+                                ");
+                            });
+                        });
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Proxy Out"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.ProxyOut).Title(Localizer["Before"].Value).Format("{0:dd/MM/yyyy HH:mm}").Width(200).ClientTemplate(@"
+                                    <span class=""font-red"">#:$.toDefault(kendo.toString(ProxyOut, 'dd/MM/yyyy HH:mm tt'), '?')#</span>
+                                ");
+                                col.Bound(o => o.MemoProxyOut).Title(Localizer["After"].Value).Format("{0:dd/MM/yyyy HH:mm}").Width(200).ClientTemplate(@"
+                                    <span class=""font-green-jungle"">#:$.toDefault(kendo.toString(MemoProxyOut, 'dd/MM/yyyy HH:mm tt'), '?')#</span>
+                                ");
+                            });
+                        });
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Presence Code"].Value);
+                            group.Columns(col =>
+                            {
+                                col.Bound(o => o.AbsentName).Title(Localizer["Before"].Value).ClientTemplate(@"
+                                    <div>
+                                        #:$.toDefault(AbsentStatus, '-')# - #:$.toDefault(AbsentName, '-')#
+                                    </div>
+                                ").Width(200);
+                                col.Bound(o => o.MemoAbsentName).Title(Localizer["After"].Value).ClientTemplate(@"
+                                    <div>
+                                        #:$.toDefault(MemoAbsentStatus, '-')# - #:$.toDefault(MemoAbsentName, '-')#
+                                    </div>
+                                ").Width(200);
+                            });
+                        });
+                        //columns.Bound(x => x.DocumentApprovalId).Title("Supporting Document")
+                        //.ClientTemplate("#if ($.toDefault(DocumentApprovalId, '-')!='-') { #"+
+                        //@"<a href=""javascript:;"" class=""btn dark btn-sm"" data-trigger=""modal"" data-modal-title=""Tracking Approval - #:$.toDefault(DocumentNumber, '-')#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""#:$.toDefault(DocumentApprovalId, '-')#"">
+                        //                        <i class=""icon-doc""></i> <span class=""d-none d-md-inline"">#:$.toDefault(DocumentNumber, '-')#</span>
+                        //</a>" +
+                        //"# }# ").Width(200);
+                        columns.Bound(x => x.DocumentURL).Title("Supporting Document")
+                        .ClientTemplate("#if ($.toDefault(DocumentURL, '-')!='-') { #"+
+                        @"<a class=""btn dark btn-sm"" href=""#:app.resolveUrl(DocumentURL)#"" target=""_blank"">
+                                                <i class=""icon-doc""></i> <span class=""d-none d-md-inline"">#:$.toDefault(DocumentNumber, '-')#</span>
+                        </a>" +
+                        "# }# ").Width(200);
+                        columns.Group(group =>
+                        {
+                            group.Title(Localizer["Modified"].Value);
+                            group.Columns(col =>
+                            {
+                                columns.Bound(x => x.CreatedDate).Title("Modified Date").Format("{0:dd/MM/yyyy HH:mm tt}").Width(200);
+                                columns.Bound(x => x.CreatedName).Title("Modified By").Width(200);
+                            });
+                        });
+                    })
+                    .Events(events =>
+                    {
+                        events.DataBound("$.OnDataBound");
+                    })
+                    .Scrollable()
+                    .Deferred()
+                    )
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

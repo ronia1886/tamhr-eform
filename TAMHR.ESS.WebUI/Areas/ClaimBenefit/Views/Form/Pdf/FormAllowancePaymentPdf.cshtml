@@ -1,0 +1,715 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Buat matrix Print Out
+    // var getPrintOut = coreService.GetPrintOut().ToList();
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string HRSectionHead = "";
+    string Requester = "";
+    string SectionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRSectionHead")
+        {
+            HRSectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+
+<hr />
+
+
+<div style="text-align:center;width:100%;padding-top:20px">
+    <table class="tableizer-table" style="font-family:'Segoe UI'; font-size:12px; width: 80%; margin-left:15%;margin-right:15%;" border="0" cellspacing="0" cellpadding="0">
+        <thead>
+            <tr class="tableizer-firstrow">
+                <td class="bold" align="center" style="font-size:14px;border-top:0px !important" colspan="4">FORMULIR PEMBAYARAN TUNJANGAN</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="text-align: center;" colspan="4">(Dilampirkan dengansurat-surat yang diperlukan)</td>
+            </tr>
+            <tr>
+                <td class="border">Nama</td>
+                <td class="border" colspan="3">@org.Name</td>
+            </tr>
+            <tr>
+                <td class="border">No. Registrasi</td>
+                <td class="border" colspan="3">@org.NoReg</td>
+            </tr>
+            <tr>
+                <td class="border">Kelas</td>
+                <td class="border" colspan="3">@org.EmployeeSubgroupText</td>
+            </tr>
+            <tr>
+                <td class="border">Divisi</td>
+                <td class="border" colspan="3">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            </tr>
+            <tr>
+                <td class="border">Department</td>
+                <td class="border" colspan="3">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+            </tr>
+            <tr>
+                <td class="border">Seksi</td>
+                <td class="border" style="width:200px">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+                <td class="border" style="width:200px">No. Extention</td>
+                <td class="border" style="width:150px"></td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+<p></p>
+<table class="tableizer-table" border="1" style="width:100%;font-family:'Segoe UI'; font-size:12px" cellspacing="0" cellpadding="0">
+    <thead>
+        <tr class="tableizer-firstrow">
+            <th colspan="4">K E T E R A N G A N</th>
+            <th colspan="4">TANGGAL (**)</th>
+            <th>JUMLAH UANG</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td rowspan="2">1.</td>
+            <td colspan="3">KELAHIRAN ANAK KE : (1) ; (2) ; (3)</td>
+            <td colspan="4" rowspan="2"></td>
+            <td rowspan="2"></td>
+        </tr>
+        <tr>
+            <td colspan="3">Nama Anak :</td>
+        </tr>
+        <tr>
+            <td rowspan="2">2.</td>
+            <td colspan="3">PERNIKAHAN</td>
+            <td colspan="4" rowspan="2" align="center">
+                @if (typeof(MarriageAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MarriageAllowanceViewModel);
+                    string formated_date = eye.WeddingDate.HasValue ? eye.WeddingDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+            <td rowspan="2" align="center">
+                @if (typeof(MarriageAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MarriageAllowanceViewModel);
+                    <span> @string.Format("{0:N}", Convert.ToDecimal(eye.AmountAllowance))</span>
+                }
+                @*@Html.Raw((formKey.Equals("marriage-allowance") ? "0" : "&nbsp"))*@
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <label>
+                    @if (typeof(MarriageAllowanceViewModel) == obj.GetType())
+                    {
+                        var eye = (obj as MarriageAllowanceViewModel);
+                        if (eye.GenderCode == "perempuan")
+                        {
+                            <span>Nama Istri / </span>
+                            <span style="text-decoration:line-through"> Suami :</span>
+                            <span class="bold">@eye.PartnerName</span>
+                        }
+                        else
+                        {
+                            <span>Nama  </span>
+                            <span style="text-decoration:line-through"> Istri </span>
+                            <span>/ Suami :</span>
+                            <span class="bold">@eye.PartnerName</span>
+
+                        }
+
+                    }
+                    else
+                    {
+                        <span>Nama Istri / Suami :</span>
+
+                    }
+                </label>
+
+            </td>
+        </tr>
+        <tr>
+            <td rowspan="4">3</td>
+            <td colspan="3">KEDUKAAN</td>
+            <td colspan="4" rowspan="4" align="center">
+                @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MisseryAllowanceViewModel);
+                    string formated_date = eye.MisseryDate.HasValue ? eye.MisseryDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+
+            </td>
+            <td rowspan="4" align="center">
+                @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MisseryAllowanceViewModel);
+                    <span> @eye.AllowancesAmount.ToString("N0") @*@string.Format("{0:N}", eye.AllowancesAmount)*@ </span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                Atas Nama :
+                <label class="bold">
+                    @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                    {
+                        var eye = (obj as MisseryAllowanceViewModel);
+                        @if (eye.IsMainFamily == "ya")
+                        {
+                            <span>@eye.OtherFamilyName</span>
+                        }
+                        @if (eye.IsMainFamily == "tidak")
+                        {
+                            <span>@eye.FamilyName</span>
+                        }
+                    }
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" rowspan="2">Hubungan</td>
+            <td height="20px">
+                <label>
+                    @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                    {
+                        var eye = (obj as MisseryAllowanceViewModel);
+                        @if (eye.IsMainFamily == "ya")
+                        {
+                            if (eye.FamilyRelation != null)
+                            {
+                                if (@eye.FamilyRelation.ToLower() == "istri")
+                                {
+                                    <span class="bold">@eye.FamilyRelation / </span><span style="text-decoration:line-through">Suami </span><span class="bold">/</span><span style="text-decoration:line-through">Anak </span>
+                                }
+                                else if (@eye.FamilyRelation.ToLower() == "suami")
+                                {
+                                    <span style="text-decoration:line-through">Istri </span><span class="bold">/ @eye.FamilyRelation / </span><span style="text-decoration:line-through">Anak </span>
+                                }
+                                else
+                                {
+                                    <span style="text-decoration:line-through">Istri</span>
+                                    <span>/</span>
+                                    <span style="text-decoration:line-through">Siami </span>
+                                    <span>/</span><span class="bold">@eye.FamilyRelation</span>
+                                }
+                            }
+
+                        }
+
+                        @if (eye.IsMainFamily == "tidak")
+                        {
+                            <span style="text-decoration:line-through">Istri / Suami / Anak (*) </span>
+                        }
+                    }
+                    else
+                    {
+                        <span>Istri / Suami / Anak (*) </span>
+                    }
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <td height="20px">
+                <label>
+                    @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                    {
+                        var eye = (obj as MisseryAllowanceViewModel);
+                        if (@eye.IsMainFamily == "ya")
+                        {
+                            <span style="text-decoration:line-through">Orang tua / Mertua / Kakek-Nenek (*) </span>
+                        }
+
+                        @if (eye.IsMainFamily == "tidak")
+                        {
+                            if (eye.NonFamilyRelationship.ToLower() == "nenek")
+                            {
+                                <span style="text-decoration:line-through">Orang Tua / Mertua / Kakek</span>
+                                <span class="bold">/ Nenek</span>
+                            }
+
+                            else if (eye.NonFamilyRelationship.ToLower() == "kakek")
+                            {
+                                <span style="text-decoration:line-through">Orang Tua / Mertua / </span>
+                                <span class="bold">Kakek /</span>
+                                <span style="text-decoration:line-through"> Nenek</span>
+                            }
+                            else if (eye.NonFamilyRelationship.ToLower() == "ayahkandung" || eye.NonFamilyRelationship.ToLower() == "ibukandung")
+                            {
+                                <span class="bold">@eye.NonFamilyRelationship</span>
+                                <span style="text-decoration:line-through">/ Mertua / Kakek / Nenek</span>
+                            }
+                            else
+                            {
+                                <span style="text-decoration:line-through">Orang Tua /</span>
+                                <span class="bold">Mertua</span>
+                                <span style="text-decoration:line-through"> / Kakek / Nenek</span>
+                            }
+
+                        }
+                    }
+                    else
+                    {
+                        <span>Orang tua / Mertua / Kakek-Nenek (*) </span>
+                    }
+                </label>
+            </td>
+        </tr>
+        <tr>
+            <td rowspan="2">4</td>
+            <td colspan="2" rowspan="2">KACA MATA</td>
+            <td>a. Lensa</td>
+            <td colspan="4" align="center">
+
+                @if (typeof(EyeglassesAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as EyeglassesAllowanceViewModel);
+                    string formated_date = eye.PurchaseLens.HasValue ? eye.PurchaseLens.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+            <td colspan="4" align="right">
+                @if (typeof(EyeglassesAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as EyeglassesAllowanceViewModel);
+                    if (eye.AmountLens > 0)
+                    {
+                        <span> @eye.AmountLens.ToString("N0") @*@string.Format("{0:N}", eye.AmountLens)*@</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td>b. Frame</td>
+            <td colspan="4" align="center">
+                @if (typeof(EyeglassesAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as EyeglassesAllowanceViewModel);
+                    string formated_date = eye.PurchaseFrame.HasValue ? eye.PurchaseFrame.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+            <td colspan="4" align="right">
+                @if (Model.Object is EyeglassesAllowanceViewModel)
+                {
+                    var eye = (obj as EyeglassesAllowanceViewModel);
+                    if (eye.AmountFrame > 0)
+                    {
+                        <span> @eye.AmountFrame.ToString("N0") @*@string.Format("{0:N}", eye.AmountFrame)*@</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td rowspan="7">5</td>
+            <td colspan="2" rowspan="7">REWARD</td>
+            <td>a. Personal Touch Activity (PTA)</td>
+            <td colspan="4" align="center">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    string valid = "";
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "pta"))
+                    {
+                        valid = "true";
+                    }
+                    if (!string.IsNullOrEmpty(valid))
+                    {
+                        string formated_date = eye.date.HasValue ? eye.date.Value.ToString("dd-MM-yyyy") : string.Empty;
+                        <span>@formated_date</span>
+                    }
+                }
+            </td>
+            <td align="right">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    double value = 0;
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "pta"))
+                    {
+                        value += ot.Total;
+                    }
+                    if (value != 0)
+                    {
+                        <span>@string.Format("{0:N}", value)</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td>b. Free Talk</td>
+            <td colspan="4" align="center">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    string valid = "";
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "fta"))
+                    {
+                        valid = "true";
+                    }
+                    if (!string.IsNullOrEmpty(valid))
+                    {
+                        string formated_date = eye.date.HasValue ? eye.date.Value.ToString("dd-MM-yyyy") : string.Empty;
+                        <span>@formated_date</span>
+                    }
+                }
+            </td>
+            <td align="right">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    double value = 0;
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "fta"))
+                    {
+                        value += ot.Total;
+                    }
+                    if (value != 0)
+                    {
+                        <span>@string.Format("{0:N}", value)</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td>c. Idea Suggestion</td>
+            <td colspan="4" align="center">
+                @if (Model.Object is IdeBerkonsepViewModel)
+                {
+                <span> @Model.DocumentApproval.CreatedOn.ToString("dd-MM-yyyy")</span>   
+                }
+            </td>
+            <td align="right">
+                @if (Model.Object is IdeBerkonsepViewModel)
+                {
+                    var eye = (obj as IdeBerkonsepViewModel);
+                    <span>   @eye.Amount.ToString("N0") @*@string.Format("{0:N}", eye.Amount)*@</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td>d. Quality Control Circle</td>
+            <td colspan="4"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>e. Quality Reward</td>
+            <td colspan="4"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>f. Safety / K3</td>
+            <td colspan="4"></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>
+                g.
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    string valid = "";
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "hrp"))
+                    {
+                        valid = "true";
+                    }
+                    if (!string.IsNullOrEmpty(valid))
+                    {
+                        <span>HRP</span>
+                    }
+                }
+            </td>
+            <td colspan="4" align="center">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    string valid = "";
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "hrp"))
+                    {
+                        valid = "true";
+                    }
+                    if (!string.IsNullOrEmpty(valid))
+                    {
+                        string formated_date = eye.date.HasValue ? eye.date.Value.ToString("dd-MM-yyyy") : string.Empty;
+                        <span>@formated_date</span>
+                    }
+                }
+            </td>
+            <td align="right">
+                @if (typeof(PtaAllowanceViewModel) == obj.GetType())
+                {
+                    double value = 0;
+                    var eye = (obj as PtaAllowanceViewModel);
+                    @foreach (var ot in eye.Summaries.Where(x => x.Reward == "hrp"))
+                    {
+                        value += ot.Total;
+                    }
+                    if (value != 0)
+                    {
+                        <span>@string.Format("{0:N}", value)</span>
+                    }
+                }
+            </td>
+        </tr>
+        <tr>
+            <td rowspan="3">6</td>
+            <td colspan="3">R E K R E A S I / P I K N I K (Lampirkan Proposal &amp; Nama Peserta)</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td rowspan="3" valign="middle" align="center">
+                @if (typeof(VacationAllowanceViewModel) == obj.GetType())
+                {
+                    var vacation = (obj as VacationAllowanceViewModel);
+                    double total = 0;
+                    foreach (var item in vacation.Summaries)
+                    {
+                        total = total + item.Total;
+                    }
+                    <span><b>@total.ToString("N0")</b></span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                a. Tujuan :
+                @if (typeof(VacationAllowanceViewModel) == obj.GetType())
+                {
+                    var vacation = (obj as VacationAllowanceViewModel);
+                    string tujuan = vacation.Location;
+                    <span><b>@tujuan</b></span>
+                }
+            </td>
+            <td colspan="4" align="center">
+                @if (typeof(VacationAllowanceViewModel) == obj.GetType())
+                {
+                    var vacation = (obj as VacationAllowanceViewModel);
+                    string formated_date = vacation.VacationDate.HasValue ? vacation.VacationDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">b. Jumlah Peserta</td>
+            <td style="text-align: right;" colspan="6">
+                @if (typeof(VacationAllowanceViewModel) == obj.GetType())
+                {
+                    var vacation = (obj as VacationAllowanceViewModel);
+                    double total = 0;
+                    foreach (var item in vacation.Summaries)
+                    {
+                        total = total + item.Qty;
+                    }
+                    <span><b>@total.ToString("N0")</b></span>
+                }
+
+                &nbsp; Karyawan
+            </td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td colspan="2">L A I N - L A I N</td>
+            <td>
+                @if (typeof(DistressedAllowanceViewModel) == obj.GetType())
+                {
+                    var diss = (obj as DistressedAllowanceViewModel);
+                    <span>Tunjangan Kesusahan</span>
+                }
+                @if (typeof(KbAllowanceViewModel) == obj.GetType())
+                {
+                    var diss = (obj as KbAllowanceViewModel);
+                    <span>Tunjangan KB</span>
+                }
+            </td>
+            <td colspan="4" align="center">
+                @if (typeof(DistressedAllowanceViewModel) == obj.GetType())
+                {
+                    var diss = (obj as DistressedAllowanceViewModel);
+                    string formated_date = diss.DateDistressed.HasValue ? diss.DateDistressed.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+                @if (typeof(KbAllowanceViewModel) == obj.GetType())
+                {
+                    var kb = (obj as KbAllowanceViewModel);
+                    string formated_date = kb.ActionKBDate.HasValue ? kb.ActionKBDate.Value.ToString("dd-MM-yyyy") : string.Empty;
+                    <span>@formated_date</span>
+                }
+            </td>
+            <td align="right">
+                @if (typeof(DistressedAllowanceViewModel) == obj.GetType())
+                {
+                    var diss = (obj as DistressedAllowanceViewModel);
+                    <span><b> @string.Format("{0:N}", Convert.ToDecimal(diss.AmountAllowance))</b></span>
+                }
+                @if (typeof(KbAllowanceViewModel) == obj.GetType())
+                {
+                    var kb = (obj as KbAllowanceViewModel);
+                    <span><b> @string.Format("{0:N}", Convert.ToDecimal(kb.Cost))</b></span>
+                }
+            </td>
+
+        </tr>
+        <tr>
+            <td colspan="9" valign="top" height="80px">
+                CATATAN :
+                @if (typeof(DistressedAllowanceViewModel) == obj.GetType())
+                {
+                    var diss = (obj as DistressedAllowanceViewModel);
+                    <span>@diss.Remarks</span>
+                }
+
+                @if (typeof(KbAllowanceViewModel) == obj.GetType())
+                {
+                    var kb = (obj as KbAllowanceViewModel);
+                    <span>@kb.Remarks</span>
+                }
+
+                @if (typeof(EyeglassesAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as EyeglassesAllowanceViewModel);
+                    <span>@eye.Remarks</span>
+                }
+
+                @if (typeof(MarriageAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MarriageAllowanceViewModel);
+                    <span>@eye.Remarks</span>
+                }
+
+                @if (typeof(VacationAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as VacationAllowanceViewModel);
+                    <span>@eye.Remarks</span>
+                }
+                @if (typeof(MisseryAllowanceViewModel) == obj.GetType())
+                {
+                    var eye = (obj as MisseryAllowanceViewModel);
+                    <span>@eye.Remarks</span>
+                }
+            </td>
+        </tr>
+    </tbody>
+</table>
+<p></p>
+
+<div style="text-align:center;width:100%;padding-top:20px">
+    <table class="tableizer-table" style=" width: 90%; margin-left:5%;margin-right:5%;font-family:'Segoe UI'; font-size:12px" cellspacing="0" cellpadding="0">
+        <thead>
+            <tr class="tableizer-firstrow">
+                <th style="text-align: left;" colspan="6">Jakarta, @DateTime.Now.ToString("dd MMMM yyyy")</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="border bold bg-gray" align="center" colspan="2">D I V I S I O N</td>
+                <td class="border bold bg-gray" align="center" rowspan="2">KARYAWAN YBS.</td>
+                <td style="width: 4px;" rowspan="3"></td>
+                <td class="border bold bg-gray" align="center" colspan="2">HRD</td>
+            </tr>
+            <tr>
+                <td class="border bold bg-gray" align="center">SECTION HEAD</td>
+                <td class="border bold bg-gray" align="center">ADMINISTRATION</td>
+                <td class="border bold bg-gray" align="center">SECTION HEAD</td>
+                <td class="border bold bg-gray" align="center">ADMINISTRATION</td>
+            </tr>
+            <tr height="80">
+                <td class="border" align="center" valign="bottom">@SectionHead</td>
+                <td class="border" align="center" valign="bottom"></td>
+                <td class="border" align="center" valign="bottom">@Requester</td>
+                <td class="border" align="center" valign="bottom">@HRSectionHead</td>
+                <td class="border" align="center" valign="bottom">@Approver</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+<p></p>
+<table class="tableizer-table" style="width:90%; font-family:'Segoe UI'; font-size:12px;margin-left:5%;;margin-right:5%;float:right" cellspacing="0" cellpadding="0">
+    <thead>
+        <tr class="tableizer-firstrow">
+            <td style="width: 157px; text-align: left;">1. FAD-HRD</td>
+            <th style="width: 4px;"></th>
+            <td style="width: 56px;">(Putih)</td>
+            <th style="width: 4px;"></th>
+            <th style="width: 297.133px;padding-left:2px" colspan="2" align="left" class="border">Diisi oleh petugas HRD</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="width: 157px;">2. FAD-Finance</td>
+            <td style="width: 4px;"></td>
+            <td style="width: 56px;">(Biru)</td>
+            <td style="width: 4px;"></td>
+            <td style="width: 100px;" class="border">Diterima tanggal</td>
+            <td style="width: 127.133px;" class="border"></td>
+        </tr>
+        <tr>
+            <td style="width: 157px;">3. Divisi bersangkutan</td>
+            <td style="width: 4px;"></td>
+            <td style="width: 56px;">(Merah)</td>
+            <td style="width: 4px;"></td>
+            <td style="width: 100px;" class="border">Petugas</td>
+            <td style="width: 127.133px;" class="border"></td>
+        </tr>
+    </tbody>
+</table>
+<p></p>

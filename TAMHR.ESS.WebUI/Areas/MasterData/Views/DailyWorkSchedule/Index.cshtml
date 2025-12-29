@@ -1,0 +1,502 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@{
+    var now = DateTime.Now;
+    var retro = 2015;
+    var yearNow = now.Year;
+    var list = new List<int>();
+    for (var i = yearNow; i >= retro; i--)
+    {
+        list.Add(i);
+    }
+    ScriptManager.RegisterReferences("colorpicker", "datepicker","dropdownlist","listview");
+    var isAdmin = User.Claims.Where(c=>c.Type == "Roles").Any(x=>x.Value.Contains("HR_ADMIN"));
+    var currentUser = User.GetClaim("NoReg");
+}
+
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/master-data/daily-work-schedule/download">
+                    @Localizer["Download Shift"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-shift-modal" data-modal-title="Upload Shift" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/daily-work-schedule">
+                    @Localizer["Upload Shift"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-ws-modal" data-modal-title="Upload Work Schedule" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/work-schedule">
+                    @Localizer["Upload Work Schedule"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-ews-modal" data-modal-title="Upload Employee Work Schedule" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/employee-work-schedule">
+                    @Localizer["Upload Employee Work Schedule"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-wsr-modal" data-modal-title="Upload Work Schedule Rule" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/work-schedule-rule">
+                    @Localizer["Upload Work Schedule Rule"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-eshift-modal" data-modal-title="Upload Single Substitution" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/employee-work-schedule/substitution/single">
+                    @Localizer["Upload Single Substitution"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-eshift-modal" data-modal-title="Upload Multiple Substitution" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/employee-work-schedule/substitution">
+                    @Localizer["Upload Multiple Substitution"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/x-kendo-tmpl" id="template">
+        <div class="col-md-6 col-12">
+            <div class="custom-control custom-checkbox d-inline">
+                <input id="#:Id#_cb" class="custom-control-input" type="checkbox" onchange = "CheckDiv(this) "name="Division[]" value="#:ObjectId#" #: Active ? "checked" : "" # />
+                <label class="custom-control-label" for="#:Id#_cb">#:ObjectText#</label>
+            </div>
+        </div>
+    </script>
+    <script type="text/javascript">
+        
+        function CheckAll(arg) {
+            var state = $(arg).is(':checked'); 
+            if (state == true) {
+                $(".custom-control-input").prop('checked', true);
+            }
+            else {
+
+                $(".custom-control-input").prop('checked', false);
+            }
+            
+        }
+
+        function CheckDiv(arg) {
+            var state = $("#select-all").attr("value");  
+            if (state == "true") {
+                $("#select-all").prop('checked', false);
+            }          
+        }
+
+        app.registerHandler("searchHandler", function () {``
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                query = $filterWrapper.data("query") || {},
+                startDate = $filterWrapper.find("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $filterWrapper.find("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                name = $filterWrapper.find("input[name='Name']").val(),
+                noreg = $filterWrapper.find("input[name='NoReg']").val();
+            
+            query.filter = [{
+                field: 'Date',
+                value: startDate,
+                operator: 'gte'
+            }, {
+                field: 'Date',
+                value: endDate,
+                operator: 'lte'
+            }, {
+                field: 'Name',
+                value: name,
+                operator: 'contains'
+            }, {
+                field: 'NoReg',
+                value: noreg,
+                operator: 'contains'
+            }];
+            
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                let $el = $(el),
+                    ds = $el.data("kendoGrid").dataSource;
+
+                let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                ds.query(executeQuery);
+            });
+
+            $filterWrapper.data("query", query);
+        });
+
+        $(function () {
+            $(document).on('focusin', function (e) {
+                e.stopImmediatePropagation();
+            });
+
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item ml-2">
+        <a class="nav-link active" id="ws-tab" data-toggle="tab" href="#ws" role="tab" aria-controls="ws" aria-selected="true">Work Schedule</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="shift-tab" data-toggle="tab" href="#shift" role="tab" aria-controls="shift" aria-selected="false">Shift</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="ews-tab" data-toggle="tab" href="#ews" role="tab" aria-controls="ews" aria-selected="false">Employee Work Schedule</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="wsr-tab" data-toggle="tab" href="#wsr" role="tab" aria-controls="ews" aria-selected="false">Work Schedule Rule</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="eshift-tab" data-toggle="tab" href="#eshift" role="tab" aria-controls="eshift" aria-selected="false">Substitution</a>
+    </li>
+    @if (isAdmin){
+    <li class="nav-item">
+        <a class="nav-link" id="wp-tab" data-toggle="tab" href="#wp" role="tab" aria-controls="wp" aria-selected="false">Employee WFO Plan</a>
+    </li>
+    }
+   
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="ws" role="tabpanel" aria-labelledby="ws-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 col-12 form-group">
+                                <label>Work Schedule Rule</label>
+                                @(Html.Kendo().ComboBox()
+                                    .Name("workScheduleDdl")
+                                    .HtmlAttributes(new { @class = "form-control" })
+                                    .DataTextField("Code")
+                                    .DataValueField("Code")
+                                    .Placeholder(Localizer["Select working schedule rule"].Value)
+                                    .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read.Url(Url.Content("~/api/master-data/work-schedule/get-rules")))
+                                        .Sort(sort => sort.Add("Code"))
+                                    )
+                                    .Events(events =>
+                                    {
+                                        events.Change(@<text>function() {
+                                        var value = this.value();
+                                        $("#loader").load(app.resolveUrl("~/core/home/workschedule"), { period: $("#periodDdl").val(), workScheduleRule: value });
+                                        }</text>);
+
+                                        events.DataBound(@<text>function() { this.trigger("change"); }</text>);
+                                    })
+                                    .SelectedIndex(0)
+                                    .Deferred()
+                                )
+                            </div>
+                            <div class="col-md-6 col-12 form-group">
+                                <label>Period</label>
+                                @(Html.Kendo().ComboBox()
+                                    .Name("periodDdl")
+                                    .HtmlAttributes(new { @class = "form-control" })
+                                    .BindTo(list)
+                                    .Placeholder(Localizer["Select period"].Value)
+                                    .Events(events =>
+                                    {
+                                        events.Change(@<text>function() {
+                                        var value = this.value();
+                                        $("#loader").load(app.resolveUrl("~/core/home/workschedule"), { period: value, workScheduleRule: $("#workScheduleDdl").val() });
+                                        }</text>);
+                                    })
+                                    .SelectedIndex(0)
+                                    .Deferred()
+                                )
+                            </div>
+                        </div>
+                        <hr />
+                        <div id="loader"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="shift" role="tabpanel" aria-labelledby="shift-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Shifts"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_Toolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.DailyWorkSchedule>()
+                            .Name("ws-grid")
+                            .HtmlAttributes(new { data_filter = "shift-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Id).Title("Schedule").ClientTemplate(@"
+                                    <div class=""media"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">
+                                                #:ShiftName# (#:ShiftCode#)
+                                            </h6>
+                                            <small class=""d-block"">
+                                                #:ShiftDesc#
+                                            </small>
+                                        </div>
+                                    </div>
+                                ");
+
+                                columns.Bound(c => c.NormalTimeIN).ClientTemplate(@"Normal Time IN<br/><small>#:$.toDefault(NormalTimeINText, '-')#</small>");
+                                columns.Bound(c => c.NormalTimeOut).ClientTemplate(@"Normal Time OUT<br/><small>#:$.toDefault(NormalTimeOutText, '-')#</small>");
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""shift-modal"" data-modal-title=""Edit Shift - #:ShiftCode#"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/dailyworkschedule/load"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-edit""></i>
+                                    </a>
+                                ").Width(90);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/master-data/daily-work-schedule/gets")))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("ShiftName");
+                                })
+                                .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="ews" role="tabpanel" aria-labelledby="ews-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Employee Working Schedules"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_EwsToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeWorkSchedule>()
+                            .Name("ews-grid")
+                            .HtmlAttributes(new { data_filter = "ews-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Id).Title("Schedule").ClientTemplate(@"
+                                    <div class=""media"">
+                                        <img class=""rounded mt-1"" src=""#:app.resolveImageUrl(NoReg)#"" alt=""avatar"" style=""width: 2.5rem; height: 2.5rem;"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                            <small>#:PostName#</small>
+                                        </div>
+                                    </div>
+                                ");
+
+                                columns.Bound(c => c.WorkScheduleRule);
+                                columns.Bound(c => c.StartDate).ClientTemplate(@"Start Date<br/><small>#:kendo.toString(StartDate, 'dd/MM/yyyy')#</small>");
+                                columns.Bound(c => c.EndDate).ClientTemplate(@"End Date<br/><small>#:kendo.toString(EndDate, 'dd/MM/yyyy')#</small>");
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""wsr-modal"" data-modal-title=""Edit Working Schedule - #:WorkScheduleRule#"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/employeeworkschedule/load"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-edit""></i>
+                                    </a>
+                                ").Width(90);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/master-data/employee-work-schedule/gets")))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("Name");
+                                })
+                                .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="wsr" role="tabpanel" aria-labelledby="wsr-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Working Schedule Rules"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_WsrToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.WorkScheduleRule>()
+                            .Name("wsr-grid")
+                            .HtmlAttributes(new { data_filter = "wsr-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Id).Title("Schedule").ClientTemplate(@"
+                                    <div class=""media"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">#:Code#</h6>
+                                            <small>Off Code - #:OffPresenceCode#</small>
+                                        </div>
+                                    </div>
+                                ");
+
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""ws-rule-modal"" data-modal-title=""Edit Rule - #:Code#"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/workschedulerule/load"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-edit""></i>
+                                    </a>
+                                ").Width(90);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/master-data/work-schedule-rule/gets")))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("Code");
+                                })
+                                .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="eshift" role="tabpanel" aria-labelledby="eshift-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["List of Substitution"]</h3>
+                        <div class="heading-elements">
+                            @await Html.PartialAsync("_EshiftToolbars")
+                        </div>
+                    </div>
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeSubstitutionView>()
+                            .Name("eshift-grid")
+                            .HtmlAttributes(new { data_filter = "eshift-filter" })
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Id).Title("Schedule").ClientTemplate(@"
+                                    <div class=""media"">
+                                        <img class=""rounded mt-1"" src=""#:app.resolveImageUrl('NoReg')#"" alt=""avatar"" style=""width: 2.5rem; height: 2.5rem;"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                            <small>#:PostName#</small>
+                                        </div>
+                                    </div>
+                                ");
+
+                                columns.Bound(c => c.Date).ClientTemplate(@"Date<br/><small>#:kendo.toString(Date, 'dd/MM/yyyy')#</small>");
+                                columns.Bound(c => c.ShiftCodeUpdate).ClientTemplate(@"Shift<br/><small>#:ShiftCodeUpdate#</small>");
+                                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""eshift-rule-modal"" data-modal-title=""Edit Substitution - #:Name# (#:kendo.toString(Date, 'dd/MM/yyyy')#)"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/employeeworkschedule/loadsubstitution"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-edit""></i>
+                                    </a>
+                                    <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/master-data/employee-work-schedule/remove-substitution"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-trash""></i>
+                                    </a>
+                                ").Width(140);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/master-data/employee-work-schedule/get-substitutions")))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("Name");
+                                    sort.Add("Date");
+                                })
+                                .PageSize(10)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="wp" role="tabpanel" aria-labelledby="wp-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">@Localizer["Working Plan"]</h3>
+                    </div>
+                    <div class="card-body p-0 table-wrap no-table-header">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.GeneralCategory>()
+                            .Name("wp-grid")
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.Id).ClientTemplate(@"
+                                    <div class=""media"">
+                                        <div class=""media-body ml-3"">
+                                            <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                        </div>
+                                    </div>
+                                ");
+
+                                columns.Bound(c => c.Id).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""wp-rule-modal"" data-modal-title=""Edit Rule - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/employeeworkschedule/loadplan"" data-parameters-id=""#:Id#"">
+                                        <i class=""ft-edit""></i>
+                                    </a>
+                                ").Width(90);
+                            })
+                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/master-data/employee-work-plan/gets")))
+                                .Sort(sort =>
+                                {
+                                    sort.Add("OrderSequence");
+                                })
+                                
+                            )
+                            .Deferred()
+                        )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

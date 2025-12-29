@@ -1,0 +1,487 @@
+﻿@{
+    ScriptManager.RegisterReferences("chart");
+}
+@using TAMHR.ESS.Infrastructure.Web.Authorization;
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var maxDate = DateTime.Now.Date;
+
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "numeric", "upload");
+    var listEmployeeStatus = new List<object> {
+        new { Text = "", Value = "" },
+        new { Text = "Employee", Value = "Employee" },
+        new { Text = "Pasangan", Value = "Pasangan" },
+        new { Text = "Anak", Value = "Anak" }
+    };
+}
+
+
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <script type="text/javascript" src="~/js/pages/vaccine-report.js" asp-append-version="true"></script>
+    <script src="https://kendo.cdn.telerik.com/2017.1.223/js/kendo.aspnetmvc.min.js"></script>
+    <script src="~/plugins/fancybox/jquery.fancybox.min.js" type="text/javascript"></script>
+
+    <partial name="_Script" />
+}
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/css/chat.css" />
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <link href="~/plugins/fancybox/jquery.fancybox.min.css" rel="stylesheet" />
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" onclick="$.download();">
+                    <i class="ft-download"></i> <span class="d-none d-sm-inline">@Localizer["Download"]</span>
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" id="btnUploadAutofill" data-trigger="modal" data-modal="VaccineReportUploadModal" data-modal-title="Upload Autofill" @*data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/vaccineschedule/download"*@>
+                    <i class="ft-upload"></i> <span class="d-none d-sm-inline">@Localizer["Upload Autofill"]</span>
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" id="btnUploadScheduleBackdate" data-trigger="modal" data-modal="VaccineReportUploadModal" data-modal-title="Upload Schedule Backdate" @*data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/vaccineschedule/download"*@>
+                    <i class="ft-upload"></i> <span class="d-none d-sm-inline">@Localizer["Upload Schedule Backdate"]</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+}
+
+@*<div class="card">
+        <div class="row d-flex no-padding row-col-separator-xl">
+            <div class="col-md-6">
+                <div class="m-widget">
+                    <div class="m-widget-header">
+                        <h3 class="m-widget-title">@Localizer["Report Summary"]</h3>
+                        <span class="m-widget-desc">@Localizer["Report summary by status"]</span>
+                    </div>
+                    <div class="m-widget-item pt-0">
+                        <div class="row">
+                            <div class="col-md-12">
+                                @(Html.Kendo().Chart<TAMHR.ESS.Infrastructure.ViewModels.SummaryViewModel>()
+                                   .Name("chart")
+                                   .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                   .Legend(legend => legend
+                                       .Position(ChartLegendPosition.Right)
+                                       .Align(ChartLegendAlign.Center)
+                                       .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                   )
+                                   .DataSource(ds => ds
+                                       .WebApi()
+                                       .ServerOperation(false)
+                                       .Read(read => read.Url(Url.Content("~/api/vaccine-report/summary")))
+                                   )
+                                   .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                   .Series(series =>
+                                   {
+                                       series.Donut(x => x.Total, x => x.Name)
+                                           .ColorField("Color")
+                                           .VisibleInLegendField("VisibleInLegend");
+                                   })
+                                   .AutoBind(false)
+                                   //.Tooltip(tooltip => tooltip
+                                   //    .Visible(true)
+                                   //    .Template("${ app.translate(category) }: ${ value }")
+                                   //)
+                                   .Deferred()
+                                )
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>*@
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Vaccine Submissions"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+                                <legend>Filter</legend>
+                                <div class="row container-by-date" style="padding-bottom:14px !important">
+                                    <div class="col-md-5 row">
+                                        <div class="col-md-6">
+                                            <label>@Localizer["Start Vaccine Date 1"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("vaccineDate1")
+                                                .Events(e => e.Change("$.filterChange"))
+                                                //.Value(DateTime.Now.Date)
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>@Localizer["End Vaccine Date 1"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("vaccineDate1End")
+                                                .Events(e => e.Change("$.filterChange"))
+                                                //.Value(DateTime.Now.Date)
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>@Localizer["Start Vaccine Date 2"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("vaccineDate2")
+                                                .Events(e => e.Change("$.filterChange"))
+                                                //.Value(DateTime.Now.Date)
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>@Localizer["End Vaccine Date 2"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("vaccineDate2End")
+                                                .Events(e => e.Change("$.filterChange"))
+                                                //.Value(DateTime.Now.Date)
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>@Localizer["Class"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("Class")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Class")
+                                                .DataValueField("Class")
+                                                .Placeholder(Localizer["Please select class"].Value)
+                                                .ClearButton(true)
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/vaccine-report/get-class")))
+                                                .Sort(s => s.Add("Class"))
+                                                )
+                                                .Events(e =>
+                                                {
+                                                    e.Change("$.filterChange");
+                                                })
+                                                .SelectedIndex(-1)
+                                                .Deferred()
+                                            )
+
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label>@Localizer["Position"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("JobName")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("JobName")
+                                                .DataValueField("JobName")
+                                                .Placeholder(Localizer["Please select position"].Value)
+                                                .ClearButton(true)
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/vaccine-report/get-position")))
+                                                .Sort(s => s.Add("JobCode"))
+                                                )
+                                                .Events(e =>
+                                                {
+                                                    e.Change("$.filterChange");
+                                                })
+                                                .SelectedIndex(-1)
+                                                .Deferred()
+                                            )
+
+                                        </div>
+                                        <div class="col-md-12">
+                                            <label>@Localizer["Division"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("division")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("ObjectText")
+                                                .DataValueField("ObjectText")
+                                                .Placeholder(Localizer["Please select division"].Value)
+                                                .ClearButton(true)
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/vaccine-report/get-division")))
+                                                .Sort(s => s.Add("ObjectText"))
+                                                )
+                                                .Events(e =>
+                                                {
+                                                    e.Change("$.filterChange");
+                                                })
+                                                .SelectedIndex(-1)
+                                                .Deferred()
+                                            )
+
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4 col-12">
+                                        <div>
+                                            <label>@Localizer["Vaccine Type"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                               .Name("vaccineType")
+                                               .HtmlAttributes(new { @class = "form-control" })
+                                               .DataTextField("Name")
+                                               .DataValueField("Code")
+                                               .Placeholder(Localizer["Please select vaccine type"].Value)
+                                               .ClearButton(true)
+
+                                               .DataSource(dataSource => dataSource
+                                               .Ajax()
+                                               .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=VaccineType")))
+                                               .Sort(s => s.Add("OrderSequence"))
+                                               )
+                                               .Events(e =>
+                                               {
+                                                   e.Change("$.filterChange");
+                                               })
+                                               .SelectedIndex(-1)
+                                               .Deferred()
+                                            )
+                                        </div>
+                                        <div>
+                                            <label>@Localizer["Hubungan"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("FamilyStatus")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Text")
+                                                .DataValueField("Value")
+                                                .Placeholder(Localizer["Please select Relation"].Value)
+                                                .ClearButton(true)
+                                                .BindTo(listEmployeeStatus)
+                                                .AutoBind(true)
+                                                .SelectedIndex(0)
+                                                .ClearButton(false)
+                                                .Placeholder(Localizer["Please select family status"].Value)
+                                                .Events(events => events.Change("$.filterChange"))
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div>
+                                            <label>@Localizer["Status"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("status")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Name")
+                                                .DataValueField("Code")
+                                                .Placeholder(Localizer["Please select status"].Value)
+                                                .ClearButton(true)
+
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=VaccineStatus")))
+                                                .Sort(s => s.Add("OrderSequence"))
+                                                )
+                                                .Events(e =>
+                                                {
+                                                    e.Change("$.filterChange");
+                                                })
+                                                .SelectedIndex(-1)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div>
+                                            <label>@Localizer["Hasil Kelayakan"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("eligible")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataTextField("Name")
+                                                .DataValueField("Code")
+                                                .Placeholder(Localizer["Please select Eligible"].Value)
+                                                .ClearButton(true)
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=EligibleVaccine")))
+                                                .Sort(s => s.Add("OrderSequence"))
+                                                )
+                                                .Events(e =>
+                                                {
+                                                    e.Change("$.filterChange");
+                                                })
+                                                .SelectedIndex(-1)
+                                                .Deferred()
+                                            )
+
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3 col-12" style="position: relative;">
+                                        <div style="position: absolute;bottom: 0;">
+                                            <label>@Localizer["Free Search"]</label>
+                                            <div class="input-group input-group-icon">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text font-red ">
+                                                        <i class="fa fa-search"></i>
+                                                    </span>
+                                                </div>
+                                                <input type="text" id="search" class="form-control" placeholder="@Localizer["Free search"]" />
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <input id="ctr" style="display:none" />
+                            <input id="NoregEmployee" style="display:none" />
+
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccinReportEmployeeView>()
+                               .Name("grid")
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Columns(columns =>
+                                {
+                                            columns.Bound(c => c.NoReg)
+                                            .Title(Localizer["Action"].Value)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .Width(200)
+                                            .ClientTemplate(
+                                                @"#if (VaccineId != null) { #
+                                                 <div class=""btn-group"">
+                                                    <a class=""btn btn-sm  btn-info"" data-trigger=""modal"" data-modal=""general-modal"" data-modal-title=""Vaccine Detail - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/core/vaccine/vaccinereportdetail"" data-parameters-NoReg=""#:NoReg#"" data-parameters-Name=""#:Name#"">
+
+                                                                            <i class=""ft-bell font-white""></i>
+                                                    </a>
+                                                </div> # }#
+
+
+                                                <div class=""btn-group"">
+                                                    <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""vaccine-modal"" data-modal-title=""Edit"" data-modal-ajax=""true"" data-ajax-url=""~/core/vaccine/load"" data-parameters-NoReg=""#:NoReg#"" data-parameters-Name=""#:Name#"">
+                                                        <i class=""ft-edit""></i>
+                                                    </a>
+                                                </div>
+                                                <!--<div class=""btn-group"">
+                                                    <a class=""btn btn-sm yellow-crusta"" data-trigger=""modal"" data-modal=""vaccineReportScheduleModal"" data-modal-title=""Set Schedule #:Name# [#:FamilyStatus#]"" data-modal-ajax=""true"" data-ajax-url=""~/core/vaccine/loadschedulebackdate"" data-parameters-NoReg=""#:NoReg#"" data-parameters-Name=""#:Name#"">
+                                                        <i class=""ft-calendar""></i>
+                                                    </a>-->
+                                                </div>
+                                                "
+                                            );
+                                    columns.Bound(c => c.NoReg).Width(150).Title("Status").ClientTemplate(@"<div class=""#:StatusCode == '8' ? 'done-color' :  '' #""> #:Status == null ? 'Not Submit' :  Status # </div>");
+                                    columns.Bound(c => c.IsAutofill).Width(150).Title("Autofill");
+                                    columns.Bound(c => c.EmployeeName).Width(200).Title("Employee Name");
+                                    columns.Bound(c => c.Name).Width(200).Title("Name");
+                                    columns.Bound(c => c.FamilyStatus).Width(150).Title("Hubungan").ClientTemplate(@"<div> #=$.renderFamily(FamilyStatus,EmployeeName)# </div>"); ;
+                                    columns.Bound(c => c.Class).Width(150).Title("Class Employee");
+                                    columns.Bound(c => c.JobName).Width(150).Title("Job Name");
+                                    columns.Bound(c => c.Division).Width(200).Title("Division");
+                                    columns.Bound(c => c.Department).Width(200).Title("Department");
+                                    columns.Bound(c => c.Section).Width(200).Title("Section");
+                                    columns.Bound(c => c.Email).Width(200).Title("Email");
+                                    columns.Bound(c => c.PhoneNumber).Width(200).Title("Phone Number");
+                                    columns.Bound(c => c.Age).Width(200).Title("Age");
+                                    columns.Bound(c => c.Eligible).Width(200).Title("Eligible").ClientTemplate(@"<div>#:Eligible == true ? 'Siap vaksin' :  (Eligible == false ? 'Tidak siap vaksin' :'')  # </div>");;
+                                    columns.Bound(c => c.VaccineDate1)
+                                    .ClientTemplate(@"<div class=""media""> #:$.toDefault(kendo.toString(VaccineDate1, 'dd-MMM-yyyy'), '')# </div>").Width(200).Title("Vaccine Date 1 ");
+                                    columns.Bound(c => c.SideEffects1).Width(200).Title("Efek Samping Vaksin 1");
+                                    columns.Bound(c => c.VaccineDate2)
+                                    .ClientTemplate(@"<div class=""media""> #:$.toDefault(kendo.toString(VaccineDate2, 'dd-MMM-yyyy'), '')# </div>").Width(200).Title("Vaccine Date 2 ");
+                                     columns.Bound(c => c.SideEffects2).Width(200).Title("Efek Samping Vaksin 2");
+                                    columns.Bound(c => c.RiwayatPenyakit).Width(200).Title("Riwayat Penyakit").ClientTemplate(@"<div> #=$.renderRiwayatPenyakit(VaccineId)# </div>");
+                                    columns.Bound(c => c.MonitoringNotes).Width(200).Title("Monitoring Notes")
+                                    .ClientTemplate(@"<div class=""#:MonitoringNotes != '' && Status != 'done' ? 'sick-group' :  '' #""> #=MonitoringNotes# </div>");
+                                })
+                               .DataSource(dataSource => dataSource
+                                   .Ajax()
+                                   .Read(read => read.Url(Url.Content("~/api/vaccine-report/get-report-employee")).Data("$.getData"))
+                                   .PageSize(20)
+                               .Sort(sort =>
+                               {
+                                   sort.Add(x => x.EmployeeName);
+                                   sort.Add(x => x.Age).Descending();
+                                   sort.Add(x => x.Class).Descending();
+                               })
+                               )
+                               .Sortable(sortable => sortable.Enabled(true))
+                               .Resizable(resizable => resizable.Columns(true))
+                               .Pageable(options =>
+                               {
+                                   options.Input(true);
+                                   options.Numeric(false);
+                                   options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                               })
+                               .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                               .Events(events =>
+                                {
+                                    events.DataBound("$.onDataBound");
+                                })
+                               .Scrollable(scrollable => scrollable.Height("auto"))
+                               //.ClientDetailTemplateId("template")
+                               .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="VaccineReportUploadModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss-modal="VaccineReportUploadModal">&times;</button>
+                <h4 class="modal-title">@Localizer["Upload Autofill"]</h4>
+                <input type="hidden" id="UploadType" />
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="file-group">
+                            <div class="input-group-area">
+                                <input id="UploadExcelPath" onfocus="this.blur()" readonly="readonly" placeholder="Nama File" />
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Browse"]
+                                    <input class="file" type="file" id="fUpload" data-auto-upload="false" name="UploadExcelPath" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                </div>
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Upload"]
+                                    <input class="file" type="button" value="Upload" data-trigger="handler" data-handler="uploadHandler" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <a class="btn green-haze btn-sm" id="btnDownloadTemplate" href="~/api/vaccine-report/download/download-template">
+                            <i class="ft-download"></i> Download Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

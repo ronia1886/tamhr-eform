@@ -1,0 +1,78 @@
+﻿@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/master-data/insurance/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Insurance" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/master-data/insurance">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Insurances"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.PersonalDataInsuranceView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "insurances-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Insurance").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">
+                                        Insurance: #:MemberNumber#
+                                    </h6>
+                                    <small class=""d-block""><b>Employee - </b> #:Name#</small>
+                                    # if (FamilyName) { #
+                                    <small class=""d-block""><b>Family - </b> #:FamilyName# (#:FamilyTypeCode#)</small>
+                                    # } #
+                                    <small class=""d-block""><b>Status - </b> <span class=""badge badge-primary badge-roundless"">#:CompleteStatus ? 'Complete' : 'Pending'#</span></small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""insurance-modal"" data-modal-title=""Edit Insurance"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/insurance/load"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                            </div>
+                        ").Width(150);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/insurance/get-insurances")))
+                        .Sort(sort =>
+                        {
+                            sort.Add("CompleteStatus").Descending();
+                        })
+                        .PageSize(10)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

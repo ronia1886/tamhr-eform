@@ -1,0 +1,430 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree");
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />
+
+}
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>       
+      .legend-item
+      {
+        font: 12px 'Noto Sans';  
+        margin: 2px;
+        cursor:pointer;  
+      }
+      .legend-item .legend-marker
+      {
+        display:inline-block;
+        width:8px;
+        height:8px;
+      }
+    </style>
+}
+
+<div class="card">
+    <div class="row d-flex no-padding row-col-separator-xl">
+        <div class="col-md-12">
+            <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Report Summary"]</h3>
+                    <span class="m-widget-desc">@Localizer["Report summary by absence code"]</span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12 analytic-block">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                //.HtmlAttributes(new { style = "width: 100%; height: auto; position: relative;" })
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    //.Width(200)
+                                    //.Position(ChartLegendPosition.Top)
+                                    .Orientation(ChartLegendOrientation.Vertical)
+                                    //.Height(50)
+                                    //.Visible(false)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                //.DataSource(ds => ds
+                                //    .WebApi()
+                                //    .ServerOperation(false)
+                                //    .Read(read => read.Url(Url.Content("~/api/daily-reconciliation/absence-summary")).Data("$.getParameters"))
+                                //)
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                    //series.Donut(new dynamic[] {
+                                    //    new {category = "Asia",value = 30.8,color = "#9de219"},
+                                    //    new {category = "Europe",value = 21.1,color = "#90cc38"},
+                                    //    new {category = "Latin America",value = 16.3,color = "#068c35"},
+                                    //    new {category = "Africa",value = 17.6,color = "#006634"},
+                                    //    new {category = "Middle East",value = 9.2,color = "#004d38"},
+                                    //    new {category = "North America",value = 4.6,color = "#033939"},
+                                    //    new {category = "Asia2",value = 30.8,color = "#9de219"},
+                                    //    new {category = "Europe2",value = 21.1,color = "#90cc38"},
+                                    //    new {category = "Latin America2",value = 16.3,color = "#068c35"},
+                                    //    new {category = "Africa2",value = 17.6,color = "#006634"},
+                                    //    new {category = "Middle East2",value = 9.2,color = "#004d38"},
+                                    //    new {category = "North America2",value = 4.6,color = "#033939"},
+                                    //    new {category = "Asia3",value = 30.8,color = "#9de219"},
+                                    //    new {category = "Europe3",value = 21.1,color = "#90cc38"},
+                                    //    new {category = "Latin America3",value = 16.3,color = "#068c35"},
+                                    //    new {category = "Africa3",value = 17.6,color = "#006634"},
+                                    //    new {category = "Middle East3",value = 9.2,color = "#004d38"},
+                                    //    new {category = "North America3",value = 4.6,color = "#033939"}
+                                    //}).ColorField("Color").VisibleInLegendField("VisibleInLegend");
+                                })
+                                //.AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                //.RenderAs(RenderingMode.Canvas)
+                                //.Series(series => {
+                                //    series.Column(x => x.Total, x => x.Name).ColorField("Color").VisibleInLegendField("VisibleInLegend");
+                                //})
+                                //.Legend(leg => 
+                                //    leg.Visible(false)
+                                // )
+                                //.CategoryAxis(axis => axis
+                                //    .Min(0)
+                                //    .Max(10)
+                                //    .Labels(labels=> labels.Rotation("auto"))
+                                //)
+                                //.Pannable(pannable => pannable
+                                //    .Lock(ChartAxisLock.Y)
+                                //)
+                                //.Zoomable(zoomable => zoomable
+                                //    .Mousewheel(mousewheel => mousewheel.Lock(ChartAxisLock.Y))
+                                //    .Selection(selection => selection.Lock(ChartAxisLock.Y))
+                                //)
+                                //.Tooltip(tooltip => tooltip
+                                //    .Visible(true)
+                                //    .Template("${ app.translate(category) }: ${ value }")
+                                //)
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Daily Reconciliation Report"]</h4>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                                    @Localizer["Download"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        <input id="SelectedNoReg" hidden/>
+                        <div class="col-md-3">
+                            <label>@Localizer["Employee"]</label>
+                            @(Html.Kendo().AutoComplete()
+                            .Name("employeeName")
+                            .DataTextField("Name")
+                            .Filter("contains")
+                            .Placeholder(Localizer["Find user..."].Value)
+                            .MinLength(3)
+                            .Delay(500)
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataSource(source =>
+                            {
+                                source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/daily-reconciliation/getactives"))))
+                                    .PageSize(30)
+                                    .Sort(sort => sort.Add("Name"))
+                                    .Schema(config => config.Data("Data").Total("Total"));
+                            })
+                            .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                            .Events(events => events.Select("EmployeeSelect"))
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Directorate"]</label>
+                            
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("directorate selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDirectorate");
+                                    })
+                                .Deferred()
+                            )
+                        
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Division"]</label>
+                            
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Enable(false)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .ClearButton(false)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("division selected");
+                                        
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDivision");
+                                    })
+                                .Deferred()
+                            )
+                        
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("department selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDepartment");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("section selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeSection");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Line"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("line")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select line"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("line selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeLine");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Group"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("group")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select group"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("group selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Class"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("class")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataTextField("Class")
+                            .DataValueField("Class")
+                            .Placeholder(Localizer["Select class"].Value)
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/daily-reconciliation/get-class")))
+                            .Sort(s => s.Add("Class"))
+                            )
+                            .SelectedIndex(-1)
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date From"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("dateFrom")
+                                .Value(DateTime.Now.Date)
+                                .Format("dd/MM/yyyy")
+                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Date To"]</label>
+                                @(Html.Kendo().DatePicker()
+                                .Name("dateTo")
+                                .Value(DateTime.Now.Date)
+                                .Format("dd/MM/yyyy")
+                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Presence Code"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("presenceCode")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataTextField("ObjectText")
+                            .DataValueField("CodePresensi")
+                            .Placeholder(Localizer["Please select presence code"].Value)
+                            .ClearButton(true)
+                            .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/daily-reconciliation/get-presence-code")))
+                                .Sort(s => s.Add("CodePresensi"))
+                            )
+                            .SelectedIndex(-1)
+                            .Deferred()
+                        )
+                        </div>
+                        <div class="col-md-3" style="text-align:right">
+                            <label>&nbsp;</label>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="$.onSubmit();"><span class="ft-search"></span> Search</button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">&nbsp;</div>
+                    </div>
+
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.DailyReconciliationReportView>
+            ()
+            .Name("grid")
+            .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.NoReg).Title(Localizer["Employee"].Value).Width(150).ClientTemplate(@"
+                    <div class=""media pull-left"">
+                        <div class=""media-img mr-2"">
+                            <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                        </div>
+                        <div class=""media-body"">
+                            <h6 class=""mb-0"">#:Name#</h6>
+                            <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                        </div>
+                    </div>
+");
+                columns.Bound(c => c.WorkingDate).Width(60).Title("Working Date")
+                .ClientTemplate(@"#:kendo.toString(WorkingDate,'dd/MM/yyyy')#").HtmlAttributes(new {@class="text-center" });
+                columns.Bound(c => c.WorkingTimeIn).Width(60).Title("Proxy In").HtmlAttributes(new { @class="text-center" })
+                .ClientTemplate(@"#:WorkingTimeIn!=null?kendo.toString(WorkingTimeIn,'HH:mm:ss'):""--""#");
+                columns.Bound(c => c.WorkingTimeInLocation).Width(60).Title("Location").HtmlAttributes(new { @class = "text-center" });
+                columns.Bound(c => c.WorkingTimeOut).Width(60).Title("Proxy Out").HtmlAttributes(new { @class="text-center" })
+                .ClientTemplate(@"#:WorkingTimeOut!=null?kendo.toString(WorkingTimeOut,'HH:mm:ss'):""--""#");
+                columns.Bound(c => c.WorkingTimeOutLocation).Width(60).Title("Location").HtmlAttributes(new { @class = "text-center" });
+                columns.Bound(c => c.AbsentStatus).Width(60).Title("Presence Code").HtmlAttributes(new { @class="text-center" });
+                columns.Bound(c => c.AbsentName).Width(60).Title("Remark");
+            })
+            .DataSource(dataSource => dataSource
+            .Ajax()
+            .Read(read => read.Url(Url.Content("~/api/daily-reconciliation/gets")).Data("$.getData"))
+            .PageSize(20)
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+            })
+            .HtmlAttributes(new { style = "height:600px;" })
+            .Sortable()
+            .Resizable(resizable => resizable.Columns(true))
+            .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+            .Scrollable()
+            .Events(events =>
+            {
+                events.DataBound("$.onDataBound");
+            })
+            .Deferred()
+            )
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

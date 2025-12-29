@@ -1,0 +1,41 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.OthersService OthersService
+@{
+    var currentDate = DateTime.Now.Date;
+    var noreg = User.GetClaim("NoReg");
+
+    var healthDeclaration = OthersService.GetHealthDeclaration(noreg, currentDate);
+    var workTypeCode = healthDeclaration?.WorkTypeCode;
+    var needToBeMonitoring = healthDeclaration?.IsSick ?? false;
+    var workFromHome = workTypeCode == "wt-wfh" || needToBeMonitoring;
+    var name = User.GetClaim("Name");
+}
+@if (needToBeMonitoring)
+{
+    <div class="fancy-alert">
+        <a href="javascript:;" class="fancy-alert-close d-none d-md-block" data-dismiss="alert">
+            <svg class="fancy-alert-close" width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.426 6.001l4.278-4.279A1.008 1.008 0 1 0 10.278.296L6 4.574 1.723.296A1.008 1.008 0 1 0 .295 1.722l4.278 4.28-4.279 4.277a1.008 1.008 0 1 0 1.427 1.426L6 7.427l4.278 4.278a1.006 1.006 0 0 0 1.426 0 1.008 1.008 0 0 0 0-1.426L7.425 6.001z" fill-rule="evenodd"></path>
+            </svg>
+        </a>
+        <div class="fancy-alert-icon bg-red-flamingo-opacity">
+            <i class="fa fa-warning"></i>
+        </div>
+        <div class="fancy-alert-info">
+            @Localizer["HealthDeclaration.Placeholder1", name]
+        </div>
+    </div>
+}
+@if (workFromHome)
+{
+    <div class="fancy-alert">
+        <a href="javascript:;" class="fancy-alert-close d-none d-md-block" data-dismiss="alert">
+            <svg class="fancy-alert-close" width="12" height="12" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7.426 6.001l4.278-4.279A1.008 1.008 0 1 0 10.278.296L6 4.574 1.723.296A1.008 1.008 0 1 0 .295 1.722l4.278 4.28-4.279 4.277a1.008 1.008 0 1 0 1.427 1.426L6 7.427l4.278 4.278a1.006 1.006 0 0 0 1.426 0 1.008 1.008 0 0 0 0-1.426L7.425 6.001z" fill-rule="evenodd"></path>
+            </svg>
+        </a>
+        <div class="fancy-alert-icon bg-green-jungle-opacity">
+            <i class="fa fa-warning"></i>
+        </div>
+        <div class="fancy-alert-info">@Localizer["HealthDeclaration.Placeholder2", name]</div>
+    </div>
+}

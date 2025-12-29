@@ -1,0 +1,240 @@
+﻿@model DocumentRequestDetailViewModel<OthersPersonalDataViewModel>
+@{
+    ScriptManager.RegisterReferences("combobox");
+
+    bool canEdit = AclHelper.CanEdit();
+
+    var displayName = User.GetClaim("Name");
+
+    var choices = new[]
+    {
+        new { Value = "transport-car", Text = "Car" },
+        new { Value = "transport-motor", Text = "Motor" },
+        new { Value = "transport-krl", Text = "KRL" },
+        new { Value = "transport-transj", Text = "Transjakarta" },
+        new { Value = "transport-bus", Text = "Bus/Angkot" },
+        new { Value = "transport-taxi", Text = "Taxi Online" },
+        new { Value = "transport-bicycle", Text = "Bicycle" }
+    };
+
+    var familyTypes = new[]
+    {
+        new { Value = "family-pasangan", Text = "Pasangan (Suami/Istri)" },
+        new { Value = "family-orangtua", Text = "Orang Tua" },
+        new { Value = "family-mertua", Text = "Mertua" },
+        new { Value = "family-saudara", Text = "Saudara/Keluarga" },
+        new { Value = "family-wali", Text = "Wali/Others" }
+    };
+
+    if (Model.Object.PublicTransportations == null)
+    {
+        Model.Object.PublicTransportations = Array.Empty<string>();
+    }
+}
+@section styles {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-tagsinput/bootstrap-tagsinput.min.js"></script>
+    <script type="text/javascript">
+        (function () {
+            $("main.page-content-wrapper").css("overflow", "inherit");
+        })(jQuery);
+    </script>
+}
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="p-4" style="height: 100%; background-color: #f8f9fa;">
+                <p class="text-uppercase font-weight-bold mb-0">@Localizer["Pengkinian Data Detail for {0}", displayName]</p>
+               
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Phone Number 1"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.PhoneNumber1)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.PhoneNumber1"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Phone Number 2"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.PhoneNumber2)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.PhoneNumber2"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Home Phone"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.HomePhoneNumber)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your home phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.HomePhoneNumber"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Email"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.PersonalEmail)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your email"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.PersonalEmail"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Public Transportations"] <span class="required" aria-required="true"> * </span></label>
+                        @for (var i = 0; i < choices.Length; i++)
+                        {
+                            var choice = choices[i];
+                            <div class="custom-control custom-checkbox mb-2">
+                                <input type="checkbox" name="Object.PublicTransportations[]" id="cb_@i" class="custom-control-input" value="@choice.Value" @(Model.Object.PublicTransportations.Contains(choice.Value) ? "checked" : string.Empty) @(!canEdit ? "disabled" : string.Empty) />
+                                <label class="custom-control-label" for="cb_@i"></label> @choice.Text
+                            </div>
+                        }
+                        <span class="invalid" data-validation-for="Object.PublicTransportations"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Hobbies"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.Hobbies)
+                            .HtmlAttributes(new { @class = "form-control", data_role = "tagsinput", placeholder = canEdit ? Localizer["Please input your hobbies"].Value : string.Empty })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.Hobbies"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Family Status"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().ComboBoxFor(x => x.Object.EmergencyCallRelationshipCode)
+                            .DataValueField("Value")
+                            .DataTextField("Text")
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your family relationship"].Value })
+                            .BindTo(familyTypes)
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.EmergencyCallRelationshipCode"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Family Name"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyCallRelationshipName)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your family name"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.EmergencyCallRelationshipName"></span>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Family Phone Number"] <span class="required" aria-required="true"> * </span></label>
+                        @(Html.Kendo().TextBoxFor(x => x.Object.EmergencyCallRelationshipPhoneNumber)
+                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your family phone number"].Value })
+                            .Enable(canEdit)
+                            .Deferred()
+                        )
+                        <span class="invalid" data-validation-for="Object.EmergencyCallRelationshipPhoneNumber"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="card-body">
+                <div class="row material">
+                    <div class="form-group col-md-12">
+                        <label>@Localizer["Notes"] <span class="required" aria-required="true"> * </span></label>
+                        <textarea name="Object.Remarks" class="form-control" rows="5" @(!canEdit ? "readonly" : string.Empty)>@Model.Object.Remarks</textarea>
+                        <span class="invalid" data-validation-for="Object.Remarks"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions
+{
+    @if (AclHelper.CanViewAction())
+    {
+        var canSubmit = AclHelper.CanSubmit();
+        <div class="row mb-5">
+            <div class="col-6 d-flex align-items-center">
+                @if (canSubmit)
+                {
+                    <div class="custom-control custom-checkbox mb-2">
+                        <input type="checkbox" name="Object.Confirmation" id="cb_confirmation" class="custom-control-input" value="True" />
+                        <label class="custom-control-label" for="cb_confirmation"></label> @Localizer["OthersPersonal.ConfirmationPlaceholder"]
+                    </div>
+                }
+                else
+                {
+                    <label>@Localizer["Send Update?"]</label>
+                }
+            </div>
+            <div class="col-6">
+                <div class="float-right">
+                    @if (canSubmit)
+                    {
+                        <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                            <i class="ft-check mr-1"></i> @Localizer["Submit"]
+                        </a>
+                    }
+                    @if (AclHelper.CanApprove())
+                    {
+                        <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                            <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                        </a>
+                    }
+                    @if (AclHelper.CanReject())
+                    {
+                        <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                            <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                        </a>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}

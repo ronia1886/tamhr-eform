@@ -1,0 +1,52 @@
+@font-face {
+  font-family: 'approval-icon';
+  src:  url('fonts/icomoon.eot?xf0rre');
+  src:  url('fonts/icomoon.eot?xf0rre#iefix') format('embedded-opentype'),
+        url('fonts/icomoon.ttf?xf0rre') format('truetype'),
+        url('fonts/icomoon.woff?xf0rre') format('woff'),
+        url('fonts/icomoon.svg?xf0rre#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+}
+
+[class^="approval-icon-"], [class*=" approval-icon-"] {
+    /* use !important to prevent issues with browser extensions that change fonts */
+    font-family: 'approval-icon' !important;
+    speak: none;
+    font-style: normal;
+    font-weight: normal;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    /* Better Font Rendering =========== */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.approval-icon-draft:before {
+  content: "\e900";
+}
+.approval-icon-inprogress:before {
+    content: "\e901";
+}
+.approval-icon-completed:before {
+    content: "\e902";
+}
+.approval-icon-cancelled:before {
+    content: "\e903";
+}
+.approval-icon-autocancel:before {
+    content: "\e903";
+}
+.approval-icon-rejected:before {
+    content: "\e904";
+}
+.approval-icon-revised:before {
+    content: "\e905";
+}
+.approval-icon-expired:before {
+    content: "\e904";
+}
+.approval-icon-locked:before {
+    content: "\e904";
+}

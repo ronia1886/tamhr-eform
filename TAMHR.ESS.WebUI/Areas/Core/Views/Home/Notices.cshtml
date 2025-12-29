@@ -1,0 +1,49 @@
+﻿<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Notices List"]
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_NotificationToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.Notification>()
+                    .Name("notificationGrid")
+                    .HtmlAttributes(new { @data_filter = "notification-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Message).Title("Notification").ClientTemplate(@"
+                            <div class=""d-block"">#=Message#</div>
+                            <div class=""d-flex mt-1"">
+                                <small class=""bold""><i class='icon-clock'></i> &nbsp;#:kendo.toString(CreatedOn, 'dd MMM yyyy - HH:mm tt')#</small>
+                            </div>
+                        ");
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/notification/notices")))
+                        .Sort(sort => sort.Add("CreatedOn").Descending())
+                    )
+                    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No notifications"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                    })
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

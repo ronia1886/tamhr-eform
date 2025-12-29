@@ -1,0 +1,135 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.DriversLicenseService driversLicenseService
+@model DocumentRequestDetailViewModel<DriverLicenseViewModel>
+@{
+    ScriptManager.RegisterReferences("combobox");
+     string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    bool canEdit = AclHelper.CanEdit();
+
+    var displayName = User.GetClaim("Name");
+    var NoReg = User.GetClaim("NoReg");
+    var isNew = true;
+
+    var simTypes = new[]
+    {
+        new { Value = "sim-a", Text = "Sim A" },
+        new { Value = "sim-b", Text = "Sim B" },
+        new { Value = "sim-c", Text = "Sim C" },
+    };
+
+}
+@section styles {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-tagsinput/bootstrap-tagsinput.css" />
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/bootstrap-tagsinput/bootstrap-tagsinput.min.js"></script>
+    <script type="text/javascript">
+        (function () {
+            $("main.page-content-wrapper").css("overflow", "inherit");
+        })(jQuery);
+    </script>
+}
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-12">
+            <div class="p-4" style="height: 100%; background-color: #f8f9fa;">
+                <p class="text-uppercase font-weight-bold mb-0">@Localizer["Pengkinian Data Detail for {0}", displayName]</p>
+
+            </div>
+        </div>
+    </div>
+</div>
+<form method="@(isNew ? "post" : "put")" action="~/api/drivers-license/save-datas">
+    <div class="card">
+        <div class="row no-gutters">
+            <div class="col-md-12">
+                <div class="card-body">
+                    <div class="row material">
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Sim Type"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().ComboBoxFor(x => x.Object.SimType)
+                                .DataValueField("Value")
+                                .DataTextField("Text")
+                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your sim type"].Value })
+                                .BindTo(simTypes)
+                                .Enable(canEdit)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Sim Number"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().TextBoxFor(x => x.Object.SimNumber)
+                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input your sim number"].Value })
+                                .Enable(canEdit)
+                                .Deferred()
+                            )
+                            <span class="invalid" data-validation-for="Object.PhoneNumber2"></span>
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Height"] <span class="required" aria-required="true"> * </span></label>
+                            @(Html.Kendo().TextBoxFor(x => x.Object.Height)
+                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Please input height"].Value })
+                                .Enable(canEdit)
+                                .Deferred()
+                            )
+                            <span class="invalid" data-validation-for="Object.Height"></span>
+                        </div>
+
+                        <div class="form-group col-md-6">
+                            <label>@Localizer["Validity Period"]</label>
+                            @(Html.Kendo().DatePickerFor(x => x.Object.ValidityPeriod)
+                                .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DateOfBirth", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Min(DateTime.Now)
+                                .Enable(canEdit)
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @*<div class="actions">
+            <a href="javascript:;" class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">
+                <i class="las la-save mr-1"></i> @Localizer["Save"]
+            </a>
+        </div>*@
+    <div class="card-header bordered">
+        <div class="float-right">
+            <a class="btn btn-primary mr-2" onclick="SaveAll()">
+                <i class="ft-check"></i> <span class="d-none d-md-inline" style="color:white">@Localizer["Submit"]</span>
+            </a>
+        </div>
+    </div>
+</form>
+
+<script>
+    function SaveAll() {
+        var simNumber = $("#Object_SimNumber").val();
+        var simType = $("#Object_SimType").val();
+        var validityPeriod = $("#Object_ValidityPeriod").val();
+        var height = $("#Object_Height").val();
+
+            app.confirm(kendo.format(app.translate("Are you sure to submit this Update data?"), app.translate(true)), function (d) {
+                var entity = {
+                    NoReg: '@NoReg',
+                    SimNumber: simNumber,
+                    SimType: simType,
+                    ValidityPeriod: validityPeriod,
+                    Height: height,
+                    RowStatus: 1,
+                };
+                if (d.value) {
+                    $.post(app.resolveUrl("~/api/drivers-license/submit-all"), entity, function (
+                        result) {
+                        if (result) {
+                            swal('success', 'Success save data', 'success');
+                            location.reload();
+                            topFunction();
+                        }
+                    });
+                }
+            });
+        }
+</script>

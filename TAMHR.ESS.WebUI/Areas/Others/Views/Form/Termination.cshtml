@@ -1,0 +1,1442 @@
+﻿@using TAMHR.ESS.Infrastructure
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.TerminationService terminationServices;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@model DocumentRequestDetailViewModel<TerminationViewModel>
+@{
+    string typeEdit = string.Empty;
+    var viewtype = Context.Request.Query["typeview"].ToString();
+    var type = ViewBag.type;
+    var typeform = type;
+    string mode = "";
+    bool canEdit = AclHelper.CanEdit();
+    bool canSubmit = AclHelper.CanSubmit();
+    bool canCancel = AclHelper.CanCancel();
+
+    bool canEditEndDate = canEdit;
+    bool canCreateTermination = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+
+    if (Model.Id == new Guid())
+    {
+        mode = "create";
+    }
+    else
+    {
+        mode = "edit";
+    }
+
+    if (mode == "edit")
+    {
+        var terminationType = terminationServices.GetTerminationTypeById(Model.Object.TerminationTypeId).Code;
+        if (terminationType == "resignation")
+        {
+            typeform = "resignation";
+        }
+        else
+        {
+            typeEdit = "termination";
+        }
+
+    }
+
+    var user = "";
+    if (Model.Object.NoReg == null)
+    {
+        user = User.GetClaim("NoReg");
+    }
+    else
+    {
+        user = Model.Object.NoReg;
+    }
+
+    var data = new TerminationViewModel();
+
+    if (type != "termination" && mode == "edit")
+    {
+        var datanew = terminationServices.GetTermination(Model.DocumentApprovalId);
+
+        data.NoReg = datanew.NoReg == null ? "-" : datanew.NoReg;
+        data.Name = datanew.Name == null ? "-" : datanew.Name;
+        data.Division = datanew.Division == null ? "-" : datanew.Division;
+        data.Position = datanew.Position == null ? "-" : datanew.Position;
+        data.Email = datanew.Email == null ? "-" : datanew.Email;
+    }
+    else
+    {
+        var datanew = terminationServices.GetTerminationEmployeeInfo(user).FirstOrDefault();
+
+        data.NoReg = datanew.NoReg == null ? "-" : datanew.NoReg;
+        data.Name = datanew.Name == null ? "-" : datanew.Name;
+        data.Division = datanew.Division == null ? "-" : datanew.Division;
+        data.Position = datanew.Position == null ? "-" : datanew.Position;
+        data.Email = datanew.Email == null ? "-" : datanew.Email;
+    }
+
+    if (type == "resignation")
+    {
+        Model.Object.NoReg = data.NoReg;
+    }
+    var layout = Layout;
+
+    ScriptManager.RegisterReferences("datetimepicker", "grid", "datepicker", "combobox", "chart", "numeric", "upload", "listview");
+    var allowedExtensions = new[] { ".pdf" };
+    var transactionId = Model.Id;
+
+    var resignationCreateValidate = terminationServices.ResignationCreateValidate(User.GetClaim("NoReg"), "Resignation", "Create");
+    var approverLevel = terminationServices.GetCurrentLevel(User.GetClaim("NoReg"), Model.FormKey, Model.DocumentApprovalId);
+    var allLevels = terminationServices.GetAllLevels(User.GetClaim("NoReg"), Model.FormKey);
+    var summary = terminationServices.GetTerminationExitClearancePdfData(Model.DocumentApprovalId).ToList();
+
+    bool isApprover = false;
+    var DocumentApproval = terminationServices.GetDocumentApprovalById(Model.DocumentApprovalId);
+
+    if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty)
+    {
+        var trackingApproval = ApprovalService.GetTrackingApprovals(Model.DocumentApprovalId).Where(a => a.NoReg != Model.Requester).FirstOrDefault();
+        var trackingUser = terminationServices.TrackingUser(Model.DocumentApprovalId, User.GetClaim("NoReg"));
+        if (trackingUser == false)
+        {
+            //User IR can edit another User IR Document
+            bool canTerminate = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+            if (canTerminate && Model.Progress == 0)
+            {
+                if (typeform == "resignation")
+                {
+
+                }
+                else
+                {
+                    canEdit = true;
+                    canSubmit = true;
+                    canCancel = true;
+                    canEditEndDate = true;
+                }
+            }
+            else if (canTerminate && Model.Progress >= 25)
+            {
+                //generate button ke view
+                if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed"))
+                {
+                    isApprover = true;
+                    canEditEndDate = true;
+                }
+            }
+        }
+        else
+        {
+            if (trackingApproval != null)
+            {
+                if (approverLevel < 2)
+                {
+                    if (typeform == "resignation")
+                    {
+                        if (viewtype == "submissionlist")
+                        {
+                            //do nothing
+                            ////User IR can edit another User IR Document
+                            bool canTerminate = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+                            if (canTerminate)
+                            {
+                                //generate button ke view
+                                if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed") && Model.Progress >= 25)
+                                {
+                                    isApprover = true;
+                                    canEditEndDate = true;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            if (Model.Object.NoReg != User.GetClaim("NoReg"))
+                            {
+                                isApprover = true;
+                                if (Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed")
+                                {
+                                    canEditEndDate = true;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (viewtype == "submissionlist")
+                        {
+                            if (Model.Requester == User.GetClaim("NoReg"))
+                            {
+                                //Do nothing
+                                ////User IR can edit another User IR Document
+                                bool canTerminate = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+                                if (canTerminate)
+                                {
+                                    if (DocumentApproval.DocumentStatusCode == "revised")
+                                    {
+                                        canEdit = true;
+                                        canSubmit = true;
+                                        canEditEndDate = true;
+                                    }
+                                    //generate button ke view
+                                    if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed") && Model.Progress >= 25)
+                                    {
+                                        isApprover = true;
+                                        canEditEndDate = true;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                ////User IR can edit another User IR Document
+                                bool canTerminate = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+                                if (canTerminate)
+                                {
+                                    canCancel = true;
+                                    if (DocumentApproval.DocumentStatusCode == "revised")
+                                    {
+                                        canEdit = true;
+                                        canSubmit = true;
+                                        canEditEndDate = true;
+                                    }
+                                    //generate button ke view
+                                    if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed") && Model.Progress >= 25)
+                                    {
+                                        isApprover = true;
+                                        canEditEndDate = true;
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //Do nothing
+                            ////User IR can edit another User IR Document
+                            bool canTerminate = terminationServices.GetTerminationUserRoleKey(User.GetClaim("NoReg"));
+                            if (canTerminate)
+                            {
+                                if (DocumentApproval.DocumentStatusCode == "revised")
+                                {
+                                    canEdit = true;
+                                    canSubmit = true;
+                                    canEditEndDate = true;
+                                    canCancel = true;
+                                }
+                                else
+                                {
+                                    isApprover = true;
+                                    if (Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed")
+                                    {
+                                        canEditEndDate = true;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                if (approverLevel == 1)
+                                {
+                                    isApprover = true;
+                                    if (Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed")
+                                    {
+                                        canEditEndDate = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if (typeform == "resignation")
+                    {
+                        if (Model.Object.NoReg != User.GetClaim("NoReg"))
+                        {
+                            ViewBag.ShowApprovalAndConversation = false;
+                            isApprover = true;
+                        }
+                    }
+                    else
+                    {
+                        ViewBag.ShowApprovalAndConversation = false;
+                        isApprover = true;
+                    }
+                }
+            }
+        }
+    }
+
+    var tooltiptitle = terminationServices.GetTerminationTooltipContent("title");
+    var tooltipcontent1 = terminationServices.GetTerminationTooltipContent("content-1");
+    var tooltipcontent2 = terminationServices.GetTerminationTooltipContent("content-2");
+    var tooltipcontent3 = terminationServices.GetTerminationTooltipContent("content-3");
+
+    var approvedByTerminationUser = terminationServices.TerminationApprovedByTerminationUser(Model.DocumentApprovalId);
+
+    var termination = terminationServices.GetTermination(Model.DocumentApprovalId);
+
+    var lastModified = "";
+
+    if (termination != null)
+    {
+        lastModified = termination.ModifiedBy == null ? "" : UserService.GetByNoReg(termination.ModifiedBy).Name;
+    }
+}
+@if (type == "resignation" && resignationCreateValidate == false)
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["Unable to make a new application because the resignation form was created previously"]</p>
+        <a href="@Url.Content("~/others/termination")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+    </div>
+    @section formActions{
+    }
+}
+else if (type == "termination" && canCreateTermination == false)
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["You does not have permission to access this form"]</p>
+        <a href="@Url.Content("~/others/termination")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+    </div>
+    @section formActions{
+    }
+}
+else
+{
+    @section scripts {
+
+        <script type="text/javascript">
+            function paramTerminationType() {
+                var param = {
+                    type: $("#type").val()
+                };
+                return param;
+            }
+
+            app.interceptHandler("postHandler", x => x.action == "approve", function (parameters, callback) {
+                document.getElementById("errorMessageEndDate").textContent = "";
+                var endDate = $("#Object_EndDate").data("kendoDatePicker")._value;
+                if (endDate == null) {
+                    document.getElementById("errorMessageEndDate").textContent = "End date cannot be empty";
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    var yyyy = new Date(endDate).getFullYear();
+                    let mm = new Date(endDate).getMonth() + 1; // Months start at 0!
+                    let dd = new Date(endDate).getDate();
+                    if (dd < 10) dd = '0' + dd;
+                    if (mm < 10) mm = '0' + mm;
+                    var newEndDate = dd + '-' + mm + '-' + yyyy;
+                    var newEndDateUpdate = dd + '/' + mm + '/' + yyyy;
+                    const date = new Date(newEndDateUpdate);
+
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/termination/validate-end-date/" + newEndDate + "/" + @data.NoReg),
+                        dataType: 'text',
+                        async: false,
+                        success: function (result) {
+                            if (result == 'success') {
+                                $.post("~/api/termination/update-enddate", { DocumentApprovalId: parameters.id, NoReg: '@User.GetClaim("NoReg")', EndDate: newEndDateUpdate }, function (d) {
+                                    callback();
+                                });
+                            } else {
+                                if (result == "End date cannot be on weekends or holidays") {
+                                    result = '@Localizer["End date cannot be on weekends or holidays"]';
+                                }
+                                document.getElementById("errorMessageEndDate").textContent = result;
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                        },
+                        error: function (error) {
+                            app.error(error.statusText);
+                        }
+                    });
+                }
+            });
+
+            app.registerHandler("saveHandler", function (d) {
+                var terminationtype = $("#Object_TerminationTypeId").data("kendoComboBox").text();
+                var noreg = $("#Object_NoReg").val();
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl("~/api/termination/custom-document-approval-title/" + d.id + "/" + terminationtype + "/" + noreg),
+                    dataType: 'text',
+                    success: function (result) {
+                        swal({
+                            title: "Save Changes",
+                            text: "Termination data saved successfully",
+                            type: "success"
+                        }).then(function () {
+                            window.location.href = app.resolveUrl("~/others/termination");
+                        });
+                    },
+                    error: function (error) {
+                        app.error(error.statusText);
+                    }
+                });
+            });
+
+            function onchangeEndDate() {
+                var enddate = $("#Object_EndDate").data("kendoDatePicker")._value;
+                var now = new Date();
+                nextmonth = new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
+
+                if (enddate < nextmonth) {
+                    swal({
+                        title: '@Localizer["Warning"]',
+                        text: '@Localizer["End date is less than 1 month after termination date"]',
+                        type: "warning",
+                    })
+                }
+            }
+
+            app.registerHandler("dataInterceptor", function (d) {
+                //reset
+                document.getElementById("errorMessageNoReg").textContent = "";
+                document.getElementById("errorMessageEndDate").textContent = "";
+                document.getElementById("errorMessageTerminationTypeId").textContent = "";
+                document.getElementById("errorMessageReason").textContent = "";
+                document.getElementById("errorMessageAttachment").textContent = "";
+
+                var error = 0;
+
+                if (d.Object.NoReg == "") {
+                    document.getElementById("errorMessageNoReg").textContent = '@Localizer["Employee cannot be empty"]';
+                    error++;
+                }
+
+                if (d.Object.EndDate == "") {
+                    document.getElementById("errorMessageEndDate").textContent = '@Localizer["End date cannot be empty"]';
+                    error++;
+                } else {
+                    if ('@mode' == 'edit') {
+                        var enddate = d.Object.EndDate.toString();
+                        var dateParts = enddate.split("/");
+                        var dateObject = new Date(+dateParts[2], dateParts[1], +dateParts[0]);
+                        var now = new Date();
+
+                        if (dateObject.toISOString().split('T')[0] < now.toISOString().split('T')[0]) {
+                            document.getElementById("errorMessageEndDate").textContent = '@Localizer["End date cannot be less than the current date"]';
+                            error++;
+                        }
+                    }
+                }
+
+                if (d.Object.NoReg != "" && d.Object.EndDate != "") {
+                    var enddate = d.Object.EndDate.replace("/", "-").replace("/", "-");
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/termination/validate-end-date/" + enddate + "/" + d.Object.NoReg),
+                        dataType: 'text',
+                        async: false,
+                        success: function (result) {
+                            if (result == 'success') {
+
+                            } else {
+                                if (result == "End date cannot be on weekends or holidays") {
+                                    result = '@Localizer["End date cannot be on weekends or holidays"]';
+                                }
+                                document.getElementById("errorMessageEndDate").textContent = result;
+                                error++;
+                            }
+                        },
+                        error: function (error) {
+                            app.error(error.statusText);
+                            error++;
+                        }
+                    });
+                }
+
+                if (d.Object.TerminationTypeId_input == "" || d.Object.TerminationTypeId_input == " ") {
+                    document.getElementById("errorMessageTerminationTypeId").textContent = '@Localizer["Termination Type cannot be empty"]';
+                    error++;
+                }
+
+                if (d.Object.Reason == "") {
+                    document.getElementById("errorMessageReason").textContent = '@Localizer["Reason cannot be empty"]';
+                    error++;
+                } else {
+                    if (d.Object.Reason.length > 250) {
+                        document.getElementById("errorMessageReason").textContent = '@Localizer["Reason cannot be more than 50 characters"]';
+                        error++;
+                    }
+                }
+
+                if ('@mode' == 'create') {
+                    if (d.Attachments == undefined) {
+                        document.getElementById("errorMessageAttachment").textContent = '@Localizer["Attachment cannot be empty"]';
+                        error++;
+                    } else {
+                        if (d.Attachments.length > 1) {
+                            document.getElementById("errorMessageAttachment").textContent = '@Localizer["Attachment contain more than 1 file, maximum attachment is only 1 file"]';
+                            error++;
+                        } else {
+                            $.ajax({
+                                type: 'POST',
+                                url: app.resolveUrl("~/api/termination/get-attachment-detail/" + d.Attachments[0].CommonFileId),
+                                dataType: 'text',
+                                async: false,
+                                success: function (result) {
+                                    if (result == 'success') {
+                                        d.Object.AttachmentCommonFileId = d.Attachments[0].CommonFileId;
+                                    } else {
+                                        if (result == "Attachment size more than 5 Mb, maximum size is 5 Mb") {
+                                            result = '@Localizer["Attachment size more than 5 Mb, maximum size is 5 Mb"]';
+                                        } else if (result == "Attachment is invalid, allowed extensions are: .pdf") {
+                                            result = '@Localizer["Attachment is invalid, allowed extensions are: .pdf"]';
+                                        }
+                                        document.getElementById("errorMessageAttachment").textContent = result;
+                                        error++;
+                                    }
+                                },
+                                error: function (error) {
+                                    app.error(error.statusText);
+                                    error++;
+                                }
+                            });
+                        }
+                    }
+                } else if ('@mode' == 'edit') {
+                    if (d.Object.AttachmentCommonFile == "") {
+                        document.getElementById("errorMessageAttachment").textContent = '@Localizer["Attachment cannot be empty"]';
+                        error++;
+                    }
+                    else {
+                        var arr = document.getElementsByClassName("k-file")
+                        if (arr.length > 1) {
+                            document.getElementById("errorMessageAttachment").textContent = '@Localizer["Attachment contain more than 1 file, maximum attachment is only 1 file"]';
+                            error++;
+                        } else {
+                            if (d.Attachments == undefined) {
+
+                            } else {
+                                $.ajax({
+                                    type: 'POST',
+                                    url: app.resolveUrl("~/api/termination/get-attachment-detail/" + d.Attachments[0].CommonFileId),
+                                    dataType: 'text',
+                                    async: false,
+                                    success: function (result) {
+                                        if (result == 'success') {
+                                            d.Object.AttachmentCommonFileId = d.Attachments[0].CommonFileId;
+                                        } else {
+                                            if (result == "Attachment size more than 5 Mb, maximum size is 5 Mb") {
+                                                result = '@Localizer["Attachment size more than 5 Mb, maximum size is 5 Mb"]';
+                                            } else if (result == "Attachment is invalid, allowed extensions are: .pdf") {
+                                                result = '@Localizer["Attachment is invalid, allowed extensions are: .pdf"]';
+                                            }
+                                            document.getElementById("errorMessageAttachment").textContent = result;
+                                            error++;
+                                        }
+                                    },
+                                    error: function (error) {
+                                        app.error(error.statusText);
+                                        error++;
+                                    }
+                                });
+                            }
+                        }
+                    }
+                }
+
+                if (error == 0) {
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/termination/validate-termination-form/" + d.Object.NoReg + "/" + d.Object.TerminationTypeId_input + "/Save/" + d.DocumentApprovalId),
+                        dataType: 'text',
+                        async: false,
+                        success: function (result) {
+                            if (result == 'success') {
+                                console.log(d)
+                            } else {
+                                if (result == "Cannot create termination form with same employee, termination form for this employee is already exists") {
+                                    result = '@Localizer["Cannot create termination form with"]' + ' ' + '@Localizer["same employee"]' + ', ' + '@Localizer["termination form for this employee is already exists"]';
+                                } else if (result == "Cannot create termination form with contract ended type because this employee is permanent employee") {
+                                    result = '@Localizer["Cannot create termination form with"]' + ' ' + '@Localizer["contract ended type because"]' + ' ' + '@Localizer["this employee is permanent employee"]';
+                                }
+                                app.error(result);
+                                error++;
+                                return false;
+                            }
+                        },
+                        error: function (error) {
+                            app.error(error.statusText);
+                            error++;
+                            return false;
+                        }
+                    });
+                    if (error == 0) {
+                        return d;
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            });
+
+            $(document).ready(function () {
+            });
+
+            $('a[data-toggle="tooltip"]').tooltip({
+                animated: 'fade',
+                placement: 'bottom',
+                trigger: 'click'
+            });
+
+            function approveFunction() {
+                swal({
+                    title: '@Localizer["Approve Remarks"]',
+                    input: "textarea",
+                    showCancelButton: true,
+                    animation: "slide-from-top",
+                    inputPlaceholder: '@Localizer["Please input reason for approve"]',
+                    inputValidator: (value) => {
+                        return !value && app.translate('@Localizer["Remarks must be filled!"]')
+                    }
+                }).then((result) => {
+                    if (result.value != undefined) {
+                        app.confirm(app.translate('@Localizer["Are you sure to approve this request?"]'), function (d) {
+                            if (d.value) {
+                                $.ajax({
+                                    type: 'POST',
+                                    url: app.resolveUrl("~/api/termination/approve/" + '@Model.DocumentApprovalId' + "/" + result.value),
+                                    dataType: 'text',
+                                    async: false,
+                                    success: function (result) {
+                                        if (result == 'success') {
+                                            swal({
+                                                title: '@Localizer["Save Changes"]',
+                                                text: '@Localizer["Termination data approved successfully"]',
+                                                type: "success"
+                                            }).then(function () {
+                                                window.location.href = app.resolveUrl("~/others/termination");
+                                            });
+                                        } else {
+                                            app.error(result);
+                                        }
+                                    },
+                                    error: function (error) {
+                                        app.error(error.statusText);
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+            }
+
+            function generatedDocumentFunction() {
+                document.getElementById("errorMessageEndDate").textContent = "";
+                var endDate = $("#Object_EndDate").data("kendoDatePicker")._value;
+                if (endDate == null) {
+                    document.getElementById("errorMessageEndDate").textContent = '@Localizer["End date cannot be empty"]';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    var yyyy = new Date(endDate).getFullYear();
+                    let mm = new Date(endDate).getMonth() + 1; // Months start at 0!
+                    let dd = new Date(endDate).getDate();
+                    if (dd < 10) dd = '0' + dd;
+                    if (mm < 10) mm = '0' + mm;
+                    var newEndDate = dd + '-' + mm + '-' + yyyy;
+                    var newEndDateUpdate = dd + '/' + mm + '/' + yyyy;
+
+                    $.ajax({
+                        type: 'POST',
+                        url: app.resolveUrl("~/api/termination/validate-end-date/" + newEndDate + "/" + @data.NoReg),
+                        dataType: 'text',
+                        async: false,
+                        success: function (result) {
+                            if (result == 'success') {
+                                swal({
+                                    title: '@Localizer["Generate Document"]',
+                                    html:
+                                        '<input id="swalBuildingName" class="swal2-input" placeholder="'+'@Localizer["Building Name"]'+'">' +
+                                        '<input id="swalPICExit" class="swal2-input" placeholder="'+'@Localizer["PIC exit interview"]'+'">',
+                                    focusConfirm: false,
+                                    preConfirm: () => {
+                                        var buildingName = document.getElementById('swalBuildingName').value;
+                                        var PICExit = document.getElementById('swalPICExit').value;
+                                        if (buildingName == '' || PICExit == '') {
+                                            Swal.showValidationError(app.translate('@Localizer["Building name and PIC exit interview must be filled!"]'));
+                                        }
+                                        else {
+                                            return {
+                                                BuildingName: buildingName,
+                                                PICExit: PICExit
+                                            }
+                                        }
+                                    },
+                                    showCancelButton: true,
+                                    animation: "slide-from-top"
+                                }).then((result) => {
+                                    if (result.value != undefined) {
+                                        app.confirm(app.translate('@Localizer["Are you sure to save and generate this document?"]'), function (d) {
+                                            if (d.value) {
+                                                //kendo.ui.progress($('.swal2-actions'), true);
+                                                $.ajax({
+                                                    type: 'POST',
+                                                    url: app.resolveUrl("~/api/termination/update-enddate-generate-file"),
+                                                    dataType: 'text',
+                                                    async: false,
+                                                    data: {
+                                                        DocumentApprovalId: '@Model.DocumentApprovalId',
+                                                        NoReg: '@User.GetClaim("NoReg")',
+                                                        EndDate: newEndDateUpdate,
+                                                        BuildingName: result.value.BuildingName,
+                                                        PICExit: result.value.PICExit
+                                                    },
+                                                    success: function (result) {
+                                                        if (result == 'success') {
+                                                            swal({
+                                                                title: '@Localizer["Save Changes"]',
+                                                                text: '@Localizer["Termination document generate successfully"]',
+                                                                type: "success"
+                                                            }).then(function () {
+                                                                location.reload();
+                                                            });
+                                                        } else {
+                                                            app.error(result);
+                                                        }
+                                                    },
+                                                    error: function (error) {
+                                                        app.error(error.statusText);
+                                                    }
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            } else {
+                                if (result == "End date cannot be on weekends or holidays") {
+                                    result = '@Localizer["End date cannot be on weekends or holidays"]';
+                                }
+                                document.getElementById("errorMessageEndDate").textContent = result;
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                        },
+                        error: function (error) {
+                            app.error(error.statusText);
+                        }
+                    });
+                }
+            }
+        </script>
+    }
+    @section styles  {
+        <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+        <style>
+            .tooltip-inner {
+                min-width: 100px;
+                max-width: 100%;
+                text-align: left;
+                background-color: red;
+            }
+
+            .swal-wide {
+                width: 1000px !important;
+            }
+        </style>
+    }
+    <div class="row" id="divContent">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Termination Form"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <input type="hidden" id="type" value="@typeform" />
+                            <div class="col-md-12 col-sm-12">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        @{
+                                            if (type == "termination")
+                                            {
+                                                @(Html.Kendo().AutoComplete()
+                                                .Name("userComplete")
+                                                .DataTextField("Name")
+                                                .Filter("contains")
+                                                .Placeholder(Localizer["Find user..."].Value)
+                                                .MinLength(3)
+                                                .Delay(500)
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .DataSource(source =>
+                                                {
+                                                    source.ServerFiltering(true)
+                                                        .Custom()
+                                                        .Type("aspnetmvc-ajax")
+                                                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/termination/get-active-employees-exclude-noreg/"+ @User.GetClaim("NoReg")))))
+                                                        .PageSize(30)
+                                                        .Sort(sort => sort.Add("Name"))
+                                                        .Schema(config => config.Data("Data").Total("Total"));
+                                                })
+                                                .Template(@"<div class=""col-10"">
+                                                                <span class=""k-state-default float-left ml-2""><span class=""font-normal"">#: NoReg #</span>&nbsp;&nbsp;|&nbsp;&nbsp;<span class=""font-normal"">#: Name #</span></span>
+                                                            </div>
+                                                            <div class=""col-2"">
+                                                                <img class=""center-image rounded float-right"" height=""40"" src=""#:app.resolveImageUrl(NoReg)#"">
+                                                            </div>")
+                                                .Events(evt => evt.Select(@<text>function(e) {
+                                                    var dataItem = this.dataItem(e.item.index());
+                                                    document.getElementById('NoReg').innerHTML = dataItem.NoReg;
+                                                    document.getElementById('Name').innerHTML = dataItem.Name;
+                                                    document.getElementById('Email').innerHTML = dataItem.Email;
+                                                    $("#Object_NoReg").val(dataItem.NoReg)
+
+                                                    $.ajax({
+                                                        type: 'POST',
+                                                        url: app.resolveUrl("~/api/termination/get-employee-detail/" + dataItem.NoReg),
+                                                        dataType: 'text',
+                                                        success: function (result) {
+                                                            const obj = JSON.parse(result);
+                                                            document.getElementById('Position').innerHTML = obj.Position;
+                                                            document.getElementById('Division').innerHTML = obj.Division.toLowerCase();
+                                                            $('#employeeImage').attr("src", obj.ImgUrl);
+                                                        },
+                                                        error: function (error) {
+                                                            app.error(error.statusText);
+                                                        }
+                                                    });
+
+                                                }</text>))
+                                                .Deferred()
+                                            )
+                                                <div class="form-group">
+                                                    @Html.HiddenFor(x => x.Object.NoReg)
+                                                    @*<span class="invalid" data-validation-for="Object.NoReg"></span>*@
+                                                    <span class="invalid" id="errorMessageNoReg"></span>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="form-group">
+                                                    @Html.HiddenFor(x => x.Object.NoReg)
+                                                    <span class="invalid" id="errorMessageNoReg"></span>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                                <fieldset>
+                                    <fieldset>
+                                        <legend>@Localizer["Employee Info"]</legend>
+                                        @{
+                                            if (type == "termination")
+                                            {
+                                                <div class="row">
+                                                    <div class="col-md-4">
+                                                        <div class="row">
+                                                            <label class="col-md-4">@Localizer["No. Reg"]<label style="float:right">:</label></label>
+                                                            <span class="col-md-8"> <label id="NoReg"></label></span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-md-4">@Localizer["Employee"]<label style="float:right">:</label></label>
+                                                            <span class="col-md-8"> <label id="Name"></label></span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-md-4">@Localizer["Email"]<label style="float:right">:</label></label>
+                                                            <span class="col-md-8"> <label id="Email"></label></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <div class="row">
+                                                            <label class="col-md-3">@Localizer["Position"]<label style="float:right">:</label></label>
+                                                            <span class="col-md-9"> <label id="Position"></label></span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-md-3">@Localizer["Division"]<label style="float:right">:</label></label>
+                                                            <span class="col-md-9" style="text-transform: capitalize;"> <label id="Division"></label></span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-2 text-center align-items-center">
+                                                        <img id="employeeImage" class="center-image rounded">
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <div class="row">
+                                                    <div class="col-sm-4">
+                                                        <div class="row">
+                                                            <label class="col-sm-4">@Localizer["No. Reg"]<label style="float:right">:</label></label>
+                                                            <span class="col-sm-8"> @data.NoReg</span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-sm-4">@Localizer["Name"]<label style="float:right">:</label></label>
+                                                            <span class="col-sm-8"> @data.Name</span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-sm-4">@Localizer["Email"]<label style="float:right">:</label></label>
+                                                            <span class="col-sm-8"> @data.Email</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-6">
+                                                        <div class="row">
+                                                            <label class="col-sm-3">@Localizer["Position"]<label style="float:right">:</label></label>
+                                                            <span class="col-sm-9"> @data.Position</span>
+                                                        </div>
+                                                        <div class="row">
+                                                            <label class="col-sm-3">@Localizer["Division"]<label style="float:right">:</label></label>
+                                                            <span class="col-sm-9" style="text-transform: capitalize;"> @data.Division.ToLower()</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-sm-2 text-center align-items-center">
+                                                        <img class="center-image rounded" width="90" height="120" src="@ConfigService.ResolveAvatar(data.NoReg)">
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </fieldset>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["End Date"]</label>
+                                            <label style="float:right">:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                @{
+                                                    if (typeform == "termination" || typeEdit =="termination") 
+                                                    {
+                                                        @(Html.Kendo().DatePickerFor(x => x.Object.EndDate)
+                                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.EndDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                        .Format("dd/MM/yyyy")
+                                                        .Enable(canEditEndDate)
+                                                        //.Min(DateTime.Now)
+                                                        .Events(e => e.Change("onchangeEndDate"))
+                                                        .Deferred(true)
+                                                        )
+                                                    }
+                                                    else
+                                                    {
+                                                        @(Html.Kendo().DatePickerFor(x => x.Object.EndDate)
+                                                        .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.EndDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                        .Format("dd/MM/yyyy")
+                                                        .Enable(canEditEndDate)
+                                                        .Min(DateTime.Now)
+                                                        .Events(e => e.Change("onchangeEndDate"))
+                                                        .Deferred(true)
+                                                        )
+                                                    }
+
+                                                }
+
+                                                <span class="invalid" id="errorMessageEndDate"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Termination Type"]</label>
+                                            <label style="float:right">:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                @{
+                                                    if (typeform == "termination")
+                                                    {
+                                                        @(Html.KendoComboBoxFor(x => x.Object.TerminationTypeId, "TerminationTypeId")
+                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.TerminationTypeId" })
+                                                        .Placeholder(Localizer["Select Termination Type"].Value)
+                                                        .DataTextField("TerminationTypeName")
+                                                        .DataValueField("Id")
+                                                        .Value(Model.Object.TerminationTypeId == null ? Model.Object.TerminationTypeId.ToString() : "00000000-0000-0000-0000-000000000000")
+                                                        .Text(" ")
+                                                        .DataSource(dataSource => dataSource
+                                                            .Ajax()
+                                                            .Read(read => read
+                                                            .Url(Url.Content("~/api/termination/get-termination-types")).Data("paramTerminationType"))
+                                                        )
+                                                        .Enable(canEdit)
+                                                        .Deferred(true)
+                                                    )
+                                                    }
+                                                    else
+                                                    {
+                                                        @(Html.KendoComboBoxFor(x => x.Object.TerminationTypeId, "TerminationTypeId")
+                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.TerminationTypeId" })
+                                                        .Placeholder(Localizer["Select Termination Type"].Value)
+                                                        .DataTextField("TerminationTypeName")
+                                                        .DataValueField("Id")
+                                                        .Value(Model.Object.TerminationTypeId.ToString())
+                                                        .Text("Resignation")
+                                                        .DataSource(dataSource => dataSource
+                                                            .Ajax()
+                                                            .Read(read => read
+                                                            .Url(Url.Content("~/api/termination/get-termination-types")).Data("paramTerminationType"))
+                                                        )
+                                                        .Enable(canEdit)
+                                                        .Deferred(true)
+                                                    )
+                                                    }
+                                                }
+                                                @*<span class="invalid" data-validation-for="Object.TerminationTypeId"></span>*@
+                                                <span class="invalid" id="errorMessageTerminationTypeId"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Reason"]</label>
+                                            <label style="float:right">:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                @Html.TextAreaFor(x => x.Object.Reason, ApplicationHelper.Enable(new
+                                                {
+                                                    @class = "form-control",
+                                                    placeholder = Localizer["Input Reason"].Value,
+                                                    maxlength = "250"
+                                                }, canEdit))
+                                                <span class="invalid" id="errorMessageReason"></span>
+                                                @*<span class="invalid" data-validation-for="Object.Reason"></span>*@
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <label><span class="required" aria-required="true" id="spanAttachment"> * </span>@Localizer["Attachment"]</label>
+                                            <label style="float:right">:</label>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                @{
+                                                    if (canEdit)
+                                                    {
+                                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.AttachmentCommonFile" })
+                                                    }
+                                                    else
+                                                    {
+                                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "AttachmentCommonFile" })
+                                                    }
+                                                }
+                                                @Html.HiddenFor(x => x.Object.AttachmentCommonFileId)
+                                                <span class="invalid py-1" id="errorMessageAttachment"></span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3" style="padding-left:1px; padding-top:4px; font-size:large">
+                                            <a data-toggle="tooltip" data-html="true" title=" @tooltiptitle <br> @tooltipcontent1 <br> @tooltipcontent2 <br> @tooltipcontent3">
+                                                <span class="k-icon k-i-info" style="font-size:20px"></span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    @if (lastModified != "")
+                                    {
+                                        <br />
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Last Modified By"]</label>
+                                                <label style="float:right">:</label>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label>@lastModified</label>
+                                            </div>
+                                            <div class="col-md-3">
+                                            </div>
+                                        </div>
+                                    }
+                                    @{
+                                        @if (canEdit == false && (approverLevel == 1 || allLevels.Count() > 1) && approvedByTerminationUser)
+                                        {
+                                            <br />
+                                            <fieldset>
+                                                <legend>@Localizer["Generate Document"]</legend>
+                                                <div class="row">
+                                                    <div class="col-md-2">
+                                                        <label>@Localizer["Invitation Letter"]</label>
+                                                        <label style="float:right">:</label>
+                                                    </div>
+                                                    <div class="col-md-10">
+                                                        @if (termination.InterviewCommonFileId == new Guid())
+                                                        {
+                                                            <span class="invalid py-1" style="font-size:medium">@Localizer["The document has not been generated"]</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a target="_blank" href="@Url.Content($"~/api/termination/download?id={termination.InterviewCommonFileId}")">Surat Undangan @data.Name<label>.pdf</label></a> <br>
+                                                        }
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        <label>@Localizer["Verklaring Letter"]</label>
+                                                        <label style="float:right">:</label>
+                                                    </div>
+                                                    <div class="col-md-10">
+                                                        @if (termination.VerklaringCommonFileId == new Guid())
+                                                        {
+                                                            <span class="invalid py-1" style="font-size:medium">@Localizer["The document has not been generated"]</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <a target="_blank" href="@Url.Content($"~/api/termination/download?id={termination.VerklaringCommonFileId}")">Surat Verklaring @data.Name<label>.pdf</label></a> <br>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        }
+                                    }
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @section formActions
+    {
+        @if (canEdit)
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-9">
+                                        <div class="float-right">
+                                            @*@if (mode.ToLower() == "edit" && Model.Requester == User.GetClaim("NoReg"))
+                                                {
+                                                    <button name="btnAction" class="btn-custom btn btn-info" id="btn-edit-save" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                        <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                    </button>
+                                                    <button type="button" class="btn-custom btn btn-primary" id="btn-edit-submit" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                    </button>
+                                                    <a class="btn btn-danger" href="~/others/termination">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {*@
+                                            @if (canEdit)
+                                            {
+                                                <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                    <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                </button>
+                                            }
+                                            @if (canSubmit)
+                                            {
+                                                <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                            }
+                                            @if (canCancel)
+                                            {
+                                                if (ApplicationHelper.IsDefault(Model.Id))
+                                                {
+                                                    <a class="btn btn-danger" href="~/others/termination">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                    </a>
+                                                }
+                                            }
+                                            @*}*@
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (isApprover && approverLevel == 1)
+        {
+            if (AclHelper.CanApprove() || AclHelper.CanReject() || AclHelper.CanRevise())
+            {
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                        <div class="col-md-9 col-sm-8 col-8">
+                                            <div class="float-right">
+                                                @if (AclHelper.CanApprove())
+                                                {
+                                                    <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanReject())
+                                                {
+                                                    <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanRevise())
+                                                {
+                                                    <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/others/termination"))">
+                                                        <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                                    </a>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @if (Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed")
+                {
+                    <div class="row">
+                        <div class="col">
+                            <div class="card">
+                                <div class="card-content">
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                            <div class="col-md-9 col-sm-8 col-8">
+                                                <div class="float-right">
+                                                    <a class="btn btn-primary mr-2 font-white" onclick="generatedDocumentFunction()">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Generate Document"]</span>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        }
+        else if (isApprover && approverLevel == 2)
+        {
+
+            if (AclHelper.CanApprove() || AclHelper.CanReject() || AclHelper.CanRevise())
+            {
+                <div class="row">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                        <div class="col-md-9 col-sm-8 col-8">
+                                            <div class="float-right">
+                                                @if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed") && allLevels.Count() > 1)
+                                                {
+                                                    <a class="btn btn-primary mr-2 font-white" onclick="generatedDocumentFunction()">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Generate Document"]</span>
+                                                    </a>
+                                                }
+                                                @if (AclHelper.CanApprove())
+                                                {
+                                                    <a class="btn btn-success mr-2" onclick="approveFunction()">
+                                                        <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                    </a>
+                                                }
+                                                <a class="btn btn-danger" href="~/others/termination">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+        }
+        else if (canEdit == false && canCancel && DocumentApproval.Progress < 15 && DocumentApproval.DocumentStatusCode != "cancelled" && DocumentApproval.DocumentStatusCode != "rejected" && DocumentApproval.DocumentStatusCode != "revised")
+        {
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-8 col-8">
+                                        <div class="float-right">
+                                            @if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/others/termination">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/others/termination">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @section pageFooter{
+        @{
+            if (isApprover && approverLevel == 2)
+            {
+                <div class="row" id="divContent">
+                    <div class="col">
+                        <div class="card">
+                            <div class="card-header">
+                                <h4 class="card-title">@Localizer["Monitoring Exit Clearance"]</h4>
+                                <a class="heading-elements-toggle">
+                                    <i class="ft-ellipsis-h font-medium-3"></i>
+                                </a>
+                                <div class="heading-elements">
+                                    <ul class="list-inline mb-0">
+                                        <li>
+                                            <a data-action="collapse">
+                                                <i class="ft-minus"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-content">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <table class="table">
+                                            <colgroup>
+                                                <col style="width: 12%;" />
+                                                <col style="width: 20%;" />
+                                                <col style="width: 25%;" />
+                                                <col style="width: 15%;" />
+                                                <col style="width: 20%;" />
+                                                <col style="width: 20%;" />
+                                            </colgroup>
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col">@Localizer["Role PIC"]</th>
+                                                    <th scope="col">@Localizer["PIC Exit Clearance"]</th>
+                                                    <th scope="col">Item</th>
+                                                    <th scope="col">Status</th>
+                                                    <th scope="col">@Localizer["Time"]</th>
+                                                    <th scope="col">@Localizer["Remark"]</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var item in summary)
+                                                {
+                                                    <tr>
+                                                        <td>@item.RolePIC.Replace("Exit Clearance PIC -", "")</td>
+                                                        <td>@item.PICName</td>
+                                                        <td style="text-transform: capitalize;">@item.About.ToLower()</td>
+                                                        @if (item.ApprovalActionCode == "approve")
+                                                        {
+                                                            <td class="text-info">@Localizer["Approve"]</td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td class="text-warning">@Localizer["In Progress"]</td>
+                                                        }
+
+
+                                                        @if (@item.CompleteDate == null)
+                                                        {
+                                                            <td>@item.CompleteDate</td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td>@item.CompleteDate.Value.ToString("dd/MM/yyyy - hh.mm")</td>
+                                                        }
+
+                                                        <td>@item.Remarks</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12 col-md-7">
+                    </div>
+                    <div class="col-12 col-md-5">
+                        <div class="card">
+                            <div class="card-header bordered">
+                                <h4 class="card-title">@Localizer["Conversation"]</h4>
+                                <a class="heading-elements-toggle">
+                                    <i class="ft-ellipsis-h font-medium-3"></i>
+                                </a>
+                                <div class="heading-elements">
+                                    <ul class="list-inline mb-0">
+                                        <li>
+                                            <a data-action="collapse">
+                                                <i class="ft-minus"></i>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-body p-0">
+                                @(await Component.InvokeAsync<Conversation>(new { id = Model.DocumentApprovalId }))
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @if (!AclHelper.CanApprove() || !AclHelper.CanReject() || !AclHelper.CanRevise()) { 
+                    @if ((Model.DocumentStatusCode == "inprogress" || Model.DocumentStatusCode == "completed") && allLevels.Count() > 1 )
+                    {
+                        <div class="row">
+                            <div class="col">
+                                <div class="card">
+                                    <div class="card-content">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                                <div class="col-md-9 col-sm-8 col-8">
+                                                    <div class="float-right">
+                                                        <a class="btn btn-primary mr-2 font-white" onclick="generatedDocumentFunction()">
+                                                            <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Generate Document"]</span>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            }
+        }
+    }
+}
+
+

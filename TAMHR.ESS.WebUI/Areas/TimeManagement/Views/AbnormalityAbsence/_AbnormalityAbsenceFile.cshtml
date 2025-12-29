@@ -1,0 +1,135 @@
+﻿@model TAMHR.ESS.Domain.AbnormalityAbsenceView
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityBdjkService svc;
+@{
+    //var isNew = !Model.AbnormaityProxyIn.HasValue ?;
+    // var IsNew = !Model.TimeManagementBdjkId.HasValue && string.IsNullOrEmpty(Model.DocumentStatusCode);
+    ScriptManager.RegisterReferences("datetimepicker", "grid", "datepicker", "combobox", "chart", "numeric", "upload", "listview");
+    string id = ViewContext.HttpContext.Request.Query["docid"];
+    bool IsRequest = @ViewBag.request;
+    var maxFileSize = 5 * 1000000;
+    //var fileUrl = svc.GetCommonFIle(Model.CommonFileId.HasValue ? Model.CommonFileId.Value : Guid.Empty);
+    var transactionId = Model.Id;
+
+}
+@section scripts {
+
+
+}
+@section styles {
+
+}
+<form method="post" action="~/api/abnormality-over-time/request">
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Abnormality Absence File Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Supporting Attachment"]</legend>
+                                    @Html.HiddenFor(x => x.Id)
+                               
+                                    <div class="form-group">
+                                        <label><span id="reqattachment" class="required" aria-required="true">  </span>@Localizer["Attachment"]</label>
+                                        <div class="upload-btn text-uppercase">
+                                            @(Html.Kendo().Upload()
+                                                .Name("FileAttachment")
+                                                .ShowFileList(true)
+                                                .Multiple(false)
+                                                .Enable(IsRequest)
+                                                .Messages(message => message.Select($@"<i class=""las la-upload""></i> &nbsp;{Localizer["Upload"].Value}"))
+                                                .Async(conf =>
+                                                    conf.AutoUpload(true)
+                                                        .SaveUrl(Url.Content("~/api/files/upload"))
+                                                )
+                                                .Events(events =>
+                                                {
+                                                    events.Success(@"function (e) {
+                                                            $.post(app.resolveUrl('~/api/abnormality-bdjk/insert-file'), { CommonFileId: e.response.files[0].Id,TransactionId : '" + @transactionId + "' }, function () {app.refreshControl('gridFile');})}");
+                                                })
+                                               .Validation(validation =>
+                                               {
+                                                   validation.AllowedExtensions(".doc", ".docx", ".pdf", ".png", "jpg", "jpeg", "xls", "xlsx");
+                                                   validation.MaxFileSize(maxFileSize);
+                                               })
+                                               )
+                                        </div>
+                                    </div>
+                                    <div class="card-body p-0 table-wrap no-table-header">
+                                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AbnormalityFileView>()
+                                            .Name("gridFile")
+                                            //.HtmlAttributes(new { data_filter = "proxy-time-filter" })
+                                            .Columns(columns =>
+                                            {
+                                                columns.Bound(c => c.Id).HeaderHtmlAttributes(new { @class = "text-center" })
+                                               .HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<div class='mt-comments mt-comments-bordered'>
+                                                    <div class='mt-comment d-flex align-items-center border-0'>
+                                                        <div class='mt-comment-img'>
+                                                            <img src='/img/assets/folderile.svg' style='width: 3rem; height: 3.5rem; border-radius: 0 !important;'>
+                                                        </div>
+                                                        <div class='mt-comment-body ml-3'>
+                                                            <a class='mt-comment-info' style='margin: 0; padding: 0;' href=""/ess/api/files/download?id=#:CommonFileId#&inline=true')"" target='_blank'>
+                                                                <span class='mt-comment-author font-small-3'>#:FileName#</span>
+                                                                <span class='mt-comment-sub-info mt-1 font-dark'>#:FileType#</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>")
+                                              ;
+                                                if (IsRequest)
+                                                {
+                                                    columns.Bound(c => c.FileName)
+                                                    .HeaderHtmlAttributes(new { @class = "text-center" })
+                                                    .HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<a class='btn red-haze' data-trigger='handler' data-parameters-Id=""#:Id#"" data-handler='deleteFileHandler' ><i class='ft-trash font-normal'></i></a>")
+                                                    .Width(50);
+                                                }
+
+                                            })
+                                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                                            .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/abnormality-absence/get-abnormality-file")).Data("{TransactionId : '"+ @transactionId + "' }"))
+                                                .PageSize(10)
+                                                .Sort(sort =>
+                                                {
+                                                    sort.Add("CreatedOn");
+                                                })
+                                            )
+                                            .Pageable(options =>
+                                            {
+                                                options.Input(true);
+                                                options.Numeric(false);
+                                                options.AlwaysVisible(false);
+                                            })
+
+
+                                        )
+                                    </div>
+                                </fieldset>
+                            </div>
+
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</form>

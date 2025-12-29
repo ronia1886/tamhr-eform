@@ -1,0 +1,48 @@
+﻿<div class="form-group">
+    <label>Search</label>
+    <input type="search" id="search" class="form-control" />
+</div>
+<div style="overflow:auto">
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccineSchedule>()
+                          .Name("bankGrid")
+                          .HtmlAttributes(new { style = "min-width:max-content" })
+                          .Columns(columns =>
+                          {
+                              columns.Bound(c => c.VaccineNumber).Filterable(true).Title("Vaccine");
+                              columns.Bound(c => c.StartDateTime).Filterable(true).Title("Start Date");
+                              columns.Bound(c => c.EndDateTime).Filterable(true).Title("End Date");
+                              columns.Bound(c => c.Id).Width(50).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+<a class=""btn"" data-trigger=""handler"" data-handler=""selectVaccineSchedule"" data-parameters-id=""#:Id#"" data-parameters-vaccinenumber=""#:VaccineNumber#"" data-parameters-startdatetime=""#:StartDateTime#"" data-parameters-enddatetime=""#:EndDateTime#"">Select</a>").Width(170);
+                          })
+                          .Pageable(p => p.AlwaysVisible(false))
+                          .DataSource(dataSource => dataSource
+                          .Ajax()
+                          .PageSize(10)
+                          .Read(read => read.Url(Url.Content("~/api/vaccineschedule/gets")))
+                          ))
+</div>
+<script type="text/javascript">
+    $("#search").keyup(function () {
+        var val = $('#search').val();
+        $("#vaccineScheduleGrid").data("kendoGrid").dataSource.filter({
+            logic: "or",
+            filters: [
+                {
+                    field: "VaccineNumber",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "StartDateTime",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "EndDateTime",
+                    operator: "contains",
+                    value: val
+                },
+            ]
+        });
+    });
+</script>

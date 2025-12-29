@@ -1,0 +1,127 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model TAMHR.ESS.Infrastructure.ViewModels.TrackingApprovalViewModel
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var documentStatusCode = (string)ViewBag.DocumentStatusCode;
+    var trackingApprovals = Model.TrackingApprovals;
+    var groups = trackingApprovals.GroupBy(x => x.ApprovalLevel);
+    var isRejectOrCancel = trackingApprovals.Any(x => Agit.Common.Utility.ObjectHelper.IsIn(x.ApprovalActionCode, ApprovalAction.Reject, ApprovalAction.Cancel));
+    var isRevise = documentStatusCode == DocumentStatus.Revised;
+
+    var cssClasses = ApprovalAction.TrackingCssClasses;
+    var dicts = DocumentStatus.CssClasses;
+}
+@if (trackingApprovals == null || trackingApprovals.Count() == 0)
+{
+    <div class="text-center p-3 text-muted">
+        <i class="fa fa-clipboard font-large-1"></i><br />@Localizer["Document has not been submitted"]
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col">
+            <div class="clearfix font-small-2">
+                <div class="pull-left">@Localizer["Progress"]</div>
+                <div class="pull-right">@(Model.Progress)%</div>
+            </div>
+            <div class="progress" style="height: 5px;">
+                <div class="progress-bar progress-bar-striped @(dicts.ContainsKey(Model.DocumentStatusCode) ? dicts[Model.DocumentStatusCode] : string.Empty)" role="progressbar" aria-valuenow="@Model.Progress" aria-valuemin="@Model.Progress" aria-valuemax="@Model.Progress" style="width: @(Model.Progress)%;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="timeline small">
+                @{
+                    var ordered = groups.OrderBy(x => x.Key);
+                    var current = -1;
+
+                    foreach (var timelineGroup in ordered)
+                    {
+                        var timeline = timelineGroup.FirstOrDefault();
+                        var status = (timeline.ApprovalActionCode ?? string.Empty).ToLower();
+                        var isGroup = timelineGroup.Count() > 1;
+                        var names = isGroup ? string.Join(@" / ", timelineGroup.OrderBy(x => x.Name).Select(x => x.Name)) : timeline.Name;
+                        var noreg = isGroup ? string.Empty : timeline.NoReg;
+                        var modifiedDate = isGroup ? timelineGroup.Where(x => x.ModifiedOn.HasValue).Select(x => x.ModifiedOn).FirstOrDefault() : timeline.ModifiedOn;
+                        var modifiedDateStr = modifiedDate.HasValue ? modifiedDate.Value.ToString("dd/MM/yyyy HH:mm tt") : string.Empty;
+                        var detail = string.Format("{0} ({1})", timeline.PostName, timeline.JobName);
+                        var cssClass = cssClasses.ContainsKey(status) ? cssClasses[status] : string.Empty;
+
+                        if ((current == -1 && timeline.ApprovalActionCode == null) || current == 0)
+                        {
+                            current++;
+                        }
+
+                        if (current == 0 && !isRejectOrCancel)
+                        {
+                            cssClass = "timeline-info";
+                        }
+
+                        if (isGroup)
+                        {
+                            detail = string.Empty;
+                        }
+
+                        <div class="timeline-item @cssClass">
+                            <div class="timeline-badge">
+                                <img class="timeline-badge-userpic" src="@ConfigService.ResolveAvatar(noreg)" />
+                            </div>
+                            <div class="timeline-body">
+                                <div class="timeline-body-arrow"></div>
+                                <div class="timeline-body-head">
+                                    <div class="timeline-body-head-caption">
+                                        @if (!string.IsNullOrEmpty(modifiedDateStr))
+                                        {
+                                            <span class="timeline-detail float-right d-md-block d-none" style="margin-top: 0.1rem">
+                                                <i class="fa fa-clock-o"></i> @modifiedDateStr
+                                            </span>
+                                        }
+                                        <a href="javascript:;" class="timeline-body-title d-block">@names</a>
+                                        <span class="timeline-detail">@detail</span>
+                                    </div>
+                                </div>
+                                <div class="timeline-body-content">
+                                    <span>
+                                        @if (string.IsNullOrEmpty(timeline.Remarks))
+                                        {
+                                            @:-
+                                        }
+                                        else
+                                        {
+                                            @timeline.Remarks
+                                        }
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(modifiedDateStr))
+                                    {
+                                        <span class="timeline-detail d-md-none d-block">
+                                            <small class="bold"><i class="fa fa-clock-o"></i> @modifiedDateStr</small>
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+    <div class="actions mr-auto">
+        <div class="pull-left">
+            <ul class="list-inline text-left mb-0">
+                <li class="d-none d-md-inline-block">
+                    @Localizer["Legends"]:<br>&nbsp;
+                </li>
+                <li>
+                    <span class="dot" style="background-color: #578EBE;"></span> @(isRevise ? Localizer["Current Initiator"].Value : Localizer["Current Approver"].Value)<br>
+                    <span class="dot" style="background-color: greenyellow;"></span> @Localizer["Approved"]
+                </li>
+                <li>
+                    <span class="dot"></span> @Localizer["Rejected"]/@Localizer["Dropped"]<br>
+                    <span class="dot" style="background-color: #f5f6fa;"></span> @Localizer["Waiting for Approval"]
+                </li>
+            </ul>
+        </div>
+    </div>
+}

@@ -1,0 +1,232 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService service;
+@{
+    var user = User.GetClaim("NoReg");
+    var dataMarriage = service.GetPersonalDataExcerptMarriage(user).ToList();
+}
+@if (dataMarriage != null)
+{
+    var laki = @dataMarriage.Where(x => x.SideCode == "datalakilaki").FirstOrDefault();
+    var cewe = @dataMarriage.Where(x => x.SideCode == "dataperempuan").FirstOrDefault();
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset>
+                        <legend>Surat Nikah</legend>
+
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tanggal Pernikahan</label>
+                            <span class="col-md-8 col-xs-8">: @laki.WeddingDate.ToString("dd-MMM-yyyy")</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Nama Karyawan</label>
+                            <span class="col-md-8 col-xs-8">: @laki.Name</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tempat Lahir</label>
+                            <span class="col-md-8 col-xs-8">: @laki.BirthPlace</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tanggal Lahir</label>
+                            <span class="col-md-8 col-xs-8">: @laki.BirthDate.ToString("dd-MMM-yyyy")</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Nama Pasangan</label>
+                            <span class="col-md-8 col-xs-8">: @cewe.Name</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tempat Lahir</label>
+                            <span class="col-md-8 col-xs-8">: @cewe.BirthPlace</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tanggal Lahir</label>
+                            <span class="col-md-8 col-xs-8">: @cewe.BirthDate.ToString("dd-MMM-yyyy")</span>
+                        </div>
+                        <div class="row">
+                            <label class="col-md-4 col-xs-4">Tempat Nikah</label>
+                            <span class="col-md-8 col-xs-8">: @laki.WeddingPlace</span>
+                        </div>
+                    </fieldset>
+
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset>
+                    <legend>Document</legend>
+                    <div class="form-group">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Surat Nikah</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset>
+                        <legend>Kutipan Akte Nikah</legend>
+                        @{
+
+                            if (laki != null)
+                            {
+                                <div>
+                                    <fieldset>
+                                        <legend>@laki.SideMariage</legend>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nama</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Name</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Bin</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Bin</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Tempat / Tanggal Lahir</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.BirthPlace / @laki.BirthDate.ToString("dd-MMM-yyyy")</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nik</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Nik</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Kewarganegraan</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Nationality</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Agama</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Religion</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Pekerjaan</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Work</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Alamat KTP</label>
+                                            <span class="col-md-8 col-xs-8">: @laki.Address</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+
+                            if (cewe != null)
+                            {
+                                <div>
+                                    <fieldset>
+                                        <legend>@cewe.SideMariage</legend>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nama</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Name</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Bin</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Bin</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Tempat / Tanggal Lahir</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.BirthPlace / @cewe.BirthDate.ToString("dd-MMM-yyyy")</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nik</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Nik</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Kewarganegraan</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Nationality</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Agama</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Religion</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Pekerjaan</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Work</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Alamat KTP</label>
+                                            <span class="col-md-8 col-xs-8">: @cewe.Address</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+                            var wali = @dataMarriage.Where(x => x.SideCode == "datawalinikah").FirstOrDefault();
+                            if (wali != null)
+                            {
+                                <div>
+                                    <fieldset>
+                                        <legend>@wali.SideMariage</legend>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nama</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Name</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Bin</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Bin</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Tempat / Tanggal Lahir</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.BirthPlace / @cewe.BirthDate.ToString("dd-MMM-yyyy")</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Nik</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Nik</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Kewarganegraan</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Nationality</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Agama</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Religion</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Pekerjaan</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Work</span>
+                                        </div>
+                                        <div class="row">
+                                            <label class="col-md-4 col-xs-4">Alamat KTP</label>
+                                            <span class="col-md-8 col-xs-8">: @wali.Address</span>
+                                        </div>
+                                    </fieldset>
+                                </div>
+                            }
+                        }
+                    </fieldset>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset>
+                    <legend>Document</legend>
+                    <div class="form-group">
+                        @if (dataMarriage != null)
+                        {
+                            <div class="col-sm-12 text-center align-items-center">
+                                <div>
+                                    <small>Kutipan Akte Nikah</small>
+                                </div>
+                                <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+                        }
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+
+<hr />

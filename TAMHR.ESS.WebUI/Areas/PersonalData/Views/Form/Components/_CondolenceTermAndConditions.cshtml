@@ -1,0 +1,30 @@
+﻿<script data-template="term-and-conditions" type="text/template">
+    <table class="table table-borderless table-nopadding">
+        <tbody>
+            <tr>
+                <td style="width: 12rem!important;">@Localizer["Condolence Date"]</td>
+                <td>: #: $.toDefault(Object.DismembermentDate, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Main Family"]</td>
+                <td>: #: $.toDefault(Object.IsMainFamily == 'ya' ? '@Localizer["Yes"]' : '@Localizer["No"]', '-') #</td>
+            </tr>
+            # if (Object.IsMainFamily === "ya") { #
+            <tr>
+                <td>@Localizer["Family Name"]</td>
+                <td>: #: $.toDefault(Object.OtherFamilyId_input, '-') #</td>
+            </tr>
+            # } else { #
+            <tr>
+                <td>@Localizer["Family Relationship"]</td>
+                <td>: #: $.toDefault(Object.NonFamilyRelationship_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Family Name"]</td>
+                <td>: #: $.toDefault(Object.FamilyName, '-') #</td>
+            </tr>
+            # } #
+        </tbody>
+    </table>
+    <hr />
+</script>

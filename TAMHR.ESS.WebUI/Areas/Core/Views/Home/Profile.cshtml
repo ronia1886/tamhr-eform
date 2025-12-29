@@ -1,0 +1,1701 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox");
+    
+    var PersonalDataEnum = ViewData["PersonalData"] as IEnumerable<EmployeeOrganizationObjectStoredEntityNew>;
+    var PersonalData = PersonalDataEnum.ToList();
+    var ProfileData = ViewData["ProfileDatas"] as PersonalDataAllProfileStoredEntity;
+    var ListProfileData = new List<PersonalDataAllProfileStoredEntity>();
+    ListProfileData.Add(ProfileData);
+    var eduData = ViewData["Education"] as IEnumerable<ProfileDataEducationStoreEntity>;
+    var eduDatas = ViewData["EducationData"] as IEnumerable<dynamic>;
+    var HBC = ViewData["HistoryBenefitClaim"] as IEnumerable<HistoryClaimStoreEntity>;
+    var Educations = ViewData["Education"] as IEnumerable<ProfileDataEducationStoreEntity>;
+    var HistoryBenefitClaim = ViewData["HistoryBenefitClaim"] as IEnumerable<HistoryClaimStoreEntity>;
+    var famData = ViewData["FamilyMember"] as IEnumerable<PersonalDataFamilyMemberStoredEntity>;
+    var FamilyMembers = ViewData["FamilyMember"] as IEnumerable<PersonalDataFamilyMemberStoredEntity>;
+    var organizationalAssignments = ViewData["OrganizationalAssignment"] as IEnumerable<OrganizationalAssignmentStoredEntity>;
+    var DataTraining = ViewData["DataTraining"];
+    var claimTypes = ViewData["claimType"] as IEnumerable<string>;
+    var training = ViewData["DataTraining"] as IEnumerable<object>;
+    var photo = ViewData["Photo"];
+    var maxFileSize = 5 * 1000000;
+    var ds = @Html.Raw(HistoryBenefitClaim);
+    var statusemp = ViewData["Status"];
+    var contract = ViewData["Contract"];
+}
+
+@* untuk validasi jika entry date sama *@
+@{
+    var startDateTAM = PersonalData?[0]?.TamDate;
+    var entryDateAstra = PersonalData?[0]?.EntryDate;
+    bool showAstra = entryDateAstra != default(DateTime) && startDateTAM != entryDateAstra;
+}
+@section styles {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style type="text/css">
+        .tab {
+            overflow-x: auto;
+            border: 1px solid #ccc;
+            background-color: #f1f1f1;
+            white-space: nowrap;
+            display: flex;
+        }
+
+            /* Style the buttons inside the tab */
+            .tab button {
+                background-color: inherit;
+                float: left;
+                border: 1px solid #ccc;
+                outline: none;
+                cursor: pointer;
+                padding: 14px 16px;
+                transition: 0.3s;
+                font-size: 15px;
+            }
+
+                /* Change background color of buttons on hover */
+                .tab button:hover {
+                    background-color: #ddd;
+                }
+
+                /* Create an active/current tablink class */
+                .tab button.active {
+                    background-color: #e9e9e9;
+                    font-weight: bold;
+                }
+
+        @@media screen and (max-width: 768px) {
+            .tab {
+                /*flex-direction: column;*/
+                flex-direction: inherit;
+            }
+
+                .tab button {
+                    outline: none;
+                    border: 1px solid #ccc;
+                    display: flex;
+                }
+        }
+        /* Style the tab content */
+        .tabcontent {
+            display: none;
+            padding: 6px 12px;
+            border: 1px solid #ccc;
+            border-top: none;
+        }
+
+        .left-side {
+            margin-left: 15px;
+        }
+
+        .icon-size {
+            font-size: 20px;
+        }
+
+        .icon-color {
+            color: white;
+        }
+
+        .center-image {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            width: 50%;
+        }
+
+        .photo {
+            width: 106px;
+            height: 130px;
+            border-radius: 100%;
+            /*margin-right: 20px;
+                        border: 3px solid #ffffff;*/
+        }
+
+        /* .card-header {
+                    border-bottom: none;
+                    background: #FFFFFF;
+                    padding-bottom: 10px;
+                }*/
+
+        /*.k-grid-header {
+                    visibility: hidden;
+                    display: none;
+                }
+
+                    .k-grid,
+                    .k-grid-header-wrap,
+                    .k-grid-header th,
+                    .k-grid-content > table > tbody > tr > td {
+                        border: 0 !important;
+                    }
+
+                    .k-grid tr:not(.k-state-selected):hover {
+                        background: none;
+                        color: inherit;
+                    }
+
+                    .k-grid tr.k-alt:not(.k-state-selected):hover {
+                        background: rgba(33,37,41,.03);
+                    }
+
+                    .k-grid {
+                        overflow-y: auto !important;
+                    }
+
+                    table[role='grid'] {
+                        min-width: 500px !important;
+                    }
+
+                    .k-grid-content.k-auto-scrollable {
+                        overflow-y: auto !important;
+                    }
+
+                .k-grid-content {
+                    border-top: 0 !important;
+                }*/
+
+        .k-grid {
+            overflow-y: auto !important;
+        }
+
+        table[role='grid'] {
+            min-width: 500px !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: auto !important;
+        }
+
+        /*.k-grid-content {
+                        border-top: 0 !important;
+                    }*/
+
+        .table-bordered {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+            .table-bordered th,
+            .table-bordered td {
+                border: 1px solid #000; /* Warna dan style border yang Anda inginkan */
+                padding: 8px;
+                text-align: left;
+            }
+
+        .p {
+            line-height: 40px;
+        }
+    </style>
+}
+@section scripts {
+    <script id="family-template" type="text/x-kendo-template">
+        <table class="">
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Family Type</th>
+                <td style="border-width: 0 0 0 0px;">
+                    # if ( FamilyTypeCode == 'Pasangan' && GenderCode == 'Perempuan') { #
+                    <label>Istri</label># }
+                    else if (FamilyTypeCode == 'Pasangan' && GenderCode == 'Laki - Laki'){ #
+                    <label>Suami</label># }
+                    else{
+                    #<label>#: FamilyTypeCode #</label>#
+                    }#
+                </td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Nama</th>
+                <td style="border-width: 0 0 0 0px;">#: Name #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Birth Place</th>
+                <td style="border-width: 0 0 0 0px;">
+                    #: BirthPlace #
+                </td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Birth Date</th>
+                # if (kendo.toString(kendo.parseDate(BirthDate), 'd') == kendo.toString(kendo.parseDate(new Date(1899, 11, 31)), 'd')) { #
+                <td style="border-width: 0 0 0 0px;"><label>#: kendo.toString(kendo.parseDate(BirthDate).addDays(1), 'dd/MM/yyyy')  #</label></td>#}
+                else{#
+                <td style="border-width: 0 0 0 0px;">#: kendo.toString(kendo.parseDate(BirthDate), 'dd/MM/yyyy')#</td>
+                #}#
+
+                    @*<td style="border-width: 0 0 0 0px;">#: kendo.toString(kendo.parseDate(BirthDate), 'dd/MM/yyyy')  #</td>*@
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Gender</th>
+                    <td style="border-width: 0 0 0 0px;">#: GenderCode #</td>
+                </tr>
+
+                # if ( FamilyTypeCode == 'Anak Kandung' || FamilyTypeCode == 'Anak Angkat'){
+                #
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Anak Ke</th>
+                    <td style="border-width: 0 0 0 0px;"> #= BindAnak() # </td>
+                </tr>#
+                }#
+
+                # if ( Marriage == 'marriage-status'){
+                #
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Tanggal Menikah</th>
+                    <td style="border-width: 0 0 0 0px;">#=kendo.toString(kendo.parseDate(MarriageDate), 'dd/MM/yyyy')#</td>
+                </tr>#
+                }#
+
+                # if ( Divorce == 'divorce'){
+                #
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Tanggal Perceraian</th>
+                    <td style="border-width: 0 0 0 0px;">#=kendo.toString(kendo.parseDate(DivorceDate), 'dd/MM/yyyy')#</td>
+                </tr>#
+                }#
+
+                # if ( Condolance == 'condolance'){
+                #
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Tanggal Kematian</th>
+                    <td style="border-width: 0 0 0 0px;"> #=kendo.toString(kendo.parseDate(CondolanceDate), 'dd/MM/yyyy')# </td>
+                </tr>#
+                }#
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">BPJS Kesehatan</th>
+                    <td style="border-width: 0 0 0 0px;"> #=$.toDefault(BpjsNumber, '-')# </td>
+                </tr>
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Nomor Asuransi</th>
+                    <td style="border-width: 0 0 0 0px;"> #=$.toDefault(InsuranceNumber, '-')# </td>
+                </tr>
+            </table>
+    </script>
+    <script id="education-template" type="text/x-kendo-template">
+        <table class="">
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Pendidikan</th>
+                <td style="border-width: 0 0 0 0px;">#: EducationTypeCode #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Jurusan</th>
+                <td style="border-width: 0 0 0 0px;">#: Major #</td>
+            </tr>
+
+            # if ( InstituteName == '' ){
+            #
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Perguruan Tinggi</th>
+                <td style="border-width: 0 0 0 0px;">#: Institute #</td>
+            </tr>#
+            }#
+
+            # if ( InstituteName != '' ){
+            #
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Perguruan Tinggi</th>
+                <td style="border-width: 0 0 0 0px;">#: InstituteName #</td>
+            </tr>#
+            }#
+
+            @*<tr>
+
+                        <th class="font-weight-bold" style="width: 175px;border: none;">Perguruan Tinggi</th>
+                        <td style="border-width: 0 0 0 0px;">#: Institute # #: InstituteName #</td>
+                    </tr>*@
+        </table>
+
+    </script>
+
+    <script id="dataTraining-template" type="text/x-kendo-template">
+        <table class="">
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Year</th>
+                <td style="border-width: 0 0 0 0px;">#: Year #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Training</th>
+                <td style="border-width: 0 0 0 0px;">#: TrainingName #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 175px;border: none;">Lembaga</th>
+                <td style="border-width: 0 0 0 0px;">#: Institution #</td>
+            </tr>
+        </table>
+
+    </script>
+
+    <script id="dataBenefitClaim-template" type="text/x-kendo-template">
+        # var obj = JSON.parse(JsonObject); #
+        <table class="">
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Tipe Benefit Claim</th>
+                <td style="border-width: 0 0 0 0px;">#: AllowanceType #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Bulan Tahun Transaksi Claim</th>
+                <td style="border-width: 0 0 0 0px;">#: monthActivity # #: yearActivity #</td>
+            </tr>
+            # if (AllowanceType == 'Reimburse RS') { #
+            # if (obj.FamilyType == 'rspasangan' || obj.FamilyType == 'rskaryawan') { #
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Nama Pasien</th>
+                <td style="border-width: 0 0 0 0px;">#: obj.FamilyName #</td>
+            </tr>
+            # if (obj.FamilyType == 'rspasangan') { #
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Hubungan</th>
+                <td style="border-width: 0 0 0 0px;">Pasangan</td>
+            </tr>
+            # } } else if (obj.FamilyType == 'rsanak') { #
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Nama Pasien</th>
+                <td style="border-width: 0 0 0 0px;">#: obj.FamilyName #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Hubungan</th>
+                <td style="border-width: 0 0 0 0px;">Anak</td>
+            </tr>
+            # } #
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Tipe Reimburse</th>
+                <td style="border-width: 0 0 0 0px;">#: (obj.ReimburseType == 'rawatjalankontrol' ? 'Rawat Jalan / Kontrol' : 'Perawatan / Inap') #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Nama Rumah Sakit</th>
+                <td style="border-width: 0 0 0 0px;">#: obj.HospitalName #</td>
+            </tr>
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Tanggal Perawatan</th>
+                <td style="border-width: 0 0 0 0px;">#: (obj.DateIn == obj.DateOut ? obj.DateIn : (obj.DateIn + " - " + obj.DateOut)) #</td>
+            </tr>
+            # } #
+            <tr>
+                <th class="font-weight-bold" style="width: 300px;border: none;">Amount Transaksi Claim</th>
+                <td style="border-width: 0 0 0 0px;">Rp #= kendo.toString(amount , 'n0') # </td>
+            </tr>
+        </table>
+
+    </script>
+    @*    <script id="voucher-template" type="text/x-kendo-template">
+            <table class="">
+                <tr>
+                    <th class="font-weight-bold" style="width: 175px;border: none;">Voucher Code</th>
+                    <td style="border-width: 0 0 0 0px;">#: VoucherCode #</td>
+                </tr>
+        </script>*@
+
+    <script type="text/javascript">
+            var anakke = 0;
+            function BindAnak() {
+                anakke += 1
+                return anakke;
+            }
+
+            // function BindGrid() {
+            //     $("#familyGrid").kendoGrid({
+            //         columns: [{
+            //             field: "Name",
+            //             template: kendo.template($("#family-template").html())
+            //         }],
+            //         noRecords: {
+            //             template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+            //         },
+            //         dataSource: familyData,
+            //         pageable: {
+            //             input : true,
+            //             numeric : false,
+            //             alwaysVisible: false
+            //         },
+            //     });
+
+            //     var educationData = @Html.Raw(Educations);
+            //     $("#educationGrid").kendoGrid({
+            //         columns: [{
+            //             field: "EducationTypeCode",
+            //             template: kendo.template($("#education-template").html())
+            //         }],
+            //         noRecords: {
+            //             template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+            //         },
+            //         dataSource: educationData,
+            //         pageable: {
+            //             input : true,
+            //             numeric : false,
+            //             alwaysVisible: false
+            //         },
+            //     });
+
+            //     var dataTraining = @Html.Raw(DataTraining);
+            //     $("#dataTraining").kendoGrid({
+            //         columns: [{
+            //             field: "Institution",
+            //             template: kendo.template($("#dataTraining-template").html())
+            //         }],
+            //         noRecords: {
+            //             template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+            //         },
+            //         dataSource: dataTraining,
+            //         pageable: {
+            //             input : true,
+            //             numeric : false,
+            //             alwaysVisible: false
+            //         },
+            //     });
+
+            //     var dataClaimBenefit = @Html.Raw(HistoryBenefitClaim);
+            //     $("#benefitClaimGrid").kendoGrid({
+            //         columns: [{
+            //             field: "Noreg",
+            //             template: kendo.template($("#dataBenefitClaim-template").html())
+            //         }],
+            //         noRecords: {
+            //             template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+            //         },
+            //         dataSource: dataClaimBenefit,
+            //         pageable: {
+            //             input : true,
+            //             numeric : false,
+            //             alwaysVisible: false,
+            //             pageSize: 5,
+            //         },
+            //     });
+            //     //var voucherData = Html.Raw(Vouchers);
+            //     //$("#voucherGrid").kendoGrid({
+            //     //    columns: [{
+            //     //        field: "VoucherTypeCode",
+            //     //        template: kendo.template($("#voucher-template").html())
+            //     //    }],
+            //     //    noRecords: {
+            //     //        template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+            //     //    },
+            //     //    dataSource: voucherData,
+            //     //    pageable: {
+            //     //        input: true,
+            //     //        numeric: false,
+            //     //        alwaysVisible: false
+            //     //    },
+            //     //});
+            // }
+
+            function filterGrid() {
+                $("#benefitClaimGrid").data("kendoGrid").dataSource.filter({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: "AllowanceType",
+                            operator: "startswith",
+                            value: $("#nama").val()
+                        },
+                        {
+                            field: "yearActivity",
+                            operator: "startswith",
+                            value: $("#nama").val()
+                        }
+                    ]
+                });
+            }
+
+            $(document).ready(function () {
+                // BindGrid();
+                $(".k-grid-header").attr("style", "display:none");
+
+                $('#divPersonalDdata').click(function () {
+                    $(window).scrollTop(330);
+                });
+
+                $('#divOrganization').click(function () {
+                    $(window).scrollTop(400);
+                });
+
+                $('#divPendidikan').click(function () {
+                    $(window).scrollTop(400);
+                });
+
+                $('#divFamilyMember').click(function () {
+                    $(window).scrollTop(550);
+                });
+
+                $('#divTraining').click(function () {
+                    $(window).scrollTop(620);
+                });
+
+                $('#divMadical').click(function () {
+                    $(window).scrollTop(700);
+                });
+
+                $('#divPersonalDevelopment').click(function () {
+                    $(window).scrollTop(800);
+                });
+
+            $('#divHistoryClaimBenefit').click(function () {
+                $(window).scrollTop(840);
+            });
+        });
+    </script>
+    <script type="text/javascript">
+        var anakke = 0;
+        function BindAnak() {
+            anakke += 1
+            return anakke;
+        }
+
+        function openCity(evt, cityName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tabcontent");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tablinks");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(cityName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // function BindGrid() {
+        //     var dataClaimBenefit = @Html.Raw(HistoryBenefitClaim);
+        //     $("#benefitClaimGrid1").kendoGrid({
+        //         columns: [{
+        //             field: "Noreg",
+        //             template: kendo.template($("#dataBenefitClaim-template").html())
+        //         }],
+        //         noRecords: {
+        //             template: '<div class="text-center p-2 text-muted"><i class="fa fa-clipboard font-large-1"></i><br/>No Records Found</div>'
+        //         },
+        //         dataSource: dataClaimBenefit,
+        //         pageable: {
+        //             input: true,
+        //             numeric: false,
+        //             alwaysVisible: false,
+        //             pageSize: 5,
+        //         },
+        //     });
+        // }
+
+        function filterGrid() {
+            $("#benefitClaimGrid1").data("kendoGrid").dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    }
+                ]
+            });
+        }
+
+        function filterGrid1() {
+            var selectedClaimType = $("#claimTypeDropdown").val();
+
+            $("#HCBGrid").data("kendoGrid").dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "eq",
+                        value: selectedClaimType
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "eq",
+                        value: selectedClaimType
+                    }
+                ]
+            });
+        }
+
+        function filterGrid23() {
+            var selectedClaimType = $("#claimTypeDropdown").val();
+            var grid = $("#HCBGrid").data("kendoGrid");
+            var namaPasienColumn = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Nama Pasien";
+                return column.field === "JsonObject" && column.title === "Patient's name";
+            })[0];
+            var namaHospitalColumn = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Nama Rumah Sakit";
+                return column.field === "JsonObject" && column.title === "Hospital Name";
+            })[0];
+            var namaTipeReimburse = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Tipe Reimburse";
+                return column.field === "JsonObject" && column.title === "Reimbursement Type";
+            })[0];
+            var namaTanggalPerawatan = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Tanggal Perawatan";
+                return column.field === "JsonObject" && column.title === "Date of Treatment";
+            })[0];
+            var namaHubungan = grid.columns.filter(function (column) {
+                //return column.field === "JsonObject" && column.title === "Hubungan";
+                return column.field === "JsonObject" && column.title === "Relationshiop";
+            })[0];
+
+            if (selectedClaimType === "Reimburse RS") {
+                // Menampilkan kolom "Nama Pasien"
+                //console.log("test1");
+                grid.showColumn(namaPasienColumn);
+                //console.log("test2");
+                grid.showColumn(namaHospitalColumn);
+                grid.showColumn(namaTipeReimburse);
+                grid.showColumn(namaTanggalPerawatan);
+                grid.showColumn(namaHubungan);
+            } else {
+                // Menyembunyikan kolom "Nama Pasien"
+                //console.log("test-1");
+                grid.hideColumn(namaPasienColumn);
+                //console.log("test1-2");
+                grid.hideColumn(namaHospitalColumn);
+                grid.hideColumn(namaTipeReimburse);
+                grid.hideColumn(namaTanggalPerawatan);
+                grid.hideColumn(namaHubungan);
+            }
+
+            grid.dataSource.filter({
+                logic: "or",
+                filters: [
+                    {
+                        field: "AllowanceType",
+                        operator: "eq",
+                        value: selectedClaimType
+                    },
+                    {
+                        field: "yearActivity",
+                        operator: "eq",
+                        value: selectedClaimType
+                    }
+                ]
+            });
+        }
+
+        /*function toggleGridVisibility() {
+            var selectedClaimType = $("#claimTypeDropdown1").val();
+            var reimburseGrid = $("#HCBGridReimburseRS").data("kendoGrid");
+            var rs = document.getElementById("HCBGridReimburseRS");
+            var nonReimburseGrid = $("#HCBGridOther").data("kendoGrid");
+
+            if (selectedClaimType === "Reimburse RS") {
+                console.log(selectedClaimType);
+                console.log("Sebelum mengubah visibilitas");
+                reimburseGrid.show();
+                nonReimburseGrid.hide();
+                console.log("Setelah mengubah visibilitas");
+            } else {
+                console.log(selectedClaimType);
+                console.log("Sebelum mengubah visibilitas1");
+                //reimburseGrid.wrapper.hide();
+                //rs.style.display = "none";
+                $("#HCBGridReimburseRS").hide();
+                $("#HCBGridOther").show();
+                //nonReimburseGrid.wrapper.show();
+                console.log("Setelah mengubah visibilitas1");
+            }
+        }
+
+        $("#toggleGridButton").click(function() {
+            toggleGridVisibility();
+        });*/
+
+
+        $(document).ready(function () {
+            // BindGrid();
+            //toggleGridVisibility();
+            $("#uploadButton").click(function () {
+                var formData = new FormData();
+                var fileInput = document.getElementById("fileInput");
+                var noreg = @Html.Encode(ProfileData.NoReg);
+                formData.append("photo", fileInput.files[0]);
+                formData.append("noreg", noreg);
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/employe-profile/upload"),
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        // Handle success response from the API
+                        console.log(response);
+                    },
+                    error: function (error) {
+                        // Handle error response from the API
+                        console.error(error);
+                    }
+                });
+            });
+        });
+
+        $("#fileInput").change(function () {
+            var fileInput = document.getElementById("fileInput");
+            var noreg = @Html.Encode(ProfileData.NoReg);
+
+            if (fileInput.files && fileInput.files.length > 0) {
+                var formData = new FormData();
+                formData.append("photo", fileInput.files[0]);
+                formData.append("noreg", noreg);
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/employe-profile/upload"),
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function (response) {
+                        // Handle success response from the API
+                        //console.log(response);
+                        location.reload();
+                    },
+                    error: function (error) {
+                        // Handle error response from the API
+                        console.error(error);
+                    }
+                });
+            }
+        });
+
+        function onDataBoundMcuGrid(e) {
+            var grid = $("#medicalHistoryGrid").data("kendoGrid");
+            var data = grid.dataSource.data();
+
+            //if (data.length > 0) {
+                var classKaryawan = @PersonalData[0]?.NP; // Ambil Class karyawan dari data pertama
+
+                // Tampilkan kolom berdasarkan Class
+                if (classKaryawan >= 3 && classKaryawan <= 6) {
+                    grid.showColumn("HasilPapsmear");
+
+                }
+                if (classKaryawan >= 7 && classKaryawan <= 8) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("Ca125");
+                    grid.showColumn("PSA");
+                }
+                if (classKaryawan >= 9 && classKaryawan <= 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+                if (classKaryawan > 10) {
+                    grid.showColumn("KesimpulanTreadmill");
+                    grid.showColumn("VitD25OH");
+                    grid.showColumn("HasilUsgMammae");
+                    grid.showColumn("PSA");
+                    grid.showColumn("CEA");
+                    grid.showColumn("SGOT");
+                    grid.showColumn("SGPT");
+                    grid.showColumn("GammaGT");
+                    grid.showColumn("Ca125");
+                }
+           // }
+        }
+
+
+    </script>
+
+}
+<div class="loader" data-url="/app/Organizational/OM/GetViewPersonDialog" data-parameters="getParameter" style="position: relative; zoom: 1;">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-sm-12 text-center d-flex align-items-center">
+                                    @if (ProfileData != null && !string.IsNullOrEmpty(ProfileData.NoReg))
+                                    {
+
+                                        if (photo != null)
+                                        {
+                                            <img alt="Profile Picture" class="photo center-image" src="@Url.Content($"~/api/employe-profile/download/{ProfileData.NoReg}")">
+                                        }
+                                        else
+                                        {
+                                            <img alt="Profile Picture" class="photo center-image" src="@ConfigService.ResolveAvatar(ProfileData.NoReg)">
+                                        }
+
+
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-user-circle" style="font-size: 7rem;"></i>
+                                    }
+                                </div>
+                                <div class="col-sm-12" style="margin-top:30px;">
+                                    <h5 class='font-weight-bold' style="text-align:center;">@ProfileData?.Name</h5>
+                                    <div class="row left-side" style="margin-top:30px;">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-pencil-square-o"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["No Reg"]</label>
+                                                    <p class='font-weight-bold'>@(ProfileData?.NoReg ?? "-")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row left-side">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-clipboard"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["Class"]</label>
+                                                    <p class='font-weight-bold'>@(ProfileData?.EmployeeSubgroupText ?? "-")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row left-side">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-calendar-o"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["Entry Date TAM"]</label>
+                                                    <p class='font-weight-bold'>@(PersonalData?[0]?.TamDate != null ? PersonalData[0].TamDate.ToString("dd/MM/yyyy") : "-")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if (showAstra)
+                                    {
+                                        <div class="row left-side">
+                                            <div class="col-sm-12">
+                                                <div class="row">
+                                                    <div class="col-sm-2 icon-size">
+                                                        <i class="fa fa-industry"></i>
+                                                    </div>
+                                                    <div class="col-sm-10">
+                                                        <label>@Localizer["Entry Date ASTRA"]</label>
+                                                        <p class='font-weight-bold'>@(PersonalData?[0]?.EntryDate != null ? PersonalData[0].EntryDate.ToString("dd/MM/yyyy") : "-")</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    <div class="row left-side">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-university"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["Work Location"]</label>
+                                                    <p class='font-weight-bold'>@(PersonalData?[0]?.EmployeeSubGroupText ?? "-")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row left-side">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-tag"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["Employee Category"]</label>
+                                                    <p class='font-weight-bold'>@(ViewData["Expr1"]?.ToString() ?? "-")</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row left-side">
+                                        <div class="col-sm-12">
+                                            <div class="row">
+                                                <div class="col-sm-2 icon-size">
+                                                    <i class="fa fa-user"></i>
+                                                </div>
+                                                <div class="col-sm-10">
+                                                    <label>@Localizer["Employee Status"]</label>
+                                                    <p class='font-weight-bold'>@contract</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            input[type="text"]:disabled, input[type="date"]:disabled, textarea:disabled {
+                background-color: #f0ecec !important; /* Light gray background */
+                border: 1px solid #ddd !important; /* Light border */
+                opacity: 1 !important; /* Prevents the input from looking too faded */
+            }
+        </style>
+        <div class="col-md-8">
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="tab">
+                                <button class="tablinks active" onclick="openCity(event, 'PersonalData')">@Localizer["Personal Data"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'OA')">@Localizer["Organization Assignment"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'Education')">@Localizer["Education"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'Family')">@Localizer["Family Member"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'EC')">@Localizer["Emergency Contact"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'TE')">@Localizer["Training & Event"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'MH')">@Localizer["Medical History"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'PD')">@Localizer["Personal Development"]</button>
+                                <button class="tablinks" onclick="openCity(event, 'HBC')">@Localizer["History Benefit Claim"]</button>
+                            </div>
+
+                            <div id="PersonalData" class="tabcontent" style="display: block;">
+                                <div class="card-body">
+
+                                    @* @(
+                                        Html.Kendo().Grid<PersonalDataAllProfileStoredEntity>(ListProfileData)
+                                        .Name("personaldataGrid")
+                                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header", @style = "font-size:0.8rem" })
+                                        .Columns(columns =>
+                                        {
+                                            columns.Bound(c => c.NoReg).Title("No Reg");
+                                            columns.Bound(c => c.Name).Title("Name");
+                                            columns.Bound(c => c.Gender).Title("Gender");
+                                        })
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read.Url(Url.Content("~/api/personaldata/get")))
+                                        )
+                                        )
+
+                                    <br /> *@
+
+                                    <input type="hidden" name="NoReg" value="@ViewData["NoReg"]" />
+
+                                    <div class="row">
+                                        <!-- Left Side -->
+                                        <div class="col-md-6">
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="profileData">Full Name Without Title</label>
+                                                <input type="text" class="form-control" id="namess" name="namess" value="@ViewData["NameUser"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="profileData">Passport Number</label>
+                                                <input type="text" class="form-control" id="passport" name="passport" value="@ViewData["passportNumber"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="profileData">Phone Number</label>
+                                                <input type="text" class="form-control" id="phone" name="phone" value="@ViewData["phoneNum"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="pob">Place of Birth</label>
+                                                <input type="text" class="form-control" id="pob" name="pob" value="@ViewData["pob"]" disabled required />
+                                            </div>
+
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="dob">Date of Birth</label>
+                                                @*<input type="date" class="form-control" id="dob" name="dob" value="@ViewData["dob"]" disabled required />*@
+                                                @{
+                                                    DateTime? dob = null;
+
+                                                    if (ViewData["dob"] is DateTime dt)
+                                                    {
+                                                        dob = dt;
+                                                    }
+                                                    else if (ViewData["dob"] is string dobStr && DateTime.TryParse(dobStr, out DateTime parsed))
+                                                    {
+                                                        dob = parsed;
+                                                    }
+                                                }
+
+                                                @(Html.Kendo().DatePicker()
+                                                                                                .Name("dob")
+                                                                                                .HtmlAttributes(new
+                                                                                                {
+                                                                                                    id = "dob",
+                                                                                                    @class = "form-control",
+                                                                                                    required = "required",
+                                                                                                    disabled = "disabled"
+                                                                                                })
+                                                                                                .Value(dob)
+                                                                                                .Format("dd/MM/yyyy")
+                                                                                                .Enable(false)
+                                                                                                .Deferred()
+                                                                                                )
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="gender">Gender</label>
+                                                <input type="text" class="form-control" id="genderss" name="genderss" value="@ViewData["gender"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="email">Email</label>
+                                                <input type="text" class="form-control" id="email" name="Email" value="@ViewData["Email"]?.ToString()" disabled />
+                                            </div>
+
+                                                @* <div class="form-group">
+                                                    <span style="color: red; display: none;" id="spanprofiles">*</span><label for="address">KTP Address</label>
+                                                    <input type="text" class="form-control" id="address" name="Address" value="@ViewData["Addresss"]?.ToString()" disabled required />
+                                                </div> *@
+                                            <div class="form-group">
+                                                <span style="color: red; display: none" class="mandatory-asterisk">* </span><label for="address">KTP Address</label>
+                                                <textarea class="form-control" id="address" name="Address" onclick="openAddressForm()" disabled style="resize: none; height: 85px">@ViewData["Addresss"]?.ToString()</textarea>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="status">Marital Status</label>
+                                                <input type="text" class="form-control" id="status" name="status" value="@ViewData["MartalStatus"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group" id="marriedCertField">
+                                                <span style="color: red; display: none">* </span><label for="personalData">Marital Certificate Number</label>
+                                                <input type="text" class="form-control" id="marCerNum" name="marCelNum" value="@Html.Encode(ViewData["marCerti"])" disabled />
+                                            </div>
+
+                                            <div class="form-group" id="divorceCertField">
+                                                <span style="color: red; display: none">* </span><label for="personalData">Divorce Certificate Number</label>
+                                                <input type="text" class="form-control" id="divCerNum" name="divCerNum" value="@Html.Encode(ViewData["divCerti"])" disabled />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Account Number</label>
+                                                <input type="text" class="form-control" id="accountnumber" name="accountnumber" value="@ViewData["accountNumber"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none" class="mandatory-asterisk non-mandatory-wna">* </span><label for="personalData">Account Name</label>
+                                                <input type="text" class="form-control non-mandatory-input-wna" id="accountname" name="accountname" value="@ViewData["accountName"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">BPJS Employment Number</label>
+                                                <input type="text" class="form-control" id="ben" name="Ben" value="@ViewData["bpjsen"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Dana Pensiun Number</label>
+                                                <input type="text" class="form-control" id="ndp" name="ndp" value="@ViewData["np"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">SIM A Number</label>
+                                                <input type="text" class="form-control" id="simanumber" name="simanumber" value="@ViewData["simaNumber"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="bg">Blood Group</label>
+                                                <input type="text" class="form-control" id="bg" name="bg" value="@ViewData["bg"]" disabled required />
+                                            </div>
+
+                                        </div>
+
+
+                                        <!-- Right Side -->
+                                        <div class="col-md-6">
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="profileData">Identity Card / KTP Name</label>
+                                                <input type="text" class="form-control" id="identityName" name="identityName" value="@ViewData["identityName"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="nationality">Nationality</label>
+                                                <input type="text" class="form-control" id="Nationality" name="Nationality" value="@ViewData["Nationality"]" disabled required />
+                                            </div>
+
+
+                                            <input type="text" class="form-control" id="noreg" name="Noreg" value="@ViewData["noregs"]" disabled hidden required />
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Whatsapp Number</label>
+                                                <input type="text" class="form-control" id="wanum" name="wanum" value="@ViewData["waNum"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Identity Number / KTP Number</label>
+                                                <input type="text" class="form-control" id="idn" name="idn" value="@ViewData["idNumber"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Family Card Number</label>
+                                                <input type="text" class="form-control" id="kk" name="kk" value="@ViewData["kk"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="education">NPWP</label>
+                                                <input type="text" class="form-control" id="npwp" name="npwp" value="@ViewData["npwp"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="profileData">Personal Email</label>
+                                                <input type="text" class="form-control" id="personalEmail" name="personalEmail" value="@ViewData["personalemail"]?.ToString()" disabled required />
+                                            </div>
+
+                                                @* <div class="form-group">
+                                                    <span style="color: red; display: none;" id="spanprofiles">*</span><label for="address">Domicile Address</label>
+                                                    <input type="text" class="form-control" id="domicile" name="domicile" value="@ViewData["Domicile"]?.ToString()" disabled required />
+                                                </div> *@
+                                            <div class="form-group">
+                                                <span style="color: red; display: none" class="mandatory-asterisk">* </span><label for="domicile">Domicile Address</label>
+                                                <textarea class="form-control" id="domicile" name="domicile" onclick="openDomicileForm()" disabled style="resize: none; height: 85px;">@ViewData["domicile"]?.ToString()</textarea>
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="religion">Religion</label>
+                                                <input type="text" class="form-control" id="Religion" name="Religion" value="@ViewData["Religion"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group" id="marriedDateField">
+                                                <span style="color: red; display: none" class="mandatory-asterisk">*</span><label class="form-label">Married Date</label>
+                                                @*<input type="date" class="form-control" id="maritalDate" disabled value="@ViewData["marDate"]">*@
+                                                @{
+                                                    DateTime? marDate = null;
+
+                                                    if (ViewData["marDate"] is DateTime dtsa)
+                                                    {
+                                                        marDate = dtsa;
+                                                    }
+                                                    else if (ViewData["marDate"] is string marDateStr && DateTime.TryParse(marDateStr, out DateTime parsed))
+                                                    {
+                                                        marDate = parsed;
+                                                    }
+                                                }
+
+                                                @(Html.Kendo().DatePicker()
+                                                 .Name("maritalDate")
+                                                 .HtmlAttributes(new
+                                                 {
+                                                     id = "maritalDate",
+                                                     @class = "form-control custom-datepicker"
+                                                 })
+                                                 .Value(marDate)
+                                                 .Format("dd/MM/yyyy")
+                                                 .Enable(false)
+                                                 .Deferred()
+                                                 )
+                                            </div>
+
+                                            <div class="form-group" id="divorceDateField">
+                                                <span style="color: red; display: none" class="mandatory-asterisk">*</span><label class="form-label">Divorce Date</label>
+                                                @*<input type="date" class="form-control" id="divorceDate" disabled value="@ViewData["divDate"]">*@
+                                                @{
+                                                    DateTime? divDate = null;
+
+                                                    if (ViewData["divDate"] is DateTime dts)
+                                                    {
+                                                        divDate = dts;
+                                                    }
+                                                    else if (ViewData["divDate"] is string divDateStr && DateTime.TryParse(divDateStr, out DateTime parsed))
+                                                    {
+                                                        divDate = parsed;
+                                                    }
+                                                }
+
+                                                @(Html.Kendo().DatePicker()
+                                                                                                .Name("divorceDate")
+                                                                                                .HtmlAttributes(new
+                                                                                                {
+                                                                                                    id = "divorceDate",
+                                                                                                    @class = "form-control",
+                                                                                                    disabled = "disabled"
+                                                                                                })
+                                                                                                .Value(divDate)
+                                                                                                .Format("dd/MM/yyyy")
+                                                                                                .Enable(false)
+                                                                                                .Deferred()
+                                                                                                )
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="branch">Branch (Bank)</label>
+                                                <input type="text" class="form-control" id="branch" name="branch" value="@ViewData["bankSelect"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="taxStatus">Tax Status</label>
+                                                <input type="text" class="form-control" id="ts" name="ts" value="@ViewData["taxSelect"]" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="familyMember">BPJS Health Number</label>
+                                                <input type="text" class="form-control" id="bpjs" name="bpjs" value="@ViewData["bpjs"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">Insurance Number</label>
+                                                <input type="text" class="form-control" id="insuranceno" name="insuranceNo" value="@ViewData["insuranceNo"]?.ToString()" disabled required />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <span style="color: red; display: none;" id="spanprofiles">*</span><label for="personalData">SIM C Number</label>
+                                                <input type="text" class="form-control" id="simcnumber" name="simcnumber" value="@ViewData["simcNumber"]?.ToString()" disabled required />
+                                            </div>
+
+
+
+
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                                <div class="col-sm-12">
+                                    <div class="p-0 table-responsive">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script>
+                                $(document).ready(function () {
+                                    // Sembunyikan dulu
+                                    $('#marriedCertField, #divorceCertField, #marriedDateField, #divorceDateField').hide();
+                                    $('#maritalDate, #divorceDate').removeAttr('required');
+
+                                    function toggleMaritalFields(value) {
+                                        if (value === 'Married' || value === 'Menikah') {
+                                            $('#marriedCertField, #marriedDateField').show();
+                                            $('#divorceCertField, #divorceDateField').hide();
+                                            $('#maritalDate').attr('required', true);
+                                            $('#divorceDate').attr('required', false);
+                                        } else if (value === 'Widow' || value === 'Widower' || value === 'Janda' || value === 'Duda') {
+                                            $('#divorceCertField, #divorceDateField').show();
+                                            $('#marriedCertField, #marriedDateField').hide();
+                                            $('#divorceDate').attr('required', true);
+                                            $('#maritalDate').attr('required', false);
+                                        } else {
+                                            $('#marriedCertField, #marriedDateField, #divorceCertField, #divorceDateField').hide();
+                                            $('#maritalDate, #divorceDate').attr('required', false);
+                                        }
+                                    }
+
+                                    // Jalankan saat halaman pertama kali dimuat
+                                    toggleMaritalFields($('#status').val());
+                                });
+                            </script>
+
+                            <div id="OA" class="tabcontent">
+                                @(
+                                                                Html.Kendo().Grid(organizationalAssignments)
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .Name("organizationGrid")
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound(x => x.OrgName).Title("Organization").Width(150);
+                                                                    columns.Bound(x => x.JobName).Title("Job").Width(150);
+                                                                    columns.Bound(x => x.PostName).Title("Position").Width(150);
+                                                                    columns.Bound(x => x.StartDate).Title("Start Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.EndDate).Title("End Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="Education" class="tabcontent">
+                                @(
+                                                                Html.Kendo().Grid(eduDatas)
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .Name("educationGrid")
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound("EducationTypeName").Title("Education").Width(131);
+                                                                    columns.Bound("Institute").Title("Name").ClientTemplate(@"
+                                                                <text>#: Institute != '' ? Institute : 'N/A' #</text>
+                                                                ").Width(187);
+                                                                    columns.Bound("MajorName").Title("Major").Width(151);
+                                                                    columns.Bound("CountryName").Title("Country").Width(131);
+
+                                                                    columns.Bound("NoReg").Title("NoReg").Hidden(true);
+
+                                                                    columns.Bound("StartEducationDate").Title("sdate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150).Hidden(true);
+
+                                                                    columns.Bound("GraduationDate").Title("gdate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150).Hidden(true);
+
+                                                                    columns.Bound("FinalGrade").Hidden(true);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="Family" class="tabcontent">
+                                @(
+                                                                Html.Kendo().Grid(famData)
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .Name("familyGrid")
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound(x => x.FamilyTypeCode).Title("Family Type").ClientTemplate(@"<text>
+                                                                #: FamilyTypeCode == 'Pasangan' && GenderCode== 'Perempuan' ? 'Istri' : FamilyTypeCode == 'Pasangan' && GenderCode== 'Laki - Laki' ? 'Suami' : FamilyTypeCode#
+                                                                </text>
+                                                                ").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.Name).Title("Name").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.BirthPlace).Title("Birth Place").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.BirthDate).Title("Birth Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.GenderCode).Title("Gender").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.ChildOrder).Title("Child Order").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                                                                                                                                     @* columns.Bound(x => x.FamilyTypeCode).Title("Child").ClientTemplate(@"<text>
+                                #= FamilyTypeCode == 'Anak Kandung' || FamilyTypeCode == 'Anak Angkat' ? BindAnak(): '-'#
+                                </text>").HtmlAttributes(new { @class = "text-center" }).Width(150); *@
+                                                                    columns.Bound(x => x.BpjsNumber).Title("BPJS Health").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.InsuranceNumber).Title("Insurance Number").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.LifeStatus).Title("Life Status").ClientTemplate("#= LifeStatus == 1 ? 'Alive' : LifeStatus == 0 ? 'Passed Away' : '-' #").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                                                                                                                                                                                                                              //columns.Bound(x => x.DeathDate).Title("Death Date").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.DeathDate)
+                                                                    .Title("Date of Death")
+                                                                    .ClientTemplate("#= LifeStatus == 0 && DeathDate ? kendo.toString(kendo.parseDate(DeathDate), 'dd/MM/yyyy') : '-' #")
+                                                                    .HtmlAttributes(new { @class = "text-center" })
+                                                                    .Width(150);
+                                                                    columns.Bound(x => x.EducationLevel).Title("Education").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.Job).Title("Job").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.PhoneNumber).Title("Phone").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.ChildStatus).Title("Child Status").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.AddressStatusCode).Title("Address Status").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.NIK).Title("Identity Number / KTP Number").HtmlAttributes(new { @class = "text-center" }).Width(180);
+                                                                    columns.Bound(x => x.Domicile).Title("Domicile").HtmlAttributes(new { @class = "text-center" }).Width(200);
+                                                                    columns.Bound(x => x.Religion).Title("Religion").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                    columns.Bound(x => x.Nationality).Title("Nationality").HtmlAttributes(new { @class = "text-center" }).Width(150);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="EC" class="tabcontent">
+                                <div class="card-body" style="padding-top: 0px">
+                                    @* @(
+                                        Html.Kendo().Grid<PersonalDataAllProfileStoredEntity>(ListProfileData)
+                                        .Name("personaldataGrid")
+                                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header", @style = "font-size:0.8rem" })
+                                        .Columns(columns =>
+                                        {
+                                            columns.Bound(c => c.NoReg).Title("No Reg");
+                                            columns.Bound(c => c.Name).Title("Name");
+                                            columns.Bound(c => c.Gender).Title("Gender");
+                                        })
+                                        .DataSource(dataSource =>
+                                        dataSource.Ajax().Read(read => read.Url(Url.Content("~/api/personaldata/get")))
+                                        )
+                                        )
+
+                                    <br /> *@
+
+                                    <div class="row">
+                                        <!-- Left Side -->
+                                        <div class="col-md-6">
+
+                                            <div class="form-group">
+                                                <label for="profileData">Family Contact Name</label>
+                                                <input type="text" class="form-control" value="@ViewData["ecName"]?.ToString()" disabled />
+                                            </div>
+
+                                            @*<div class="form-group">
+                                                <label for="phone">Family Contact Number</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <select class="form-control" style="max-width: 100px;" disabled>
+                                                            @foreach (var code in ViewData["ecPhoneList"] as List<string>)
+                                                            {
+                                                                <option value="@code" selected="@(code == ViewData["ecPhoneCode"]?.ToString() ? "selected" : null)">
+                                                                    @code
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <input type="text" class="form-control" value="@ViewData["ecPhone"]?.ToString()" disabled />
+                                                </div>
+                                            </div>*@
+
+                                            <div class="form-group">
+                                                <label for="phone">Family Contact Number</label>
+                                                <input type="text" class="form-control" value="@ViewData["ecPhone"]?.ToString()" disabled />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="familytype" class="form-label">Family Contact Relationship</label>
+                                                <select class="form-control" disabled>
+                                                    <option value="">Select Family Type</option>
+                                                    @{
+                                                        var selectedRelation = ViewData["ecRelation"]?.ToString();
+                                                    }
+                                                    @foreach (var familyType in (IEnumerable<string>)ViewData["familyTypeList"])
+                                                    {
+                                                        <option value="@familyType" selected="@(familyType == selectedRelation ? "selected" : null)">
+                                                            @familyType
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </div>
+
+                                        </div>
+
+                                        <!-- Right Side -->
+                                        <div class="col-md-6">
+
+                                            <div class="form-group">
+                                                <label for="profileData">Family Contact Name 2</label>
+                                                <input type="text" class="form-control" value="@ViewData["ecName2"]?.ToString()" disabled />
+                                            </div>
+
+                                            @*<div class="form-group">
+                                                <label for="phone">Family Contact Number 2</label>
+                                                <div class="input-group">
+                                                    <div class="input-group-prepend">
+                                                        <select class="form-control" style="max-width: 100px;" disabled>
+                                                            @foreach (var code in ViewData["ecPhoneList"] as List<string>)
+                                                            {
+                                                                <option value="@code" selected="@(code == ViewData["ecPhoneCode2"]?.ToString() ? "selected" : null)">
+                                                                    @code
+                                                                </option>
+                                                            }
+                                                        </select>
+                                                    </div>
+                                                    <input type="text" class="form-control" value="@ViewData["ecPhone2"]?.ToString()" disabled />
+                                                </div>
+                                            </div>*@
+                                            <div class="form-group">
+                                                <label for="phone">Family Contact Number 2</label>
+                                                <input type="text" class="form-control" value="@ViewData["ecPhone2"]?.ToString()" disabled />
+                                            </div>
+
+                                            <div class="form-group">
+                                                <label for="familytype" class="form-label">Family Contact Relationship 2</label>
+                                                <select class="form-control" disabled>
+                                                    <option value="">Select Family Type</option>
+                                                    @{
+                                                        var selectedRelation2 = ViewData["ecRelation2"]?.ToString();
+                                                    }
+                                                    @foreach (var familyType in (IEnumerable<string>)ViewData["familyTypeList"])
+                                                    {
+                                                        <option value="@familyType" selected="@(familyType == selectedRelation2 ? "selected" : null)">
+                                                            @familyType
+                                                        </option>
+                                                    }
+                                                </select>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="TE" class="tabcontent">
+                                @(
+                                                                Html.Kendo().Grid(training)
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .Name("trainingEventGrid")
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound("Year").Title("Year").Width(221).HtmlAttributes(new { @class = "text-center" });
+                                                                    columns.Bound("TrainingName").Title("Training Name").Width(221);
+                                                                    columns.Bound("Institution").Title("Institution").Width(221);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="MH" class="tabcontent">
+                                @(Html.Kendo().Grid<TAMHR.ESS.Domain.PersonalDataMedicalHistory>()
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Name("medicalHistoryGrid")
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound(c => c.YearPeriod).Title("Tahun MCU").Width(100);
+                                                                    columns.Bound(c => c.LokasiMCU).Title("Lokasi MCU").Width(170);
+                                                                    columns.Bound(c => c.Usia).Title("Usia").Width(70);
+                                                                    columns.Bound(c => c.Berat).Title("BB (KG)").Width(100);
+                                                                    columns.Bound(c => c.Tinggi).Title("TB (CM)").Width(100);
+                                                                    columns.Bound(c => c.StatusBMI).Title("BMI").Width(100);
+                                                                    columns.Bound(c => c.TekananDarah).Title("TD").Width(120);
+                                                                    columns.Bound(c => c.KolesterolTotal).Title("Cholesterol").Width(120);
+                                                                    columns.Bound(c => c.LDL).Title("LDL").Width(120);
+                                                                    columns.Bound(c => c.HDL).Title("HDL").Width(120);
+                                                                    columns.Bound(c => c.Triglyceride).Title("TRYGLICERID").Width(120);
+                                                                    columns.Bound(c => c.GlukosaPuasa).Title("GDP").Width(120);
+                                                                    columns.Bound(c => c.HbA1c).Title("HBA1C").Width(120);
+                                                                    columns.Bound(c => c.SGOT).Title("SGOT").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.SGPT).Title("SGPT").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.GammaGT).Title("GGT").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.Ureum).Title("UREUM").Width(120);
+                                                                    columns.Bound(c => c.Kreatinin).Title("CREATININ").Width(120);
+                                                                    columns.Bound(c => c.GFR).Title("GFR").Width(120);
+                                                                    columns.Bound(c => c.AsamUrat).Title("URID ACID").Width(120);
+                                                                    columns.Bound(c => c.HBsAg).Title("HBSAG").Width(120);
+                                                                    columns.Bound(c => c.HasilEKG).Title("EKG").Width(120);
+                                                                    columns.Bound(c => c.HasilRontgen).Title("PARU").Width(120);
+                                                                    columns.Bound(c => c.HasilPapsmear).Title("PAPSMEAR (WANITA)").Width(170).Hidden(true);
+                                                                    columns.Bound(c => c.KesimpulanTreadmill).Title("TREADMIL").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.VitD25OH).Title("VIT D-25 OH").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.HasilUsgMammae).Title("USG").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.CEA).Title("CEA").Width(120).Hidden(true);
+                                                                    columns.Bound(c => c.PSA).Title("PSA (PRIA)").Width(170).Hidden(true);
+                                                                    columns.Bound(c => c.Ca125).Title("Ca-125 (WANITA)").Width(170).Hidden(true);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .Events(e => e.DataBound("onDataBoundMcuGrid"))
+                                                                .DataSource(dataSource => dataSource
+                                                                .Ajax()
+                                                                .Read(read => read.Url(Url.Content("~/api/employe-profile/get-medical-histories-1")).Data(@<text>function() { return { noreg: "@ProfileData.NoReg" }; }</text>))
+                                                                .Sort(sort => sort.Add("YearPeriod").Descending())
+                                                                ).Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="PD" class="tabcontent">
+                                @(Html.Kendo().Grid<TAMHR.ESS.Domain.PerformanceDevelopment>()
+                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                .Name("performanceDevelopmentGrid")
+                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                .Columns(columns =>
+                                                                {
+                                                                    columns.Bound(x => x.Period).Title("Period").Width(70);
+                                                                    columns.Bound(x => x.AreaDevelopment).Title("Area Development").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                                    columns.Bound(x => x.GeneralDevCategory).Title("Dev. Category").Width(250);
+                                                                    columns.Bound(x => x.DevelopmentActivity).Title("Dev. Activity").Width(250);
+                                                                    columns.Bound(x => x.Mentor).Title("Mentor").Width(250);
+                                                                    columns.Bound(x => x.Target).Title("Target").Width(250);
+                                                                    columns.Bound(x => x.StartDate).Title("StartDate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                                    columns.Bound(x => x.EndDate).Title("EndDate").Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                                                })
+                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No personal development found"].Value + "</div>"))
+                                                                .DataSource(dataSource => dataSource
+                                                                .Ajax()
+                                                                .Read(read => read.Url(Url.Content("~/api/employe-profile/get-performance-developments")).Data(@<text>function() { return { noreg: "@ProfileData.NoReg" }; }</text>))
+                                                                .Sort(sort => sort.Add("Period").Descending())
+                                                                )
+                                                                .Pageable(options =>
+                                                                {
+                                                                    options.Input(true);
+                                                                    options.Numeric(false);
+                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                })
+                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                .Deferred()
+                                                                )
+                            </div>
+
+                            <div id="HBC" class="tabcontent">
+                                <div id="historyBenefitClaim" aria-labelledby="headingThree">
+                                    <div class="card-body">
+                                        <div class="form-group">
+                                            <div class="row">
+                                                <label style="margin-right: 5px; margin-top:5px;">Claim Type:</label>
+                                                <select class="form-control" id="claimTypeDropdown" style="width:190px;">
+                                                    @foreach (var claimType in claimTypes)
+                                                    {
+                                                        <option>@claimType</option>
+                                                    }
+                                                </select>
+                                            </div>
+                                            <div style="margin-bottom:62px;margin-top:10px;">
+                                                <a class="btn btn-primary" onclick="filterGrid23();" style="color: #fff; float:right;">
+                                                    <i class="ft-search"></i> &nbsp;@Localizer["Search"]
+                                                </a>
+                                            </div>
+                                        </div>
+                                        @*<div id="benefitClaimGrid1"></div>*@
+                                        @(Html.Kendo().Grid<HistoryClaimStoreEntity>(HBC)
+                                                                                .Name("HCBGrid")
+                                                                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                                                                .HtmlAttributes(new { @style = "font-size:0.9rem" })
+                                                                                .Pageable(options =>
+                                                                                {
+                                                                                    options.Input(true);
+                                                                                    options.Numeric(false);
+                                                                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                                                                })
+                                                                                .Scrollable(s => s.Enabled(true).Height("auto"))
+                                                                                .Resizable(resizable => resizable.Columns(true))
+                                                                                .Columns(columns =>
+                                                                                {
+                                                                                    columns.Bound(x => x.AllowanceType).Title("Type of Benefit Claim").Width(150);
+                                                                                    columns.Bound(x => x.Noreg).Title("Claim Transactions").ClientTemplate(@"#= monthActivity # #= yearActivity#").Width(200);
+                                                                                    columns.Bound(x => x.JsonObject).Title("Patient's name").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: obj.FamilyName #</text>").Hidden().HtmlAttributes(new { id = "namaPasienColumn" }).Width(200);
+                                                                                    columns.Bound(x => x.JsonObject).Title("Relationshiop").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#if (obj.FamilyType === 'rspasangan') { #
+                                                                                Pasangan
+                                                                                # } else if (obj.FamilyType === 'rskaryawan') { #
+                                                                                Diri Sendiri
+                                                                                # } else if (obj.FamilyType === 'rsanak') { #
+                                                                                Anak
+                                                                                # }  #</text>").Hidden().HtmlAttributes(new { id = "namaHubunganColumn" }).Width(200);
+                                                                                    columns.Bound(x => x.JsonObject).Title("Reimbursement Type").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: (obj.ReimburseType == 'rawatjalankontrol' ? 'Rawat Jalan / Kontrol' : 'Perawatan / Inap') #</text>").Hidden().HtmlAttributes(new { id = "namaTipeReimburse" }).Width(200);
+                                                                                    columns.Bound(x => x.JsonObject).Title("Hospital Name").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: obj.HospitalName#</text>").Hidden().HtmlAttributes(new { id = "namaHospitalColumn" }).Width(200);
+                                                                                    columns.Bound(x => x.JsonObject).Title("Date of Treatment").ClientTemplate(@"#var obj = JSON.parse(JsonObject)#<text>#: (obj.DateIn == obj.DateOut ? obj.DateIn : (obj.DateIn)) #</text>").Hidden().HtmlAttributes(new { id = "namaTanggal Perawatan" }).Width(200);
+                                                                                    columns.Bound(x => x.amount).Title("Amount Transaction Claims").Format("Rp.{0:n0}").Width(150);
+                                                                                })
+                                                                                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No History Benefit Claim found"].Value + "</div>"))
+                                                                                .Deferred()
+                                                                                )
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

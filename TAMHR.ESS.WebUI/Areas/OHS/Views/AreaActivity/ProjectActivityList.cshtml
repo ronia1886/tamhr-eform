@@ -1,0 +1,165 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    // Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+}
+@section styles {
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+            left: -1.13rem;
+        }
+
+        .nav-item {
+            margin-right: 15px; /* Sesuaikan dengan kebutuhan Anda */
+        }
+    </style>
+}
+@section scripts {
+   
+}
+<div class="col-md-12"></div>
+<div class="col-md-12"></div>
+<div class="col-md-12">
+    <div class="card-header bordered">
+        <h3 class="card-title">@Localizer["List of Project Activity"]</h3>
+        <div class="heading-elements">
+            <ul id="ProjectActivity-filter" class="page-toolbars" data-role="filter">
+                <li>
+                    <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+                        <i class="icon-magnifier"></i>
+                    </a>
+                    <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["AreaName" , "DivisionCode", "DivisionName", "Contractor", "ProjectName", "RiskCategory", "TotalWorkerSearch"]' />
+                </li>
+                <li class="dropdown dropdown-arrow">
+                    <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                        <i class="fa fa-sort-amount-desc"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="Contractor">@Localizer["Contractor"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="ProjectName">@Localizer["Project Name"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="RiskCategory">@Localizer["Risk Category"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Divisi Name"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="AreaName">@Localizer["Nama Area"]</a>
+                        </li>
+                        <li>
+                            <a href="javascript:;" data-trigger="filter" data-sort="TotalWorkerSearch">@Localizer["Total Worker"]</a>
+                        </li>
+                        <li class="dropdown-divider"></li>
+                        <li class="p-2">
+                            <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="dropdown">
+                    <a href="javascript:;" class="font-green-haze" data-target="grid_project_activity" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Project Activity" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadProjectActivity">
+                        <i class="fa fa-plus-circle"></i>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.ProjectActivityViewModel>()
+        .Name("grid_project_activity")
+        .HtmlAttributes(new { data_filter = "ProjectActivity-filter" })
+        .Columns(columns =>
+        {
+            columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+            columns.Bound(o => o.Contractor).Title("Contractor").HtmlAttributes(new { @class = "text-center" }).Width(150);
+            columns.Bound(o => o.DivisionName).Title("Division").Width(180);
+            columns.Bound(o => o.AreaName).Title("Area").HtmlAttributes(new { @class = "text-center" }).Width(150);
+            columns.Bound(o => o.ProjectName).Title("Project Name").HtmlAttributes(new { @class = "text-center" });
+            columns.Bound(o => o.RiskCategory).Title("Risk Category").HtmlAttributes(new { @class = "text-center" }).Width(150);
+            columns.Bound(o => o.StartDate)
+            .Title("Start Date")
+            .HtmlAttributes(new { @class = "text-center" })
+            .ClientTemplate("#= kendo.toString(kendo.parseDate(StartDate), 'dd-MM-yyyy') #").Width(100);
+            columns.Bound(o => o.EndDate)
+            .Title("End Date")
+            .HtmlAttributes(new { @class = "text-center" })
+            .ClientTemplate("#= kendo.toString(kendo.parseDate(EndDate), 'dd-MM-yyyy') #").Width(100);
+            columns.Bound(o => o.TotalWorker).Title("Total Worker").HtmlAttributes(new { @class = "text-center" }).Width(150);
+            // Action column
+            columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+            .ClientTemplate(@"
+            <div class=""btn-group"">
+            <a class="" btn btn-sm blue-sharp"" data-target=""grid_project_activity"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Project Activity"" data-modal-ajax="" true"" data-ajax-url=""~/ohs/areaactivity/LoadProjectActivity"" data-parameters-id="" #:Id#"">
+            <i class=""ft-edit""></i>
+            </a>
+            </div>
+            <div class=""btn-group"">
+            <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteProjectActivity"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+            <i class=""ft-trash""></i>
+            </a>
+            </div>").Width(150);
+        })
+        .DataSource(dataSource => dataSource
+        .Ajax()
+        .Read(read => read.Url(Url.Content("~/api/ohs/area-activity/projectActivity/gets"))
+        .Data("filterGridByUrlParameters"))
+        .PageSize(20)
+        .Sort(sort =>
+        {
+            sort.Add("RowNum");
+        })
+        )
+        .Resizable(resize => resize.Columns(true))
+        .Pageable(options =>
+        {
+            options.Input(true);
+            options.Numeric(false);
+            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+        })
+        .Events(events => events.DataBound("onDataBound"))
+        .Scrollable(scrollable => scrollable.Height("auto"))
+        .Deferred()
+        )
+</div>

@@ -1,0 +1,39 @@
+﻿@{
+    var user = User.GetClaim("NoReg");
+}
+@*script Index*@
+<script>
+        function confirmAll() {
+            app.confirm(kendo.format(app.translate("Are you sure to confirm this Update data?"), app.translate(true)), function (d) {
+                var entity = {
+                    NoReg: '@user',
+                    UpdateDataStatus : 'comfirmed',
+                    Progress: 100,
+                };
+                if (d.value) {
+                    $.post(app.resolveUrl("~/api/form-pengkinian-data/confirm-all"), entity, function (
+                        result) {
+                        if (result) {
+                            location.reload();
+                            topFunction();
+                        }
+                    });
+                }
+            });
+        }
+
+        $(window).scroll(function () {
+			if ($(this).scrollTop() > 50) {
+				$('#back-to-top').fadeIn();
+			} else {
+				$('#back-to-top').fadeOut();
+			}
+		});
+        // When the user clicks on the button, scroll to the top of the document
+        function topFunction() {
+          $("html, body").animate({
+            scrollTop: 0
+            }, 1500);
+        }
+</script>
+

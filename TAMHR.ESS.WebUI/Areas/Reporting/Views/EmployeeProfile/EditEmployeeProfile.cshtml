@@ -1,0 +1,381 @@
+﻿<head>
+    <style>
+        .form-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Creates 2 equal-width columns */
+            gap: 20px; /* Space between columns */
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        /* Ensure labels span full width in smaller devices */
+        label {
+            width: 100%;
+        }
+
+        /* Make inputs full width inside grid cells */
+        .form-control {
+            width: 100%;
+        }
+
+        .left-side {
+            grid-column: 1; /* Position this group in the left column */
+        }
+
+        .right-side {
+            grid-column: 2; /* Position this group in the right column */
+        }
+
+    </style>
+</head>
+
+       <form id="editProfileForm" method="post" enctype="multipart/form-data">
+            <input type="hidden" name="NoReg" value="@ViewData["NoReg"]" />
+
+    <div class="form-container">
+
+        <!-- Left Side -->
+        <div class="left-side">
+
+            <div class="form-group">
+                <label for="profileData">Name</label>
+                <input type="text" class="form-control" id="profileData" name="ProfileData" value="@ViewData["PersonalData"]" disabled />
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">Class</label>
+                <input type="text" class="form-control" id="kelas" name="Kelas" value="@ViewData["Kelas"]" disabled />
+            </div>
+
+            <div class="form-group">
+                <label for="persarea">Pers. Area</label>
+                <select class="form-control" id="persarea" name="PersArea" disabled>
+                    @foreach (var persAreaList in (IEnumerable<string>)ViewData["persAreaList"])
+                    {
+                      @if (persAreaList == ViewData["persArea"]?.ToString())
+                        {
+                            <option value="@persAreaList" selected="selected">@persAreaList</option>
+                        }
+                        else
+                        {
+                            <option value="@persAreaList">@persAreaList</option>
+                        }
+                    }
+                </select>
+            </div>
+
+           <div class="form-group">
+                <label for="ec">Employee Category</label>
+                <select class="form-control" id="ec" name="ec" disabled>
+                    @if (ViewData["Expr1"]?.ToString() == "Active Employee")
+                    {
+                        <option value="Active Employee" selected="selected">Active Employee</option>
+                    }
+                    else
+                    {
+                        <option value="Active Employee">Active Employee</option>
+                    }
+
+                    @if (ViewData["Expr1"]?.ToString() == "Terminated")
+                    {
+                        <option value="Terminated" selected="selected">Terminated</option>
+                    }
+                    else
+                    {
+                        <option value="Terminated">Terminated</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="nationality">Nationality</label>
+                <select class="form-control" id="nationality" name="nationality" disabled>
+                    @foreach (var nationality in (IEnumerable<string>)ViewData["NationalityList"])
+                    {
+                        @if (nationality.Contains(Html.Encode(ViewData["Nationality"])))
+                        {
+                            <option value="@nationality" selected="selected">@nationality</option>
+                        }
+                        else
+                        {
+                            <option value="@nationality">@nationality</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="dob">Date of Birth</label>
+                <input type="date" class="form-control" id="dob" name="dob" value="@ViewData["dob"]" />
+            </div>
+
+            <div class="form-group">
+                <label for="gender">Gender</label>
+                <select class="form-control" id="gender" name="gender">
+                    @if (ViewData["gender"]?.ToString() == "Laki - Laki")
+                    {
+                        <option value="lakilaki" selected="selected">Male</option>
+                    }
+                    else
+                    {
+                        <option value="lakilaki">Male</option>
+                    }
+
+                    @if (ViewData["gender"]?.ToString() == "Perempuan")
+                    {
+                        <option value="perempuan" selected="selected">Female</option>
+                    }
+                    else
+                    {
+                        <option value="perempuan">Female</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="address">Address</label>
+                <textarea class="form-control" id="address" name="Address" style="height: 124px;">@Html.Encode(ViewData["address"])</textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="text" class="form-control" id="email" name="Email" value="@ViewData["Email"]?.ToString()" disabled />
+            </div>
+
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select class="form-control" id="status" name="Status">
+                    @foreach (var maritalStatus in (IEnumerable<string>)ViewData["maritalStatus"])
+                    {
+                        @if (maritalStatus == ViewData["Status"]?.ToString())
+                        {
+                            <option value="@maritalStatus" selected="selected">@maritalStatus</option>
+                        }
+                        else
+                        {
+                            <option value="@maritalStatus">@maritalStatus</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="religion">Religion</label>
+                <select class="form-control" id="religion" name="Religion">
+                    @foreach (var religionList in (IEnumerable<string>)ViewData["religionList"])
+                    {
+                        @if (religionList.Contains(ViewData["Religion"]?.ToString()))
+                        {
+                            <option value="@religionList" selected="selected">@religionList</option>
+                        }
+                        else
+                        {
+                            <option value="@religionList">@religionList</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="bg">Blood Group</label>
+                <select class="form-control" id="bg" name="Bg">
+                    @foreach (var bloodList in (IEnumerable<string>)ViewData["bloodList"])
+                    {
+                        @if (bloodList == ViewData["bg"]?.ToString())
+                        {
+                            <option value="@bloodList" selected="selected">@bloodList</option>
+                        }
+                        else
+                        {
+                            <option value="@bloodList">@bloodList</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">No Dana Pensiun</label>
+                <input type="text" class="form-control" id="ndp" name="ndp" value="@ViewData["np"]?.ToString()" />
+            </div>
+
+         @*    <div class="form-group">
+                <label for="es">Employee Status</label>
+                <select class="form-control" id="es" name="Es">
+                    @foreach (var workContractList in (IEnumerable<string>)ViewData["workContractList"])
+                    {
+                        @if (workContractList == ViewData["es"]?.ToString())
+                        {
+                            <option value="@workContractList" selected="selected">@workContractList</option>
+                        }
+                        else
+                        {
+                            <option value="@workContractList">@workContractList</option>
+                        }
+                    }
+                </select>
+            </div> *@
+
+        </div>
+
+        <!-- Right Side -->
+        <div class="right-side">
+
+            <div class="form-group">
+                <label for="noreg">Noreg</label>
+                <input type="text" class="form-control" id="noreg" name="Noreg" value="@ViewData["noregs"]" disabled/>
+            </div>
+
+            <div class="form-group">
+                <label for="ed">Entry Date</label>
+                <!-- Input with date format as yyyy-MM-dd (for proper handling) -->
+                <input type="date" class="form-control" id="ed" name="ed" value="@ViewData["ed"]" disabled/>
+            </div>
+
+             <div class="form-group">
+                <label for="nationality">Subarea</label>
+                <select class="form-control" id="subarea" name="Subarea" disabled>
+                    @foreach (var subgrupList in (IEnumerable<string>)ViewData["subgrupList"])
+                    {
+                        @if (subgrupList == ViewData["subgrup"]?.ToString())
+                        {
+                            <option value="@subgrupList" selected="selected">@subgrupList</option>
+                        }
+                        else
+                        {
+                            <option value="@subgrupList">@subgrupList</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="es">Employee Status</label>
+                <select class="form-control" id="es" name="Es" disabled>
+                    @foreach (var workContractList in (IEnumerable<string>)ViewData["workContractList"])
+                    {
+                        @if (workContractList == ViewData["es"]?.ToString())
+                        {
+                            <option value="@workContractList" selected="selected">@workContractList</option>
+                        }
+                        else
+                        {
+                            <option value="@workContractList">@workContractList</option>
+                        }
+                    }
+                </select>
+            </div>
+
+@*             @{
+                // Helper function to convert a string to title case
+                Func<string, string> ToTitleCase = str =>
+                {
+                    if (string.IsNullOrWhiteSpace(str)) return str;
+                    return System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(str.ToLower());
+                };
+
+                string selectedPob = ToTitleCase(ViewData["pob"]?.ToString());
+            } *@
+
+            <div class="form-group">
+                <label for="pob">Place of Birth</label>
+                <select class="form-control" id="pob" name="Pob">
+                    @foreach (var pob in (IEnumerable<string>)ViewData["pobList"])
+                    {
+
+                        @if (pob.IndexOf(ViewData["pob"]?.ToString(), StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            <option value="@pob" selected="selected">@pob</option>
+                        }
+                        else
+                        {
+                            <option value="@pob">@pob</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">Identity Number</label>
+                <input type="text" class="form-control" id="idn" name="idn" value="@ViewData["idNumber"]" />
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">Family Card Number</label>
+                <input type="text" class="form-control" id="kk" name="kk" value="@ViewData["kk"]?.ToString()" />
+            </div>
+
+            <div class="form-group">
+                <label for="education">NPWP</label>
+                <input type="text" class="form-control" id="npwp" name="npwp" value="@ViewData["npwp"]?.ToString()" />
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">Account Number</label>
+                <input type="text" class="form-control" id="an" name="an" value="@ViewData["accountNumber"]?.ToString()" />
+            </div>
+
+            <div class="form-group">
+                <label for="personalData">Branch</label>
+                <input type="text" class="form-control" id="branch" name="Branch" value="@ViewData["cbf"]?.ToString()" />
+            </div>
+
+             <div class="form-group">
+                <label for="personalData">Tax Status</label>
+                <input type="text" class="form-control" id="ts" name="Ts" value="@ViewData["taxStatus"]?.ToString()" />
+            </div>
+
+            <div class="form-group">
+                <label for="familyMember">BPJS Health Number</label>
+                <input type="text" class="form-control" id="bpjs" name="bpjs" value="@ViewData["bpjs"]?.ToString()" />
+            </div>
+
+             <div class="form-group">
+                <label for="personalData">BPJS Employment Number</label>
+                <input type="text" class="form-control" id="ben" name="Ben" value="@ViewData["bpjsen"]?.ToString()" />
+            </div>
+
+             <div class="form-group">
+                <label for="personalData">Insurance Number</label>
+                <input type="text" class="form-control" id="insuranceno" name="insuranceNo" value="@ViewData["insuranceNo"]?.ToString()" />
+            </div>
+        </div>
+    </div>
+
+        <button type="button" class="btn btn-secondary float-right" id="cancelButton">Cancel</button>
+        <button type="button" id="saveProfileBtn" class="btn btn-primary float-right mr-2">Save</button>
+
+        </form>
+
+<script>
+    document.getElementById("cancelButton").addEventListener("click", function () {
+        $('#role-modal').modal('hide');  // Close the modal
+    });
+</script>
+
+<script>
+    $(document).ready(function () {
+        // Handle form submission via AJAX
+        $('#saveProfileBtn').click(function () {
+            // Collect form data as an object
+            var formData = $('#editProfileForm').serialize(); // Serialize the form data
+
+            // Make AJAX call to the controller's API endpoint
+            $.ajax({
+                url: '@Url.Content("~/api/employe-profile/updateprofile")', // Use the proper controller URL
+                type: 'POST',
+                data: formData, // Send the serialized form data
+                success: function (response) {
+                    alert('Profile updated successfully!');
+                    // You can add logic to handle the response, like redirecting or updating the page
+                },
+                error: function (xhr, status, error) {
+                    alert('There was an error updating the profile. Please try again.');
+                }
+            });
+        });
+    });
+</script>
+
+    

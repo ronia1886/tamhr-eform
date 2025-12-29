@@ -1,0 +1,102 @@
+﻿<script data-template="term-and-conditions" type="text/template">
+    <table class="table table-borderless table-nopadding">
+        <tbody>
+            <tr>
+                <td style="width: 12rem!important;">@Localizer["Partner Name"]</td>
+                <td>: #: $.toDefault(Object.PartnerName, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Date of Birth"]</td>
+                <td>: #: $.toDefault(Object.DateOfBirth, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Citizenship"]</td>
+                <td>: #: $.toDefault(Object.NationalityCode == 'wni' ? 'WNI' : 'WNA', '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Gender"]</td>
+                <td>: #: $.toDefault(Object.GenderCode == 'lakilaki' ? '@Localizer["Male"]' : '@Localizer["Female"]', '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Nationality"]</td>
+                <td>: #: $.toDefault(typeof Object.IsOtherNation !== 'undefined' ? Object.OtherNation : Object.NationCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>NIK/KTP</td>
+                <td>: #: $.toDefault(Object.NIK, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Place of Birth"]</td>
+                <td>: #: $.toDefault(typeof Object.IsOtherPlaceOfBirthCode !== 'undefined' ? Object.OtherPlaceOfBirthCode : Object.PlaceOfBirthCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Province"]</td>
+                <td>: #: $.toDefault(Object.ProvinceCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["City"]</td>
+                <td>: #: $.toDefault(Object.CityCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["District"]</td>
+                <td>: #: $.toDefault(Object.DistrictCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Sub-district"]</td>
+                <td>: #: $.toDefault(Object.SubDistrictCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Postal Code"]</td>
+                <td>: #: $.toDefault(Object.PostalCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Address"]</td>
+                <td>: #: $.toDefault(Object.Address, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Religion"]</td>
+                <td>: #: $.toDefault(Object.ReligionCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Blood Type"]</td>
+                <td>: #: $.toDefault(Object.BloodTypeCode_input, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Profession"]</td>
+                <td>: #: $.toDefault(Object.Job, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Wedding Date"]</td>
+                <td>: #: $.toDefault(Object.MarriageDate, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Family Card Number"]</td>
+                <td>: #: $.toDefault(Object.FamilyCardNo, '-') #</td>
+            </tr>
+            # if (typeof Object.IsParnertBpjs !== 'undefined' && Object.IsParnertBpjs === true) { #
+            <tr>
+                <td>@Localizer["BPJS Number"]</td>
+                <td>: #: $.toDefault(Object.PartnerBjpsNo, '-') #</td>
+            </tr>
+            # } else { #
+            <tr>
+                <td>@Localizer["Faskes Code"]</td>
+                <td>: #: $.toDefault(Object.FaskesCode, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Faskes Name"]</td>
+                <td>: #: $.toDefault(Object.FaskesName, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Phone Number"]</td>
+                <td>: #: $.toDefault(Object.PartnerPhone, '-') #</td>
+            </tr>
+            <tr>
+                <td>@Localizer["Email"]</td>
+                <td>: #: $.toDefault(Object.PartnerEmail, '-') #</td>
+            </tr>
+            # } #
+        </tbody>
+    </table>
+    <hr />
+</script>

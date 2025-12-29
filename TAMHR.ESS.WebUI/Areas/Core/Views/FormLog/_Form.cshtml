@@ -1,0 +1,58 @@
+﻿@model FormLog
+@{ 
+    var isNew = Model.Id == default;
+}
+<form action="~/api/form-log" method="post">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.FormId)
+    @Html.HiddenFor(x => x.NoReg)
+    <span class="invalid" data-validation-for="FormId"></span>
+    <div class="row">
+        <div class="form-group col-md-12">
+            <label>@Localizer["Notes"]</label>
+            @Html.TextAreaFor(x => x.Notes, new { @class = "form-control", rows = 4 })
+            <span class="invalid" data-validation-for="Notes"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="form-group col-12">
+            <label>@Localizer["Closed"]</label>
+            <div class="custom-control custom-switch">
+                @Html.CheckBoxFor(x => x.Closed, new { @class = "custom-control-input", id = "closed-switch" })
+                <label class="custom-control-label" for="closed-switch">@Localizer["Marked as closed or not"]</label>
+            </div>
+            <span class="invalid" data-validation-for="Closed"></span>
+        </div>
+    </div>
+    <hr />
+    @(Html.Kendo().Grid<FormLog>()
+        .Name("formLogHistoryGrid")
+        .Columns(cols =>
+        {
+            cols.Bound(o => o.Id)
+                .Title(Localizer["Logs"].Value)
+                .ClientTemplate(
+                    @"<p>""#:Notes#""</p>
+                    <small class=""d-block description"">Opened on #:kendo.toString(CreatedOn, 'dd/MM/yyyy at HH:mm')#</small>
+                    <small class=""d-block description"">Closed on #:kendo.toString(ModifiedOn, 'dd/MM/yyyy at HH:mm')#</small>"
+                );
+        })
+        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Read(read => read.Url(Url.Content("~/api/form-log/get-closed")).Data(@"function() { return { ""noreg"": """ + Model.NoReg + @""" } }"))
+            .PageSize(5)
+            .Sort(sort => sort.Add(x => x.ModifiedOn).Descending())
+        )
+    )
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="formLogDataInterceptor">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+    app.registerHandler("formLogDataInterceptor", function (d) {
+        d.Closed = $(this).closest(".modal").find("input[name='Closed']").prop("checked");
+
+        return d;
+    });
+</script>

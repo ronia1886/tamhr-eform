@@ -1,0 +1,114 @@
+﻿<script type="text/x-kendo-template" id="formQuestionDetailTpl">
+    <a class="btn blue-sharp px-3 mb-3" data-trigger="modal" data-modal="generic-modal" data-target="formQuestionDetailGrid_#=Id#" data-modal-ajax="true" data-ajax-url="~/masterdata/formquestion/load" data-parameters-pid="#=Id#">
+        <i class="las la-plus-circle mr-2"></i>@Localizer["Create Detail"]
+    </a>
+    @(Html.Kendo().Grid<FormQuestion>()
+        .Name("formQuestionDetailGrid_#=Id#")
+        .Columns(cols =>
+        {
+            cols.Bound(o => o.Title)
+                .Title(Localizer["Title"].Value)
+                .ClientTemplate(
+                    @"<div class=""d-flex align-items-center"">" +
+                        @"<a href=""javascript:;"" data-trigger=""modal"" data-target=""formQuestionDetailGrid_#=Id#"" data-modal=""generic-modal"" data-title=""Edit Question"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/formquestion/load"" data-parameters-id=""\\#:Id\\#""><span class=""row-number mr-2""></span> \\#:Title\\#" +
+                        @"\\#if (IsActive) { \\#<span class=""fa fa-check""></span> \\# } else { \\#&nbsp;\\#}\\#</a>" +
+                        @"<a class=""ml-auto font-medium-3"" data-trigger=""handler"" data-url=""~/api/form-question/soft-delete"" data-handler=""deleteHandler"" data-parameters-id=""\\#:Id\\#""><i class=""fa fa-times-circle""></i></a>" +
+                    @"</div>"
+                );
+        })
+        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+        .DataSource(dataSource => dataSource
+            .Ajax()
+            .Read(read => read.Url(Url.Content("~/api/form-question/gets")).Data("function() { return { 'parentId': '#=Id#' } }"))
+            .Sort(sort => sort.Add(x => x.OrderSequence))
+        )
+        .Events(events =>
+        {
+            events.DataBound("function() { $.rowNumber.call(this); $.initDraggable.call(this, '>tbody >tr:not(.k-detail-row)', $.onSuccessDrag); }");
+        })
+        .ToClientTemplate()
+    )
+</script>
+<script type="text/javascript">
+    (function ($, app) {
+        let $messageWrapper = $("#message-wrapper"),
+            $questionWrapper = $("#question-wrapper");
+
+        const Toast = Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3000,
+            onOpen: (toast) => {
+                toast.addEventListener('mouseenter', Swal.stopTimer)
+                toast.addEventListener('mouseleave', Swal.resumeTimer)
+            }
+        });
+
+        $.onFormChange = function () {
+            let value = this.value();
+
+            app.refreshControl("questionRootGrid");
+
+            if (!$messageWrapper.hasClass("hidden")) {
+                $messageWrapper.addClass("hidden");
+            }
+
+            if ($questionWrapper.hasClass("hidden")) {
+                $questionWrapper.removeClass("hidden");
+            }
+
+            $("#createQuestionBtn").attr("data-parameters-fid", value);
+        };
+
+        $.onSuccessDrag = function (newIndex, dataItem) {
+            let grid = this,
+                id = grid.element.attr("id"),
+                data = {
+                    Id: dataItem.Id,
+                    ReferenceId: id.startsWith("formQuestionDetailGrid_") ? id.replace("formQuestionDetailGrid_", "") : null,
+                    OrderIndex: newIndex + 1
+                };
+
+            $.post(app.resolveUrl("~/api/form-question/reorder"), data, function () {
+                grid.dataSource.remove(dataItem);
+                grid.dataSource.insert(newIndex, dataItem);
+
+                Toast.fire({
+                    type: 'success',
+                    title: 'Reorder successfully'
+                });
+            });
+        };
+
+        $.gridData = function () {
+            let formId = $("#FormId").data("kendoComboBox").value();
+
+            return {
+                formId: formId
+            };
+        };
+
+        $.gridGroupData = function () {
+            let category = $("#CategoryCb").data("kendoComboBox").value(),
+                output = $.gridData();
+
+            output.category = category;
+
+            return output;
+        };
+
+        $.categoryChange = function () {
+            app.refreshControl("questionGroupAnswerGrid");
+        };
+
+        app.registerHandler("questionGroupInterceptor", function (d) {
+            d = {
+                Category: $("#CategoryCb").data("kendoComboBox").value(),
+                Ids: d.SelectedIds || []
+            };
+
+            return d;
+        });
+    })(jQuery, app);
+</script>

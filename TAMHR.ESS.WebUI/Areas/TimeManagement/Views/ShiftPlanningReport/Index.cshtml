@@ -1,0 +1,236 @@
+﻿
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox");
+}
+
+<style>
+    .k-grid,
+    .k-grid-header-wrap,
+    .k-grid-header th,
+    .k-grid-content > table > tbody > tr > td {
+        border: 0 !important;
+    }
+
+        .k-grid td {
+            border-width: 1px 0 0 0 !important;
+        }
+
+        .k-grid tr {
+            background-color: transparent !important;
+        }
+
+        .k-grid .k-alt {
+            background-color: transparent !important;
+        }
+    .label-report {
+        font-size: smaller !important
+    }
+</style>
+@section scripts {
+    <script type="text/javascript">
+        //$('.checkAll').click(function () {
+        //    var grid = $("#grid").data("kendoGrid");
+        //    if ($(this).is(':checked')) {
+        //        grid.tbody.find("input[type='checkbox']").attr('checked', 'checked');
+        //    } else {
+        //        grid.tbody.find("input[type='checkbox']").removeAttr('checked');
+        //    }
+        //});
+
+        app.registerHandler("executeHandler", function (parameters) {
+            var grid = $("#grid").data("kendoGrid");
+
+            if (grid.tbody.find("input:checked").closest("tr").length === 0) {
+                app.warning("Please select request data.");
+            } else {
+                var selections = [];
+                grid.tbody.find("input:checked").closest("tr").each(function (idx, row) {
+                    var data = grid.dataItem(row);
+                    selections.push(data.Id);
+                });
+
+                app.confirm("Are you sure want to execute selected request", function (d) {
+                    if (!d.value) return;
+
+                    if (parameters.action === 'approve') {
+                        $.post(app.resolveUrl("~/api/workflow/multipleApprove"), selections, function () {
+                            window.sessionStorage.setItem("flashMessage", "Success");
+                            window.location.reload();
+                        });
+                    } else {
+                        $.post(app.resolveUrl("~/api/workflow/multipleReject"), selections, function () {
+                            window.sessionStorage.setItem("flashMessage", "Success");
+                            window.location.reload();
+                        });
+                    }
+                });
+            }
+        });
+
+        function filterGrid() {
+            $("#grid").data("kendoGrid").dataSource.filter({
+                logic: "and",
+                filters: [
+                    {
+                        field: "DocumentStatusCode",
+                        operator: "startswith",
+                        value: $("#Status").val()
+                    },
+                    {
+                        field: "CreatedBy",
+                        operator: "startswith",
+                        value: $("#nama").val()
+                    },
+                    {
+                        field: "CreatedOn",
+                        operator: function (item) {
+                            var filterVal = $("#str-date").data("kendoDatePicker").value();
+                            if (filterVal === null)
+                                return true;
+                            else
+                                return item >= filterVal;
+                        },
+                        value: $("#str-date").data("kendoDatePicker").value()
+                    },
+                    {
+                        field: "CreatedOn",
+                        operator: function (item) {
+                            var filterVal = $("#end-date").data("kendoDatePicker").value();
+                            if (filterVal === null)
+                                return true;
+                            else
+                                return item <= filterVal;
+                        },
+                        value: $("#end-date").data("kendoDatePicker").value()
+                    }
+                ]
+            });
+        }
+
+            var currentUser = "@User.GetClaim("Username")"; // Razor render ke JS string
+            console.log("TEST: ", currentUser);
+
+        function dataBound(e) {
+            $("#btnApprove").hide();
+            $("#btnReject").hide();
+
+            $.each(this.dataSource.view(), function (i, o) {
+                if (o.Approver && typeof o.Approver === "string") {
+                    if (o.Approver.indexOf(currentUser) !== -1) {
+                        $("#btnApprove").show();
+                        $("#btnReject").show();
+                    }
+                }
+            });
+        }
+    </script>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-header bordered">
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <div class="row">
+                                <div class="col-md-3 col-sm-3 form-group">@Html.Kendo().DatePicker().Name("str-date").HtmlAttributes(new { placeholder = "From", style = "width:100%" }).Events(e => e.Change("filterGrid")).Deferred()</div>
+                                <div class="col-md-3 col-sm-3 form-group">@Html.Kendo().DatePicker().Name("end-date").HtmlAttributes(new { placeholder = "To", style = "width:100%" }).Events(e => e.Change("filterGrid")).Deferred()</div>
+                                <div class="col-md-3 col-sm-3 form-group">
+                                    @(Html.KendoComboBox("Status", "", "", "Value", "Text")
+                                        .HtmlAttributes(new { @class = "form-control", style="width:100%" })
+                                        .Placeholder(Localizer["Status"].Value)
+                                        .BindTo(new List<SelectListItem>() {
+                                            new SelectListItem() {
+                                                Text = "Approve", Value = "completed"
+                                            },
+                                            new SelectListItem() {
+                                                Text = "In Progress", Value = "inprogress"
+                                            },
+                                            new SelectListItem() {
+                                                Text = "Rejected", Value = "rejected"
+                                            },
+                                            new SelectListItem() {
+                                                Text = "Cancel", Value = "cancelled"
+                                            }
+                                        })
+                                        .Events(e => e.Change("filterGrid"))
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="col-md-3 col-sm-3 form-group">
+                                    <input id="nama" class="form-control" onkeyup="filterGrid()" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="form-group col-md-12" style="overflow:auto">
+                            @if (bool.Parse(User.GetClaim("Chief")))
+                            {
+                                @(Html.Kendo().Grid<ShiftPlanningReportViewModel>()
+                                    .Name("grid")
+                                    .Columns(columns =>
+                                    {
+                                        columns.Select().Width(10).ClientHeaderTemplate(@"<input class='k-checkbox' data-role='checkbox' id='cb-all' aria-label='Select row' aria-checked='false' type='checkbox'><label for='cb-all' class='k-checkbox-label' >" + @Localizer["All"].Value + "</label>");
+                                        columns.Template("#:DocumentNumber#");
+                                        columns.Template("#= DocumentStatusCode == 'completed' ? 'Approve' : DocumentStatusCode == 'rejected' ? 'Rejected' : (DocumentStatusCode == 'cancelled' ? 'Cancel' : 'In Progress') #");
+                                        columns.Template("#:CreatedBy#");
+                                        columns.Template("#: kendo.toString(kendo.parseDate(CreatedOn), 'dd/MM/yyyy')#");
+                                        columns.Template(@"<a href='" + Url.Content($"~/core/form/view?formKey=shift-planning&id=#:Id#") + "' #= CreatedBy == '" + User.GetClaim("Name") + "' ? '' : 'hidden' # class='btn btn-xs'>View</a>").Title(" ");
+                                    })
+                                    .Events(e => e.DataBound("dataBound"))
+                                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>No Shift Planning found</div>"))
+                                    .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                                    .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .ServerOperation(false)
+                                        .Read(read => read.Url(Url.Content("~/api/shift-report/getlist")))
+                                    )
+                                    .Deferred()
+                                )
+                            }
+                            else
+                            {
+                                @(Html.Kendo().Grid<ShiftPlanningReportViewModel>()
+                                    .Name("grid")
+                                    .Columns(columns =>
+                                    {
+                                        columns.Template("#:DocumentNumber#");
+                                        columns.Template("#= DocumentStatusCode == 'completed' ? 'Approve' : DocumentStatusCode == 'rejected' ? 'Rejected' : (DocumentStatusCode == 'cancelled' ? 'Cancel' : 'In Progress') #");
+                                        columns.Template("#:ShiftCode#");
+                                        columns.Template("#: kendo.toString(kendo.parseDate(CreatedOn), 'dd/MM/yyyy')#");
+                                    })
+                                    .Events(e => e.DataBound("dataBound"))
+                                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>No Shift Planning found</div>"))
+                                    .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                                    .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .ServerOperation(false)
+                                    .Read(read => read.Url(Url.Content("~/api/shift-report/getlist"))))
+                                    .Deferred()
+                                )
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bordered">
+                    <div class="float-right" style="margin-bottom:10px">
+                        <a id="btnApprove" hide class="btn btn-sm blue-sharp" style="margin-bottom:20px" data-trigger="handler" data-handler="executeHandler" data-parameters-action="approve">
+                            <span class="d-none d-sm-inline">Approve</span>
+                        </a>
+                        <a id="btnReject" hide class="btn btn-sm red-soft" style="margin-bottom:20px" data-trigger="handler" data-handler="executeHandler" data-parameters-action="reject">
+                            <span class="d-none d-sm-inline">Reject</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+

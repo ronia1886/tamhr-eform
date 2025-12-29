@@ -1,0 +1,349 @@
+﻿@model Vaccine
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineScheduleService vaccineScheduleService
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineHospitalService vaccineHospitalService
+
+@{
+    var allowedExtensions = new[] { ".jpg", ".jpeg", ".bmp", ".gif", ".png" };
+    double maxFileSize = (4096000);
+    var hospitalList = vaccineHospitalService.Gets().ToList();
+    var dataVaccineSchedule = vaccineScheduleService.GetVaccineScheduleLimitBackdates().GroupBy(g => g.VaccineDate).Select(s => s.FirstOrDefault()).ToList();
+}
+<script type="text/javascript">
+    $(".modal-footer").hide();
+
+    if ('@Model.VaccineDate1' != "") {
+        CheckAvailableHospital('@Model.VaccineDate1', 1);
+    }
+
+    if ('@Model.VaccineDate2' != "") {
+        CheckAvailableHospital('@Model.VaccineDate2', 2);
+    }
+
+    $("#btnSubmitScheduleBackdate").on('click', function (e) {
+        e.preventDefault();
+
+        var url = app.resolveUrl("~/api/vaccine-report/update-schedule-backdate");
+        var Id = $("#Id").val();
+        var vaccineDate1 = $("input[name='VaccineDate1']").val();
+        var vaccineDate2 = $("input[name='VaccineDate2']").val();
+
+        var vaccineHospital1 = $("input[name='VaccineHospital1']").val();
+        var vaccineHospital2 = $("input[name='VaccineHospital2']").val();
+        app.blockUI({ boxed: true });
+        $.post(url, { Id: Id, VaccineDate1: vaccineDate1, VaccineHospital1: vaccineHospital1, VaccineDate2: vaccineDate2, VaccineHospital2: vaccineHospital2 }, function () {
+            app.flash(app.translate("Success to save schedule"));
+            window.location.href = app.resolveUrl("~/core/vaccine/report");
+            app.unblockUI();
+        });
+    });
+
+    $("input[name='VaccineDate1']").kendoDatePicker({
+        change: function () {
+            var vaccineDate = $("input[name='VaccineDate1']").val();
+            if (vaccineDate != "") {
+                vaccineDate = vaccineDate.split("/")[2] + "-" + vaccineDate.split("/")[1] + "-" + vaccineDate.split("/")[0];
+                var now = new Date(vaccineDate);
+                now.setDate(now.getDate() + 15);
+                $("input[name='VaccineDate2']").data("kendoDatePicker").min(now);
+                $("input[name='VaccineDate2']").data("kendoDatePicker").enable(true);
+            }
+            CheckAvailableHospital(vaccineDate, 1);
+
+
+            $("#VaccineHospital1View").kendoComboBox().val("").trigger("change");
+
+            $("input[name='VaccineHospital1']").val("");
+            
+        },
+        format: "dd/MM/yyyy",
+        value: new Date('@Model.VaccineDate1'),
+        disableDates: function (date) {
+            $("#VaccineDate1View_dateview .k-state-disabled a").css("color", "white");
+            if (date && compareDates(date)) {
+                return false;
+            } else {
+                $("#VaccineDate1View_dateview .k-state-disabled").removeClass("k-today");
+                return true;
+            }
+            return true;
+        },
+    });
+
+    
+    $("input[name='VaccineDate2']").kendoDatePicker({
+        change: function () {
+            var vaccineDate = $("input[name='VaccineDate2']").val();
+            if (vaccineDate != "") {
+                vaccineDate = vaccineDate.split("/")[2] + "-" + vaccineDate.split("/")[1] + "-" + vaccineDate.split("/")[0];
+            }
+            CheckAvailableHospital(vaccineDate, 2);
+            $("#VaccineHospital2View").kendoDatePicker().val("").trigger("change");
+            $("input[name='VaccineHospital2']").val("");
+        },
+        format: "dd/MM/yyyy",
+        value: new Date('@Model.VaccineDate2'),
+        disableDates: function (date) {
+            $("#VaccineDate2View_dateview .k-state-disabled a").css("color", "white");
+            if (date && compareDates(date)) {
+                return false;
+            } else {
+                $("#VaccineDate2View_dateview .k-state-disabled").removeClass("k-today");
+                return true;
+            }
+            return true;
+        },
+    });
+
+    function validateDate(stringDate) {
+        debugger;
+        var setDate = new Date();
+        var mindate = new Date();
+
+        var obj = $("input[name='VaccineDate2']").val().split("/");
+        mindate = new Date(obj[1] + "/" + obj[0] + "/" + obj[2]);
+        var rs = stringDate.split("/")
+        setDate = new Date(rs[1] + "/" + rs[0] + "/" + rs[2]);
+
+        if (setDate > mindate) {
+            return true
+        } else {
+            return false
+        }
+    }
+
+    $.filterChange = function () {
+        $("input[name='VaccineHospital1']").val($("#VaccineHospital1View").val());
+        $("input[name='VaccineHospital2']").val($("#VaccineHospital2View").val());
+    };
+
+
+    function compareDates(date) {
+
+        for (i = 0; i < $("input[name='totalSchedule']").val(); i++) {
+            if (date.getDate() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getDate() &&
+                date.getMonth() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getMonth() &&
+                date.getYear() == Date.parse($("input[name='dateSchedule-" + i + "']").val()).getYear()) { return true; }
+        }
+    }
+
+    function CheckAvailableHospital(vaccineDate,vaccineNumber) {
+        var url = app.resolveUrl("~/api/vaccine-schedule/get-by-date");
+
+        $.get(url, { vaccineDate: vaccineDate}, function (data) {
+            if (data != null) {
+                
+                var arrData = new Array();
+                $.each(data, function (i, dt) {
+                    arrData.push({ Name: dt.Name });
+                });
+                
+                //var dataSource = new kendo.data.DataSource({
+                //    data: [{Name: "test"}]
+                //});
+                var dataSource = new kendo.data.DataSource({
+                    data: [{Name: "Bananas"}, { Name: "Cherries" }]
+                });
+                console.log(dataSource)
+                var combobox = $("#VaccineHospital" + vaccineNumber + "View").data("kendoComboBox");
+                combobox.setDataSource(dataSource);
+            }
+
+        });
+    }
+
+    function setMinDate(number) {
+        var mindate = new Date();
+        //if vaccine number 2
+        if (number == 2) {
+            var obj = $("input[name='VaccineDate1']").val().split("/");
+            mindate = new Date(obj[1] + "/" + obj[0] + "/" + obj[2]);
+            mindate.setDate(mindate.getDate() + 15);
+            return mindate;
+        } else {
+            return mindate;
+        }
+    }
+</script>
+<div class="card-body" id="vaccineReportScheduleModal">
+    <form method="post" action="~/api/vaccine-report/update-schedule-backdate">
+        <div class="form-group col-md-12 material">
+            <input type="hidden" name="Id" value="@Model.Id" />
+            <input type="hidden" name="NoReg" value="@Model.NoReg" />
+            <input type="hidden" name="Name" value="@Model.Name" />
+
+            <label>@Localizer["Vaksin ke-1"]</label>
+            @{
+                int j = 0;
+                foreach (var dataSchedule in dataVaccineSchedule)
+                {
+
+                    <input type="hidden" name="dateSchedule-@j" class="dateSchedule" title="@dataSchedule.VaccineHospitalId" value="@dataSchedule.VaccineDate" />
+                    j++;
+                }
+            }
+            <input type="hidden" name="totalSchedule" value="@j" />
+        </div>
+        <div class="form-group col-md-12 material">
+            <label>@Localizer["Tanggal"]</label>
+            @{
+                string VaccineDate1String = "";
+                if (Model.VaccineDate1 != null)
+                {
+                    VaccineDate1String = Model.VaccineDate1.Value.ToString("dd/MM/yyyy");
+                }
+            }
+            <input type="text" class="form-control" id="VaccineDate1View" name="VaccineDate1" value="@Model.VaccineDate1" />
+
+        </div>
+        <div class="form-group col-md-12 material">
+            <label>@Localizer["Rumah Sakit"]</label>
+            @(Html.Kendo().ComboBox()
+            .Name("VaccineHospital1View")
+            .Value(Model.VaccineHospital1)
+            .HtmlAttributes(new { placeholder = "Please Select Hospital", @class = "form-control" })
+            .DataTextField("Name")
+            .DataValueField("Name")
+            .BindTo(hospitalList)
+            .AutoBind(true)
+            .Filter(FilterType.Contains)
+            .Events(events => events.Change("$.filterChange"))
+            )
+
+            <input type="hidden" name="VaccineHospital1" value="@Model.VaccineHospital1" />
+            <span class="k-invalid-msg" data-for="VaccineHospital1"></span>
+        </div>
+        <div class="vaccineCard1Div form-group col-md-12 material">
+            @(Html.Kendo().Upload()
+    .Name("FileVaccine1")
+    .ShowFileList(true)
+    .Multiple(false)
+    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach Kartu Vaksin"].Value}"))
+    .Async(conf =>
+        conf
+        .AutoUpload(false)
+        .SaveUrl(Url.Content("~/api/vaccine/upload-public"))
+    )
+    .Files(config =>
+    {
+        if (!string.IsNullOrEmpty(Model.VaccineCard1))
+        {
+            var fileName = System.IO.Path.GetFileName(Model.VaccineCard1);
+            var extension = System.IO.Path.GetExtension(fileName);
+            config.Add().Name("Uploaded File").Extension(extension);
+        }
+    })
+    .Events(events =>
+    {
+    events.Success(@<text>function (e) { $("#VaccineCard1").val(e.response.url); }</text>);
+})
+.Validation(validation =>
+{
+validation.AllowedExtensions(allowedExtensions);
+validation.MaxFileSize(maxFileSize);
+})
+                                        )
+            @Html.HiddenFor(x => x.VaccineCard1, new { data_validation_for = "VaccineCard1" })
+
+            <input id="vaccineFile1" value="@Model.VaccineCard1" style="display:none" />
+            <span class="invalid" id="VaccineCard1Validation" data-validation-for="VaccineCard1"></span>
+        </div>
+        <div class="form-group col-md-12 material">
+            <label>@Localizer["Vaksin ke-2"]</label>
+        </div>
+        <div class="form-group col-md-12 material">
+            <label>@Localizer["Tanggal"]</label>
+            <input type="text" class="form-control" id="VaccineDate2View" name="VaccineDate2" value="@Model.VaccineDate2" />
+        </div>
+        <div class="form-group col-md-12 material">
+            <label>@Localizer["Rumah Sakit"]</label>
+            @(Html.Kendo().ComboBox()
+            .Name("VaccineHospital2View")
+            .Value(Model.VaccineHospital2)
+            .HtmlAttributes(new { placeholder = "Please Select Hospital", @class = "form-control" })
+            .DataTextField("Name")
+            .DataValueField("Id")
+            .BindTo(hospitalList)
+            .AutoBind(true)
+            .Filter(FilterType.Contains)
+            .Events(events => events.Change("$.filterChange"))
+            )
+            <input type="hidden" name="VaccineHospital2" value="@Model.VaccineHospital2" />
+            <span class="k-invalid-msg" data-for="VaccineHospital2"></span>
+        </div>
+        <div class="vaccineCard1Div form-group col-md-12 material">
+            @(Html.Kendo().Upload()
+    .Name("FileVaccine2")
+    .ShowFileList(true)
+    .Multiple(false)
+    .HtmlAttributes(new { @accept = string.Join(",", allowedExtensions) })
+    .Messages(message => message.Select($@"<i class=""las la-camera-retro"" style=""font-size: 20px;""></i> &nbsp;{Localizer["Attach Kartu Vaksin"].Value}"))
+    .Async(conf =>
+        conf
+        .AutoUpload(false)
+        .SaveUrl(Url.Content("~/api/vaccine/upload-public"))
+    )
+    .Files(config =>
+    {
+        if (!string.IsNullOrEmpty(Model.VaccineCard2))
+        {
+            var fileName = System.IO.Path.GetFileName(Model.VaccineCard2);
+            var extension = System.IO.Path.GetExtension(fileName);
+            config.Add().Name("Uploaded File").Extension(extension);
+        }
+    })
+    .Events(events =>
+    {
+    events.Success(@<text>function (e) { $("#VaccineCard2").val(e.response.url); }</text>);
+})
+.Validation(validation =>
+{
+validation.AllowedExtensions(allowedExtensions);
+validation.MaxFileSize(maxFileSize);
+})
+                                        )
+            @Html.HiddenFor(x => x.VaccineCard2, new { data_validation_for = "VaccineCard2" })
+
+            <input id="vaccineFile1" value="@Model.VaccineCard2" style="display:none" />
+            <span class="invalid" id="VaccineCard2Validation" data-validation-for="VaccineCard2"></span>
+        </div>
+        <div class="row mb-5">
+
+            <div class="col-12">
+                <div class="float-right">
+                    @*<a class="btn btn-primary" href="#" data-trigger="submit" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to save this data?"]" data-callback="submitHandler">
+                        <i class="ft-check mr-1"></i> @Localizer["Save"]
+                    </a>*@
+                    <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="formScheduleInterceptor">@Localizer["Save"]</a>
+                    <button type="button" class="btn dark btn-outline btn-modal-close" data-dismiss="modal">Close</button>
+                    @*<input type="button" id="btnSubmitScheduleBackdate" class="btn btn-primary" value="Save" />*@
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+<script>
+    (function ($, app) {
+        function getGrid() {
+            return $("#grid");
+        }
+
+        app.registerHandler("submitHandler", function () {
+            debugger;
+            app.close($(this));
+            app.success("Success to update data");
+            app.refreshControl(getGrid());
+        });
+
+        app.registerHandler("formScheduleInterceptor", function (d) {
+            d.Closed = $(this).closest(".modal").find("input[name='Closed']").prop("checked");
+
+            return d;
+        });
+    });
+    setTimeout(function () {
+        $(".vaccineCard1Div .k-file-name").html("<a href='@Url.Content("~/api/vaccine/download-image?Id="+Model.Id + "&ImageType=VaccineCard1")' target='_blank' >Uploaded File</a>");
+        $(".vaccineCard2Div .k-file-name").html("<a href='@Url.Content("~/api/vaccine/download-image?Id="+Model.Id + "&ImageType=VaccineCard2")' target='_blank' >Uploaded File</a>");
+
+    },1000);
+</script>

@@ -1,0 +1,64 @@
+﻿@{ 
+    var chief = bool.Parse(User.GetClaim("Chief"));
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Daily Monitoring"]</h3>
+                @if (chief)
+                {
+                    <div class="heading-elements">
+                        @await Html.PartialAsync("_DailyMonitoringToolbars")
+                    </div>
+                }
+                else
+                {
+                <div class="pull-right">
+                    <span>
+                        <i class="ft-calendar"></i>
+                        @DateTime.Now.ToString("dd MMMM yyyy")
+                    </span>
+                </div>
+                }
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeMonitoringSubordinateStoredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { @class = "table-w-padding", data_filter = "absence-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title("Employee").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                </div>
+                            </div>
+                            <div class=""pull-right"">
+                                <span class=""d-block text-right"">#:TotalProxy# Proxies</span>
+                                <span class=""d-block text-right"">#:$.toDefault(kendo.toString(ProxyIn, 'HH:mm'), '?')# - #:$.toDefault(kendo.toString(ProxyOut, 'HH:mm'), '?')#</span>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/monitoring-report/get-daily-monitoring")))
+                    )
+                    .ClientDetailTemplateId("detail-template")
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

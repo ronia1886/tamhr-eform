@@ -1,0 +1,564 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineService vaccineService
+@{
+    var question = vaccineService.GeVaccineQuestion().ToList();
+}
+
+@*script report*@
+<script>
+    //(function () {
+    $.renderStatusBg = function (status) {
+        var sb = "";
+
+        if (status == "done") {
+            sb = 'success';
+        } else if (status == "inprogress") {
+            sb = 'info';
+        } else if (status == "waiting") {
+            sb = 'warning';
+        } else {
+            sb = 'secondary';
+        }
+
+        return sb;
+    };
+
+    $.renderStatus = function (status, vaccineType) {
+        var sb = "";
+
+
+
+        if (status == "done") {
+            sb = '<span>Done ' + vaccineType + '</span>';
+        } else if (status == "inprogress") {
+            sb = '<span>Completed ' + vaccineType + '</span>';
+        } else if (status == "waiting") {
+            sb = '<span>Waiting ' + vaccineType + '</span>';
+        } else {
+            sb = '<span>Not Submitted</span>';
+        }
+
+        return sb;
+    };
+
+    $.renderSHAStatus = function (SHAStatus) {
+        var sb = "";
+        if (SHAStatus == true) { sb = "<span class='fa fa-check'></span>" }
+        else if (SHAStatus == false) {
+            sb = "<span class='fa fa-times'></span> "
+        }
+
+        return sb;
+    };
+
+     $.renderRiwayatPenyakit = function (vaccineId) {
+        var sb = "";
+        var ls = '@Json.Serialize(question)'
+        var heroes = JSON.parse(ls);
+        var found_names = $.grep(heroes, function (v) {
+            return v.VaccineId === vaccineId;
+        });
+
+         for (var i = 0; i < found_names.length; i++) {
+             sb = sb + found_names[i].Title + ", ";
+         }
+         var lgh = 0;
+         if (sb.length > 0) {
+             lgh = sb.length - 2;
+         }
+         sb = sb.substring(0, lgh);
+        return sb;
+    };
+
+     $.renderFamily = function (familyStatus,noRegemployee) {
+         var sb = "";
+                            $("#NoregEmployee")
+         if ($("#NoregEmployee").val() != noRegemployee) {
+             $("#NoregEmployee").val(noRegemployee)
+             $("#ctr").val(1)
+         }
+         if ($("#NoregEmployee").val() == noRegemployee && familyStatus == "Anak") {
+             var cnt = parseFloat($("#ctr").val())
+             sb = familyStatus + "  " + $("#ctr").val();
+             $("#ctr").val(cnt + 1)
+         } else {
+             sb = familyStatus;
+         }
+        return sb;
+    };
+
+</script>
+
+<script>
+    (function ($, app) {
+        app.registerHandler("uploadHandler", function () {
+            var $this = $(this),
+                allowedExtensions = ['xls', 'xlsx'],
+                $fileInputWrapper = $("#UploadExcelPath"),
+                $fileInput = $this.closest("form").find("input[type='file']"),
+                fileName = $fileInput.val();
+            
+            if (fileName.length === 0) {
+                app.warning("Mohon pilih file.");
+
+                return;
+            }
+            else {
+                var extension = fileName.replace(/^.*\./, '');
+
+                if ($.inArray(extension, allowedExtensions) === -1) {
+                    app.warning("Mohon pilih hanya file excel.");
+
+                    return;
+                }
+            }
+
+            var formData = new FormData();
+            formData.append("file", $fileInput[0].files[0]);
+            var urlData = "";
+            if ($("#UploadType").val() == "autofill") {
+                urlData = "~/api/vaccine-report/upload-autofill";
+                msgUpload = "Failed upload Vaccine Autofill";
+            } else {
+                urlData = "~/api/vaccine-report/upload-schedule-backdate";
+                msgUpload = "Failed upload Schedule Backdate";
+            }
+            app.blockUI({ boxed: true });
+            $.ajax({
+                url: app.resolveUrl(urlData),
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false,
+                type: 'POST'
+            }).done(function (data) {
+                if (data.TotalSuccess === data.TotalUpload && data.TotalSuccess > 0) {
+                    app.success(app.translate("Success upload all data"));
+                }
+                else if (data.TotalSuccess < data.TotalUpload && data.TotalSuccess > 0) {
+                    app.warning(kendo.format(app.translate("Success upload {0} of {1} data, with warning"), data.TotalSuccess, data.TotalUpload) + ":<br/>" + data.Messages.join("<br/>"));
+                }
+                else {
+                    app.error(app.translate(msgUpload) + ":<br/>" + data.Messages.join("<br/>"));
+                }
+
+                $fileInput.val("");
+                $fileInputWrapper.val("");
+                app.refreshControl("grid");
+                app.unblockUI();
+                $("#VaccineReportUploadModal").modal("hide");
+            });
+        });
+
+        $("input[type='file']").change(function () {
+            var fileName = $(this).val();
+            $("#UploadExcelPath").val(fileName);
+        });
+
+        $("#btnUploadAutofill").on("click", function (e) {
+            e.preventDefault();
+            $("#UploadType").val("autofill");
+            //$("#btnDownloadTemplate href").val("~/api/vaccine-report/download/download-template");
+            document.getElementById("btnDownloadTemplate").href = app.resolveUrl("~/api/vaccine-report/download/download-template");
+        });
+
+        $("#btnUploadScheduleBackdate").on("click", function (e) {
+            e.preventDefault();
+            $("#UploadType").val("schedulebackdate");
+            //$("#btnDownloadTemplate href").val("~/api/vaccine-report/download/download-template");
+            document.getElementById("btnDownloadTemplate").href = app.resolveUrl("~/api/vaccine-report/download/download-template2");
+        });
+
+        
+        function getGrid() {
+            return $("#grid").data("kendoGrid");
+        }
+
+        function getSelectedDate() {
+            return kendo.toString($("#SubmissionDate").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+        }
+
+        $.download = function () {
+            window.open(app.resolveUrl("~/api/vaccine-report/download?whereClause=" + JSON.stringify($.filterDownload())), "_blank");
+        };
+
+        $.getData = function () {
+            return {
+                vaccineDate1: kendo.toString($("#vaccineDate1").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                vaccineDate1End: kendo.toString($("#vaccineDate1End").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                vaccineDate2: kendo.toString($("#vaccineDate2").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                vaccineDate2End: kendo.toString($("#vaccineDate2End").data("kendoDatePicker").value(), 'yyyy-MM-dd')
+            };
+        };
+
+        $.filterDownload = function () {
+            var divdata = andScript($("#division").val().split("&"))
+            var entity = {
+                VaccineDate1: kendo.toString($("#vaccineDate1").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                VaccineDate2: kendo.toString($("#vaccineDate2").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                VaccineDate1End: kendo.toString($("#vaccineDate1End").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                VaccineDate2End: kendo.toString($("#vaccineDate2End").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+                Eligible: $("#eligible").val(),
+                Status: $("#status").val(),
+                VaccineType: $("#vaccineType").val(),
+                EmployeeName: $("#search").val(),
+                Division: divdata,
+            }
+            return entity;
+        };
+
+        function andScript(arrData) {
+            var str = "";
+            for (var i = 0; i < arrData.length; i++) {
+                str = str + arrData[i] + "xtx";
+            }
+            return str.substring(0, str.length - 3);
+        }
+
+        $.onDataBound = function () {
+            let $grid = this;
+
+            $grid.element.find(".sick-group").closest("tr").addClass("bg-yellow-crusta font-white");
+            $grid.element.find(".done-color").closest("tr").addClass("bg-grey-mint font-white");
+
+            $.initFixedHeader.call(this);
+        };
+
+        $.filterChange = function () {
+            debugger;
+            var $grid = getGrid();
+            if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+            var dataSource = $grid.dataSource,
+                src = $("#search").val();
+            eligible = $("#eligible").val();
+            status = $("#status").val();
+            vaccineType = $("#vaccineType").val();
+            division = $("#division").val();
+            FamilyStatus = $("#FamilyStatus").val();
+            Class = $("#Class").val();
+            JobName = $("#JobName").val();
+            if (eligible == "true") {
+                eligible = true;
+            } else if (eligible == "false") {
+                eligible = false;
+            }
+            filters = [{
+
+            }];
+
+            if (status !== "") {
+                filters.push({
+                    field: 'StatusCode',
+                    operator: 'eq',
+                    value: status
+                });
+            }
+            if (eligible !== "") {
+                filters.push({
+                    field: 'Eligible',
+                    operator: 'eq',
+                    value: eligible
+                });
+            }
+
+            if (vaccineType != "") {
+                filters.push({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: 'VaccineTypeCode',
+                            operator: 'eq',
+                            value: vaccineType
+                        }
+                    ]
+                });
+            }
+
+            if (division != "") {
+                filters.push({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: 'Division',
+                            operator: 'eq',
+                            value: division
+                        }
+                    ]
+                });
+            }
+
+            if (FamilyStatus != "") {
+                filters.push({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: 'FamilyStatus',
+                            operator: 'contains',
+                            value: FamilyStatus
+                        }
+                    ]
+                });
+            }
+
+            if (Class != "") {
+                filters.push({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: 'Class',
+                            operator: 'eq',
+                            value: Class
+                        }
+                    ]
+                });
+            }
+            if (JobName != "") {
+                filters.push({
+                    logic: "or",
+                    filters: [
+                        {
+                            field: 'JobName',
+                            operator: 'eq',
+                            value: JobName
+                        }
+                    ]
+                });
+            }
+
+            console.log(src)
+            filters.push({
+                logic: "or",
+                filters: [
+                    {
+                        field: 'NoReg',
+                        operator: 'contains',
+                        value: src
+                    },
+
+                    {
+                        field: 'EmployeeName',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Name',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Status',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'FamilyStatus',
+                        operator: 'contains',
+                        value: src
+                    },
+                    //{
+                    //    field: 'Class',
+                    //    operator: 'contains',
+                    //    value: src
+                    //},
+                    {
+                        field: 'JobName',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Department',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Division',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Section',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Email',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'PhoneNumber',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'Age',
+                        operator: 'contains',
+                        value: src
+                    },
+                    //{
+                    //    field: 'Eligible',
+                    //    operator: 'contains',
+                    //    value: src
+                    //},
+                    {
+                        field: 'SideEffects1',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'SideEffects2',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'RiwayatPenyakit',
+                        operator: 'contains',
+                        value: src
+                    },
+                    {
+                        field: 'MonitoringNotes',
+                        operator: 'contains',
+                        value: src
+                    },
+                ]
+            });
+
+            dataSource.filter(filters);
+        };
+
+        $('#search').on('keyup', function (e) {
+            let $this = $(this),
+                value = $this.val();
+
+            if (e.keyCode === 13) {
+                $.filterChange();
+                e.preventDefault();
+            }
+        });
+        $('#age').on('keyup', function (e) {
+            let $this = $(this),
+                value = $this.val();
+
+            if (e.keyCode === 13) {
+                $.filterChange();
+                e.preventDefault();
+            }
+        });
+    })(jQuery, app);
+
+
+</script>
+
+
+@*Script vaccine Form and vaccine Hospital*@
+<script>
+
+    function loadVaccineSchedule(vaccineNumber) {
+        if ($("#ScheduleVaccineDate").val() == "") {
+            $("#ScheduleVaccineDate").val("");
+            $("#ScheduleVaccineHospital").val("");
+            $("#Qty").val("");
+        }
+
+        $("#VaccineNo").html(vaccineNumber);
+
+        var combobox = $("#ScheduleVaccineHospital").data("kendoComboBox");
+        combobox.select(function (dataItem) {
+            return dataItem.Name === $("#VaccineHospital" + vaccineNumber).val();
+        });
+        combobox.enable(true);
+        if (vaccineNumber == 2) {
+            combobox.enable(false);
+            combobox.select(function (dataItem) {
+                return dataItem.Name === $("#VaccineHospital" + 1).val();
+            });
+        }
+
+        $("#ScheduleVaccineDate").kendoDatePicker({
+            change: function () {
+                //GetAvailableHospital();
+                CheckQuotaSchedule();
+            },
+            format: "dd/MM/yyyy",
+            min: setMinDate(vaccineNumber),
+            //max: $("input[name='maxDateSchedule1']").val(),
+            disableDates: function (date) {
+                $("#ScheduleVaccineDate_dateview .k-state-disabled a").css("color", "white");
+                if (date && compareDates(date)) {
+                    return false;
+                } else {
+                    $("#ScheduleVaccineDate_dateview .k-state-disabled").removeClass("k-today");
+                    return true;
+                }
+                return true;
+            },
+        });
+
+        $("#ScheduleVaccineDate").data("kendoDatePicker").value($("#VaccineDate" + vaccineNumber).val());
+        CheckQuotaSchedule();
+        $("#vaccineScheduleModal").modal();
+    }
+
+    function GetAvailableHospital() {
+        if ($("#ScheduleVaccineDate").val() != "") {
+            var dataSource = new kendo.data.DataSource({
+                transport: {
+                    read: {
+                        url: app.resolveUrl("~/api/vaccine/get-available-schedule"),
+                        dataType: "jsonp",
+                        data: { vaccineDate: $("#ScheduleVaccineDate").val() }
+                    }
+                }
+            });
+            var scheduleVaccineHospital = $("#ScheduleVaccineHospital").kendoComboBox({
+                dataSource: dataSource,
+                dataTextField: "Name",
+                dataValueField: "VaccineHospitalId"
+            });
+
+            //scheduleVaccineHospital.bind("change", CheckQuotaSchedule);
+        }
+    }
+
+    function setMinDate(number) {
+        var mindate = new Date();
+        //if vaccine number 2
+        if (number == 2) {
+            var obj = $("input[name='VaccineDate1']").val().split("/");
+            mindate = new Date(obj[1] + "/" + obj[0] + "/" + obj[2]);
+            mindate.setDate(mindate.getDate() + 15);
+            return mindate;
+        } else {
+            return mindate;
+        }
+    }
+
+    function schedule2Click(e) {
+        var upload = $("#FileVaccine2").data("kendoUpload");
+        var textbox = $("#VaccineHospital2");
+
+        if ($("#VaccineDate1").val() != "" && $("#vaccineFile1").val() != "") {
+            $("#SetSchedule2Validation").addClass("hidden");
+            upload.disable(false);
+            textbox[0].disable = false;
+        } else {
+            e.preventDefault();
+            $("#SetSchedule2Validation").removeClass("hidden");
+        }
+    }
+
+    function startChange() {
+        debugger;
+        var endPicker = $("#VaccineDate2").data("kendoDatePicker");
+        var fd = $("#VaccineDate1").kendoDatePicker({
+            parseFormats: ["dd/MM/yyyy"],
+            format: "dd/MM/yyyy"
+        }).data("kendoDatePicker");
+        var startDate = fd.value();
+
+        if (startDate) {
+            startDate = new Date(startDate);
+            startDate.setDate(startDate.getDate());
+            endPicker.min(startDate);
+        }
+    }
+</script>

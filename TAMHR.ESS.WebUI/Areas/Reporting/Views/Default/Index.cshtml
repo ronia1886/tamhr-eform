@@ -1,0 +1,115 @@
+﻿@inject TAMHR.ESS.Infrastructure.Web.Authorization.AclHelper AclHelper
+@{ 
+    ScriptManager.RegisterReferences("dropdownlist", "datepicker", "combobox", "numeric", "grid", "chart");
+
+    var viewTrainingReport = AclHelper.HasPermission("Core.ViewTrainingReport");
+    var viewSheReport = AclHelper.HasPermission("Core.ViewSheReport");
+    var viewHrAdminReport = AclHelper.HasPermission("Core.ViewHrAdminReport");
+
+    var now = DateTime.Now;
+    var choices = new List<SelectListItem>();
+
+    if (viewTrainingReport)
+    {
+        choices.AddRange(new[] {
+            new SelectListItem { Text = Localizer["Concept Idea"].Value, Value = "conceptideaallowance" }
+        });
+    }
+
+    if (viewSheReport)
+    {
+        choices.AddRange(new[] {
+            new SelectListItem { Text = Localizer["Lost & Return"].Value, Value = "lostandreturn" },
+            new SelectListItem { Text = Localizer["Reimbursement"].Value, Value = "reimbursementhospital" },
+            new SelectListItem { Text = Localizer["Letter of Guarantee"].Value, Value = "letterofguarantee" }
+        });
+    }
+
+    if (viewHrAdminReport)
+    {
+        choices.AddRange(new[] {
+            new SelectListItem { Text = Localizer["Eyeglasses"].Value, Value = "eyeglassesallowance" },
+            new SelectListItem { Text = Localizer["Company Loan"].Value, Value = "companyloan" },
+            new SelectListItem { Text = Localizer["COP/CPP"].Value, Value = "carpurchase" },
+            new SelectListItem { Text = Localizer["COP Fuel"].Value, Value = "copfuel" },
+            new SelectListItem { Text = Localizer["KB Allowance"].Value, Value = "kballowance" },
+            new SelectListItem { Text = Localizer["Ayo Sekolah"].Value, Value = "ayosekolah" },
+            new SelectListItem { Text = Localizer["Vacation Allowance"].Value, Value = "vacationallowance" },
+            new SelectListItem { Text = Localizer["PTA/HRP/FTA Allowance"].Value, Value = "ptaallowance" },
+            new SelectListItem { Text = Localizer["Marriage Allowance"].Value, Value = "marriageallowance" },
+            new SelectListItem { Text = Localizer["Condolance Allowance"].Value, Value = "condolanceallowance" },
+            new SelectListItem { Text = Localizer["Calamity Allowance"].Value, Value = "calamityallowance" },
+            new SelectListItem { Text = Localizer["Meal Allowance"].Value, Value = "mealallowance" }
+        });
+    }
+
+    if (choices.Count == 0) {
+        throw new Exception("You dont have permission to view this report");
+    }
+}
+@section scripts {
+    <script type="text/javascript">
+        $.getFilter = function () {
+            var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd");
+
+            return { startDate: startDateStr, endDate: endDateStr };
+        }
+
+        app.registerHandler("searchHandler", function () {
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                filter = $.getFilter(),
+                currYear = @now.Year,
+                sd = kendo.parseDate(filter.startDate),
+                sdYear = sd.getFullYear(),
+                ed = kendo.parseDate(filter.endDate),
+                edYear = ed.getFullYear(),
+                $downloadBtn = $(".download"),
+                formKey = $downloadBtn.data("formKey");
+
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                app.refreshControl(el);
+            });
+
+            $(".date-detail").text("(" + kendo.toString(sd, "d MMM") + (sdYear != currYear ? (" " + sdYear) : "") + " - " + kendo.toString(ed, "d MMM") + (edYear != currYear ? (" " + edYear) : "") + ")");
+            $(".download").attr("href", app.resolveUrl("~/api/" + formKey + "/download?startDate=" + filter.startDate + "&endDate=" + filter.endDate));
+        });
+
+        $(function() {
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+<div class="row">
+    <div class="col-md-3 col-12">
+        @(Html.Kendo().DropDownList()
+            .HtmlAttributes(new { @class = "form-control bg-white" })
+            .Name("sel1")
+            .DataTextField("Text")
+            .DataValueField("Value")
+            .BindTo(choices.OrderBy(x => x.Text))
+            .Events(events => {
+                events.DataBound(@<text>function() { this.trigger("change"); }</text>);
+                events.Change(@<text>function() {
+                    var val = this.value();
+                    
+                    $("#wrapper").load(app.resolveUrl("~/reporting/default/partialreport?formKey=" + val));
+                }</text>);
+            })
+            .SelectedIndex(0)
+            .Deferred()
+        )
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div id="wrapper"></div>
+    </div>
+</div>

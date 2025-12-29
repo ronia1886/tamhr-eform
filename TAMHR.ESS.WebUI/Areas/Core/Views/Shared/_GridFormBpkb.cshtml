@@ -1,0 +1,58 @@
+﻿<div class="form-group">
+    <label>Search</label>
+    <input type="search" id="search" class="form-control" />
+</div>
+<div style="overflow:auto">
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.Bpkb>()
+            .Name("bpkbGrid")
+            .HtmlAttributes(new { style = "min-width:max-content" })
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.NoReg).Filterable(true).Title("Nomor Registrasi");
+                columns.Bound(c => c.NoBPKB).Filterable(true).Title("Nomor BPKB");
+                columns.Bound(c => c.LicensePlat).Filterable(true).Title("Plat Nomor");
+                columns.Bound(c => c.Model).Filterable(true).Title("Model");
+                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+<a class=""btn"" data-trigger=""handler"" data-handler=""selectBpkb""
+data-parameters-id=""#:Id#"" data-parameters-noreg=""#:NoReg#"" data-parameters-nobpkb=""#:NoBPKB#"" data-parameters-licenseplat=""#:LicensePlat#""
+data-parameters-type=""#:Type#"" data-parameters-model=""#:Model#"" data-parameters-createdyear=""#:CreatedYear#"" data-parameters-color=""#:Color#""
+data-parameters-vinno=""#:VINNo#"" data-parameters-engineno=""#:EngineNo#"" data-parameters-vehicleowner=""#:VehicleOwner#"" data-parameters-address=""#:Address#"">Select</a>");
+            })
+            .Pageable(p => p.AlwaysVisible(false))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .PageSize(10)
+            .Read(read => read.Url(Url.Content("~/api/bpkb/getsbynoreg")))
+            )
+    )
+</div>
+<script type="text/javascript">
+    $("#search").keyup(function () {
+        var val = $('#search').val();
+        $("#bpkbGrid").data("kendoGrid").dataSource.filter({
+            logic  : "or",
+            filters: [
+                {
+                    field: "NoReg",
+                    operator: "contains",
+                    value   : val
+                },
+                {
+                    field: "NoBPKB",
+                    operator: "contains",
+                    value   : val
+                },
+                {
+                    field: "LicensePlat",
+                    operator: "contains",
+                    value: val
+                },
+                {
+                    field: "Model",
+                    operator: "contains",
+                    value: val
+                }
+            ]
+        });
+    });
+</script>

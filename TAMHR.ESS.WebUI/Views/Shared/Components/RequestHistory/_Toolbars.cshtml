@@ -1,0 +1,95 @@
+﻿@model TAMHR.ESS.Infrastructure.ViewModels.RequestHistoryViewModel
+@inject AclHelper AclHelper
+@{
+    var formKey = this.Context.Request.Query["formKey"].ToString();
+}
+<ul id="request-history-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        @if (formKey == "weekly-wfh-planning")
+        {
+            <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["Title", "FormTitle", "DocumentNumber", "MonthYear"]' />
+        }
+        else {
+            <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["Title", "FormTitle", "DocumentNumber", "DocumentStatusCode"]' />
+        }
+    </li>
+    <li class="dropdown">
+        <a href="javascript:;" class="dropdown-toggle font-green-haze" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="DocumentNumber">@Localizer["Document Number"]</a>
+            </li>
+            @if (formKey == "weekly-wfh-planning")
+            {
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-sort="MonthYear">@Localizer["Planning Month"]</a>
+                </li>
+            }
+            else {
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-sort="DocumentStatusCode">Status</a>
+                </li>
+            }
+            <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Created Date"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+    @if (formKey != "weekly-wfh-planning")
+    {
+        <li>
+            <a href="javascript:;" class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fa fa-filter"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "draft" }'>@Localizer["Draft"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "inprogress" }'>@Localizer["In Progress"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "completed" }'>@Localizer["Completed"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "rejected" }'>@Localizer["Rejected"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "revised" }'>@Localizer["Revised"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "cancelled" }'>@Localizer["Dropped"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-filter='{ "field": "DocumentStatusCode", "value": "expired" }'>@Localizer["Expired"]</a>
+                </li>
+                <li class="dropdown-divider"></li>
+                <li class="p-2">
+                    <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="filter">@Localizer["Clear"]</a>
+                </li>
+            </ul>
+        </li>
+    }
+    
+    @if (AclHelper.HasPermission("Core.ViewAllDocumentApprovals") && Model.ShowFormTitle)
+    {
+        <li>
+            <div class="custom-control custom-checkbox">
+                <input id="show-all" type="checkbox" class="custom-control-input" data-trigger="handler" data-handler="showAllRequestHandler">
+                <label class="custom-control-label" for="show-all">
+                    <span class="d-inline d-md-none">@Localizer["All"]</span>
+                    <span class="d-none d-md-inline">@Localizer["Show All"]</span>
+                </label>
+            </div>
+        </li>
+    }
+</ul>

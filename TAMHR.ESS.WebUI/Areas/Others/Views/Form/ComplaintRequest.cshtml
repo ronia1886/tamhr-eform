@@ -1,0 +1,132 @@
+﻿@using Newtonsoft.Json
+@model DocumentRequestDetailViewModel<ComplaintRequestViewModel>
+<script type="text/javascript">
+    setTimeout(function () {
+        if ("@AclHelper.CanEdit()" != "True") {
+            $("#Object_ComplaintSubCode").data("kendoComboBox").enable(false);
+        }
+    },1000);
+    
+</script>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Complaint Request Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    @Html.HiddenFor(x => x.Object.CommonFileId)
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Complaint"]</label>
+                                @Html.KendoComboBoxFor(x => x.Object.ComplaintCode, "ComplaintType", tabIndex: 1, autoFocus: true).Enable(AclHelper.CanEdit()).Placeholder(Localizer["Please select complaint"].Value).Deferred()
+                                <span class="invalid" data-validation-for="Object.ComplaintCode"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Sub Complaint"]</label>
+                                @(Html.Kendo().ComboBoxFor(x => x.Object.ComplaintSubCode)
+                                    .HtmlAttributes(new { @class = "form-control", tabindex = 2})
+                                    .DataTextField("Name")
+                                    .DataValueField("Code")
+                                    .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/category/getsbycategorymapping")).Data(@<text>function() { return { category: $('#Object_ComplaintCode').val() } }</text>))
+                                    )
+                                    .AutoBind(false)
+                                    .Placeholder(Localizer["Please select sub complaint"].Value)
+                                    .CascadeFrom("Object_ComplaintCode")
+                                    .Deferred()
+                                    )
+                                <span class="invalid" data-validation-for="Object.ComplaintSubCode"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Detail"]</label>
+                                @Html.TextAreaFor(x => x.Object.ComplaintDetail, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "ComplaintDetail", placeholder = Localizer["Please input complaint detail"].Value, @rows = 3, tabindex = 5 }, AclHelper.CanEdit()))
+                                <span class="invalid" data-validation-for="Object.ComplaintDetail"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Expectation"]</label>
+                                @Html.TextBoxFor(x => x.Object.Expectation, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Expectation", @placeholder = Localizer["Please input expectation"].Value, tabindex = 4 }, AclHelper.CanEdit()))
+                                <span class="invalid" data-validation-for="Object.Expectation"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label>@Localizer["Remarks"]</label>
+                                @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Remarks", placeholder = Localizer["Please input remarks if any"].Value, @rows = 3, tabindex = 5 }, AclHelper.CanEdit()))
+                                <span class="invalid" data-validation-for="Object.Remarks"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                                @*@(await Component.InvokeAsync<FileUpload>(new { @placeholder = "Choose file", field = "FilePath" }))*@
+                                @if (AclHelper.CanEdit())
+                                {
+                                    <div class="file-group form-control">
+                                        <div class="input-group-area">
+                                            @Html.TextBoxFor(x => x.Object.FilePath, ApplicationHelper.Enable(new { @placeholder = Localizer["Choose File"].Value, @readonly = "readonly", data_validation_for = "Object.FilePath" }, AclHelper.CanEdit()))
+
+                                        </div>
+                                        <div class="input-group-icon">
+                                            <div class="file btn">
+                                                <i class="ft-upload"></i>
+                                                <input class="file" type="file" name="Object.FilePath" accept="image/*" />
+                                            </div>
+                                        </div>
+                                        <div class="input-group-icon d-md-none d-sm-inline-block">
+                                            <div class="file btn">
+                                                <i class="ft-camera"></i>
+                                                <input class="file" type="file" name="Object.FilePath" accept="image/*" capture="camera" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="invalid" data-validation-for="Object.FilePath"></span>
+                                    @* @(await Component.InvokeAsync<FileUpload>(new { docId = Model.DocumentApprovalId, field = "Object.FilePath" }))
+                                    <span id="detailWrapper" class="d-block font-small-1 bold font-yellow-soft hidden">@Localizer["Choose file"]</span>
+                                    <span class="invalid" data-validation-for="Object.FilePath"></span> *@
+                                }
+                                else
+                                {
+                                    <br />
+                                    @(await Component.InvokeAsync<Attachment>(new { files = Model.Attachments, fieldCategory = "Object.FilePath" }))
+                                }
+                                
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    

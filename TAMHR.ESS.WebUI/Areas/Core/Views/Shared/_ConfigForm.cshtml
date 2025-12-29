@@ -1,0 +1,64 @@
+﻿@model TAMHR.ESS.Domain.Config
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/config">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Module"]</label>
+                @(Html.KendoComboBoxFor(x => x.ModuleCode, "Module")
+                    .Placeholder(Localizer["Please select module"].Value)
+                    .Suggest(true)
+                )
+                <span class="invalid" data-validation-for="ModuleCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Data Type"]</label>
+                @(Html.KendoComboBoxFor(x => x.DataTypeCode, "DataType")
+                    .HtmlAttributes(ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "DataTypeCode", tabindex = 1 }, isNew))
+                    .Placeholder(Localizer["Please select data type"].Value)
+                    .Events(events => {
+                        events.Change("$.onConfigChangeDataType");
+                        events.DataBound("function() { this.trigger('change'); }");
+                    })
+                    .Suggest(true)
+                )
+                <span class="invalid" data-validation-for="DataTypeCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Config Key"]</label>
+                @Html.TextBoxFor(x => x.ConfigKey, new { @class = "form-control", @data_validation_for = "ConfigKey", @placeholder = Localizer["Please input config key"].Value })
+                <span class="invalid" data-validation-for="ConfigKey"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Config Value"]</label>
+                <div class="input-wrapper">
+                    @Html.TextBoxFor(x => x.ConfigValue, new { @class = "form-control", @data_validation_for = "ConfigValue", @placeholder = Localizer["Please input config value"].Value })
+                </div>
+                <span class="invalid" data-validation-for="ConfigValue"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Config Text"]</label>
+                @Html.TextBoxFor(x => x.ConfigText, new { @class = "form-control", @data_validation_for = "ConfigText", @placeholder = Localizer["Please input config text"].Value })
+                <span class="invalid" data-validation-for="ConfigText"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

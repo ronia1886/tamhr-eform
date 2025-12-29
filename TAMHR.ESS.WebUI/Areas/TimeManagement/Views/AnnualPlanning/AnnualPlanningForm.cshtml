@@ -1,0 +1,241 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    ScriptManager.RegisterReferences(new string[] { "treeview","dropdownlist" });
+}
+
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var layoutType = "";
+    var NoReg = ViewBag.NoReg;
+    var data = (IEnumerable<TreeViewItemModel>)ViewBag.treeData;
+
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+    var now = DateTime.Now;
+    var nextYear = (now.Month != 12 ? now.Year : now.Year + 1);
+    //var nextYear = now.Year + 1;
+    var retro =  (now.Month != 12 ? now.Year-1 : now.Year);
+    //var retro = now.Year - 1;
+
+    var listYear = new List<object> {
+        new { Text = nextYear, Value = nextYear },
+        new { Text = retro, Value = retro }
+    };
+
+    string isHidden = "hidden";
+    string heightSize = "";
+    if (Convert.ToBoolean(User.GetClaim("Chief")))
+    {
+        isHidden = "";
+        heightSize = "150px";
+    }
+
+    DateTime annualPlanningDateFrom = DateTime.Parse(ConfigService.GetConfig("AnnualPlanning.DateFrom").ConfigValue);
+    DateTime annualPlanningDateTo = DateTime.Parse(ConfigService.GetConfig("AnnualPlanning.DateTo").ConfigValue);
+}
+@section scripts{
+    <script type="text/javascript">
+
+    function getEmployeeParameters() {
+            return {
+                noreg: "@User.GetClaim("NoReg")",
+                postcode: "@User.GetClaim("PostCode")"
+            };
+        }
+
+    function fetchHierarchy(noreg,postcode) {
+        var $loader = $(".hierarchy-widget").find(".loader");
+
+        $loader.load("@Url.Content("~/TimeManagement/AnnualPlanning/GetHierarchiest")", { noreg,postcode });
+    }
+
+    $(function () {
+        var parameters = getEmployeeParameters(),
+            noreg = parameters.noreg,
+            postcode = parameters.postcode
+        fetchHierarchy(noreg,postcode);
+    });
+    </script>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Annual Planning Form"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Choose Annual Planning"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            @{
+                                if (annualPlanningDateFrom <= DateTime.Now && DateTime.Now <= annualPlanningDateTo) 
+                                {
+                                    <li>
+                                        <a href="~/timemanagement/form/load?formKey=annual-leave-planning"><span class="ft-plus-square"></span> @Localizer["Add Leave Planning"].Value</a>
+                                    </li>
+                                    <!--<li class="@isHidden">
+                                        <a href="~/timemanagement/form/load?formKey=annual-wfh-planning"><span class="ft-plus-square"></span> @Localizer["Add WFH Planning"].Value</a>
+                                    </li>-->
+                                    <li class="@isHidden">
+                                        <a href="~/timemanagement/form/load?formKey=annual-ot-planning"><span class="ft-plus-square"></span> @Localizer["Add OT Planning"].Value</a>
+                                    </li>
+                                    <li class="@isHidden">
+                                        <a href="~/timemanagement/form/load?formKey=annual-bdjk-planning"><span class="ft-plus-square"></span> @Localizer["Add BDJK Planning"].Value</a>
+                                    </li>
+                                }
+                            }
+                        </ul>
+                    </div>      
+                </div>
+
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    
+                    @*<div class="col-md-12">*@
+                        <div class="col-md-4">
+                                    <div class="profile-sidebar column sortable">
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <div class="portlet light profile-light">
+                                                    <div class="portlet-body">
+                                                        <div class="profpic">
+                                                            <div id="hierarchy-box" class="profpic-wrapper">
+                                                                <div class="profpic-avatar">
+                                                                    <span id="avatarLogin" class="hidden">@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))</span>
+                                                                    <img src="@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))" style="width: 2rem; height: 2rem; border-radius: 50%;">
+                                                                </div>
+                                                                <div class="profpic-body">
+                                                                    <span class="profpic-title" style="font-size:12px !important">@User.GetClaim("Name")</span>
+                                                                    <span class="profpic-description" style="font-size:12px !important">@User.GetClaim("PostName")</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="hidden-xs hidden-sm portlet portlet-sortable-empty"></div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4" style="height: @heightSize; overflow: auto">
+                                    <div class="portlet light bordered hierarchy-widget portlet-sortable @isHidden">
+                                        <div class="portlet-title">
+                                            <div class="caption caption-md">
+                                                <i class="icon-globe theme-font hide"></i>
+                                                <span class="caption-subject font-blue-madison bold uppercase">Hierarchy</span>
+                                            </div>
+                                            <div class="tools">
+                                                <a class="collapse"></a>
+                                            </div>
+                                        </div>
+                                        <div class="portlet-body" style="margin: 0; padding: 0;">
+                                            @(Html.Kendo().TreeView()
+                                                    .Name("EmployeeHierarchy")
+                                                    .BindTo(data)
+                                                    .Template("<div onClick=\"$.onSearchForm('#=item.id#');\" style='font-size: 12px;'><i class='fa fa-user font-blue'></i> #=item.text#</div>")
+                                                    .Deferred()
+                                             )
+                                            <div class="loader"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                        <div class="col-md-4 text-right">
+                            <div class="heading-elements">
+                                <div class="dropdown custom-filter">
+                                    <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown">
+                                        <i class="fa fa-filter"></i>
+                                    </a>
+                                    <div class="dropdown-menu dropdown-menu-right" style="width:200px">
+                                        <form class="form-horizontal p-2" role="form">
+                                                <div class="form-group">
+                                                    <label>@Localizer["Period"]</label>
+                                                    @(Html.Kendo().ComboBox()
+                                                      .Name("yearDdl")
+                                                      .DataTextField("Text")
+                                                      .DataValueField("Value")
+                                                      .BindTo(listYear)
+                                                      .Value(nextYear.ToString())
+                                                      .HtmlAttributes(new { style = "width: 100%" })
+                                                      .Deferred()
+                                                )
+                                                </div>
+                                                
+                                            <hr class="mt-1" />
+                                            <button type="button" class="btn red btn-block" onclick="searchForm2();">@Localizer["Search"]</button>
+                                        </form>
+
+
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.AnnualPlanningSummaryStoredEntity>
+    ()
+    .Name("gridForm")
+    .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+    .Columns(columns =>
+    {
+        columns.Bound(c => c.Title).Title(Localizer["Title"].Value).HeaderHtmlAttributes(new {@class="text-center"}).Width(180).ClientTemplate(@Localizer["#=Title#"].Value);
+        columns.Bound(c => c.Jan).Width(65).Title(Localizer["Jan"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Feb).Width(65).Title(Localizer["Feb"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Mar).Width(65).Title(Localizer["Mar"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Apr).Width(65).Title(Localizer["Apr"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.May).Width(65).Title(Localizer["May"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Jun).Width(65).Title(Localizer["Jun"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Jul).Width(65).Title(Localizer["Jul"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Aug).Width(65).Title(Localizer["Aug"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Sep).Width(65).Title(Localizer["Sep"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Oct).Width(65).Title(Localizer["Oct"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Nov).Width(65).Title(Localizer["Nov"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(c => c.Dec).Width(65).Title(Localizer["Dec"].Value).HeaderHtmlAttributes(new {@class="text-center"}).HtmlAttributes(new {@class="text-center"});
+        columns.Bound(o => o.NoReg).Title(Localizer["Action"].Value).HeaderHtmlAttributes(new {@class="text-center"}).Width(100).ClientTemplate(
+        "#if (SequenceNo%2==0 && !Title.indexOf(\"OT\")==0) { #"+
+        "<a style='color: white;' target='_self'  class='btn btn-sm btn-primary' href='#=app.resolveUrl('~/timemanagement/annualplanning/viewform?Period=')##=Period#&NoReg=#=NoReg#&Name=#=Name#&PostName=#=PostCode#&SequenceNo=#=SequenceNo#' ><i class='fa fa-eye'></i></a>" +
+        "# }# ")
+        .HtmlAttributes(new { @class = "text-center" });
+    })
+    .DataSource(dataSource => dataSource
+    .Ajax()
+    .Read(read => read.Url(Url.Content("~/api/annual-planning/gets")).Data("$.getDataForm"))
+    .PageSize(10)
+    //.Sort(sort =>
+    //{
+    //    sort.Add(x => x.EmployeeName);
+    //    sort.Add(x => x.Age).Descending();
+    //    sort.Add(x => x.Class).Descending();
+    //})
+    )
+    //.Sortable(sortable => sortable.Enabled(true))
+    .Resizable(resizable => resizable.Columns(true))
+    .Pageable(options =>
+    {
+        options.Input(true);
+        options.Numeric(false);
+        options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+    })
+    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+    .Events(events =>
+    {
+        events.DataBound("$.onDataBound");
+    })
+    .Scrollable(scr=>scr.Height("auto"))
+    .HtmlAttributes(new { style= "font-size:0.9rem;line-height:1" })
+    .Deferred()
+    )
+                        </div>
+                    @*</div>*@
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,90 @@
+﻿@{ 
+    ScriptManager.RegisterReferences("grid");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/organization/download-subordinates">
+                    @Localizer["Download"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    <span class="d-block">@Localizer["Subordinates"]</span>
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_SubordinatesToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.SubordinateStroredEntity>()
+                    .Name("grid")
+                    .HtmlAttributes(new { @class = "table-w-padding", data_filter = "subordinates-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.NoReg).Title("Employee").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:Name#</h6>
+                                    <span class=""d-block"">#:$.toDefault(PostName, '-')#</span>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.Id).Title("Organization").ClientTemplate(@"
+                            <div class=""media pull-left"">
+                                <div class=""media-body"">
+                                    # if (Division != null) { #
+                                    <span class=""d-block font-small-1 uppercase bold font-red-flamingo"">#:$.toDefault(Division, '-')# Division</span>
+                                    # } if (Department != null) { #
+                                    <span class=""d-block font-small-1 uppercase bold font-blue-sharp"">#:$.toDefault(Department, '-')# Department</span>
+                                    # } if (Section != null) { #
+                                    <span class=""d-block font-small-1 uppercase bold font-yellow-crusta"">#:$.toDefault(Section, '-')# Section</span>
+                                    # } #
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm purple"" data-trigger=""modal"" data-modal=""role-modal"" data-modal-title=""View Profile"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/subprofile"" data-parameters-noreg=""#:NoReg#"">
+                                    <i class=""ft-eye""></i>
+                                </a>
+                            </div>
+                        ").Width("6rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/organization/subordinates")))
+                        .Sort(sort =>
+                        {
+                            sort.Add("Name").Ascending();
+                        })
+                        .PageSize(31)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

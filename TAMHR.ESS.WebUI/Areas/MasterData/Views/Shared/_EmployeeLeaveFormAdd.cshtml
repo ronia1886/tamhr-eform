@@ -1,0 +1,1041 @@
+﻿@model List<TAMHR.ESS.Domain.EmployeeLeaveHistoryView>
+
+@{
+    var isNew = Model?.FirstOrDefault()?.Id == default(Guid);
+    var firstItem = Model?.FirstOrDefault(); // Get first item for single object properties
+}
+
+@{
+    var currentYears = DateTime.Now.Year;
+
+    var maxLongLeave = Model?
+        .Where(x => x.leavetype == "long-leave" && x.Period == currentYears)
+        .OrderBy(x => x.Period)
+        .Sum(x => x.RemainingLeave) ?? 0;
+
+    //var maxLongLeave = Model?.Where(x => x.leavetype == "long-leave")
+    //                        .OrderByDescending(x => x.Period)
+    //                        .FirstOrDefault()?.RemainingLeave  ?? 0; // Default to 0 if no data
+
+    //var maxAnnualLeave = Model?.Where(x => x.leavetype == "annual-leave")
+    //                          .OrderByDescending(x => x.Period)
+    //                          .FirstOrDefault()?.RemainingLeave ?? 0; // Default to 0 if no data
+
+
+    var maxAnnualLeave = Model?
+        .Where(x => x.leavetype == "annual-leave" && x.Period == currentYears)
+        .OrderBy(x => x.Period)
+        .Sum(x => x.RemainingLeave) ?? 0;
+}
+
+@{
+    var maxPeriod = Model.Where(x => x.leavetype == "long-leave").Any()
+        ? Model.Where(x => x.leavetype == "long-leave").Max(x => x.Period)
+        : 0; // Handle case where there are no "long-leave" records
+
+    var maxPeriodAnnual = Model.Where(x => x.leavetype == "annual-leave").Any()
+           ? Model.Where(x => x.leavetype == "annual-leave").Max(x => x.Period)
+           : 0; // Handle case where there are no "long-leave" records
+}
+@* <style>
+    .modal .modal-footer {
+        display: none !important;
+    }
+
+</style>
+ *@
+ <style>
+    #employee-leave-modal .modal-footer {
+        display: none; /* Hide default footer */
+    }
+
+    .modal-footer-custom {
+        padding: 15px;
+        text-align: right;
+        border-top: 1px solid #dee2e6;
+    }
+
+ </style>
+
+
+<form id="employeeLeaveForms" method="post">
+    @Html.HiddenFor(x => firstItem.Id)
+    @Html.HiddenFor(x => firstItem.noreg)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                 @(Html.Kendo().AutoComplete()
+                    .Name("noregAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Placeholder(Localizer["Find user..."].Value)
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Enable(true)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/getactives"))))
+                        .PageSize(10)
+                        .Sort(sort => sort.Add("Name"))
+                        .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>
+                        function(e) {
+                            var dataItem = this.dataItem(e.item.index());
+                            $("#NoReg").val(dataItem.NoReg);
+                            loadLeaveData(); 
+                            loadlongLeaveData(); 
+                        }
+                    </text>))
+                )
+               <input type="text" class="form-control" id="NoReg" name="NoReg" value="@(Model.FirstOrDefault()?.noreg ?? "")" style="display:none;"/>
+            </div>
+        </div>
+    </div>
+    @* <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Current Long Leave"]</label>
+                @Html.TextBoxFor(x => maxLongLeave, new { @class = "form-control", @data_validation_for = "LongLeave", @placeholder = Localizer["Please input long leave"].Value, @disabled = "disabled" })
+                <span class="invalid" data-validation-for="LongLeave"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Current Annual Leave"]</label>
+                @Html.TextBoxFor(x => maxAnnualLeave, new { @class = "form-control", @data_validation_for = "AnnualLeave", @placeholder = Localizer["Please input annual leave"].Value, @disabled = "disabled" })
+                <span class="invalid" data-validation-for="AnnualLeave"></span>
+            </div>
+        </div>
+    </div> *@
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Annual Leave"]</label>
+
+                <!-- FontAwesome Plus Icon -->
+                <i class="fa fa-plus add-btn" style="float: right; background-color: #74a4ac; color: black; padding: 6px 10px; border-radius: 5px; cursor: pointer; display: inline-block;"></i>
+
+                <!-- Table -->
+                <table class="table table-striped" style="border: 1px solid #ddd; white-space: nowrap;">
+                    <thead style="background-color:#74a4ac;">
+                        <tr>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Period"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Total Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Used Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Remaining Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Action"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaveTable">
+                    <!-- First Row: Input Fields -->
+                    <tr>
+                        <td style="text-align: center; border: 1px solid #ddd;">
+                            <input type="text" class="form-control leave-input period" id="period" style="display: none;" />
+                        </td>
+                        <td class="total-leave" style="text-align: center; border: 1px solid #ddd;">
+                            <input type="text" class="form-control leave-input totalleave" id="totalleave" style="display: none;" />
+                        </td>
+                        <td class="used-leave" style="text-align: center; border: 1px solid #ddd;">
+                            <input type="text" class="form-control leave-input usedleave" id="usedleave" value="0" style="display: none;" readonly/>
+                        </td>
+                        <td class="remaining-leave" style="text-align: center; border: 1px solid #ddd;">
+                            <input type="text" class="form-control leave-input remainingleave" id="remainingleave" value="0" readonly style="display: none;" />
+                        </td>
+                        <td style="text-align: center; border: 1px solid #ddd;">
+                            <i class="fa fa-trash delete-btn" style="cursor: pointer; display: none; font-size: 20px;"></i>
+                        </td>
+                    </tr>
+
+                      <!-- Second Row Onwards: Data from Model -->
+                      @if (Model != null && Model.Any(x => x.leavetype == "annual-leave" && x.noreg == ViewBag.SelectedNoReg)) 
+                        {
+                            foreach (var leave in Model.Where(x => x.leavetype == "annual-leave" && x.noreg == ViewBag.SelectedNoReg)
+                                .OrderByDescending(x => x.Period))
+                            {
+                               <tr data-id="@leave.noreg">
+                                <td class="noreg" data-original-value="@leave.noreg" style="text-align: center; border: 1px solid #ddd;" hidden>
+                                    @leave.noreg
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                  @leave.Period
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.TotalLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.UsedLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.RemainingLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;"></td>
+                            </tr>
+
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; border: 1px solid #ddd;">No data available</td>
+                            </tr>
+                        }
+
+                </tbody>
+                </table>
+
+
+             <script>
+
+              $(document).ready(function () {
+              $(".add-btn").prop("disabled", true).css({ "pointer-events": "none", "opacity": "0.5" });
+              });
+
+                function paginateTable(rowsPerPage) {
+                    let tableRows = $("#leaveTable tr:not(:first)"); // Exclude header row
+                    let totalRows = tableRows.length;
+                    let totalPages = Math.ceil(totalRows / rowsPerPage);
+                    let currentPage = 1;
+
+                    function updatePageDropdown() {
+                        let dropdown = $("#pageInfo").empty();
+                        for (let i = 1; i <= totalPages; i++) {
+                            dropdown.append(`<option value="${i}">${i}</option>`);
+                        }
+                        dropdown.val(currentPage);
+                        $("#pageLabel").text(`Page`);
+                        $("#totalPagesText").text(`of ${totalPages}`);
+                    }
+
+                    function updatePaginationInfo() {
+                        let start = (currentPage - 1) * rowsPerPage + 1;
+                        let end = Math.min(start + rowsPerPage - 1, totalRows);
+                        $("#paginationInfo").text(`${start} - ${end} of ${totalRows} items`);
+                    }
+
+                    function showPage(page) {
+                        tableRows.hide();
+                        let start = (page - 1) * rowsPerPage;
+                        let end = start + rowsPerPage;
+                        tableRows.slice(start, end).show();
+
+                        $("#prevPage").toggleClass("disabled", page === 1);
+                        $("#nextPage").toggleClass("disabled", page === totalPages);
+                        $("#pageInfo").val(page);
+                        updatePaginationInfo();
+                    }
+
+                    $("#nextPage").off("click").on("click", function () {
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            showPage(currentPage);
+                        }
+                    });
+
+                    $("#prevPage").off("click").on("click", function () {
+                        if (currentPage > 1) {
+                            currentPage--;
+                            showPage(currentPage);
+                        }
+                    });
+
+                    $("#pageInfo").off("change").on("change", function () {
+                        currentPage = parseInt($(this).val());
+                        showPage(currentPage);
+                    });
+
+                    updatePageDropdown();
+                    updatePaginationInfo();
+                    showPage(1);
+                }
+
+                function loadLeaveData() {
+                    var selectedNoReg = $("#NoReg").val();
+
+                    if (!selectedNoReg) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: "@Url.Content("~/masterdata/employeeleave/LoadAddLeave")",
+                        type: "POST",
+                        data: { noreg: selectedNoReg },
+                        contentType: "application/x-www-form-urlencoded", 
+                        success: function(response) {
+                            var responseTbody = $("<div>").html(response).find("#leaveTable");
+                            var newRows = responseTbody.find("tr:not(:first)");
+
+                            $("#leaveTable").find("tr:not(:first)").remove();
+                            $("#leaveTable").append(newRows);
+
+                    
+                            paginateTable(parseInt($("#itemsPerPage").val()));
+
+                             $(".add-btn").prop("disabled", true).css({ "pointer-events": "none", "opacity": "0.5" });
+
+                             if (newRows.length > 0) {
+                                 $(".add-btn").prop("disabled", false).css({ "pointer-events": "auto", "opacity": "1" });
+                             }
+
+                        },
+                        error: function(xhr) {
+                            alert("Failed to load leave history. " + xhr.responseText);
+                        }
+                    });
+                }
+
+                $(document).ready(function () {
+                    $("#itemsPerPage").on("change", function () {
+                        paginateTable(parseInt($(this).val()));
+                    });
+
+                    paginateTable(parseInt($("#itemsPerPage").val())); 
+                });
+            </script>
+
+                <script>
+                    $(document).ready(function () {
+                        $(".add-btn").click(function () {
+                            $("#leaveTable .leave-input").show().prop("required", true);
+                            $(".delete-btn").show(); // Show delete button
+
+                            // Sync "Remaining Leave" with "Total Leave"
+                            $(".totalleave, .usedleave").on("input", function () {
+                                let totalLeave = $(".totalleave").val() === "" ? null : parseInt($(".totalleave").val());
+                                let usedLeave = parseInt($(".usedleave").val()) || 0;
+                                let remainingLeave = totalLeave - usedLeave;
+
+                                $(".remainingleave").val(remainingLeave);
+                            }).trigger("input"); 
+                        });
+
+                        $(".delete-btn").click(function () {
+                            $(this).closest("tr").find(".leave-input").hide().prop("required", false);
+                            $(this).hide(); // Hide trash icon for that row
+                            $(".totalleave").val(null);
+                        });
+
+                        // Allow only numbers in totalleave
+                        $(document).on("input", ".totalleave", function () {
+                            this.value = this.value.replace(/[^0-9]/g, ''); // Allow only digits
+                        });
+
+                        $(document).on("input", ".period", function () {
+                            this.value = this.value.replace(/[^0-9]/g, ''); // Allow only digits
+                        });
+
+                        $(document).on("blur", ".period", function () {
+                            let currentYear = new Date().getFullYear();
+                            let nextYear = currentYear + 1;
+                            let allowedYears = [currentYear.toString(), nextYear.toString()];
+
+                            if (!allowedYears.includes(this.value)) {
+                                app.warning(`Please enter only ${currentYear} or ${nextYear}`);
+                                this.value = ''; // Clear input if not valid
+                            }
+                        });
+                    });
+                </script>
+
+
+                <!-- Pagination Info -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <nav class="d-flex align-items-center">
+                        <ul class="pagination mb-0">
+                            <li class="page-item disabled" id="prevPage">
+                                <a class="page-link" href="#"><i class="fa fa-angle-left"></i></a>
+                            </li>
+                            <li class="page-item mx-2 d-flex align-items-center">
+                                <span id="pageLabel" class="mr-2">Page</span>
+                                <select id="pageInfo" class="form-control w-auto"></select>
+                                <span id="totalPagesText" class="ml-2">of X</span>
+                            </li>
+
+                            <li class="page-item" id="nextPage">
+                                <a class="page-link" href="#"><i class="fa fa-angle-right"></i></a>
+                            </li>
+
+                            <li class="page-item ml-3 d-flex align-items-center">
+                                <select id="itemsPerPage" class="form-control w-auto">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                                <span class="ml-2">Items per page</span>
+                            </li>
+                        </ul>
+                    </nav>
+                    <span id="paginationInfo" class="text-muted">1 - 3 of 10 items</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Long Leave"]</label>
+                <i class="fa fa-plus addlong-btn" style="float: right; background-color: #74a4ac; color: black; padding: 6px 10px; border-radius: 5px; cursor: pointer; display: inline-block;" hidden></i>
+
+                  <table class="table table-striped" style="border: 1px solid #ddd; white-space: nowrap; display: block; overflow-x: auto;">
+                    <thead style="background-color:#74a4ac;">
+                        <tr>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Entry Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Start Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["End Date"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Total Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Used Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Remaining Leave"]</th>
+                            <th style="text-align: center; border: 1px solid #ddd;">@Localizer["Action"]</th>
+                        </tr>
+                    </thead>
+                    <tbody id="longleave">
+                        <tr>
+                            <td style="text-align: center; border: 1px solid #ddd;">
+                                <input type="text" class="form-control" id="entrydates" style="display: none;" readonly/>
+                            </td>
+                            <td style="text-align: center; border: 1px solid #ddd;">
+                             <input type="text" class="form-control" id="startdates" style="display: none;"  readonly/>
+                            </td>
+                            <td style="text-align: center; border: 1px solid #ddd;">
+                             <input type="text" class="form-control" id="enddatess" style="display: none;"  readonly/>
+                            </td>
+                            <td class="total-leave" style="text-align: center; border: 1px solid #ddd;">
+                                <input type="text" class="form-control leave-input totallongleave" id="totallongleave" style="display: none;" />
+                            </td>
+                            <td class="used-leave" style="text-align: center; border: 1px solid #ddd;">
+                                <input type="text" class="form-control leave-input usedlongleave" id="usedlongleave" value="0" style="display: none;" readonly/>
+                            </td>
+                            <td class="remaining-leave" style="text-align: center; border: 1px solid #ddd;">
+                                <input type="text" class="form-control leave-input remaininglongleave" id="remaininglongleave" value="0" style="display: none;" readonly />
+                            </td>
+                            <td style="text-align: center; border: 1px solid #ddd;">
+                                <i class="fa fa-trash delete-btns" style="cursor: pointer; display: none; font-size: 20px;"></i>
+                            </td>
+                        </tr>
+
+                          @if (Model != null && Model.Any(x => x.leavetype == "long-leave" && x.noreg == ViewBag.SelectedNoReg)) 
+                        {
+                            foreach (var leave in Model.Where(x => x.leavetype == "long-leave" && x.noreg == ViewBag.SelectedNoReg)
+                                .OrderByDescending(x => x.Period))
+                            {
+                               <tr data-id="@leave.noreg">
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                  @leave.DateIn?.ToString("dd/MM/yyyy")
+                                </td>
+                                 <td style="text-align: center; border: 1px solid #ddd;">
+                                  @leave.CreatedOn?.ToString("dd/MM/yyyy")
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                  @leave.PeriodDateLeave?.ToString("dd/MM/yyyy")
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.TotalLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.UsedLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;">
+                                    @leave.RemainingLeave
+                                </td>
+                                <td style="text-align: center; border: 1px solid #ddd;"></td>
+                            </tr>
+
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; border: 1px solid #ddd;">No data available</td>
+                            </tr>
+                        }
+
+                    </tbody>
+                </table>
+
+            <script>
+                $(document).ready(function () {
+                    $(".addlong-btn").prop("disabled", true).css({ "pointer-events": "none", "opacity": "0.5" });
+
+                    $("#entrydates").hide();
+                    $("#startdates").hide();
+                    $("#enddatess").hide();
+
+                    $(".addlong-btn").on("click", function () {
+
+                        var currentYear = new Date().getFullYear();
+
+                        var startDate = "01/01/" + currentYear;
+                        $("#startdates").val(startDate).show();
+
+                        var endDate = "31/12/" + currentYear;
+                        $("#enddatess").val(endDate).show();
+
+                        $("#entrydates").show();
+                    });
+
+                    $(document).on("click", ".delete-btns", function () {
+                        $("#entrydates").hide();
+                        $("#startdates").hide();
+                        $("#enddatess").hide();
+                    });
+                });
+
+                function paginateTables(rowsPerPage) {
+                    let tableRows = $("#longleave tr:not(:first)"); // Exclude header row
+                    let totalRows = tableRows.length;
+                    let totalPages = Math.ceil(totalRows / rowsPerPage);
+                    let currentPage = 1;
+
+                    function updatePageDropdowns() {
+                        let dropdown = $("#pageInfos").empty();
+                        for (let i = 1; i <= totalPages; i++) {
+                            dropdown.append(`<option value="${i}">${i}</option>`);
+                        }
+                        dropdown.val(currentPage);
+
+                        // Display "Page X of Y" outside the dropdown
+                        $("#pageLabels").text(`Page`);
+                        $("#totalPagesTexts").text(`of ${totalPages}`);
+                    }
+
+                    function updatePaginationInfos() {
+                        let start = (currentPage - 1) * rowsPerPage + 1;
+                        let end = Math.min(start + rowsPerPage - 1, totalRows);
+                        $("#paginationInfos").text(`${start} - ${end} of ${totalRows} items`);
+                    }
+
+                    function showPages(page) {
+                        tableRows.hide();
+                        let start = (page - 1) * rowsPerPage;
+                        let end = start + rowsPerPage;
+                        tableRows.slice(start, end).show();
+
+                        // Update buttons state
+                        $("#prevPages").toggleClass("disabled", page === 1);
+                        $("#nextPages").toggleClass("disabled", page === totalPages);
+
+                        // Update dropdown & text info
+                        $("#pageInfos").val(page);
+                        updatePaginationInfos();
+                    }
+
+                    // Handle next button click
+                    $("#nextPages").off("click").on("click", function () {
+                        if (currentPage < totalPages) {
+                            currentPage++;
+                            showPages(currentPage);
+                        }
+                    });
+
+                    // Handle previous button click
+                    $("#prevPages").off("click").on("click", function () {
+                        if (currentPage > 1) {
+                            currentPage--;
+                            showPages(currentPage);
+                        }
+                    });
+
+                    // Handle page dropdown change
+                    $("#pageInfos").off("change").on("change", function () {
+                        currentPage = parseInt($(this).val());
+                        showPages(currentPage);
+                    });
+
+                    // Initialize
+                    updatePageDropdowns();
+                    updatePaginationInfos();
+                    showPages(1);
+                }
+
+                function loadlongLeaveData() {
+                    var selectedNoReg = $("#NoReg").val();
+
+                    if (!selectedNoReg) {
+                        return;
+                    }
+
+                    $.ajax({
+                        url: "@Url.Content("~/masterdata/employeeleave/LoadAddLeave")",
+                        type: "POST",
+                        data: { noreg: selectedNoReg },
+                        contentType: "application/x-www-form-urlencoded", 
+                        success: function(response) {
+                            var responseTbody = $("<div>").html(response).find("#longleave");
+                            var newRows = responseTbody.find("tr:not(:first)");
+
+                            $("#longleave").find("tr:not(:first)").remove();
+                            $("#longleave").append(newRows);
+
+                            paginateTables(parseInt($("#itemsPerPages").val())); 
+
+                            $(".addlong-btn").prop("disabled", true).css({ "pointer-events": "none", "opacity": "0.5" });
+
+                            if (newRows.length > 0) {
+                                $(".addlong-btn").prop("disabled", false).css({ "pointer-events": "auto", "opacity": "1" });
+                            }
+
+                            var firstRow = newRows.first();
+                            var entryDate = firstRow.find("td:eq(0)").text().trim();
+
+                            if (entryDate) {
+                                $("#entrydates").val(entryDate);
+                            } else {
+                                $("#entrydates").val("").hide(); 
+                            }
+                        },
+                        error: function(xhr) {
+                            alert("Failed to load leave history. " + xhr.responseText);
+                        }
+                    });
+                }
+
+                $(document).ready(function () {
+                    $("#itemsPerPages").on("change", function () {
+                        paginateTables(parseInt($(this).val()));
+                    });
+
+                    paginateTables(parseInt($("#itemsPerPages").val())); 
+                });
+            </script>
+
+
+                <script>
+                    $(document).ready(function () {
+                        $(".addlong-btn").click(function () {
+                            // Show all hidden inputs and delete buttons
+                            $("#longleave .leave-input").show().attr("required", true);
+                            $("#longleave .delete-btns").show();
+
+                            $(document).on("input", ".totallongleave", function () {
+                                this.value = this.value.replace(/[^0-9]/g, ''); 
+                            });
+
+
+                            // Update remaining leave when total leave changes
+                            $(".totallongleave, .usedlongleave").on("input", function () {
+                                let totallongLeave = $(".totallongleave").val() === "" ? null : parseInt($(".totallongleave").val());
+                                let usedlongLeave = parseInt($(".usedlongleave").val()) || 0;
+                                let remaininglongLeave = totallongLeave - usedlongLeave;
+
+                                $(".remaininglongleave").val(remaininglongLeave);
+                            }).trigger("input");
+                        });
+
+                        // Delete button hides row inputs and removes 'required' attribute
+                        $(document).on("click", ".delete-btns", function () {
+                            $(this).closest("tr").find(".leave-input").hide().removeAttr("required");
+                            $(this).hide(); // Hide only this delete button
+                            $(".totallongleave").val(null);
+                        });
+                    });
+                </script>
+
+                <!-- Pagination Info -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- Pagination Controls -->
+                    <nav class="d-flex align-items-center">
+                        <ul class="pagination mb-0">
+                            <li class="page-item disabled" id="prevPages">
+                                <a class="page-link" href="#"><i class="fa fa-angle-left"></i></a>
+                            </li>
+                            <li class="page-item mx-2 d-flex align-items-center">
+                                <span id="pageLabels" class="mr-2">Page</span>
+                                <select id="pageInfos" class="form-control w-auto"></select>
+                                <span id="totalPagesTexts" class="ml-2">of X</span>
+                            </li>
+
+                            <li class="page-item" id="nextPages">
+                                <a class="page-link" href="#"><i class="fa fa-angle-right"></i></a>
+                            </li>
+
+                            <li class="page-item ml-3 d-flex align-items-center">
+                                <select id="itemsPerPages" class="form-control w-auto">
+                                    <option value="5" selected>5</option>
+                                    <option value="10">10</option>
+                                </select>
+                                <span class="ml-2">Items per page</span>
+                            </li>
+                        </ul>
+                    </nav>
+                    <span id="paginationInfos" class="text-muted">1 - 3 of 10 items</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* <script>
+        $(document).ready(function () {
+            function paginateTable(rowsPerPage) {
+                let tableRows = $("#leaveTable tr");
+                let totalRows = tableRows.length;
+                let totalPages = Math.ceil(totalRows / rowsPerPage);
+                let currentPage = 1;
+
+                function updatePageDropdown() {
+                    let dropdown = $("#pageInfo").empty();
+                    for (let i = 1; i <= totalPages; i++) {
+                        dropdown.append(`<option value="${i}">${i}</option>`);
+                    }
+                    dropdown.val(currentPage);
+
+                    // Display "Page X of Y" outside the dropdown
+                    $("#pageLabel").text(`Page`);
+                    $("#totalPagesText").text(`of ${totalPages}`);
+                }
+
+
+                function updatePaginationInfo() {
+                    let start = (currentPage - 1) * rowsPerPage + 1;
+                    let end = Math.min(start + rowsPerPage - 1, totalRows);
+                    $("#paginationInfo").text(`${start} - ${end} of ${totalRows} items`);
+                }
+
+                function showPage(page) {
+                    tableRows.hide();
+                    let start = (page - 1) * rowsPerPage;
+                    let end = start + rowsPerPage;
+                    tableRows.slice(start, end).show();
+
+                    // Update buttons state
+                    $("#prevPage").toggleClass("disabled", page === 1);
+                    $("#nextPage").toggleClass("disabled", page === totalPages);
+
+                    // Update dropdown & text info
+                    $("#pageInfo").val(page);
+                    updatePaginationInfo();
+                }
+
+                // Handle next button click
+                $("#nextPage").off("click").on("click", function () {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        showPage(currentPage);
+                    }
+                });
+
+                // Handle previous button click
+                $("#prevPage").off("click").on("click", function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        showPage(currentPage);
+                    }
+                });
+
+                // Handle page dropdown change
+                $("#pageInfo").off("change").on("change", function () {
+                    currentPage = parseInt($(this).val());
+                    showPage(currentPage);
+                });
+
+                // Initialize
+                updatePageDropdown();
+                updatePaginationInfo();
+                showPage(1);
+            }
+
+            // Handle items per page change
+            $("#itemsPerPage").on("change", function () {
+                paginateTable(parseInt($(this).val()));
+            });
+
+            // Initialize with default value
+            paginateTable(parseInt($("#itemsPerPage").val()));
+        });
+    </script> *@
+
+@*     <script>
+        $(document).ready(function () {
+            function paginateTables(rowsPerPage) {
+                let tableRows = $("#longleave tr");
+                let totalRows = tableRows.length;
+                let totalPages = Math.ceil(totalRows / rowsPerPage);
+                let currentPage = 1;
+
+                function updatePageDropdowns() {
+                    let dropdown = $("#pageInfos").empty();
+                    for (let i = 1; i <= totalPages; i++) {
+                        dropdown.append(`<option value="${i}">${i}</option>`);
+                    }
+                    dropdown.val(currentPage);
+
+                    // Display "Page X of Y" outside the dropdown
+                    $("#pageLabels").text(`Page`);
+                    $("#totalPagesTexts").text(`of ${totalPages}`);
+                }
+
+
+                function updatePaginationInfos() {
+                    let start = (currentPage - 1) * rowsPerPage + 1;
+                    let end = Math.min(start + rowsPerPage - 1, totalRows);
+                    $("#paginationInfos").text(`${start} - ${end} of ${totalRows} items`);
+                }
+
+                function showPages(page) {
+                    tableRows.hide();
+                    let start = (page - 1) * rowsPerPage;
+                    let end = start + rowsPerPage;
+                    tableRows.slice(start, end).show();
+
+                    // Update buttons state
+                    $("#prevPages").toggleClass("disabled", page === 1);
+                    $("#nextPages").toggleClass("disabled", page === totalPages);
+
+                    // Update dropdown & text info
+                    $("#pageInfos").val(page);
+                    updatePaginationInfos();
+                }
+
+                // Handle next button click
+                $("#nextPages").off("click").on("click", function () {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        showPages(currentPage);
+                    }
+                });
+
+                // Handle previous button click
+                $("#prevPages").off("click").on("click", function () {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        showPages(currentPage);
+                    }
+                });
+
+                // Handle page dropdown change
+                $("#pageInfos").off("change").on("change", function () {
+                    currentPage = parseInt($(this).val());
+                    showPages(currentPage);
+                });
+
+                // Initialize
+                updatePageDropdowns();
+                updatePaginationInfos();
+                showPages(1);
+            }
+
+            // Handle items per page change
+            $("#itemsPerPages").on("change", function () {
+                paginateTables(parseInt($(this).val()));
+            });
+
+            // Initialize with default value
+            paginateTables(parseInt($("#itemsPerPages").val()));
+        });
+    </script> *@
+
+    <!-- Custom Footer Inside Modal -->
+    <div id="employee-leave-footer" class="modal-footer-custom">
+        <button type="submit" class="btn red-haze" id="save-employee-leave">@Localizer["Save"]</button>
+        <button type="button" class="btn btn-secondary" id="close-employee-leave-modal">@Localizer["Close"]</button>
+
+    </div>
+
+@*     <script>
+        function closeEmployeeLeaveModal() {
+            var modal = document.getElementById("employee-leave-modal");
+
+            if (modal) {
+                modal.style.display = "none"; // Hide modal
+                modal.classList.remove("show"); // Remove Bootstrap's "show" class
+                document.body.classList.remove("modal-open"); // Remove modal-open class from body
+
+                // Remove ALL modal backdrops to prevent freezing
+                document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+                    backdrop.remove();
+                });
+
+                // Ensure scrolling is enabled again
+                document.body.style.overflow = "";
+            }
+        }
+
+        // ✅ Close when clicking the custom close button
+        document.getElementById("close-employee-leave-modal").addEventListener("click", function () {
+            closeEmployeeLeaveModal();
+        });
+
+        // ✅ Close when clicking outside the modal
+        document.addEventListener("click", function (event) {
+            var modal = document.getElementById("employee-leave-modal");
+
+            // Ensure modal is open
+            if (modal && modal.classList.contains("show")) {
+                // Check if clicked outside the modal
+                if (!modal.contains(event.target) && !event.target.closest("[data-modal='employee-leave-modal']")) {
+                    closeEmployeeLeaveModal();
+                }
+            }
+        });
+
+
+        // ✅ Close when clicking the "X" button
+        document.addEventListener("click", function (event) {
+            if (event.target.matches(".modal .close") || event.target.closest(".modal .close")) {
+                closeEmployeeLeaveModal();
+            }
+        });
+
+        // ✅ Open modal properly when clicking the trigger link
+        document.querySelector("[data-modal='employee-leave-modal']").addEventListener("click", function () {
+            var modal = document.getElementById("employee-leave-modal");
+
+            if (modal) {
+                modal.style.display = "block"; // Show modal
+                modal.classList.add("show"); // Add Bootstrap's "show" class
+                document.body.classList.add("modal-open"); // Prevent scrolling
+
+                // Remove any existing backdrops before adding a new one
+                document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+                    backdrop.remove();
+                });
+
+                // Add a new backdrop
+                var backdrop = document.createElement("div");
+                backdrop.className = "modal-backdrop fade show";
+                document.body.appendChild(backdrop);
+
+                // Ensure scrolling is disabled when modal is open
+                document.body.style.overflow = "hidden";
+            }
+        });
+
+        // ✅ Remove duplicate backdrops when modal is hidden
+        document.addEventListener("hidden.bs.modal", function () {
+            document.querySelectorAll(".modal-backdrop").forEach(function (backdrop) {
+                backdrop.remove();
+            });
+            document.body.classList.remove("modal-open");
+            document.body.style.overflow = "";
+        });
+    </script> *@
+
+
+  @*   <div class="actions">
+    <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a> 
+    </div> *@
+
+</form>
+
+<script>
+    $(document).ready(function () {
+        $("#employeeLeaveForms").submit(function (event) {
+            event.preventDefault(); // Prevent form submission
+
+            Swal.fire({
+                title: "Are you sure?",
+                text: "Do you want to add leave details?",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#DD6B55",
+                confirmButtonText: "Yes",
+                cancelButtonText: "No",
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(result => {
+                if (result.value) { 
+                    console.log("User confirmed, proceeding with request...");
+
+                    let NoReg = $("#NoReg").val();
+                    if (!String(NoReg).trim()) {
+                        Swal.fire("Warning", "Employee can't be empty.", "warning");
+                        return;
+                    }
+
+                    let requestData = {
+                        NoReg: $("#NoReg").val() || "",
+                        Period: $("#period").val() || "",
+                        TotalLeave: $("#totalleave").val() === "" || $("#totalleave").val() === null ? null : $("#totalleave").val(),
+                        UsedLeave: $("#usedleave").val() || "0",
+                        RemainingLeave: $("#remainingleave").val() || "0",
+                        PeriodLongLeave: new Date().getFullYear().toString(),
+                        TotalLongLeave: $("#totallongleave").val() === "" || $("#totallongleave").val() === null ? null : $("#totallongleave").val(),
+                        UsedLongLeave: $("#usedlongleave").val() || "0",
+                        RemainingLongLeave: $("#remaininglongleave").val() || "0"
+                    };
+
+                    console.log("Sending request:", requestData);
+
+                    $.ajax({
+                        url: '@Url.Content("~/masterdata/employeeleave/AddLeaveEmployee")',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify(requestData),
+                        success: function (data) {
+                            console.log("Response received:", data);
+                            Swal.fire({
+                                title: "Success!",
+                                text: "Leave details saved successfully.",
+                                type: "success",
+                                confirmButtonText: "OK"
+                            }).then(result => {
+                                if (result.value) {  
+                                    console.log("User confirmed success, reloading page...");
+                                    location.reload();
+                                }
+                            });
+                        },
+                        error: function (xhr) {
+                            console.error("Error:", xhr);
+                            Swal.fire("Error", "An error occurred while saving leave details.", "error");
+                        }
+                    });
+                }
+            });
+        });
+    });
+</script>
+
+
+
+
+@* <script>
+    $(document).ready(function () {
+
+        $("#save-employee-leave").click(function () {
+            console.log("Save button clicked");
+
+            app.confirm("Are you sure you want to update leave details?", function (confirmed) {
+                if (!confirmed) {
+                    console.log("User canceled action");
+                    return; 
+                }
+
+                let requestData = {
+                    NoReg: $("#NoReg").val() || "",
+                    Period: $("#period").val() || "", 
+                    TotalLeave: $("#totalleave").val() || "0",
+                    UsedLeave: $("#usedleave").val() || "0",
+                    RemainingLeave: $("#remainingleave").val() || "0",
+                    PeriodLongLeave: new Date().getFullYear().toString(),
+                    TotalLongLeave: $("#totallongleave").val() || "0",
+                    UsedLongLeave: $("#usedlongleave").val() || "0",
+                    RemainingLongLeave: $("#remaininglongleave").val() || "0"
+                };
+
+                console.log("Sending request:", requestData);
+
+                $.ajax({
+                    url: '@Url.Content("~/masterdata/employeeleave/AddLeaveEmployee")',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(requestData),
+                    success: function (data) {
+                        console.log("Response received:", data);
+                        app.success("Leave details saved successfully.", ""); 
+                        location.reload(); 
+                    },
+                    error: function (xhr) {
+                        console.error("Error:", xhr);
+                        app.error("An error occurred while saving leave details."); 
+                    }
+                });
+            });
+        });
+    });
+</script> *@

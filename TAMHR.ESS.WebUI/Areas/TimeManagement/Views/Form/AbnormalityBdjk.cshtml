@@ -1,0 +1,565 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AbnormalityBdjkViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityBdjkService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService ;
+@{
+    ScriptManager.RegisterReferences("dropdownlist", "datetimepicker", "grid", "multiselect", "datepicker", "combobox", "numeric", "upload", "listview");
+
+    var currentUser = User.GetClaim("NoReg");
+    var name = @User.GetClaim("Name");
+    var postName = @User.GetClaim("PostName");
+    var postCode = @User.GetClaim("PostCode");
+    var organizationStructure = MdmService.GetActualOrganizationStructure(currentUser, postCode);
+    var orgCode = organizationStructure?.OrgCode;
+    var orgLevel = organizationStructure?.OrgLevel;
+    string id = ViewContext.HttpContext.Request.Query["id"];
+    var CountData = 0;
+    var iconFa = "ft-edit";
+    if (Model.DocumentApprovalId == Guid.Empty)
+    {
+        var faskes = svc.GetBdjkRequestDetailsByUser(currentUser
+        //name, orgCode, orgLevel
+        ).ToList();
+        List<AbnormalityBdjkView> data = new List<AbnormalityBdjkView>();
+        foreach (var item in faskes)
+        {
+            var obj = new AbnormalityBdjkView();
+            obj = item;
+            //obj.DocumentApprovalId = Model.DocumentApprovalId;
+            data.Add(obj);
+        }
+        Model.Object.Details = data.ToArray();
+        CountData = faskes.Where(x => x.Status != "Rejected").Count();
+    }
+    else
+    {
+        CountData = Model.Object.Details.Count();
+        currentUser = Model.Object.Details.FirstOrDefault().NoReg;
+        name = Model.Object.Details.FirstOrDefault().Name;
+        // postName = Model.Object.Details.FirstOrDefault().PostName;
+        List<AbnormalityBdjkView> data = new List<AbnormalityBdjkView>();
+        foreach (var item in Model.Object.Details)
+        {
+            var obj = new AbnormalityBdjkView();
+            obj = item;
+            obj.DocumentApprovalId = Model.DocumentApprovalId;
+            data.Add(obj);
+        }
+        Model.Object.Details = data.ToArray();
+        iconFa = "ft-eye";
+    }
+
+
+    string action = ViewContext.HttpContext.Request.Query["action"];
+    bool isCanEdit = Model.DocumentStatusCode == "draft" && Model.Progress == 0;
+    var now = DateTime.Now.Date;
+
+    var requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    bool isNewRequest = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid);
+
+    //var now = DateTime.Now.Date;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var chief = bool.Parse(User.GetClaim("Chief"));
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+}
+
+
+@section styles{
+    <style>
+        .k-grid-header .k-header .k-checkbox-label {
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css">
+}
+
+<div>
+    <div class="row d-flex ">
+        <div class="col-md-6 col-sm-12">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <div class="profpic-avatar">
+                                    <img src="@ConfigService.ResolveAvatar(@currentUser)" style="width: 5rem; height: 5rem; border-radius: 50%;">
+                                </div>
+                            </div>
+                            <div class="media-body text-right">
+                                <h3 class="font-green-haze" data-field="EarlyLeave">@name</h3>
+                                <span class="font-dark">@postName</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="media d-flex">
+                            <div class="align-self-center position-absolute">
+                                <i class="iconmoon-absent font-red-haze font-large-2 float-left"></i>
+                            </div>
+                            @{
+                                var title = "Abnormality BDJK";
+                                if (Model.DocumentApprovalId != Guid.Empty)
+                                {
+                                    title = "Pengajuan Abnormality BDJK";
+                                }
+                            }
+                            <div class="media-body text-right">
+                                <h3 class="font-red-haze" data-field="Absent">@CountData</h3>
+                                <span class="font-dark d-md-none d-lg-block">@Localizer[@title]</span>
+                                <span class="font-dark d-lg-none d-md-block font-small-1">@Localizer[@title]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["Abnormality BDJK"]</h3>
+                @if (Model.Progress == 0)
+                {
+                    <div class="row">
+                        <div class="col-md-3 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["Start Date"]</label>
+                                @(Html.Kendo().DatePicker()
+                                .Name("StartDate")
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                            </div>
+                        </div>
+                        <div class="col-md-4 col-sm-12">
+                            <div class="form-group">
+                                <label>@Localizer["End Date"]</label>
+                                <div>
+                                    <div style="display:inline-block">
+
+                                        @(Html.Kendo().DatePicker()
+                                                        .Name("EndDate")
+                                                        .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                        .Format("dd/MM/yyyy")
+                                                        .Deferred()
+                                                    )
+                                    </div>
+                                    <div style="display:inline-block;position:absolute;margin-left:20px">
+                                        <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler"><i class="fa fa-search" aria-hidden="true"></i></a>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                        @if (Model.DocumentApprovalId == Guid.Empty)
+                        {
+                            <div class="col-md-5 col-sm 12" style="display:none;">
+                                <div class="form-group">
+                                    <label style="color:transparent">.</label>
+                                    <div>
+                                        <a href="javascript:;" class=" btn btn-md font-green-haze fa-pull-right" data-target="grid" data-trigger="modal" data-modal="bdjk-modal" data-modal-title="Create new BDJK request" data-modal-ajax="true" data-ajax-url="~/timemanagement/abnormalitybdjk/load">
+                                            <i class="fa fa-plus-circle"></i>
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="card-body p-0 table-wrap">
+
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid(Model.Object.Details)
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "proxy-time-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(p => p.Status).Hidden(true).HtmlAttributes(new { @class = "abnormality-bdjk-id"}).ClientTemplate(@"#:Status#</small>");
+                        columns.Select().Width(40).Title("Select All").HeaderHtmlAttributes(new { @class = "text-center" });
+                        columns.Bound(p => p.WorkingDate)
+                        .Title("Date").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                        .ClientTemplate(@"<small class="" d-block"">#:kendo.toString(WorkingDate, 'dd/MM/yyyy')#</small>#if(Status == 'Rejected') {#<small class="" d-block""><span class="" font-red-sunglo"">Already Submitted</span></small>#} else{##}#");
+                        columns.Bound(p => p.WorkingTimeIn)
+                        .Title("Proxy In").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                        .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeIn, 'hh:mm tt'), '-')#</span></small>");
+                        columns.Bound(p => p.WorkingTimeOut)
+                        .Title("Proxy Out").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                        .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeOut, 'hh:mm tt'), '-')#</span></small>");
+                        columns.Bound(p => p.BdjkCode).Width(50)
+                        .Title("BDJK Code").HeaderHtmlAttributes(new { @class = "text-center" })
+                        .ClientTemplate(@"<small class="" d-block bold font-red-sunglo"">#:$.toDefault(BdjkCode,'-')#</small>");
+                        columns.Bound(p => p.ActivityName)
+                        .Title("Activity").HeaderHtmlAttributes(new { @class = "text-center" }).Width(170)
+                        .ClientTemplate(@"<small class="" d-block"">#:$.toDefault(ActivityName,'-')#</small>");
+                        columns.Bound(p => p.BdjkReason)
+                        .Title("Reason").HeaderHtmlAttributes(new { @class = "text-center" }).Width(200)
+                        .ClientTemplate(@"<small class="" d-block""><span class="" font-red-sunglo"">#:$.toDefault(BdjkReason,'-')#</span></small>");
+                        columns.Bound(p => p.DocumentStatusName)
+                        .Title("Status").HeaderHtmlAttributes(new { @class = "text-center" }).Width(90)
+                        .ClientTemplate(@"<small class="" d-block"">#if(Status == 'Rejected') {#<span class="" font-red-sunglo"">rejected</span>#} else{# #:$.toDefault(DocumentStatusCode, '')# #}#</small>");
+                        columns.Bound(c => c.Id).Title("Action")
+                        .HeaderHtmlAttributes(new { @class = "text-center" })
+                        .HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <a class=""btn btn-xs yellow ml-1 actionButton"" data-trigger=""modal"" data-modal=""over-time-modal"" data-modal-title=""BDJK File - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/timemanagement/abnormalitybdjk/loadfile"" data-parameters-id=""#:Id#"" data-parameters-abnormalityBdjkId=""#:AbnormalityBdjkId#"" data-parameters-progress='" + Model.Progress + "'><i class='ft-paperclip'></i></a> " +
+                       "<a class='btn btn-xs blue-sharp ml-1 actionButton' data-trigger='modal' data-modal='over-time-modal-File' data-modal-title='Edit BDJK - #:Name#' data-modal-ajax='true' data-ajax-url='~/timemanagement/abnormalitybdjk/loadabnormalitybdjkedit' data-parameters-id='#:Id#' data-parameters-abnormalityBdjkId='#:AbnormalityBdjkId#' data-parameters-workingDate='#:WorkingDate#' data-parameters-progress='" + Model.Progress + "'><i class='" + iconFa + "'></i></a>")
+                       .Width(120);
+
+                    })
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Events(events => {events.DataBound("$.onBatchDataBound");})
+                    .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .ServerOperation(false)
+
+                    //.Read(read => read.Url(Url.Content("~/api/abnormality-absence/gets")).Data("$.getData"))
+                    .PageSize(5)
+                    
+                    .Sort(sort =>
+                    {
+                        sort.Add("Name");
+                        sort.Add("WorkingDate");
+                    })
+                    )
+                    .Sortable(sortable => sortable.Enabled(true))
+                    .Resizable(resizable => resizable.Columns(true))
+                    .Pageable(p => p.PageSizes(new int[] { 10, 50, 100 }))
+                    .Scrollable(scrollable => scrollable.Height("auto"))
+                    .Deferred()
+                    )
+                </div>
+
+                @*no-table-header*@
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section formActions
+{
+    @if (AclHelper.CanApprove() || AclHelper.CanEdit())
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (ApplicationHelper.IsDefault(Model.Id) || @isCanEdit)
+                                        {
+                                            <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-error-handler="" data-draft="true">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                        }
+                                        @if (ApplicationHelper.IsDefault(Model.Id) || @isCanEdit)
+                                        {
+                                            <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-error-handler="" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </button>
+                                        }
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="approveHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanRevise())
+                                        {
+                                            <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="~/core/home/tasks">
+                                                <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+}
+
+
+@section scripts {
+    <script type="text/javascript">
+         $.getData = function () {
+                var obj = {};
+                obj = { noReg: '@currentUser' }
+               return obj
+        };
+
+        var disabledDatesList = [];
+
+        $(function () {
+
+            $.ajax({
+                url: app.resolveUrl("~/api/abnormality-bdjk/get-master-data-date-noreg"),
+                type: 'POST',
+                data: { NoReg: '@currentUser' }
+            }).done(function (data) {
+                disabledDatesList = [];
+
+                JSON.parse(data).forEach((el) => {
+                    disabledDatesList.push(new Date(el))
+                });
+            });
+        });
+
+
+        app.registerHandler("searchHandler", function () {
+
+            var grid = $("#grid").data("kendoGrid");
+            var dataSource = grid.dataSource;
+
+            var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1);
+            var endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31);
+            var startDateStr = kendo.toString(startDate, "yyyy-MM-dd");
+            dataSource.filter([{
+                field: 'WorkingDate',
+                value: startDate,
+                operator: 'gte'
+            }, {
+                field: 'WorkingDate',
+                value: endDate,
+                operator: 'lte'
+            }]);
+
+        });
+
+        $.onBatchDataBound = function () {
+            var grid = $("#grid").data("kendoGrid");
+            var allRows = grid.items();
+            $.each(allRows, function (index, value) {
+                if($(value).find('.abnormality-bdjk-id').html() == "Rejected"){
+                    $(value).find(".k-checkbox").attr('disabled', true);
+                    $(value).find(".actionButton").addClass( 'disabled-link');
+                    $(value).find(".actionButton").attr('data-trigger', '');
+                    $(value).find(".actionButton").removeClass( 'yellow');
+                    $(value).find(".actionButton").removeClass( 'blue-sharp');
+                    $(value).find(".actionButton").addClass( 'grey');
+                }
+
+                if('@isCanEdit' == 'True'){
+                    $(value).find(".k-checkbox").attr('checked', true);
+                } else {
+                    if (parseFloat("@Model.Progress") == 0) {
+                        $(value).find(".ft-eye").replaceWith("<i class='ft-edit'></i>");
+                    } else if ((parseFloat("@Model.Progress") != 0 && parseFloat("@Model.Progress") != 100)){
+                        $(value).find(".k-checkbox").attr('checked', true);
+                    } else {
+                        $(value).find(".k-checkbox").attr('checked', false);
+                    }
+                }
+            })
+        };
+
+        function isInArray(array, value) {
+          return !!array.find(item => {return item.getTime() == value.getTime()});
+        }
+
+        app.registerHandler("dataInterceptor", function (d) {
+            var documents = []
+            var grid = $("#grid").data("kendoGrid");
+            var disabledIncludes = false;
+            var dateDisabledIncludes;
+
+            grid.tbody.find("input:checked").closest("tr").each(function (index) {
+                grid.select($(this));
+                var dataItem = grid.dataItem($(this));
+
+                console.log(disabledDatesList);
+                console.log(dataItem.WorkingDate);
+
+                if(isInArray(disabledDatesList, dataItem.WorkingDate)){
+                    disabledIncludes = true;
+                    dateDisabledIncludes =  kendo.toString(dataItem.WorkingDate, "dd/MM/yyyy");
+                    return;
+                }
+
+                dataItem.WorkingDate = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd");
+                dataItem.WorkingTimeIn = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd") + 'T' + kendo.toString(dataItem.WorkingTimeIn, "HH:mm:ss");
+                dataItem.WorkingTimeOut = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd") + 'T' + kendo.toString(dataItem.WorkingTimeOut, "HH:mm:ss");
+
+                dataItem.BdjkCode = dataItem.BdjkCode.split(' ').filter( function( el ) {
+                    return (el != 'T' && el != 'D')
+                } ).join();
+
+                documents.push(dataItem);
+            });
+
+            if(disabledIncludes){
+                app.warning("Cannot select date "+dateDisabledIncludes + " already input manually by HR administrator, please drop this document.");
+                return;
+            }
+
+            if (documents.length == 0) {
+                app.warning("No data selected, please check your request");
+                return;
+            }
+            d.Object = {
+                Details: documents
+            };
+
+            return d;
+        });
+
+        app.registerHandler("updateHandler", function () {
+            location.reload();
+        });
+
+
+        app.registerHandler("deleteFileHandler", function (Id) {
+            $.post(app.resolveUrl("~/api/abnormality-bdjk/delete-file"), Id, function (d) {
+
+                    swal('success', 'Delete data successed', 'success');
+                    app.refreshControl('gridFile');
+
+                });
+        });
+
+        app.registerHandler("saveHandler", function (d) {
+            swal({
+                title: "Save Changes",
+                text: "Abnormality BDJK Data saved successfully",
+                type: "success"
+            }).then(function () {
+                window.location.href = app.resolveUrl("~/core/form/index?formKey=abnormality-bdjk");
+            });
+        });
+
+        app.registerHandler("approveHandler", function (d) {
+            var documents = []
+            var grid = $("#grid").data("kendoGrid");
+            grid.tbody.find("input:checked").closest("tr").each(function (index) {
+                grid.select($(this));
+                var dataItem = grid.dataItem($(this));
+                dataItem.WorkingDate = kendo.toString(dataItem.WorkingDate, "yyyy-MM-dd");
+                dataItem.WorkingTimeIn = kendo.toString(dataItem.WorkingTimeIn, "yyyy-MM-dd HH:mm");
+                dataItem.WorkingTimeOut = kendo.toString(dataItem.WorkingTimeOut, "yyyy-MM-dd HH:mm");
+                documents.push(dataItem);
+            });
+
+            if (documents.length == 0) {
+                app.warning("No data selected, please check your request");
+                return;
+            }
+            d.Object = {
+                Details: documents
+            };
+
+            d.DocumentApprovalId = '@Model.DocumentApprovalId'
+
+            $.post(app.resolveUrl("~/api/abnormality-bdjk/approve"), d, function (result) {
+                swal({
+                    title: "Save Changes",
+                    text: "Abnormality BDJK Planning Data approved successfully",
+                    type: "success"
+                }).then(function () {
+                    window.location.href = app.resolveUrl("~/core/home/tasks");
+                });
+            });
+        });
+
+        var selectedEmp = [];
+        function selectEmployee(item) {
+            let CurrentVal = $("#BdjkCode").val()
+            if (CurrentVal != "") {
+                CurrentVal = CurrentVal + " " + item.dataItem.Name
+            } else {
+                CurrentVal = item.dataItem.Name
+            }
+            $("#BdjkCode").val(CurrentVal)
+        }
+        function deselectEmployee(item) {
+            selectedEmp = $.grep(selectedEmp, function (e) {
+                return e.NoReg != item.dataItem.NoReg;
+            });
+
+            //$.OnChangeDate();
+        }
+
+        $.workingDateChange = function (e) {
+            let entity = {
+                WorkingDate: $("#WorkingDate").val(),
+                NoReg: $("#NoReg").val()
+            }
+
+            $.post(app.resolveUrl("~/api/abnormality-over-time/working-date"), entity, function (d) {
+                console.log(d)
+                if (typeof d !== "undefined") {
+                    $("#WorkingTimeInLabel").kendoTimePicker({
+                        value: new Date(d.WorkingTimeIn)
+                    });
+                    $("#WorkingTimeIn").val(d.WorkingTimeIn);
+                    $("#WorkingTimeOutLabel").kendoTimePicker({
+                        value: new Date(d.WorkingTimeOut)
+                    });
+                    $("#WorkingTimeOut").val(d.WorkingTimeOut);
+                }
+            });
+        };
+    </script>
+
+
+    @*@if (canCancelAbsence)
+        {
+            <script type="text/javascript">
+                (function ($, app) {
+                    app.registerHandler("dropDocumentHandler", function (parameters) {
+                        app.confirm(app.translate("Are you sure want to drop this document?"), app.translate("You won't be able to revert this!"), function (d) {
+                            if (!d.value) return;
+
+                            $.delete(app.resolveUrl("~/api/absence/drop-document"), { id: parameters.id }, function () {
+                                app.flash(app.translate("Success drop document"));
+                                window.location.reload();
+                            });
+                        });
+                    });
+                })(jQuery, app);
+            </script>
+        }*@
+}
+
+

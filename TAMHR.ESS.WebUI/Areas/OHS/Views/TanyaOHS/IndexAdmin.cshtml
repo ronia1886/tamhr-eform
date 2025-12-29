@@ -1,0 +1,371 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "combobox", "datepicker", "chart");
+
+    var now = DateTime.Now.Date;
+    var currentPeriod = now.Year;
+    var currentMonth = now.Month;
+    var offsetYear = 2020;
+
+    var periods = Enumerable.Range(offsetYear, (currentPeriod - offsetYear) + 1)
+        .OrderByDescending(x => x);
+
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+}
+@section scripts {
+    <partial name="_Script" />
+    <partial name="_ActionScript" />
+    <partial name="ModalFeedback" />
+    <partial name="ModalLiveChat" />
+    <partial name="ModalNewConsult" />
+    <partial name="ModalReplyFeedback" />
+    <partial name="IndexAdminScript" />
+    <script type="text/javascript" src="~/plugins/A/Axios/axios.min.js"></script>
+    <script type="text/javascript" src="~/plugins/M/Moment/moment.js"></script>
+}
+@await Html.PartialAsync("ModalSelectService")
+@Html.AntiForgeryToken()
+<style>
+    .ColumnCenter {
+        display: flex;
+        flex-direction: column;
+        width: auto;
+        align-items: center;
+    }
+
+    .RedLine {
+        background-color: maroon !important;
+        color: white
+    }
+
+    .ReplyFeedback {
+        border: none;
+        background: #25D366;
+    }
+</style>
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+        <a class="nav-link active" id="feedback-tab" data-toggle="tab" href="#feedback" role="tab" aria-controls="feedback" aria-selected="false">Feedback</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" id="konsultasi-tab" data-toggle="tab" href="#konsultasi" role="tab" aria-controls="konsultasi" aria-selected="false">Konsultasi</a>
+    </li>
+</ul>
+<div class="tab-content">
+    <div class="tab-pane fade show active" id="feedback" role="tabpanel" aria-labelledby="feedback-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">Feedback</h3>
+                        <div class="heading-elements">
+                        </div>
+                    </div>
+                    <div class="card-body p-4 table-wrap">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Kategori Layanan</label>
+                                    <select id="FeedbackCategory" onchange="FeedbackSearch()" class="form-control">
+                                        <option value="">All</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Date Range</label>
+                                    <div class="row">
+                                        <div class="col-md-6 col-sm-12">
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("FeedbackStartDate")
+                                                .Value(start)
+                                                .Events(e => e.Change("FeedbackSearch"))
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                        <div class="col-md-6 col-sm-12">
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("FeedbackEndDate")
+                                                .Value(end)
+                                                .Events(e => e.Change("FeedbackSearch"))
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-10"></div>
+                            <div class="col-2">
+                                <ul class="page-toolbars" data-role="filter">
+                                    <li class="dropdown dropdown-arrow">
+                                        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                                            <i class="fa fa-sort-amount-desc"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li>
+                                                <a onclick="FeedbackKategoriLayanan()" data-trigger="filter" data-sort="KategoriLayanan">
+                                                    Kategori Layanan
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="FeedbackNewestData()" data-trigger="filter" data-sort="CreatedOn">
+                                                    Newest Data
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="FeedbackOldestData()" data-trigger="filter" data-sort="CreatedOn">
+                                                    Oldest Data
+                                                </a>
+                                            </li>
+                                            <li class="dropdown-divider"></li>
+                                            <li class="p-2">
+                                                <a onclick="FeedbackClearSort()" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="dropdown dropdown-arrow">
+                                        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                                            <i class="fa fa-filter"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li>
+                                                <a onclick="FeedbackSolved()" data-trigger="filter" data-sort="Name">
+                                                    Solved
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="FeedbackUnsolved()" data-trigger="filter" data-sort="KategoriPenyakit">
+                                                    Unsolved
+                                                </a>
+                                            </li>
+                                            <li class="dropdown-divider"></li>
+                                            <li class="p-2">
+                                                <a onclick="FeedbackClearFilter()" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div id="IncidentAccidentChart"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div id="DistrubutionWorkingChart"></div>
+                            </div>
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.TanyaOhs>()
+                            .Name("GridFeedback")
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RealName).Title("Nama").Width(200);
+                                columns.Bound(c => c.Noreg).Title("Noreg").Width(100);
+                                columns.Bound(c => c.Keluhan).Title("Keluhan").Width(100);
+                                columns.Bound(c => c.KategoriLayanan).Title("Kategori Layanan").Width(100);
+                                columns.Bound(c => c.CreatedOn).Format("{0:dd/MM/yyyy}").Title("Tanggal").Width(100);
+                                columns.Bound(c => c.Feedback).Title("Feedback").Width(100);
+                                columns.Bound(c => c.ReplyFeedback).Title("Reply Feedback").Width(100);
+                                columns.Bound(c => c.Solve).Title("Solve").Width(100);
+                                columns.Bound(c => c.Status).Title("Status").Width(100);
+                                columns.Template("" +
+                                "<div class=\"ColumnCenter\">"
+                                +
+                                "<button class=\"btn btn-primary ReplyFeedback\" onclick=\"OpenReplyFeedback('#:Id#')\" style=\" #if(Status == 'Closed' && ReplyFeedback == '') {# display:block # } else {# display:none #}#\">" +
+                                "<i class=\"fa fa-reply\"></i></button>" +
+                                "</div>").Title("Action").Width(100);
+                            })
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/tanyaOHS/gets")))
+                            .Sort(sort =>
+                            {
+                            })
+                            .Filter(filter =>
+                            {
+                            })
+                            .PageSize(20)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                            })
+                            .Sortable()
+                            .Resizable(resizable => resizable.Columns(true))
+                            .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                            .Scrollable(scrollable => scrollable.Height("auto"))
+                            .Events(events =>
+                            {
+                                events.DataBound("RedLine");
+                            })
+                            .Deferred()
+                            )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="tab-pane fade" id="konsultasi" role="tabpanel" aria-labelledby="konsultasi-tab">
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header bordered">
+                        <h3 class="card-title">Konsultasi</h3>
+                        <div class="heading-elements">
+                        </div>
+                    </div>
+                    <div class="card-body p-4 table-wrap">
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Kategori Layanan</label>
+                                    <select id="KonsultasiCategory" onchange="KonsultasiSearch()" class="form-control">
+                                        <option value="">All</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-group">
+                                    <label>Date Range</label>
+                                    <div class="row">
+                                        <div class="col-md-6 col-sm-12">
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("KonsultasiStartDate")
+                                                .Value(start)
+                                                .Events(e => e.Change("KonsultasiSearch"))
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                        <div class="col-md-6 col-sm-12">
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("KonsultasiEndDate")
+                                                .Value(end)
+                                                .Events(e => e.Change("KonsultasiSearch"))
+                                                .Format("dd/MM/yyyy")
+                                                .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                                .Deferred()
+                                                )
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-10"></div>
+                            <div class="col-2">
+                                <ul class="page-toolbars" data-role="filter">
+                                    <li class="dropdown dropdown-arrow">
+                                        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                                            <i class="fa fa-sort-amount-desc"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li>
+                                                <a onclick="KonsultasiKategoriLayanan()" data-trigger="filter" data-sort="Name">
+                                                    Kategori Layanan
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="KonsultasiNewestData()" data-trigger="filter" data-sort="KategoriPenyakit">
+                                                    Newest Data
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="KonsultasiOldestData()" data-trigger="filter" data-sort="Penyakit">
+                                                    Oldest Data
+                                                </a>
+                                            </li>
+                                            <li class="dropdown-divider"></li>
+                                            <li class="p-2">
+                                                <a onclick="KonsultasiClearSort()" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                    <li class="dropdown dropdown-arrow">
+                                        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                                            <i class="fa fa-filter"></i>
+                                        </a>
+                                        <ul class="dropdown-menu dropdown-menu-right">
+                                            <li>
+                                                <a onclick="KonsultasiOnGoing()" data-trigger="filter" data-sort="Name">
+                                                    On-Going
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a onclick="KonsultasiClosed()" data-trigger="filter" data-sort="KategoriPenyakit">
+                                                    Closed
+                                                </a>
+                                            </li>
+                                            <li class="dropdown-divider"></li>
+                                            <li class="p-2">
+                                                <a onclick="KonsultasiClearFilter()" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.TanyaOhs>()
+                            .Name("GridKonsultasi")
+                            .Columns(columns =>
+                            {
+                                columns.Bound(c => c.RealName).Title("Nama").Width(200);
+                                columns.Bound(c => c.Noreg).Title("Noreg").Width(100);
+                                columns.Bound(c => c.Keluhan).Title("Keluhan").Width(100);
+                                columns.Bound(c => c.KategoriLayanan).Title("Kategori Layanan").Width(100);
+                                columns.Bound(c => c.CreatedOn).Format("{0:dd/MM/yyyy}").Title("Tanggal").Width(100);
+                                columns.Bound(c => c.Solve).Title("Solve").Width(100);
+                                columns.Bound(c => c.Status).Title("Status").Width(100);
+                                columns.Template("" +
+                                "<div class=\"ColumnCenter\">" +
+                                "<button class=\"btn btn-primary\" onclick=\"OpenChatAdmin('#:Id#')\">" +
+                                "<i class=\"icon-eye\"></i></button>" +
+                                "</div>"
+                                ).Title("Action").Width(100);
+                            })
+                            .DataSource(dataSource => dataSource
+                            .Ajax()
+                            .Read(read => read.Url(Url.Content("~/api/tanyaOHS/gets")))
+                            .Sort(sort =>
+                            {
+                            })
+                            .Filter(filter =>
+                            {
+                                filter.Add(x => x.KategoriLayanan)
+                                .IsNotEqualTo("Kebijakan Kesehatan").And()
+                                .IsNotEqualTo("Kebijakan Keselamatan (Safety)");
+                            })
+                            .PageSize(20)
+                            )
+                            .Pageable(options =>
+                            {
+                                options.Input(true);
+                                options.Numeric(false);
+                                options.AlwaysVisible(false);
+                            })
+                            .Sortable()
+                            .Resizable(resizable => resizable.Columns(true))
+                            .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                            .Scrollable(scrollable => scrollable.Height("auto"))
+                            .Events(events =>
+                            {
+                                events.DataBound("RedLine");
+                            })
+                            .Deferred()
+                            )
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

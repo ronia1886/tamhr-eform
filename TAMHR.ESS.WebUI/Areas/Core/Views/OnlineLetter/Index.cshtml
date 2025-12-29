@@ -1,0 +1,81 @@
+﻿@{ 
+    ScriptManager.RegisterReferences("datepicker", "combobox", "dropdownlist");
+}
+@section styles {
+    <style type="text/css">
+        .k-popup .k-item.k-first {
+            padding-top: 20px !important;
+        }
+
+        .k-popup .k-list .k-item > .k-group {
+            left: 0 !important;
+            background: black;
+            color: white;
+        }
+    </style>
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="online-letter-modal" data-modal-title="Create new Online Letter" data-modal-ajax="true" data-ajax-url="~/core/onlineletter/load">
+                    @Localizer["Create Online Letter"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Online Letter"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.OnlineLetterView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "online-letter-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Hospital").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:LetterTypeName# Letter - #:LetterNumber# (#:kendo.toString(LetterDate, 'dd/MM/yyyy')#)</h6>
+                                    <small class=""d-block"">PIC - #:PicTarget#</small>
+                                    <small class=""d-block"">Department - #:Department#</small>
+                                    <small class=""d-block"">Division/Agency - #:CompanyTarget#</small>
+                                    <small class=""d-block"">Remarks - #:Remarks#</small>
+                                    <small class=""d-block"">Created by - #:Creator#</small>
+                                </div>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/online-letter/gets")))
+                        .Sort(sort =>
+                        {
+                            sort.Add(x => x.LetterDate.Year).Descending();
+                            sort.Add(x => x.LetterNumber).Descending();
+                        })
+                        .PageSize(20)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

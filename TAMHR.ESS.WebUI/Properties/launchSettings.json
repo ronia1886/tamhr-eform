@@ -1,0 +1,23 @@
+{
+  "profiles": {
+    "TAMHR.ESS.WebUI": {
+      "commandName": "Project",
+      "launchBrowser": true
+    },
+    "IIS Express": {
+      "commandName": "IISExpress",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  },
+  "iisSettings": {
+    "windowsAuthentication": false,
+    "anonymousAuthentication": true,
+    "iisExpress": {
+      "applicationUrl": "http://localhost:52993/",
+      "sslPort": 44351
+    }
+  }
+}

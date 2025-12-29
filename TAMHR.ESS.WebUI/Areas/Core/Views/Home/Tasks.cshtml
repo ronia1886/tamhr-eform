@@ -1,0 +1,203 @@
+﻿@{ 
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+}
+@section pageToolbars {
+    <div class="page-toolbars">
+        <a id="executeBtn" class="btn btn-sm blue-sharp disabled" data-trigger="handler" data-handler="executeHandler">
+            <i class="ft-check"></i> <span class="d-none d-sm-inline">@Localizer["Approve"]</span>
+        </a>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript" src="~/js/pages/task.js"></script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <div class="custom-control custom-checkbox d-inline">
+                    <input id="check-all" type="checkbox" class="custom-control-input" data-trigger="handler" data-handler="checkAllHandler" disabled="disabled">
+                    <label class="custom-control-label" for="check-all"></label>
+                </div>
+                <h3 class="card-title">
+                    @Localizer["My Task"]
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_TaskToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.DocumentApprovalView>()
+                    .Name("taskGrid")
+                    .HtmlAttributes(new { data_filter = "task-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id)
+                            .Width(35)
+                            .HtmlAttributes(new { @class = "pr-0", style = "vertical-align: middle;" })
+                            .ClientTemplate(
+                                @"<div class=""custom-control custom-checkbox"">
+                                    <input type=""checkbox"" name=""ids[]"" id=""cb#:Id#"" value=""#:Id#"" class=""custom-control-input"" data-trigger=""handler"" data-handler=""checkHandler"" #:!EnableDocumentAction || !CanSubmit?'disabled=""disabled""' : ''#"">
+                                    <label class=""custom-control-label"" for=""cb#:Id#""></label>
+                                </div>"
+                            );
+
+                        columns.Bound(c => c.Title).Title("Document Title").HtmlAttributes(new { @class = "pl-3 align-middle" }).ClientTemplate(@"
+                            <a class=""font-dark"" href=""" + Url.Content("~/core/form/redirectto?formKey=#:FormKey#&id=#:Id#") + @""">
+                                <div>
+                                    #=Title#
+                                    # if(!EnableDocumentAction || !CanSubmit) { #
+                                    <br />
+                                    <span class='font-small-1'><i>" + Localizer["You need to open the document to approve this task"].Value + @"</i></span>
+                                    # } #
+                                </div>
+                                <div class=""progress mt-1 mb-1"" style=""height: 4px;"">
+                                    <div class=""progress-bar progress-bar-striped #: css('DocumentApproval', DocumentStatusCode) #"" role=""progressbar"" aria-valuenow=""#:Progress#"" aria-valuemin=""#:Progress#"" aria-valuemax=""#:Progress#"" style=""width:#:Progress#%;""></div>
+                                </div>
+                                <div class='d-flex'>
+                                    <span class='font-small-1'><i class='icon-clock'></i> &nbsp;#:kendo.toString(CreatedOn, 'dd MMM yyyy - HH:mm tt')#</span>
+                                    <span class='font-small-1 ml-auto'>#:Progress#%</span>
+                                </div>
+                            </a>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No task list found"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                        evt.DataBound(@<text>function() {
+                            var $checkAllEl = $("#check-all"),
+                                data = this.dataSource.data(),
+                                total = data.length,
+                                totalCanSubmit = $.grep(data, function(obj) { return obj.CanSubmit && obj.EnableDocumentAction; }).length;
+                            
+                            $checkAllEl.prop("checked", false);
+                            $checkAllEl.prop("disabled", data.length === 0 || totalCanSubmit === 0);
+                            $("#executeBtn").addClass("disabled");
+                        }</text>);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/task/gets")))
+                        .Sort(sort => sort.Add("ModifiedOn").Descending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["My Task Histories"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_TaskHistoryToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.DocumentApprovalView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "task-history-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).HtmlAttributes(new { @class = "pr-0 align-middle position-relative" }).ClientTemplate(@"
+                            <a data-trigger=""modal"" data-modal-title=""Approval Histories -  #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/documentapprovalhistories"" data-parameters-id=""#:Id#"">
+                                <div class=""position-relative"">
+                                    <i class=""approval-icon-#:DocumentStatusCode# font-large-2""></i>
+                                </div>
+                            </a>
+                        ").Width(35);
+                        columns.Bound(c => c.Title).Title("Document Title").HtmlAttributes(new { @class = "pl-3 align-middle" }).ClientTemplate(@"
+                            <a class=""font-dark"" href=""" + Url.Content("~/core/form/view?formKey=#:FormKey#&id=#:Id#") + @""">
+                                <div>
+                                    #=Title#
+                                </div>
+                            </a>
+                            <a data-trigger=""modal"" data-modal-title=""Tracking Approval - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""#:Id#"">
+                                <div class=""progress mt-1 mb-1"" style=""height: 4px;"">
+                                    <div class=""progress-bar progress-bar-striped #: css('DocumentApproval', DocumentStatusCode) #"" role=""progressbar"" aria-valuenow=""#:Progress#"" aria-valuemin=""#:Progress#"" aria-valuemax=""#:Progress#"" style=""width:#:Progress#%;""></div>
+                                </div>
+                                <div class='d-flex'>
+                                    <span class='font-small-1'><i class='icon-clock'></i> &nbsp;#:kendo.toString(CreatedOn, 'dd MMM yyyy - HH:mm tt')#</span>
+                                    <span class='font-small-1 ml-auto'>#:Progress#%</span>
+                                </div>
+                            </a>
+                            <div class=""btn-group d-block d-sm-none mt-3"">
+                                <a class=""btn btn-xs #: (CreatedBy == '" + User.GetClaim("NoReg") + @"' && DocumentStatusCode != 'cancelled' && DocumentStatusCode != 'rejected' && DocumentStatusCode != 'completed' && DocumentStatusCode != 'expired') ? 'red' : 'disabled grey' #"" data-trigger=""handler"" data-handler=""postHandler"" data-parameters-id=""#:Id#"" data-parameters-action=""cancel"">
+                                    <i class=""ft-trash font-normal""></i>
+                                </a>
+                                <a class=""btn btn-xs green-jungle ml-1 #: !CanDownload ? 'disabled grey' : '' #"" target=""_blank"" href=""" + Url.Content($"~/core/form/download?formKey=#:FormKey#&id=#:Id#") + @""">
+                                    <i class=""ft-download font-normal""></i>
+                                </a>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).HtmlAttributes(new { @class = "align-middle pl-0" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-xs #: (CreatedBy == '" + User.GetClaim("NoReg") + @"' && DocumentStatusCode != 'cancelled' && DocumentStatusCode != 'rejected' && DocumentStatusCode != 'completed' && DocumentStatusCode != 'expired') ? 'red' : 'disabled grey' #"" data-trigger=""handler"" data-handler=""postHandler"" data-parameters-id=""#:Id#"" data-parameters-action=""cancel"" title=""Drop Request"">
+                                    <i class=""ft-trash font-normal""></i>
+                                </a>
+                                <a class=""btn btn-xs green-jungle ml-1 #: !CanDownload ? 'disabled grey' : '' #"" target=""_blank"" href=""" + Url.Content($"~/core/form/download?formKey=#:FormKey#&id=#:Id#") + @""" title=""Download Request"">
+                                    <i class=""ft-download font-normal""></i>
+                                </a>
+                            </div>
+                            <div class=""dropdown d-none"">
+                                <a class=""btn btn-xs dropdown-toggle red-sunglo mt-2"" data-toggle=""dropdown"">
+                                    <i class=""ft-chevron-down""></i>
+                                </a>
+                                <ul class=""dropdown-menu dropdown-menu-right"">
+                                    <li>
+                                        <a href=""" + Url.Content($"~/core/form/view?formKey=#:FormKey#&id=#:Id#") + @""">View</a>
+                                    </li>
+                                    # if (DocumentStatusCode == 'completed') { #
+                                    <li>
+                                        <a>Download Form</a>
+                                    </li>
+                                    # } #
+                                    <li class=""dropdown-divider""></li>
+                                    <li>
+                                        <a data-trigger=""modal"" data-modal-title=""Tracking Approval - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""#:Id#"">View Tracking Approval</a>
+                                    </li>
+                                    <li>
+                                        <a data-trigger=""modal"" data-modal-title=""Approval Histories -  #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/documentapprovalhistories"" data-parameters-id=""#:Id#"">View Approval Histories</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        ").Width(55).MinScreenWidth(576);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No history found"].Value + "</div>"))
+                    .Events(evt => evt.DataBinding(@<text>function() {
+                        this.element.removeClass("k-grid k-widget k-display-block");
+                        this.element.find("table").addClass("table w-100 mb-1");
+                    }</text>))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/task/gethistories")))
+                        .Sort(sort =>
+                        {
+                            sort.Add("LastApprovedOn").Descending();
+                            sort.Add("CreatedOn").Descending();
+                        })
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred(true)
+                )
+            </div>
+        </div>
+    </div>
+</div>

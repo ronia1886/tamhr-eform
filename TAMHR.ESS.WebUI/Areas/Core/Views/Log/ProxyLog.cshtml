@@ -1,0 +1,128 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var logProxy = ConfigService.GetConfigValue<bool>("Application.LogProxy", false, false);
+    ScriptManager.RegisterReference("datetimepicker");
+}
+@section scripts {
+    <script type="text/javascript">
+        app.registerHandler("searchHandler", function () {``
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                query = $filterWrapper.data("query") || {},
+                startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd");
+            
+            query.filter = [{
+                field: 'CreatedOn',
+                value: startDateStr,
+                operator: 'gte'
+            }, {
+                field: 'CreatedOn',
+                value: endDateStr,
+                operator: 'lte'
+            }];
+            
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                let $el = $(el),
+                    ds = $el.data("kendoGrid").dataSource;
+
+                let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                ds.query(executeQuery);
+            });
+
+            $filterWrapper.data("query", query);
+        });
+
+        $(function () {
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+@if (!logProxy)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title text-warning"><i class="ft-alert-triangle" style="font-size: 0.95rem;"></i> @Localizer["Warning"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body pb-0 pt-3">
+                    <p class="description">@Localizer["Setting for logging proxy activities are disabled. To enabled it, please go to <b>Config Page</b> and search for key <b>Application.LogProxy</b> then change the boolean value to <b>True</b>"]</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Proxy Log List"]
+                </h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_ProxyLogToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.ProxyLog>()
+                    .Name("proxyLogGrid")
+                    .HtmlAttributes(new { data_filter = "proxy-log-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">
+                                        Log for <b>#:Originator#</b> on #: kendo.toString(CreatedOn, 'dd MMM yyyy - HH:mm:ss') #
+                                    </h6>
+                                    <small class=""d-block""><b>Target Username - </b> #=TargetUsername#</small>
+                                    <small class=""d-block""><b>IP Address - </b> #: (IpAddress === '::1') ? 'localhost' : IpAddress #</small>
+                                </div>
+                            </div>
+                        ");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No logs data"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/proxy-log/gets")))
+                        .Sort(sort => sort.Add("CreatedOn").Descending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

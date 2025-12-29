@@ -1,0 +1,1111 @@
+﻿@model DocumentRequestDetailViewModel<PtaAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    var org = ViewData["OrganizationInfo"] as IEnumerable<EmployeeeOrganizationObjectStoredEntity>;
+    var divCode = org.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectID;
+
+    var data = Model.Object;
+    var departments = Newtonsoft.Json.JsonConvert.SerializeObject(data.Departments);
+    var summaries = Newtonsoft.Json.JsonConvert.SerializeObject(data.Summaries);
+
+
+}
+
+@section scripts {
+    <script type="text/javascript">
+        var selectedEmp = [];
+        var listEmpHistory = [];
+
+    if ('@isCanEdit' === 'True') {
+        $.ajax({
+            type: 'POST',
+            url: app.resolveUrl('~/api/claimbenefit/getinfo'),
+            dataType: 'json',
+            success: function (data) {
+                $('#User').text(data.Data[0].Name);
+                $('#Object_User').val(data.Data[0].Name);
+            }
+        });
+    }
+
+    function GetDepartments() {
+        if ($("#CateogryPTA").data("kendoComboBox").value() !== null && $("#date").data("kendoDatePicker").value() !== null && ($("#Amouont").data("kendoComboBox").value() !== null && $("#Amouont").data("kendoComboBox").value() !== "")) {
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/claimbenefit/division-with-employees-pta'),
+                dataType: 'json',
+                data: { divcode : '@divCode', type: $("#CateogryPTA").data("kendoComboBox").value(), date: kendo.toString(kendo.parseDate($("#date").data("kendoDatePicker").value()), 'yyyy-MM-dd'), amount: $("#Amouont").data("kendoComboBox").value() },
+                success: function (data) {
+                    if (data !== undefined && data !== null) {
+                        $("#division_container").html("");
+                        $(".division-list").html("");
+
+                        $("#cb_Division").removeAttr("checked");
+                        $.each(data.divisions, function (i, o) {
+                            var emps = $.grep(o.Employees, function (oo, i) {
+                                return (oo.Classification <= 11);
+                            });
+
+                            o.Employees = emps;
+                            $.each(o.Employees, function (ii, oo) {
+                                $("#division_container").append('<input type="hidden" class="div-' + o.ObjectID + '" data-noreg="' + oo.NoReg + '" data-name="' + oo.Name + '" data-classification="' + oo.Classification + '" />');
+                                //$("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][NoReg]" value="' + oo.NoReg + '" />');
+                                //$("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][Name]" value="' + oo.Name + '" />');
+                                //$("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][Classification]" value="' + oo.Classification + '" />');
+                            });
+
+                            var item = $('<label style="width:90%">' +
+                                '<input class="cb-division division-' + o.ObjectID + '" onChange="selectAllEmpDivision(this);" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                o.ObjectText + ' - ' + o.ObjectDescription +
+                                '<br/>' +
+                                '<a href="javascript:void(0)" onclick="openModalDivision(\'' + o.ObjectID + '\');"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                '<span id="counter-' + o.ObjectID + '" class="pull-right">( 0 / ' + o.Employees.length + ' )</span>' +
+                                '</label>').appendTo($(".division-list"));
+                        });
+                    }
+                }
+            });
+
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/claimbenefit/departments-with-employees-pta'),
+                dataType: 'json',
+                data: { type: $("#CateogryPTA").data("kendoComboBox").value(), date: kendo.toString(kendo.parseDate($("#date").data("kendoDatePicker").value()), 'yyyy-MM-dd'), amount: $("#Amouont").data("kendoComboBox").value() },
+                success: function (data) {
+                    if (data !== undefined && data !== null) {
+                        $("#department_container").html("");
+                        $(".department-list").html("");
+
+                        $("#cb_Department").removeAttr("checked");
+                        $.each(data.Departments, function (i, o) {
+                            var emps = $.grep(o.Employees, function (oo, i) {
+                                return (oo.Classification <= 11);
+                            });
+
+                            o.Employees = emps;
+                            $.each(o.Employees, function (ii, oo) {
+                                $("#department_container").append('<input type="hidden" class="dept-' + o.ObjectID + '" data-noreg="' + oo.NoReg + '" data-name="' + oo.Name + '" data-classification="' + oo.Classification + '" />');
+                            });
+
+                            var item = $('<label style="width:90%">' +
+                                '<input class="cb-department department-' + o.ObjectID + '" onChange="selectAllEmp(this);" data-code="' + o.ObjectID + '" type="checkbox">' +
+                                o.ObjectText + ' - ' + o.ObjectDescription +
+                                '<br/>' +
+                                '<a href="javascript:void(0)" onclick="openModal(\'' + o.ObjectID + '\');"><i class="fa fa-eye"></i> @Localizer["See Participants"]</a>' +
+                                '<span id="counter-' + o.ObjectID + '" class="pull-right">( 0 / ' + o.Employees.length + ' )</span>' +
+                                '</label>').appendTo($(".department-list"));
+                        });
+                    }
+                }
+            });
+        } else {
+            $("#division_container").html("");
+            $(".division-list").html("");
+            $("#department_container").html("");
+            $(".department-list").html("");
+        }
+
+        $(".select-all").prop("checked", false);
+        $(".select-all-div").prop("checked", false);
+    }
+
+    function openModal(code) {
+        $objemp = $(".dept-" + code);
+        var readOnlyCb = '@isCanEdit' === 'False' ? 'disabled' : '';
+        $("#select_all_modal").show();
+        $(".employee-container").html("");
+        $.each($objemp, function (i, o) {
+            var dataEmp = $(o).data();
+            var tempEmp = $.grep(selectedEmp, function (e) {
+                return e.orgCode.toString() === code.toString() && e.noReg.toString() === dataEmp.noreg.toString() && e.reward == $("#CateogryPTA").data("kendoComboBox").value();
+            });
+
+            var checked = tempEmp.length > 0 ? ' checked="checked" ' : "";
+
+            var item = $('<label>' +
+                '<input ' + checked + ' ' + readOnlyCb + ' class="cb-employee" data-org-code="' + code + '" data-no-reg="' + dataEmp.noreg + '" data-name="' + dataEmp.name + '" data-classification="' + dataEmp.classification + '" type="checkbox">' +
+                '<span> ' + dataEmp.name + ' - No Reg : ' + dataEmp.noreg + ' - Kelas : ' + dataEmp.classification + '</span>' +
+                '</label>' +
+                '<hr style="margin:5px">');
+
+            $(".employee-container").append(item);
+        });
+
+        $("#modal-employee").modal();
+    }
+
+    function openModalDivision(code) {
+        $objemp = $(".div-" + code);
+        var readOnlyCb = '@isCanEdit' === 'False' ? 'disabled' : '';
+        $("#select_all_modal").show();
+        $(".employee-container").html("");
+        $.each($objemp, function (i, o) {
+            var dataEmp = $(o).data();
+            var tempEmp = $.grep(selectedEmp, function (e) {
+                return e.orgCode.toString() === code.toString() && e.noReg.toString() === dataEmp.noreg.toString() && e.reward == $("#CateogryPTA").data("kendoComboBox").value();
+            });
+
+            var checked = tempEmp.length > 0 ? ' checked="checked" ' : "";
+
+            var item = $('<label>' +
+                '<input ' + checked + ' ' + readOnlyCb + ' class="cb-employee" data-org-code="' + code + '" data-no-reg="' + dataEmp.noreg + '" data-name="' + dataEmp.name + '" data-classification="' + dataEmp.classification + '" type="checkbox">' +
+                '<span> ' + dataEmp.name + ' - No Reg : ' + dataEmp.noreg + ' - Kelas : ' + dataEmp.classification + '</span>' +
+                '</label>' +
+                '<hr style="margin:5px">');
+
+            $(".employee-container").append(item);
+        });
+
+        $("#modal-employee").modal();
+    }
+
+    $('.select-all-modal-employee').change(function () {
+        if (!this.checked) {
+            $(".cb-employee").each(function () {
+                $(this).click();
+            });
+        } else {
+            $(".cb-employee").each(function () {
+
+                if (!this.checked) {
+                    $(this).click();
+                }
+            });
+        }
+        return false;
+    });
+
+    function openModalSummary(kelas, reward, isDetail) {
+        $objemp = $("." + kelas + reward);
+        $(".employee-container").html("");
+
+        if (isDetail == true) {
+            $("#select_all_modal").hide();
+        } else {
+            $("#select_all_modal").show();
+        }
+
+        $objemp.sort(function (a, b) {
+            if ( (+a.dataset.classification - +b.dataset.classification) == -1)
+                return +a.dataset.classification - +b.dataset.classification;
+            if ((a.dataset.name < b.dataset.name) == true)
+                return -1;
+
+            return 0;
+        }).appendTo($("#hiddensummary"));
+
+        $.each($objemp, function (i, o) {
+            var dataEmp = $(o).data();
+
+            var item = $('<label>' +
+                '<span> ' + dataEmp.name + ' - No Reg : ' + dataEmp.noreg + ' - Kelas : ' + dataEmp.classification + '</span>' +
+                '</label>' +
+                '<hr style="margin:5px">');
+
+            $(".employee-container").append(item);
+        });
+
+        $("#modal-employee").modal();
+    }
+
+    function openDetailSummary(kelas, reward, amount, eventDate) {
+        $objemp = $("." + kelas + reward);
+        $(".detail-summary-emp").html("");
+        $(
+            '<span><h3 style="display:inline">' + reward.toUpperCase() + ' </h3>' + '<h5 style="display:inline">' + kendo.toString(kendo.parseDate(eventDate), "dd/MM/yyyy") + '</h5>' + '</span>' +
+            '<div class="form-group">' +
+            '<label>@Localizer["Amount"]</label>' +
+            '<input class="form-control" value="' + amount + '" readonly />' +
+            '</div>'
+        ).appendTo($('.detail-summary-emp'));
+
+        $objemp.sort(function (a, b) {
+            if ((+a.dataset.classification - +b.dataset.classification) == -1)
+                return +a.dataset.classification - +b.dataset.classification;
+            if ((a.dataset.name < b.dataset.name) == true)
+                return -1;
+
+            return 0;
+        }).appendTo($("#hiddensummary"));
+
+        $.each($objemp, function (i, o) {
+            var dataEmp = $(o).data();
+
+            var item = $('<label>' +
+                '<span> ' + dataEmp.name + ' - No Reg : ' + dataEmp.noreg + ' - Kelas : ' + dataEmp.classification + '</span>' +
+                '</label>' +
+                '<hr style="margin:5px">');
+
+            $(".detail-summary-emp").append(item);
+        });
+    }
+
+    $(".btn-modal-close").click(function () {
+        var cbEmp = $("#modal-employee").find(".cb-employee:checked");
+        var countEmp = 0;
+        if (cbEmp.length > 0) {
+            var dataFirst = $(cbEmp[0]).data();
+
+            selectedEmp = $.grep(selectedEmp, function (e) {
+                return e.orgCode !== dataFirst.orgCode && e.reward == $("#CateogryPTA").data("kendoComboBox").value();
+            });
+
+            $.each(cbEmp, function (i, o) {
+                var dataEmp = $(o).data();
+
+                var curEmp = $.grep(selectedEmp, function (e) {
+                    return e.noReg === dataEmp.noreg;
+                });
+
+                if (curEmp.length == 0) {
+                    selectedEmp.push({
+                        classification: dataEmp.classification,
+                        name: dataEmp.name,
+                        noReg: dataEmp.noReg,
+                        orgCode: dataEmp.orgCode,
+                        reward: $("#CateogryPTA").data("kendoComboBox").value()
+                    });
+                    countEmp++;
+                }
+            });
+
+            $("#counter-" + dataFirst.orgCode).html("( " + countEmp + " / " + $("#modal-employee").find(".cb-employee").length + " )");
+            if (countEmp === $("#modal-employee").find(".cb-employee").length) {
+                $('.department-' + dataFirst.orgCode).prop('checked', true);
+            } else {
+                $('.department-' + dataFirst.orgCode).prop('checked', false);
+            }
+        }
+    });
+
+    $(".create-summary").click(function () {
+
+        var selectedReward = $("#CateogryPTA").data("kendoComboBox").value();
+        $("." + selectedReward).remove();
+
+        ////detele semua noreg yg udah ada di history
+        //selectedEmp = $.grep(selectedEmp, function (e) {
+        //    return $.inArray(e.noReg, listEmpHistory) === -1;
+        //});
+
+        var kelas;
+        var kelas1 = 0;
+        var kelas4 = 0;
+        var kelas7 = 0;
+        var kelas9 = 0;
+        var kelas11 = 0;
+        var isValid = true;
+        $.each(selectedEmp, function (i, o) {
+            if (o.reward == selectedReward) {
+                if (o.classification.isBetween(1, 3)) {
+                    kelas1++;
+                    kelas = "kelas1-3";
+                } else if (o.classification.isBetween(4, 6)) {
+                    kelas4++;
+                    kelas = "kelas4-6";
+                } else if (o.classification.isBetween(7, 8)) {
+                    kelas7++;
+                    kelas = "kelas7-8";
+                } else if (o.classification.isBetween(9, 10)) {
+                    kelas9++;
+                    kelas = "kelas9-10";
+                } else if (o.classification = 11) {
+                    kelas11++;
+                    kelas = "kelas11";
+                }
+            }
+        });
+
+        $.each(selectedEmp, function (ii, oo) {
+            var Noreg = oo.noReg
+            var Name = oo.name
+            var OrgCode = oo.orgCode
+            var Classification = oo.classification
+            var Reward = oo.reward
+
+            //console.log(oo, Noreg, Name, OrgCode, Classification, Reward)
+            var rowSummary = $("#summary_data").find('tr');
+
+            $.each(rowSummary, function (i, o) {
+                var coloumSummary = $(o).find('td');
+                var kelas = $(coloumSummary[0]).html().toLowerCase().replace(/\s/g, "");
+                var reward = selectedReward;
+                var oo = $('#hiddensummary');
+                //console.log(coloumSummary)
+                //console.log($(coloumSummary[0]).html())
+                //console.log($(coloumSummary[1]).html())
+                //console.log($(coloumSummary[2]).html(), Reward.toUpperCase())
+                //console.log($(coloumSummary[3]).html())
+                //console.log($(coloumSummary[4]).html())
+                //console.log($(coloumSummary[5]).html())
+
+                if ($(coloumSummary[2]).html() == $("#CateogryPTA").data("kendoComboBox").value().toUpperCase()) {
+                    //console.log('delete ' + $("#CateogryPTA").data("kendoComboBox").value() + $(coloumSummary[2]).html())
+                    o.remove()
+                    //console.log($(coloumSummary[2]).html(), Reward.toUpperCase())
+                    //isValid = false;
+                    //console.log(isValid)
+                }
+            })
+        });
+
+        if (isValid) {
+            //kelas 1 - 3
+            if (kelas1 > 0) {
+                var rowKelas1 = $("<tr class='" + $("#CateogryPTA").data("kendoComboBox").text() + "'><td>Kelas 1 - 3</td></tr>");
+                $("<td data-from='1' data-to='3' align='center'></td>").html(kelas1).appendTo(rowKelas1);
+                $("<td data-val='" + $("#CateogryPTA").data("kendoComboBox").value() + "'></td>").html($("#CateogryPTA").data("kendoComboBox").text()).appendTo(rowKelas1);
+                $("<td data-val='" + $("#Amouont").data("kendoComboBox").value() + "' align='right'></td>").html(kendo.toString($("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas1);
+                $("<td data-val='" + (kelas1 * $("#Amouont").data("kendoComboBox").value()) + "' align='right'></td>").html(kendo.toString(kelas1 * $("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas1);
+                $("<td><a href='javascript:void(0)' onclick='openModalSummary(\"kelas1-3\", \"" + selectedReward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas1);
+                $("#summary_data").append(rowKelas1);
+            }
+            //kelas 4 - 6
+            if (kelas4 > 0) {
+                var rowKelas4 = $("<tr class='" + $("#CateogryPTA").data("kendoComboBox").text() + "'><td>Kelas 4 - 6</td></tr>");
+                $("<td data-from='4' data-to='6' align='center'></td>").html(kelas4).appendTo(rowKelas4);
+                $("<td data-val='" + $("#CateogryPTA").data("kendoComboBox").value() + "'></td>").html($("#CateogryPTA").data("kendoComboBox").text()).appendTo(rowKelas4);
+                $("<td data-val='" + $("#Amouont").data("kendoComboBox").value() + "' align='right'></td>").html(kendo.toString($("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas4);
+                $("<td data-val='" + (kelas4 * $("#Amouont").data("kendoComboBox").value()) + "' align='right'></td>").html(kendo.toString(kelas4 * $("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas4);
+                $("<td><a href='javascript:void(0)' onclick='openModalSummary(\"kelas4-6\", \"" + selectedReward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas4);
+                $("#summary_data").append(rowKelas4);
+            }
+            //kelas 7 - 8
+            if (kelas7 > 0) {
+                var rowKelas7 = $("<tr class='" + $("#CateogryPTA").data("kendoComboBox").text() + "'><td>Kelas 7 - 8</td></tr>");
+                $("<td data-from='7' data-to='8' align='center'></td>").html(kelas7).appendTo(rowKelas7);
+                $("<td data-val='" + $("#CateogryPTA").data("kendoComboBox").value() + "'></td>").html($("#CateogryPTA").data("kendoComboBox").text()).appendTo(rowKelas7);
+                $("<td data-val='" + $("#Amouont").data("kendoComboBox").value() + "' align='right'></td>").html(kendo.toString($("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas7);
+                $("<td data-val='" + (kelas7 * $("#Amouont").data("kendoComboBox").value()) + "' align='right'></td>").html(kendo.toString(kelas7 * $("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas7);
+                $("<td><a href='javascript:void(0)' onclick='openModalSummary(\"kelas7-8\", \"" + selectedReward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas7);
+                $("#summary_data").append(rowKelas7);
+            }
+            //kelas 9 - 10
+            if (kelas9 > 0) {
+                var rowKelas9 = $("<tr class='" + $("#CateogryPTA").data("kendoComboBox").text() + "'><td>Kelas 9 - 10</td></tr>");
+                $("<td data-from='9' data-to='10' align='center'></td>").html(kelas9).appendTo(rowKelas9);
+                $("<td data-val='" + $("#CateogryPTA").data("kendoComboBox").value() + "'></td>").html($("#CateogryPTA").data("kendoComboBox").text()).appendTo(rowKelas9);
+                $("<td data-val='" + $("#Amouont").data("kendoComboBox").value() + "' align='right'></td>").html(kendo.toString($("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas9);
+                $("<td data-val='" + (kelas9 * $("#Amouont").data("kendoComboBox").value()) + "' align='right'></td>").html(kendo.toString(kelas9 * $("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas9);
+                $("<td><a href='javascript:void(0)' onclick='openModalSummary(\"kelas9-10\", \"" + selectedReward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas9);
+                $("#summary_data").append(rowKelas9);
+            }
+            //kelas 11
+            if (kelas11 > 0) {
+                var rowKelas11 = $("<tr class='" + $("#CateogryPTA").data("kendoComboBox").text() + "'><td>Kelas 11</td></tr>");
+                $("<td data-from='11' data-to='11' align='center'></td>").html(kelas11).appendTo(rowKelas11);
+                $("<td data-val='" + $("#CateogryPTA").data("kendoComboBox").value() + "'></td>").html($("#CateogryPTA").data("kendoComboBox").text()).appendTo(rowKelas11);
+                $("<td data-val='" + $("#Amouont").data("kendoComboBox").value() + "' align='right'></td>").html(kendo.toString($("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas11);
+                $("<td data-val='" + (kelas11 * $("#Amouont").data("kendoComboBox").value()) + "' align='right'></td>").html(kendo.toString(kelas11 * $("#Amouont").data("kendoComboBox").value(), "n0")).appendTo(rowKelas11);
+                $("<td><a href='javascript:void(0)' onclick='openModalSummary(\"kelas11\", \"" + selectedReward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas11);
+                $("#summary_data").append(rowKelas11);
+            }
+        }
+
+        var rowSummary = $("#summary_data").find('tr');
+        var totalQty = 0;
+        var totalAmount = 0;
+        var totalSummary = 0;
+
+        $.each(rowSummary, function (i, o) {
+            var coloumSummary = $(o).find('td');
+            var kelas = $(coloumSummary[0]).html();
+            var totalKelas = $(coloumSummary[1]).html();
+            var kelasFrom = $(coloumSummary[1]).data().from;
+            var kelasTo = $(coloumSummary[1]).data().to;
+            var currReward = $(coloumSummary[2]).data().val;
+            var currRewardText = $(coloumSummary[2]).html();
+            var currAmount = $(coloumSummary[3]).data().val;
+            var currTotal = $(coloumSummary[4]).data().val;
+
+            console.log()
+            totalQty += parseInt(totalKelas);
+            totalAmount += currAmount;
+            totalSummary += currTotal;
+
+            $(
+                '<div class="' + currReward + '">' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Range]" value="' + kelas + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][ClassFrom]" value="' + kelasFrom + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][ClassTo]" value="' + kelasTo + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][RewardText]" value="' + currRewardText + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Reward]" value="' + currReward + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Qty]" value="' + totalKelas + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Amount]" value="' + currAmount + '"  />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Total]" value="' + currTotal + '"  />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][EventDate]" value="' + kendo.toString($("#date").data("kendoDatePicker")._value, "yyyy-MM-dd") + '"  />' +
+                '</div>'
+            ).appendTo($('#hiddensummary'));
+
+
+            var idxEmp = 0;
+            $.each(selectedEmp, function (ii, oo) {
+                if (oo.reward == currReward && oo.classification.isBetween(kelasFrom, kelasTo)) {
+                    var classRemove = kelasTo == 11 ? 'kelas' + kelasFrom + currReward : 'kelas' + kelasFrom + '-' + kelasTo + currReward;
+                    var objRemove = $("." + classRemove + "[data-noreg='" + oo.noReg + "']");
+                    objRemove.remove();
+
+                    //if ($("." + classRemove).data() !== undefined) {
+                    //    console.log($("." + classRemove + "[data-noreg='" + oo.noReg + "']"))
+                    //    console.log($("." + classRemove))
+                    //}
+
+                    var classEmp = kelasTo == 11 ? '<input type="hidden" class="kelas' + kelasFrom + currReward + '"' : '<input type="hidden" class="kelas' + kelasFrom + '-' + kelasTo + currReward + '"';
+
+                    var employeeContainer = $(
+                        '<div class="' + currReward + '">' +
+                        classEmp +
+                        'data-org="' + oo.orgCode + '" data-noreg="' + oo.noReg + '" data-name="' + oo.name + '" data-classification="' + oo.classification + '" />' +
+                        '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + idxEmp + '][NoReg]" value="' + oo.noReg + '" />' +
+                        '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + idxEmp + '][Name]" value="' + oo.name + '" />' +
+                        '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + idxEmp + '][OrgCode]" value="' + oo.orgCode + '" />' +
+                        '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + idxEmp + '][Classification]" value="' + oo.classification + '" />' +
+                        '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + idxEmp + '][Reward]" value="' + oo.reward + '" />' +
+                        '</div>'
+                    ).appendTo($('#hiddensummary'));
+
+                    idxEmp++;
+
+                    listEmpHistory.push(oo.noReg)
+                }
+            });
+
+            $("#total_qty").html(totalQty);
+            $("#sum_qty").html(kendo.toString(totalAmount, "n0"));
+            $("#sum_total").html(kendo.toString(totalSummary, "n0"));
+        });
+    });
+
+    function selectAllEmp(e) {
+        var data = $(e).data();
+        var objEmp = $(".dept-" + data.code);
+        var countEmp = 0;
+        selectedEmp = $.grep(selectedEmp, function (e) {
+            return e.orgCode !== data.code ;
+        });
+        if ($(e).is(':checked'))
+        {
+            $.each(objEmp, function (i, o) {
+                var dataEmp = $(o).data();
+
+                var curEmp = $.grep(selectedEmp, function (e) {
+                    return e.noReg == dataEmp.noreg;
+                });
+                if (curEmp.length == 0) {
+                    selectedEmp.push({
+                        classification: dataEmp.classification,
+                        name: dataEmp.name,
+                        noReg: dataEmp.noreg,
+                        orgCode: data.code,
+                        reward: $("#CateogryPTA").data("kendoComboBox").value()
+                    });
+
+                    countEmp++;
+                }
+            });
+            $("#counter-" + data.code).html("( " + countEmp + " / " + objEmp.length + " )");
+            $(".select-all").each(function () {
+
+            });
+        }
+        else
+            {
+                $("#counter-" + data.code).html("( 0 / " + objEmp.length + " )");
+                $("#cb_Department").prop("checked", false);
+                $(".select-all").each(function () {
+                    $(this).prop("checked", false);
+                });
+            }
+        }
+
+    function selectAllEmpDivision(e) {
+        var data = $(e).data();
+        var objEmp = $(".div-" + data.code);
+        var countEmp = 0;
+
+        selectedEmp = $.grep(selectedEmp, function (e) {
+            return e.orgCode !== data.code;
+        });
+
+        if ($(e).is(':checked')) {
+            $.each(objEmp, function (i, o) {
+                var dataEmp = $(o).data();
+
+                var curEmp = $.grep(selectedEmp, function (e) {
+                    return e.noReg == dataEmp.noreg;
+                });
+
+                if (curEmp.length == 0) {
+                    selectedEmp.push({
+                        classification: dataEmp.classification,
+                        name: dataEmp.name,
+                        noReg: dataEmp.noreg,
+                        orgCode: data.code,
+                        reward: $("#CateogryPTA").data("kendoComboBox").value()
+                    });
+
+                    countEmp++;
+                }
+            });
+            $("#counter-" + data.code).html("( " + countEmp + " / " + objEmp.length + " )");
+
+            $(".select-all").each(function () {
+                $(this).prop("checked", true);
+            });
+            $(".cb-department").each(function () {
+                if (!this.checked) {
+                    $(this).click();
+                }
+            });
+        } else {
+            $(".select-all").each(function () {
+                $(this).prop("checked", false);
+            });
+            $(".cb-department").each(function () {
+                if (this.checked) {
+                    $(this).click();
+                }
+            });
+            $("#counter-" + data.code).html("( 0 / " + objEmp.length + " )");
+            $("#cb_Division").prop("checked", false)
+        }
+    }
+
+    function CategoryChange(e) {
+        GetDepartments();
+    }
+
+    function AmountChange(e) {
+        GetDepartments();
+    }
+
+    function DateChange(e) {
+        GetDepartments();
+    }
+
+    if ('@Model.Object.AccountType' === 'rekening') {
+        $("#DivBankCode").hide();
+        $("#DivAccountNumber").hide();
+        $("#DivAccountName").hide();
+        $("#Object_AccountType").prop("checked", true);
+    }
+    else if ('@Model.Object.AccountType' === 'rekeninglain') {
+        $("#DivBankCode").show();
+        $("#DivAccountNumber").show();
+        $("#DivAccountName").show();
+        $("#Object_AccountType").prop("checked", false);
+    } else {
+        $("#DivBankCode").hide();
+        $("#DivAccountNumber").hide();
+        $("#DivAccountName").hide();
+        $("#Object_AccountType").prop("checked", true);
+    }
+
+    $('input[type=radio][id=Object_AccountType]').change(function () {
+        if (this.value == "rekening") {
+            $("#DivBankCode").hide();
+            $("#DivAccountNumber").hide();
+            $("#DivAccountName").hide();
+        }
+        if (this.value == "rekeninglain") {
+            $("#DivBankCode").show();
+            $("#DivAccountNumber").show();
+            $("#DivAccountName").show();
+            $("#Object_BankCode").data("kendoComboBox").value("");
+            $("#Object_AccountNumber").val("");
+            $("#Object_AccountName").val("");
+
+        }
+    });
+
+    $('.select-all').change(function () {
+
+        if (!this.checked) {
+
+            $(".cb-department").each(function () {
+                $(this).click();
+            });
+
+            $(".select-all-div").each(function () {
+                if (this.checked) {
+                    $(this).click();
+                }
+            });
+        } else {
+
+            $(".cb-department").each(function () {
+
+                if (!this.checked) {
+                    $(this).click();
+                }
+
+            });
+
+            $(".select-all-div").each(function () {
+                if (!this.checked) {
+                    $(this).click();
+                }
+            });
+        }
+        return false;
+    });
+
+    $('.select-all-div').change(function () {
+        if (!this.checked) {
+
+            $(".cb-division").each(function () {
+                $(this).click();
+            });
+
+            $(".select-all").each(function () {
+                if (this.checked) {
+                    $(this).click();
+                }
+            });
+        } else {
+
+            $(".cb-division").each(function () {
+
+                if (!this.checked) {
+                    $(this).click();
+                }
+
+            });
+
+            $(".select-all").each(function () {
+                if (!this.checked) {
+                    $(this).click();
+                }
+            });
+        }
+    });
+
+    if ('@isCanEdit' === 'False') {
+        $("#User").text('@Model.Object.User');
+    }
+
+    function prepareEditData() {
+        //list dept
+        var dept = @Html.Raw(departments);
+        $("#department_container").html("");
+        $(".department-list").html("");
+        $.each(dept, function (i, o) {
+            $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][ObjectID]" value="' + o.ObjectID + '" />');
+            $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][ObjectText]" value="' + o.ObjectText + '" />');
+            $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][ObjectDescription]" value="' + o.ObjectDescription + '" />');
+            $.each(o.Employees, function (ii, oo) {
+                $("#department_container").append('<input type="hidden" class="dept-' + o.ObjectID + '" data-noreg="' + oo.NoReg + '" data-name="' + oo.Name + '" data-classification="' + oo.Classification + '" />');
+                $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][NoReg]" value="' + oo.NoReg + '" />');
+                $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][Name]" value="' + oo.Name + '" />');
+                $("#department_container").append('<input type="hidden" name="Object.Departments[' + i + '][Employees][' + ii + '][Classification]" value="' + oo.Classification + '" />');
+            });
+        });
+
+        //list summary
+        var summaries = @Html.Raw(summaries);
+        $("#summary_data").html("");
+        var totalQty = 0;
+        var totalAmount = 0;
+        var totalSummary = 0;
+        $.each(summaries, function (i, o) {
+            var kelas = o.Range.toLowerCase().replace(/\s/g, "");
+            var rowKelas = $("<tr class='" + o.Reward + "'><td>" + o.Range + "</td></tr>");
+            $("<td data-from='" + o.KelasFrom + "' data-to='" + o.KelasTo + "' align='center'></td>").html(o.Qty).appendTo(rowKelas);
+            $("<td></td>").html(o.RewardText).appendTo(rowKelas);
+            $("<td data-val='" + o.Amount + "' align='right'></td>").html(kendo.toString(o.Amount, "n0")).appendTo(rowKelas);
+            $("<td data-val='" + o.Total + "' align='right'></td>").html(kendo.toString(o.Total, "n0")).appendTo(rowKelas);
+            @if (isCanEdit)
+            {
+                @:$("<td><a href='javascript:void(0)' onclick='openModalSummary(\"" + kelas + "\", \"" + o.Reward + "\", true);'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas);
+            }
+            else
+            {
+                @:$("<td><a href='javascript:void(0)' onclick='openDetailSummary(\"" + kelas + "\", \"" + o.Reward + "\", \"" + kendo.toString(o.Amount, "n0") + "\", \"" + o.EventDate + "\");'><i class='fa fa-eye'></i></a></td>").appendTo(rowKelas);
+            }
+            $("#summary_data").append(rowKelas);
+            totalQty += o.Qty;
+            totalAmount += o.Amount;
+            totalSummary += o.Total;
+
+            $(
+                '<div class="' + o.Reward + '">'+
+                '<input type="hidden" name="Object.Summaries[' + i + '][Range]" value="' + o.Range + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][ClassFrom]" value="' + o.ClassFrom + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][ClassTo]" value="' + o.ClassTo + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][RewardText]" value="' + o.RewardText + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Reward]" value="' + o.Reward + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Qty]" value="' + o.Qty + '" />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Amount]" value="' + o.Amount + '"  />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][Total]" value="' + o.Total + '"  />' +
+                '<input type="hidden" name="Object.Summaries[' + i + '][EventDate]" value="' + kendo.toString(o.EventDate, "yyyy-MM-dd") + '"  />' +
+                '</div>'
+            ).appendTo($('#hiddensummary'));
+
+            $.each(o.Employees, function (ii, oo) {
+                var classEmp = o.ClassTo == 11 ? '<input type="hidden" class="kelas' + o.ClassFrom + oo.Reward + '"' : '<input type="hidden" class="kelas' + o.ClassFrom + '-' + o.ClassTo + oo.Reward + '"';
+                var employeeContainer = $(
+                    '<div class="' + oo.reward + '">' +
+                    classEmp +
+                    'data-org="' + oo.OrgCode + '" data-noreg="' + oo.NoReg + '" data-name="' + oo.Name + '" data-classification="' + oo.Classification + '" />' +
+                    '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + ii + '][NoReg]" value="' + oo.NoReg + '" />' +
+                    '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + ii + '][Name]" value="' + oo.Name + '" />' +
+                    '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + ii + '][OrgCode]" value="' + oo.OrgCode + '" />' +
+                    '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + ii + '][Classification]" value="' + oo.Classification + '" />' +
+                    '<input type="hidden" name="Object.Summaries[' + i + '][Employees][' + ii + '][Reward]" value="' + oo.Reward + '" />' +
+                    '</div>'
+                ).appendTo($('#hiddensummary'));
+
+                selectedEmp.push({
+                    classification: oo.Classification,
+                    name: oo.Name,
+                    noReg: oo.NoReg,
+                    orgCode: oo.OrgCode,
+                    reward: oo.Reward
+                });
+
+                listEmpHistory.push(oo.NoReg)
+            });
+        })
+        $("#total_qty").html(totalQty);
+        $("#sum_qty").html(kendo.toString(totalAmount, "n0"));
+        $("#sum_total").html(kendo.toString(totalSummary, "n0"));
+    }
+
+    @{if (Model.DocumentApprovalId != default(Guid))
+        {
+            @:prepareEditData();
+        }}
+
+    </script>
+}
+
+@section styles  {
+    <style type="text/css">
+        .table th, .table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e3ebf3;
+        }
+    </style>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Reward Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            @if (isCanEdit)
+                            {
+                                <fieldset>
+                                    <legend>@Localizer["Reward Data"]</legend>
+                                    @if (isCanEdit)
+                                    {
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("CateogryPTA")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .Placeholder(Localizer["Select Category"].Value)
+                                                .DataTextField("Name")
+                                                .DataValueField("Code")
+                                                .DataSource(dataSource => dataSource
+                                                .Ajax()
+                                                .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=Reward")))
+                                                )
+                                                .Events(e => e.Change("CategoryChange"))
+                                                .SelectedIndex(-1)
+                                                .Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Date"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("date")
+                                                .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                .Enable(isCanEdit)
+                                                .Events(e => e.Change("DateChange"))
+                                                .Format("dd/MM/yyyy")
+                                                .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Amount"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                .Name("Amouont")
+                                                .HtmlAttributes(new { @class = "form-control" })
+                                                .Placeholder("Input Amount")
+                                                .DataValueField("Ammount")
+                                                .DataTextField("Ammount")
+                                                .DataSource(dataSource => dataSource
+                                                    .Ajax()
+                                                    .Read(read => read.Url(Url.Content("~/api/categorypta/ammount"))
+                                                    .Data(@"function filterProducts() { return { Type: $('#CateogryPTA').val() } }"))
+                                                )
+                                                .Events(e => e.Change("AmountChange"))
+                                                .SelectedIndex(-1)
+                                                .Enable(isCanEdit)
+                                                .AutoBind(false)
+                                                .CascadeFrom("CateogryPTA")
+                                                .Deferred()
+                                            )
+                                        </div>
+                                    }
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Proposal Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.ProposalPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "ProposalPath" })
+                                            }
+                                        }
+                                    </div>
+
+                                    <div class="form-group">
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                <span><span class="required" aria-required="true"> * </span>@Localizer["Select Division"]</span>
+                                                <br />
+                                                <label><input class="select-all-div" type="checkbox" name="select-all-div" id="cb_Division"> @Localizer["Select All"]</label>
+                                            }
+                                        }
+
+                                        <div class="mt-checkbox-list division-list" style="max-height:200px;overflow-y:scroll">
+
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                <span><span class="required" aria-required="true"> * </span>@Localizer["Select Department"]</span>
+                                                <br />
+                                                <label><input class="select-all" type="checkbox" name="select-all" id="cb_Department"> @Localizer["Select All"]</label>
+                                            }
+                                        }
+
+                                        <div class="mt-checkbox-list department-list" style="max-height:200px;overflow-y:scroll">
+
+                                        </div>
+                                    </div>
+                                    @if (isCanEdit)
+                                    {
+                                        <a href="javascript:void(0)" class="btn btn-primary pull-right create-summary">@Localizer["Update Summary"]</a>
+                                    }
+
+                                </fieldset>
+                            }
+                            else
+                            {
+                                <fieldset>
+                                    <legend>@Localizer["Summary"]</legend>
+                                    <table class="table table-sm table-small summary">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:20%">@Localizer["Class"]</th>
+                                                <th style="width:25%;text-align:center">@Localizer["Participants (Qty)"]</th>
+                                                <th style="width:10%">Reward</th>
+                                                <th style="text-align:right">@Localizer["Amount"]</th>
+                                                <th style="text-align:right">Total</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="summary_data"></tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th>Total</th>
+                                                <th style="text-align:center"><span id="total_qty"></span></th>
+                                                <th></th>
+                                                <th style="text-align:right" align="right"><span id="sum_qty"></span></th>
+                                                <th style="text-align:right" align="right"><span id="sum_total"></span></th>
+                                                <th></th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                    <div id="hiddensummary"></div>
+                                </fieldset>
+                            }
+                            <fieldset>
+                                <legend>@Localizer["Account Data"]</legend>
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Transfer Destination"] :</label>
+
+                                <div class="form-group">
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["<b class='font-red' id='User'></b>'s Account"]
+                                        @Html.RadioButtonFor(x => x.Object.AccountType, "rekening", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                        @Html.HiddenFor(x => x.Object.User)
+                                        <span></span>
+                                    </label>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="mt-radio green mt-radio-outline">
+                                        @Localizer["Another Account"] @*<label class="font-red">User</label>*@
+                                        @Html.RadioButtonFor(x => x.Object.AccountType, "rekeninglain", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                        <span></span>
+                                    </label>
+                                </div>
+
+                                <div class="form-group" id="DivBankCode">
+                                    @(Html.KendoComboBoxFor(x => x.Object.BankCode, "BankCode")
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BankCode" })
+                                        .Placeholder(Localizer["Select Bank Name"].Value)
+                                        .DataTextField("BankName")
+                                        .DataValueField("BankName")
+                                        .DataSource(dataSource => dataSource
+                                        .Ajax()
+                                        .Read(read => read.Url(Url.Content("~/api/bank/distinct")))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group" id="DivAccountNumber">
+                                    @(Html.Kendo().NumericTextBox<decimal>()
+                                        .Name("Object.AccountNumber")
+                                        .HtmlAttributes(new { @class = "form-control", maxlength = "16", @data_validation_for = "Object.AccountNumber" })
+                                        .Placeholder(Localizer["Input Account Number"].Value)
+                                        .Value(string.IsNullOrEmpty(Model.Object.AccountNumber) ? null : decimal.Parse(Model.Object.AccountNumber) as decimal?)
+                                        .Spinners(false)
+                                        .Min(0)
+                                        .Format("#")
+                                        .Decimals(0)
+                                        .Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                    @*@Html.TextBoxFor(x => x.Object.AccountNumber, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.AccountNumber", placeholder = Localizer["Please Input Account Number"].Value, onkeydown = "return ValidateNumber(event);",
+                                            maxlength = "16"
+                                        }, isCanEdit))*@
+
+                                </div>
+                                <div class="form-group" id="DivAccountName">
+                                    @Html.TextBoxFor(x => x.Object.AccountName, ApplicationHelper.Enable(new {
+                                        @class = "form-control", data_validation_for = "Object.AccountName", placeholder = Localizer["Account Name"].Value}, isCanEdit))
+                                </div>
+
+                                @if (!isCanEdit)
+                                {
+                                    <div class="form-group">
+                                        <label>@Localizer["Proposal Attachment"]</label>
+                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "ProposalPath" })
+                                    </div>
+                                }
+                            </fieldset>
+                        </div>
+                        <div id="division_container">
+
+                        </div>
+                        <div id="department_container">
+
+                        </div>
+
+                        <div class="col-md-6">
+                            @if (isCanEdit)
+                            {
+                                <fieldset>
+                                    <legend>@Localizer["Summary"]</legend>
+                                    <div style="overflow:auto">
+                                        <table class="table table-sm table-small summary">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width:20%">@Localizer["Class"]</th>
+                                                    <th style="width:25%;text-align:center">@Localizer["Participants (Qty)"]</th>
+                                                    <th style="width:10%">Reward</th>
+                                                    <th style="text-align:right">@Localizer["Amount"]</th>
+                                                    <th style="text-align:right">Total</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="summary_data"></tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <th>Total</th>
+                                                    <th style="text-align:center"><span id="total_qty"></span></th>
+                                                    <th></th>
+                                                    <th style="text-align:right" align="right"><span id="sum_qty"></span></th>
+                                                    <th style="text-align:right" align="right"><span id="sum_total"></span></th>
+                                                    <th></th>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                    <div id="hiddensummary"></div>
+                                </fieldset>
+                            }
+                            else
+                            {
+                                <fieldset>
+                                    <legend>@Localizer["Detail Employee"]</legend>
+                                    <div class="detail-summary-emp">
+
+                                    </div>
+                                </fieldset>
+                            }
+
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="modal-employee" class="modal fade bs-modal-md" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-md" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Data Peserta</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">×</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="loader">
+                    <div class="form-horizontal" role="form">
+                        <div class="form-group">
+                            @{
+                                if (isCanEdit)
+                                {
+                                    <label id="select_all_modal"><input class="select-all-modal-employee" type="checkbox" name="select-all-div" id="cb_Division"> @Localizer["Select All"]</label>
+                                }
+                            }
+                            <div class="mt-checkbox-list employee-container" style="max-height:300px;overflow-y:scroll">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn dark btn-outline btn-modal-close" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

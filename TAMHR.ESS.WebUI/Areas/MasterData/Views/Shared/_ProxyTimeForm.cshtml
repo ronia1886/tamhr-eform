@@ -1,0 +1,402 @@
+﻿@model TAMHR.ESS.Domain.TimeManagementView
+@{ 
+    var isNew = Model.Id == default(Guid);
+    var min = Model.WorkingDate.Date;
+    var maxMinute = min.AddMinutes(1439);
+    var max = min.AddDays(1).AddMinutes(1439);
+}
+<form id="proxyForm" method="@(isNew ? "post" : "put")" action="~/api/proxy-time">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    @Html.HiddenFor(x => x.NormalTimeIn)
+    @Html.HiddenFor(x => x.NormalTimeOut)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Working Date"]</label>
+                @Html.TextBox("WorkingDate", Model.WorkingDate.ToString("dd/MM/yyyy"), new { @class = "form-control", @data_validation_for = "WorkingDate", @placeholder = Localizer["Please input working date"].Value, @readonly = "readonly" })
+                <span class="invalid" data-validation-for="WorkingDate"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Proxy In"]</label>
+                @(Html.Kendo().DateTimePickerFor(x => x.WorkingTimeIn)
+                    .HtmlAttributes(new { style = "width: 100%" })
+                    .TimeFormat("HH:mm tt")
+                    .Format("dd/MM/yyyy HH:mm tt")
+                    .ParseFormats("dd/MM/yyyy HH:mm tt")
+                    .Min(min)
+                    .Max(maxMinute)
+                    .Events(e => e.Change("onProxyInChanged"))
+                )
+                <span class="invalid" data-validation-for="WorkingTimeIn"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Proxy Out"]</label>
+                @(Html.Kendo().DateTimePickerFor(x => x.WorkingTimeOut)
+                    .HtmlAttributes(new { style = "width: 100%" })
+                    .TimeFormat("HH:mm tt")
+                    .Format("dd/MM/yyyy HH:mm tt")
+                    .ParseFormats("dd/MM/yyyy HH:mm tt")
+                    .Min(min)
+                    .Max(max)
+                    .Events(e => e.Change("onProxyOutChanged"))
+                )
+                <span class="invalid" data-validation-for="WorkingTimeOut"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Shift"]</label>
+                @(Html.Kendo().ComboBoxFor(x => x.ShiftCode)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .DataTextField("ShiftName")
+                    .DataValueField("ShiftCode")
+                    .Placeholder(Localizer["Please select shift"].Value)
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/master-data/daily-work-schedule/gets")))
+                        .Sort(sort => sort.Add("ShiftCode"))
+                    )
+                    .SelectedIndex(-1)
+                )
+                <span class="invalid" data-validation-for="ShiftCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Presence Code"]</label>
+                @Html.KendoComboBoxAutocompleteFor(x => x.AbsentStatus, Url.Content("~/api/masterdata/absence/get-defaults"), valueField: "CodePresensi", textField: "Name", pageSize: int.MaxValue)
+                <span class="invalid" data-validation-for="AbsentStatus"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", data_validation_for = "Description", placeholder = Localizer["Please input description if any"].Value, @rows = 3, tabindex = 5 })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <hr class="mt-1" />
+    <div class="row">
+        <div class="col">
+            @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeManagementHistory>()
+                .Name("history-grid")
+                .Columns(columns =>
+                {
+                    columns.Bound(c => c.WorkingTimeIn).Title("Proxy In").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"#:$.toDefault(kendo.toString(WorkingTimeIn, 'dd/MM/yyyy HH:mm'), '-')#");
+                    columns.Bound(c => c.WorkingTimeOut).Title("Proxy Out").HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"#:$.toDefault(kendo.toString(WorkingTimeOut, 'dd/MM/yyyy HH:mm'), '-')#");
+                    columns.Bound(c => c.PresenceCode).Title("Presence Code").HtmlAttributes(new { @class = "text-center" });
+                    columns.Bound(c => c.ShiftCode).Title("Shift").HtmlAttributes(new { @class = "text-center" });
+                    columns.Bound(c => c.Description).Title("Description").HtmlAttributes(new { @class = "text-center" });
+                    columns.Bound(c => c.CreatedBy).Title("Created By").HtmlAttributes(new { @class = "text-center" });
+
+                    columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        <div class=""btn-group"">
+                            <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/proxy-time/delete-history"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-trash""></i>
+                            </a>
+                        </div>
+                    ").Width(80);
+                })
+                .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                .DataSource(dataSource => dataSource
+                    .Ajax()
+                    .Read(read => read.Url(Url.Content("~/api/proxy-time/get-histories")).Data(@<text>function() { return { noreg: "@Model.NoReg", date: "@Model.WorkingDate.ToString("yyyy-MM-dd")" } }</text>))
+                    .Sort(sort => sort.Add("CreatedOn").Descending())
+                )
+            )
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze " data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+
+    <script>
+
+        $(document).ready(function () {
+            var presenceCombo = $("#AbsentStatus").data("kendoComboBox");
+           
+            if (presenceCombo) {
+                presenceCombo.bind("change", function () {
+                    console.log("testest");
+                    onProxyInChanged();  // Cek ulang dan set Proxy Out sesuai kondisi baru
+                });
+            }
+
+            //var comboBox = $("#ShiftCode").data("kendoComboBox");
+
+            //$("#ShiftCode").change(function () {
+            //    var selectedDataItem = comboBox.dataItem();
+            //    console.log("test select", selectedDataItem);
+            //    if (selectedDataItem) {
+            //        console.log("NormalTimeOut:", selectedDataItem.NormalTimeOutText);
+            //        let setTime = selectedDataItem.NormalTimeOutText.split(":");
+            //        console.log("hour", setTime[0]);
+            //        console.log("minute", setTime[1]);
+            //        let newNormaltiMeOut = new Date(NormalTimeOut);
+            //        console.log("newNormaltiMeOut", newNormaltiMeOut);
+            //    }
+            //});
+
+            function onProxyInChanged() {
+                //console.log("nana");
+                let proxyInPicker = $("#WorkingTimeIn").data("kendoDateTimePicker");
+                let proxyOutPicker = $("#WorkingTimeOut").data("kendoDateTimePicker");
+                let UpdateShiftCode = $("#ShiftCode").val();
+                let presenceCode = $("#AbsentStatus").val();
+                let NormalTimeIn = $("#NormalTimeIn").val();
+                let NormalTimeOut = $("#NormalTimeOut").val();
+                var comboBoxShift = $("#ShiftCode").data("kendoComboBox");
+                let selectedDataItem = comboBoxShift.dataItem();
+                if (selectedDataItem) {
+                    //console.log("NormalTimeOut:", selectedDataItem.NormalTimeOutText);
+                    let setTimeOut = selectedDataItem.NormalTimeOutText.split(":");
+                    let setTimeIn = selectedDataItem.NormalTimeINText.split(":");
+                    //console.log("hour", setTime[0]);
+                    //console.log("minute", setTime[1]);
+                    let newNormaltiMeOut = new Date(NormalTimeOut);
+                    let newNormalTimeIn = new Date(NormalTimeIn);
+                    newNormalTimeIn.setHours(parseInt(setTimeIn[0]), parseInt(setTimeIn[1]), 0, 0);
+                    newNormaltiMeOut.setHours(parseInt(setTimeOut[0]), parseInt(setTimeOut[1]), 0, 0);
+                    NormalTimeOut = newNormaltiMeOut;
+                    NormalTimeIn = newNormalTimeIn;
+                }
+                if (presenceCode === "1") {
+                    if (proxyInPicker && proxyOutPicker) {
+                        console.log("new");
+                        let proxyInValue = proxyInPicker.value();
+                        let NormalTimeInDate = new Date(NormalTimeIn);
+                        let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+                        if (UpdateShiftCode === "1NJ8") {
+                            threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+                        }
+
+                        if (proxyInValue > NormalTimeInDate && (UpdateShiftCode === "1NJ8" || UpdateShiftCode === "1NS8")) {
+                            // Tambah 8 jam 45 menit
+
+                            let minOutValue = new Date(proxyInValue.getTime() + threshold * 60000);
+                            //proxyOutPicker.value(minOutValue);
+                            proxyOutPicker.min(minOutValue);
+                        }
+                        //else if (NormalTimeInDate > NormalProxyOut) {
+                        //    NormalProxyOut = NormalProxyOut.addDays(1);
+                        //    proxyOutPicker.value(NormalProxyOut);
+
+                        //    proxyOutPicker.min(NormalProxyOut);
+
+                        //    document.querySelector('#WorkingTimeOut').value = formatDateToString(NormalProxyOut);
+                        //}
+                        else {
+                            let NormalProxyOut = new Date(NormalTimeOut);
+                            //let minOutValue = new Date(NormalTimeOut.getTime());
+                            //proxyOutPicker.value(NormalProxyOut);
+                            proxyOutPicker.min(NormalProxyOut);
+                        }
+                    }
+                
+                } else {
+                    let minOut = proxyInPicker.value();
+                    console.log(minOut);
+                    minOut.setHours(0, 0, 0, 0);
+                    proxyOutPicker.min(minOut);
+                }
+            }
+        });
+
+       
+
+
+        function getMinimumProxyOut(proxyIn, thresholdMinutes) {
+            let timeIn = new Date(proxyIn);
+            console.log("new proxy",proxyIn);
+            console.log("timeIn", timeIn);
+            timeIn.setMinutes(timeIn.getMinutes() + thresholdMinutes);
+            return timeIn;
+        }
+
+        function showWarning(message) {
+                swal({
+                    title: '@Localizer["Warning"]',
+                    text: message,
+                    type: "warning"
+                });
+                return;
+        }
+
+        function parseDateTime(str) {
+            // Contoh input: "29/09/2025 08:32 AM"
+            const [datePart, timePart, ampm] = str.split(' ');
+            const [day, month, year] = datePart.split('/');
+
+            let [hours, minutes] = timePart.split(':');
+            hours = parseInt(hours, 10);
+            minutes = parseInt(minutes, 10);
+
+            if (ampm === 'PM' && hours < 12) hours += 12;
+            if (ampm === 'AM' && hours === 12) hours = 0;
+
+            // Membuat objek Date dengan format yang benar
+            return new Date(year, month - 1, day, hours, minutes);
+        }
+
+        function formatDateToString(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0'); // bulan 01-12
+            const day = date.getDate().toString().padStart(2, '0');          // tanggal 01-31
+
+            let hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+
+            // tentukan AM atau PM
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+
+            // ubah 24-jam ke 12-jam format
+            //hours = hours % 12;
+            //hours = hours ? hours : 12; // jam 0 jadi 12
+            const hoursStr = hours.toString().padStart(2, '0');
+            //${ ampm }
+            return `${day}/${month}/${year} ${hoursStr}:${minutes} ${ ampm }`;
+        }
+
+        
+
+
+
+        $(document).on("click", ".save-btn", function () {
+            alert("save");
+
+            //var grid = $("#history-grid").data("kendoGrid");
+
+            // Mengambil data dari baris yang dipilih
+            //var selectedRow = grid.select();
+            //var dataItem = grid.dataItem(selectedRow);
+            //console.log(dataItem);
+            console.log("Proxy In:", $("#WorkingTimeIn").val());
+            //console.log("Proxy Out:", dataItem.WorkingTimeOut);
+            //console.log("Presence Code:", dataItem.PresenceCode);
+
+            var UpdateId = $("#Id").val();
+            var UpdateNoreg = $("#NoReg").val();
+            var UpdateWorkingTimeIn = $("#WorkingTimeIn").val();
+            var UpdateWorkingTimeOut = $("#WorkingTimeOut").val();
+            var UpdateShiftCode = $("#ShiftCode").val();
+            var UpdateAbsentStatus = $("#AbsentStatus").val();
+            var UpdateDescription = $("#Description").val();
+
+
+
+
+            let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+            if (UpdateShiftCode === "1NJ8") {
+                threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+            }
+
+
+            //if (!UpdateWorkingTimeIn || !UpdateWorkingTimeOut) {
+            //    alert("Silakan isi Proxy In dan Proxy Out terlebih dahulu.");
+            //    e.preventDefault();
+            //    return;
+            //}
+
+            let proxyIn = new Date(UpdateWorkingTimeIn);
+            let proxyOut = new Date(UpdateWorkingTimeOut);
+            let timeInDate = parseDateTime(UpdateWorkingTimeIn);
+            let timeOutDate = parseDateTime(UpdateWorkingTimeOut);
+            let minimalProxyOut = getMinimumProxyOut(timeInDate, threshold);
+            console.log("test proxy out", UpdateWorkingTimeOut);
+            console.log("threshold", threshold);
+            console.log("test minimal out", minimalProxyOut);
+            let listInclude = ["1NS8", "1NJ8"];
+            console.log("ShiftCode", UpdateShiftCode);
+            console.log(listInclude.includes(UpdateShiftCode));
+            console.log("test logic", timeOutDate < minimalProxyOut);
+            //if (timeOutDate < minimalProxyOut) {
+            //    let minTimeStr = formatDateToString(minimalProxyOut);
+            //    let warningMessage = "Warning: Waktu Proxy Out harus minimal " + minTimeStr +
+            //        " untuk memenuhi minimal Working Hour.\nSilakan cek kembali, tapi Anda bisa melanjutkan.";
+            //    showWarning(warningMessage);
+
+            //    // Proses simpan tidak dibatalkan, user bisa tetap tekan SAVE
+            //    console.log("if true");
+            //}
+            //console.log("if false");
+
+
+            let ajaxUrl = $("#proxyForm").attr("action");
+            let ajaxMethod = $("#proxyForm").attr("method");
+            let requestData = {
+                Id: UpdateId,
+                NoReg: UpdateNoreg,
+                WorkingTimeIn: timeInDate,
+                WorkingTimeOut: timeOutDate,
+                ShiftCode: UpdateShiftCode,
+                AbsentStatus: UpdateAbsentStatus,
+                Description: UpdateDescription
+            };
+
+            // Prevent double save
+            isSaving = true;
+            //$btn.prop("disabled", true);
+
+            $.ajax({
+                url: ajaxUrl,
+                type: ajaxMethod,
+                contentType: "application/json",
+                data: JSON.stringify(requestData),
+                success: function (response) {
+                    swal({
+                        title: '@Localizer["Save Changes"]',
+                        text: '@Localizer["Update Proxy Time Successfully"]',
+                        type: "success"
+                    }).then(function () {
+                        window.location.reload();
+                        //// Update original values
+                        //row.find(".noreg").html(updatedNoReg).data("original-value", updatedNoReg);
+                        //row.find(".period").html(updatedPeriod).data("original-value", updatedPeriod);
+                        //row.find(".used-leave").html(updatedUsedLeave).data("original-value", updatedUsedLeave);
+                        //row.find(".remaining-leave").html(updatedRemainingLeave).data("original-value", updatedRemainingLeave);
+                        //row.find(".total-leave").html(updatedTotalLeave).data("original-value", updatedTotalLeave);
+
+                        //row.removeClass("editing");
+
+                        //// Replace Save button back to Edit icon
+                        //$btn.replaceWith('<i class="fa fa-pencil editlng-btn"></i>');
+                        //row.find(".close-btn-long").remove();
+                    });
+                },
+                error: function (xhr) {
+                    let errorMessage = "Unknown error";
+
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        errorMessage = response.message || errorMessage;
+                    } catch (e) {
+                        errorMessage = xhr.responseText;
+                    }
+
+                    swal({
+                        title: "Error",
+                        text: errorMessage,
+                        icon: "error"
+                    });
+                },
+                complete: function () {
+                    isSaving = false;
+                    //$btn.prop("disabled", false);
+                }
+            });
+        });
+    </script>
+</form>

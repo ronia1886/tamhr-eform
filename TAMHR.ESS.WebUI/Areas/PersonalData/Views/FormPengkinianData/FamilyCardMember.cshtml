@@ -1,0 +1,285 @@
+﻿@model DocumentRequestDetailViewModel<TAMHR.ESS.Domain.PersonalDataKkMember>
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker", "combobox", "timepicker", "grid", "panelbar", "numeric");
+    @inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService updatedataservice;
+    var user = User.GetClaim("NoReg");
+    string stringObject = ViewBag.StringObject;
+    var param = updatedataservice.DeserializeFromJson<TAMHR.ESS.Domain.PersonalDataKKView>(stringObject);
+    var kkUpdate = updatedataservice.GetPersonalDataKKUpdate(param).FirstOrDefault();
+    if (kkUpdate == null)
+    {
+        kkUpdate = new TAMHR.ESS.Domain.PersonalDataKKView();
+        kkUpdate.KKNumber = param.KKNumber;
+    }
+}
+<style>
+    .form-control{
+        text-transform: capitalize;
+    }
+</style>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Family Card Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-12 col-md-12 col-sm-12">
+                            <fieldset>
+                                <legend>Data @kkUpdate.KKStatus</legend>
+                          
+                                <input id="Id" value="@kkUpdate.Id" style="display:none" />
+                                <div class="row">
+                                    <div class="col-lg-6 col-md-6 col-xs-6">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Card Number"]</label>
+                                            <input type="text" class="form-control" value="@kkUpdate.KKNumber" disabled />
+                                            @(Html.Kendo().TextBoxFor(x => x.Object.KKNumber)
+                                              .HtmlAttributes(new { @class = "form-control", @style = "display:none" })
+                                              .Value(kkUpdate.KKNumber)
+                                              .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Number"]</label>
+                                            @(Html.Kendo().TextBoxFor(x => x.Object.Nik)
+                                              .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Nik" })
+                                              .Value(kkUpdate.Nik)
+                                              .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                                            @(Html.Kendo().TextBoxFor(x => x.Object.Name)
+                                              .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Name", @required = "required" })
+                                              .Value(kkUpdate.Name)
+                                              .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Gender"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.GenderCode, Url.Content("~/api/form-pengkinian-data/get-general-category/gender"))
+                                                 .Placeholder(Localizer["Select Gender"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.GenderCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Birth Place"]</label>
+                                            @(Html.Kendo().TextBoxFor(x => x.Object.BirthPlace)
+                                              .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Birth Place", @required = "required" })
+                                              .Value(kkUpdate.BirthPlace)
+                                              .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["BirthDate"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.BirthDate)
+                                               .Value(kkUpdate.BirthDate.HasValue ? kkUpdate.BirthDate.ToString() : "")
+                                               .HtmlAttributes(new { @class = "form-control", @placeholder = "Please Select Date", @required = "required" })
+                                               .Format("dd MMM yyyy")
+                                               .Deferred()
+                                              // .Events(e => e.Change("$.onChange"))
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Religion"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.ReligionCode, Url.Content("~/api/form-pengkinian-data/get-general-category/religion"))
+                                                 .Placeholder(Localizer["Select Religion"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.ReligionCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Education"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.EducationCode, Url.Content("~/api/form-pengkinian-data/get-general-category/EducationLevel"))
+                                                 .Placeholder(Localizer["Select Education"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.EducationCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Marital Status"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.MaritalStatusCode, Url.Content("~/api/form-pengkinian-data/get-general-category/maritalStatusCode"))
+                                                 .Placeholder(Localizer["Select Marital Status"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.MaritalStatusCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Marital Date"]</label>
+                                            @(Html.Kendo().DatePickerFor(x => x.Object.MaritalDate)
+                                                .Value(kkUpdate.MaritalDate.HasValue ? kkUpdate.MaritalDate.ToString() : "")
+                                                .HtmlAttributes(new { @class = "form-control", @placeholder = "Please Select Date", @required = "required" })
+                                                .Format("dd MMM yyyy")
+                                                .Deferred()
+                                                // .Events(e => e.Change("$.onChange"))
+                                            )
+                                        </div>
+                                    </div>
+
+                                    <div class="col-lg-6 col-md-6 col-xs-6">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Profesion"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.WorkTypeCode, Url.Content("~/api/form-pengkinian-data/get-general-category/KKWorkTypeCode"))
+                                                 .Placeholder(Localizer["Select Profesion"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.WorkTypeCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class=""></span>@Localizer["BloodTypeCode"]</label>
+                                            @(Html.Kendo().TextBoxFor(x => x.Object.BloodTypeCode)
+                                                        .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Blood Type" })
+                                                        .Value(kkUpdate.BloodTypeCode)
+                                                        .Deferred()
+                                            )
+                                        </div>
+
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Family Relation Status"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.KKStatusCode, Url.Content("~/api/form-pengkinian-data/get-general-category/KKStatusCode"))
+                                                 .Placeholder(Localizer["Select Relation Status"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.KKStatusCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Nationality Status"]</label>
+                                            @(Html.KendoComboBoxAutocompleteFor(x => x.Object.NationalityCode, Url.Content("~/api/form-pengkinian-data/get-general-category/NationalityCode"))
+                                                 .Placeholder(Localizer["Select Nationality"].Value)
+                                                 .SelectedIndex(-1)
+                                                 .Value(kkUpdate.NationalityCode)
+                                                 .Deferred()
+                                            )
+                                        </div>
+                                        <div>
+                                            <fieldset>
+                                                <legend>Document Imigrasi</legend>
+                                                <div class="row form-group">
+                                                    <label class="col-md-4">No Passpor</label>
+                                                    <div class="col-md-8">
+                                                        @(Html.Kendo().TextBoxFor(x => x.Object.PassportNumber)
+                                                        .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Passport Number" })
+                                                        .Value(kkUpdate.PassportNumber)
+                                                        .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                                <div class="row form-group">
+                                                    <label class="col-md-4">No KITAP</label>
+                                                    <div class="col-md-8">
+                                                        @(Html.Kendo().TextBoxFor(x => x.Object.KitapNumber)
+                                                          .HtmlAttributes(new { @class = "form-control", @placeholder = "Type KITAP Number" })
+                                                          .Value(kkUpdate.KitapNumber)
+                                                          .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </div>
+                                        <div>
+                                            <fieldset>
+                                                <legend>Nama Orang Tua</legend>
+                                                <div class="row form-group">
+                                                    <label class="col-md-4">Ayah</label>
+                                                    <div class="col-md-8">
+                                                        @(Html.Kendo().TextBoxFor(x => x.Object.FatherName)
+                                                           .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Fater Name" })
+                                                           .Value(kkUpdate.FatherName)
+                                                           .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                                <div class="row form-group">
+                                                    <label class="col-md-4">Ibu</label>
+                                                    <div class="col-md-8">
+                                                        @(Html.Kendo().TextBoxFor(x => x.Object.MatherName)
+                                                        .HtmlAttributes(new { @class = "form-control", @placeholder = "Type Mather Name" })
+                                                        .Value(kkUpdate.MatherName)
+                                                        .Deferred()
+                                                        )
+                                                    </div>
+                                                </div>
+                                            </fieldset>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+                            <div class="card-header">
+                                <div class="float-right">
+                                    <a class="btn btn-primary mr-2" onclick="SaveAll()">
+                                        <i class="ft-check"></i> <span class="d-none d-md-inline" style="color:white">@Localizer["Submit"]</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function SaveAll() {
+        app.confirm(kendo.format(app.translate("Are you sure to submit this data?"), app.translate(true)), function (d) {
+            var entity = {
+                Id: $("#Id").val(),
+                KKNumber: $("#Object_KKNumber").val(),
+                KKStatusCode: $("#Object_KKStatusCode").val(),
+                Name: $("#Object_Name").val(),
+                Nik: $("#Object_Nik").val(),
+                GenderCode: $("#Object_GenderCode").val(),
+                BirthDate: $("#Object_BirthDate").val(),
+                BirthPlace: $("#Object_BirthPlace").val(),
+                ReligionCode: $("#Object_ReligionCode").val(),
+                EducationCode: $("#Object_EducationCode").val(),
+                WorkTypeCode: $("#Object_WorkTypeCode").val(),
+                BloodTypeCode: $("#Object_BloodTypeCode").val(),
+                MaritalStatusCode: $("#Object_MaritalStatusCode").val(),
+                MaritalDate: $("#Object_MaritalDate").val(),
+                NationalityCode: $("#Object_NationalityCode").val(),
+                FatherName: $("#Object_FatherName").val(),
+                MatherName: $("#Object_MatherName").val(),
+                PassportNumber: $("#Object_PassportNumber").val(),
+                KitapNumber: $("#Object_KitapNumber").val(),
+                PhoneNumber: $("#Object_PhoneNumber").val(),
+
+                RowStatus: 1,
+            };
+            if (d.value) {
+                $.post(app.resolveUrl("~/api/form-pengkinian-data/submit-kk"), entity, function (
+                    result) {
+                    if (result) {
+                        swal('success', 'Success save data', 'success');
+                        setTimeout(
+                            window.location.href = app.resolveUrl("/personaldata/formpengkiniandata/index"), 4000);
+                    }
+                });
+            }
+        });
+    }
+</script>
+

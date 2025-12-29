@@ -1,0 +1,239 @@
+﻿@model DocumentRequestDetailViewModel<EducationViewModel>
+@{
+    //var method = isNew ? "post" : "put";
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("dropdownlist");
+}
+@section scripts {
+    @*@Html.Kendo().DeferredScripts(true)*@
+    <script type="text/javascript">
+        
+       if ('@Model.Object.IsOtherCollegeName' == 'True') {
+           $("#DivOtherCollegeName").show();
+           $("#DivCollegeName").hide();
+           $("#Object_IsOtherCollegeName").prop("checked", true);
+        } else { 
+           $("#DivOtherCollegeName").hide();
+           $("#DivCollegeName").show();
+           $("#Object_IsOtherCollegeName").prop("checked", false);
+        } 
+       
+        $('input[type=checkbox][id=Object_IsOtherCollegeName]').change(function () {
+            if ($(this).is(':checked')) {
+                $("#DivOtherCollegeName").show();
+                $("#DivCollegeName").hide();
+                $("#Object_CollegeName").data("kendoComboBox").value("");
+                $("#Object_OtherCollegeName").val("");
+            }
+            else {
+                $("#DivOtherCollegeName").hide();
+                $("#DivCollegeName").show();
+                $("#Object_OtherCollegeName").val("");
+                $("#Object_CollegeName").data("kendoComboBox").value("");
+            }
+        });
+
+        $('#Object_GPA').keypress(function () {
+            if (this.value.length <= 4) {
+                var value = $("#Object_GPA").val();
+                if (this.value.length == 2) {
+                    var formatted = value.replace(/^(\d{1})(\d{1}).*/, '$1.$2');
+                    $('#Object_GPA').val(formatted);
+                } else {
+                    var formatted = value.replace(/^(\d{1})(\d{2}).*/, '$1.$2');
+                    $('#Object_GPA').val(formatted);
+                }
+            }
+        });
+
+        function casscadeDatabound(e) {
+            if ('@isCanEdit' == 'False') {
+            this.enable(false);
+        }
+    }
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Education Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Education Data"]</legend>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Education Level"]</label>
+                                    @(Html.KendoComboBoxAutocompleteFor(x => x.Object.LevelOfEducationCode, Url.Content("~/api/category/get-query/EducationLevel"))
+                                                    .Placeholder(Localizer["Select Education Level"].Value)
+                                                    .SelectedIndex(-1)
+                                                    .Enable(isCanEdit)
+                                                    .Deferred()
+                                    )
+                                    @*@(Html.KendoComboBoxFor(x => x.Object.LevelOfEducationCode, "LevelOfEducationCode")
+                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.LevelOfEducationCode" })
+                                                    .Placeholder(Localizer["Select Education Level"].Value)
+                                                    .DataTextField("Name")
+                                                    .DataValueField("Code")
+                                                    .DataSource(dataSource => dataSource
+                                                         .Ajax()
+                                                         .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=EducationLevel")))
+                                                    )
+                                                    .SelectedIndex(-1)
+                                                    .Enable(isCanEdit)
+                                                    .Deferred()
+                                    )*@
+                                </div>
+                                <div class="form-group" id="DivCollegeName">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["College"]</label>
+                                    @(Html.KendoComboBoxFor(x => x.Object.CollegeName, "CollegeName")
+                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.CollegeName" })
+                                                    .Placeholder(Localizer["Select College"].Value)
+                                                    .DataTextField("Name")
+                                                    .DataValueField("Code")
+                                                    .DataSource(dataSource => dataSource
+                                                         .Ajax()
+                                                         .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=Collage")))
+                                                    )
+                                                    .SelectedIndex(-1)
+                                                    .Enable(isCanEdit)
+                                                    .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group" id="DivOtherCollegeName">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["College"]</label>
+                                    @Html.TextBoxFor(x => x.Object.OtherCollegeName, ApplicationHelper.Enable(new {
+                                   @class = "form-control", data_validation_for = "Object.OtherCollegeName", placeholder = Localizer["Input College"].Value
+                               }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label class="mt-checkbox green mt-checkbox-outline">
+                                        @Localizer["Other"]
+                                        <input type="checkbox" value="@Model.Object.IsOtherCollegeName" id="Object_IsOtherCollegeName" name="Object.IsOtherCollegeName" class="form-control" , data_validation_for="Object.IsOtherCollegeName" @(!isCanEdit ? "disabled" : "") />
+                                        <span></span>
+                                    </label>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Major"]</label>
+                                    @*@(Html.KendoComboBoxAutocompleteFor(x => x.Object.DepartmentCode, Url.Content("~/api/category/get-mapping-query"), "function() { return { 'category': $('#Object_LevelOfEducationCode').val() } }")
+                                        .AutoBind(false)
+                                        .Enable(false)
+                                        .SelectedIndex(-1)
+                                        .Placeholder(Localizer["Select Major"].Value)
+                                        .CascadeFrom("Object_LevelOfEducationCode")
+                                        .CascadeFromField("ParentGeneralCategoryCode")
+                                        .Events(e => e.DataBound("casscadeDatabound"))
+                                        .Deferred()
+                                    )*@
+                                    @(Html.Kendo().DropDownListFor(x => x.Object.DepartmentCode)
+                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.DepartmentCode" })
+                                            //.Placeholder(Localizer["Select Major"].Value)
+                                            .DataTextField("Name")
+                                            .DataValueField("Code")
+                                            .DataSource(source => source.Custom()
+                                                .Type("aspnetmvc-ajax")
+                                                .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/category/get-mapping-query")).Data("function() { return { 'category': $('#Object_LevelOfEducationCode').val() } }")))
+                                                .ServerFiltering(true)
+                                                .Schema(schema => schema.Data("Data")
+                                                    .Total("Total")
+                                                )
+                                            )
+                                            .CascadeFrom("Object_LevelOfEducationCode")
+                                            .CascadeFromField("ParentGeneralCategoryCode")
+                                            .Events(e => e.DataBound("casscadeDatabound"))
+                                            .Deferred()
+                                    )
+                                    @*@(Html.KendoComboBoxFor(x => x.Object.DepartmentCode, "DepartmentCode")
+                                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.DepartmentCode" })
+                                                                    .Placeholder(Localizer["Select Major"].Value)
+                                                                    .DataTextField("Name")
+                                                                    .DataValueField("Code")
+                                                                    .DataSource(dataSource => dataSource
+                                                                         .Ajax()
+                                                                         .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=Majors")))
+                                                                    )
+                                                                    .SelectedIndex(-1)
+                                                                    .Enable(isCanEdit)
+                                                                    .Deferred()
+                                    )*@
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Graduation Period"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.Period)
+                                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Period", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                            .Format("dd/MM/yyyy")
+                                                            .Enable(isCanEdit)
+                                                            .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["GPA"]</label>
+                                    @(Html.Kendo().NumericTextBoxFor(x => x.Object.GPA)
+                                                  .HtmlAttributes(new { @class = "form-control", maxlength = "4" })
+                                                  .Spinners(true)
+                                                  .Placeholder(Localizer["Input GPA (Example: 4.00)"].Value)
+                                                  .Enable(isCanEdit)
+                                                  .Max(4)
+                                                  .Format("#.00")
+                                                  .Round(false)
+                                                  .Step(0.01m)
+                                                  .Decimals(2)
+                                                  .Deferred()
+                                    )
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Supporting Attachment"]</legend>
+                                <div class="form-group">
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Certificate"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.DiplomaPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "DiplomaPath" })
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    <br />
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value
+                               }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

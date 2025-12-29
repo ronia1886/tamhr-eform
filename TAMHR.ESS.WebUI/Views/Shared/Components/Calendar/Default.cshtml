@@ -1,0 +1,144 @@
+﻿@model IEnumerable<TAMHR.ESS.Infrastructure.ViewModels.EventsCalendarViewModel>
+@{
+    var editMode = (bool)ViewBag.EditMode;
+    var monthNames = System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.Where(x => !string.IsNullOrEmpty(x)).ToArray();
+    var dayNames = new[] { "Mo", "Tu", "We", "Th", "Fr", "Sa", "Su" };
+    var excludeShift = new[] { "1NS8", "1NJ8" };
+    var length = dayNames.Length;
+    var year = (int)ViewBag.Period;
+    var events = Model.Where(x => x.Events.Any(y => !string.IsNullOrEmpty(y.Description))).OrderBy(x => x.MonthIndex);
+    var eventDates = events.SelectMany(x => x.GetEventDates());
+    var dates = Model.SelectMany(x => x.Events).ToDictionary(x => x.StartDate);
+    var shifts = (IEnumerable<TAMHR.ESS.Domain.DailyWorkSchedule>)ViewBag.Shifts;
+    var colors = new Dictionary<string, string>();
+
+    if (shifts != null)
+    {
+        colors = shifts.ToDictionary(x => x.ShiftCode, x => x.ColorClass);
+    }
+}
+<h3 class="text-center">@year</h3>
+<div class="calendar">
+    <div class="months-container row">
+        @for (var i = 0; i < monthNames.Length; i++)
+        {
+            var day = new DateTime(year, i + 1, 1);
+            int dayIndex = (int)day.DayOfWeek - 1;
+            dayIndex = dayIndex < 0 ? ((int)DayOfWeek.Saturday) : dayIndex;
+            var month = monthNames[i];
+            var days = DateTime.DaysInMonth(year, i + 1);
+            var counter = 0;
+            var dimension = length * ((days + dayIndex + 1) / (length - 1));
+            var activeDays = eventDates.Where(x => x.Month == i + 1).Select(x => x.Day);
+            <div class="month-container col">
+                <table class="month">
+                    <thead>
+                        <tr>
+                            <th class="month-title" colspan="@dayNames.Length">@Localizer[month]</th>
+                        </tr>
+                        <tr>
+                            @foreach (var dayName in dayNames)
+                            {
+                                <th class="day-header">@Localizer[dayName]</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var j = 0; j < dimension; j++)
+                        {
+                            @if (j % 7 == 0)
+                            {
+                                @:</tr>
+                            }
+                            @if (j % 7 == 0 || j == 0)
+                            {
+                                @:<tr>
+                            }
+
+                            @if (j < dayIndex)
+                            {
+                                <td class="day old"></td>
+                            }
+                            else if (counter >= days)
+                            {
+                                <td class="day new"></td>
+                            }
+                            else
+                            {
+                                ++counter;
+                                var date = new DateTime(year, i + 1, counter);
+                                <td class="day@(activeDays.Contains(counter) ? " active" : string.Empty)">
+                                    @if (editMode)
+                                    {
+                                        <a class="d-block day-content" data-trigger="modal" data-modal="events-calendar-modal" data-modal-title="Create Event Calendar" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-date="@date.ToString("MM/dd/yyyy")" data-parameters-handler="eventscalendar">@counter</a>
+                                    }
+                                    else
+                                    {
+                                        var shiftCode = dates.ContainsKey(date) ? dates[date].ShiftCode : string.Empty;
+                                        var fontColor = colors.ContainsKey(shiftCode) ? colors[shiftCode] : "#000000";
+                                        <div class="day-content" style="color: @fontColor;">
+                                            @counter
+                                        </div>
+                                    }
+                                </td>
+                            }
+                        }
+                </tbody>
+            </table>
+        </div>
+    }
+    </div>
+</div>
+@if (!editMode)
+{
+    <hr />
+    <div class="row">
+        <div class="col">
+            <h3 class="font-medium-1 bold">Daily Working Schedule</h3>
+            <ol>
+                @foreach (var shift in shifts)
+                {
+                    if (!excludeShift.Contains(shift.ShiftCode))
+                    {
+                        var fontColor = colors.ContainsKey(shift.ShiftCode) ? colors[shift.ShiftCode] : "#000000";
+                        <li style="color: @fontColor;">@shift.ShiftName: @shift.NormalTimeINText - @shift.NormalTimeOutText</li>
+                    }
+                    else
+                    {
+                        var fontColor = colors.ContainsKey(shift.ShiftCode) ? colors[shift.ShiftCode] : "#000000";
+                        <li style="color: @fontColor;">@shift.ShiftName: - </li>
+                    }
+
+                }
+            </ol>
+        </div>
+    </div>
+    <hr class="mt-1" />
+    <div class="row">
+        @foreach (var eventsCalendar in events)
+        {
+            var eventDescriptions = eventsCalendar.EventWithDescriptions;
+            <div class="col-md-4 col-12 mb-3">
+                <h3 class="font-medium-1 bold">@Localizer[monthNames[eventsCalendar.MonthIndex]]</h3>
+                <div class="description">
+                    @foreach (var eventItem in eventDescriptions)
+                    {
+                        if (eventItem.StartDate == eventItem.EndDate)
+                        {
+                            <span>@eventItem.StartDate.ToString("dd"): @eventItem.Description</span>
+                        }
+                        else if (eventItem.StartDate.Month != eventItem.EndDate.Month)
+                        {
+                            <span>@eventItem.StartDate.ToString("dd") - @eventItem.EndDate.ToString("dd MMM"): @eventItem.Description</span>
+                        }
+                        else
+                        {
+                            <span>@eventItem.StartDate.ToString("dd") - @eventItem.EndDate.ToString("dd"): @eventItem.Description</span>
+                        }
+                        @:<br />
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,107 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = null;
+    var profileData = ViewData["ProfileData"] as PersonalDataAttributeStroredEntity;
+    var personalData = (ViewData["PersonalData"] as IEnumerable<EmployeeeOrganizationObjectStoredEntity>).FirstOrDefault();
+    var familyMembers = ViewData["FamilyMember"] as IEnumerable<PersonalDataFamilyMemberStoredEntity>;
+    var employeeLeave = ViewData["EmployeeLeave"] as EmployeeLeave;
+    var benefitClaimHistories = ViewData["BenefitClaimHistories"] as IEnumerable<HistoryClaimStoreEntity>;
+    var childCount = 1;
+}
+<div class="row-fluid">
+    <div class="col-sm-12">
+        <div class="row">
+            <div class="col-sm-3 text-center d-flex align-items-center">
+                <img alt="Default Profile Picture" class="rounded center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(profileData?.NoReg)">
+            </div>
+            <div class="col-sm-9">
+                <table class="p">
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>No Reg</th>
+                        <td style='border-width: 0 0 0 0px;'>@profileData?.NoReg</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Nama</th>
+                        <td style='border-width: 0 0 0 0px;'>@profileData?.Name</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Class</th>
+                        <td style='border-width: 0 0 0 0px;'>@personalData?.Kelas</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Entry Date</th>
+                        <td style='border-width: 0 0 0 0px;'>@personalData?.EntryDate.ToString("dd/MM/yyyy")</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Address</th>
+                        <td style='border-width: 0 0 0 0px;'>@profileData?.Address</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Annual Leave</th>
+                        <td style='border-width: 0 0 0 0px;'>@employeeLeave.AnnualLeave</td>
+                    </tr>
+                    <tr>
+                        <th class='font-weight-bold' style='width: 175px;border: none;'>Long Leave</th>
+                        <td style='border-width: 0 0 0 0px;'>@employeeLeave.LongLeave</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<hr />
+<div class="row">
+    <div class="col-12">
+        @if (familyMembers.Count() == 0)
+        {
+            <h6 class="text-center">Family Members not Registered</h6>
+        }
+        else
+        {
+            <h6>Family Members</h6>
+            <ol>
+                @foreach (var family in familyMembers)
+                {
+                    <li>
+                        @family.Name (@if (family.FamilyTypeCode == "suamiistri" && family.GenderCode == "Perempuan")
+                        {
+                            <label>Istri</label>
+                        }
+                        else if (family.FamilyTypeCode == "suamiistri" && family.GenderCode == "Laki - Laki")
+                        {
+                            <label>Suami</label>
+                        }
+                        else
+                        {
+                            if (family.FamilyTypeCode == "Orang Tua")
+                            {
+                                <label>@(family.GenderCode == "Laki - Laki" ? "Ayah" : "Ibu")</label>
+                            }
+                            else if (family.FamilyTypeCode == "Anak Kandung" || family.FamilyTypeCode == "Anak Angkat")
+                            {
+                                <label>Anak ke @(childCount++) @family.GenderCode</label>
+                            }
+                            else
+                            {
+                                <label>@family.FamilyTypeCode @family.GenderCode</label>
+                            }
+                        })
+                        lahir di @(family.BirthPlace == "-" ? "tempat yang tidak diketahui" : family.BirthPlace), @family.BirthDate?.ToString("d MMMM yyyy")
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+</div>
+<hr class="mt-0" />
+<div class="row">
+    <div class="col-md-12">
+        <h6>@Localizer["Benefit Claim Histories"]</h6>
+        <ol>
+            @foreach (var benefitClaim in benefitClaimHistories)
+            {
+                <li>@benefitClaim.AllowanceType - @benefitClaim.monthActivity, @benefitClaim.yearActivity (@("Rp" + benefitClaim.amount.ToString("N0")))</li>
+            }
+        </ol>
+    </div>
+</div>

@@ -1,0 +1,287 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var NoReg = ViewBag.NoReg;
+    var data = (IEnumerable<TreeViewItemModel>)ViewBag.treeData;
+
+}
+@{
+    ScriptManager.RegisterReferences(new string[] { "treeview", "combobox", "grid", "datepicker" });
+    int periodYear = DateTime.Today.Month != 12 ? DateTime.Today.AddYears(1).Year : DateTime.Today.Year;
+
+    string isHidden = "hidden";
+    if (Convert.ToBoolean(User.GetClaim("Chief")))
+    {
+        isHidden = "";
+    }
+
+}
+<script type="text/javascript">
+    var resolveEditUrl = function (data) {
+        return app.resolveUrl("~/" + data + "/edit/");
+    };
+</script>
+@section scripts{ 
+    <script type="text/javascript">
+        function getEmployeeParameters() {
+                return {
+                    noreg: "@User.GetClaim("NoReg")",
+                    postcode: "@User.GetClaim("PostCode")"
+                };
+            }
+
+        function fetchHierarchy(noreg,postcode) {
+            var $loader = $(".hierarchy-widget").find(".loader");
+
+            $loader.load("@Url.Content("~/TimeManagement/AnnualPlanning/GetHierarchiest")", { noreg,postcode });
+        }
+
+        $(function () {
+            var parameters = getEmployeeParameters(),
+                noreg = parameters.noreg,
+                postcode = parameters.postcode
+            fetchHierarchy(noreg,postcode);
+        });
+    </script>
+}
+
+<script>
+    function getFormTypeData(){
+        var x = {
+                    isChief: ("@User.GetClaim("Chief")"=='True'?1:0)
+                };
+        console.log(x);
+        return x;
+    }
+</script>
+        
+<div class="row">
+    @*<div class="col-md-3">
+        <div class="demo-section k-content">
+            <div class="profile-sidebar column sortable">
+                <div class="portlet light profile-light">
+                    <div class="portlet-body">
+                        <div class="profpic">
+                            <div class="profpic-wrapper">
+                                <div class="profpic-avatar">
+                                    <img src="@ConfigService.ResolveAvatar(User.GetClaim("NoReg"))" style="width: 2.8125rem;height: 2.8125rem;border-radius: 50%;">
+                                </div>
+                                <div class="profpic-body">
+                                    <span class="profpic-title">@User.GetClaim("Name")</span>
+                                    <span class="profpic-description">@User.GetClaim("PostName")</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="portlet light bordered hierarchy-widget portlet-sortable">
+                    <div class="portlet-title">
+                        <div class="caption caption-md">
+                            <i class="icon-globe theme-font hide"></i>
+                            <span class="caption-subject font-blue-madison bold uppercase">Hierarchy</span>
+                        </div>
+                        <div class="tools">
+                            <a class="collapse"></a>
+                        </div>
+                    </div>
+                    <div class="portlet-body" style="margin: 0; padding: 0;">
+                        @(
+                            Html.Kendo().TreeView()
+                                .Name("EmployeeHierarchy2")
+                                .BindTo(data)
+                                .Template("<div style='font-size: 12px;'><i class='fa fa-user font-blue'></i> #=item.text#</div>")
+                                .Deferred()
+                        )
+                    </div>
+                </div>
+                <div class="hidden-xs hidden-sm portlet portlet-sortable-empty"></div>
+            </div>
+        </div>
+    </div>*@
+
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Annual Planning"]</h4>
+            </div>
+
+            <div class="card-body">
+                @* Search Form *@
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-6">
+                            @(Html.Kendo()
+                                .ComboBox()
+                                .Name("FormTypeFilter")
+                                .DataValueField("FormKey")
+                                .DataTextField("Title")
+                                .HtmlAttributes(new { @style = "width: 100%", placeholder= Localizer["Please Select Type"].Value })
+                                .DataSource(d => d
+                                    .Ajax()
+                                    .Read(r => r.Url(Url.Content("~/api/annual-planning/get-form-type"))
+                                    .Data(@<text>
+                                    function() {
+                                        return {
+                                            isChief : '@User.GetClaim("Chief")'
+                                        }
+                                    }</text>)
+                                    )
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-6">
+                            @(Html.Kendo()
+                                .ComboBox()
+                                .Name("PeriodFilter")
+                                .HtmlAttributes(new { @style = "width: 100%", placeholder = Localizer["Please Select Period"].Value })
+                                .DataSource(d => d
+                                    .Ajax()
+                                    .Read(r => r.Url(Url.Content("~/api/annual-planning/get-year-period")))
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="row">
+                        <div class="col-md-12 text-right">
+                            <button class="btn btn-sm btn-primary" id="btnSearch" type="button"><i class="fa fa-search"></i>@Localizer["Search"]</button>
+                        </div>
+                    </div>
+                </div>
+                @* End of Search Form *@
+
+                @* Data Grid *@
+                <div class="row">
+                    <div class="col-md-12">
+                        <ul class="nav nav-tabs navBarMain" role="tablist" id="annualPlanningTabs">
+                            <li class="nav-item ml-2"><a class="nav-link active show" data-toggle="tab" role="tab" aria-selected="true" href="#personal">Personal</a></li>
+                            <li class="nav-item @isHidden"><a class="nav-link" data-toggle="tab" role="tab" aria-selected="false" href="#subordinate">Subordinate</a></li>
+                        </ul>
+                        <div class="tab-content" style="padding-top: 10px;">
+                            <div id="personal" class="tab-pane fade in active show">
+                                @(Html.Kendo()
+                                    .Grid<PersonalAnnualPlanningDashboardView>()
+                                    .Name("PersonalAnnualPlanningGrid")
+                                    .Columns(c => {
+                                        c.Bound(o => o.YearPeriod).Title(Localizer["Period"].Value).Width(120).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.DocumentNumber).Title(Localizer["Personal Propose List"].Value).HeaderHtmlAttributes(new { @class="text-center" })
+                                        .ClientTemplate("<div class='row'>" +
+                                            "<div class='col-md-3' style='font-size: xxx-large;'><i class='#if(DocumentStatus==\"Completed\"){#approval-icon-completed#}else if(DocumentStatus==\"Draft\"){#approval-icon-draft#}else{#approval-icon-inprogress#}#'></i></div>" +
+                                            "<div class='col-md-9' style='font-weight: bold; padding-top: 15px;'>" +
+                                            "<div class='row'><div class='col-md-12'>#=DocumentNumber#</div></div>" +
+                                            "<div class='row'><div class='col-md-12'>#=kendo.toString(ModifiedOn, 'dd MMM yyyy-HH:mm:ss')#</div></div>" +
+                                            "</div>" +
+                                            "</div>")
+                                            .Width(300)
+                                            .HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.Title).Title(Localizer["Plan"].Value).Width(200).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.DocumentStatus).Title(Localizer["Status"].Value).Width(150).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.Id).Title(Localizer["Action"].Value).ClientTemplate("<a style='color: white;' target='_blank' href='#=app.resolveUrl('~/timemanagement/form/view?formKey=')##=FormKey#&docid=#=Id#' class='btn btn-primary'><i class='fa fa-eye'></i></a>" +
+                                            "#if((DocumentStatusCode == 'completed' || DocumentStatusCode == 'revised') && YearPeriod == " + DateTime.Today.Year.ToString() +") { #" +
+                                            "<a href='#=resolveEditUrl(FormKey)##=Id#' target='_blank' class='btn btn-primary' style='color: white; margin-left: 5px;'><i class='fa fa-edit'></i></a>" +
+                                            "#}#" +
+                                            "<a class='btn btn-primary' target='_blank' href='#=app.resolveUrl('~/timemanagement/form/pdf?formKey=')##=FormKey#&docId=#=Id#' style='color: white; margin-left: 5px;'><i class='fa fa-download'></i></a>")
+                                            .Width(200)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .HeaderHtmlAttributes(new { @class="text-center" });
+                                    })
+                                    .NoRecords(config => config.Template(@"<div class=""text-center p-1"">" + Localizer["No annual plan data available"].Value + "</div>"))
+                                    .DataSource(ds => ds
+                                        .Ajax()
+                                        .Read(
+                                            r => r.Url(Url.Content("~/api/annual-planning/get-personal-annual-planning")).Data(@<text>
+                                            function() {
+                                                var yearPeriodFilter = $("#PeriodFilter").data("kendoComboBox");
+                                                var formTypeFilter = $("#FormTypeFilter").data("kendoComboBox");
+                                                return {
+                                                    yearPeriod: yearPeriodFilter.value(),
+                                                    formKey: formTypeFilter.value()
+                                                }
+                                            }</text>)
+                                        )
+                                        .PageSize(10)
+                                        .Sort(s => {
+                                            s.Add("YearPeriod").Descending();
+                                            s.Add("ModifiedOn").Descending();
+                                        })
+                                    )
+                                    .Sortable(true)
+                                    .Scrollable(s => s.Enabled(true))
+                                    .Deferred()
+                                )
+                            </div>
+                            <div id="subordinate" class="tab-pane fade @isHidden">
+                                @(Html.Kendo()
+                                    .Grid<SubordinateAnnualPlanningDashboardView>()
+                                    .Name("SubordinateAnnualPlanningGrid")
+                                    .Columns(c => {
+                                        c.Bound(o => o.YearPeriod).Title("Period").Width(120).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.DocumentNumber).Title(Localizer["Subordinate Propose List"].Value)
+                                        .ClientTemplate("<div class='row'>" +
+                                            "<div class='col-md-3' style='font-size: xxx-large;'><i class='#if(DocumentStatus==\"Completed\"){#approval-icon-completed#}else if(DocumentStatus==\"Draft\"){#approval-icon-draft#}else{#approval-icon-inprogress#}#'></i></div>" +
+                                            "<div class='col-md-9' style='font-weight: bold; padding-top: 15px;'>" +
+                                            "<div class='row'><div class='col-md-12'>#=DocumentNumber#</div></div>" +
+                                            "<div class='row'><div class='col-md-12'>#=kendo.toString(ModifiedOn, 'dd MMM yyyy-HH:mm:ss')#</div></div>" +
+                                            "</div>" +
+                                            "</div>")
+                                            .Width(300)
+                                            .HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.Title).Title("Plans").Width(200).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.DocumentStatus).Title("Status").Width(150).HeaderHtmlAttributes(new { @class="text-center" });
+                                        c.Bound(o => o.Id).Title("Action").ClientTemplate("<a style='color: white;' target='_blank' href='#=app.resolveUrl('~/timemanagement/form/view?formKey=')##=FormKey#&docid=#=Id#' class='btn btn-primary'><i class='fa fa-eye'></i></a>" +
+                                            "#if(((DocumentStatusCode == 'completed' || DocumentStatusCode == 'revised') && FormKey != 'annual-leave-planning' && NoReg == '"+ NoReg +"') && YearPeriod == " + @periodYear.ToString() + ") { #" +
+                                            "<a href='#=resolveEditUrl(FormKey)##=Id#' target='_blank' class='btn btn-primary' style='color: white; margin-left: 5px;'><i class='fa fa-edit'></i></a>" +
+                                            "#}#" +
+                                            "<a class='btn btn-primary' target='_blank' href='#=app.resolveUrl('~/timemanagement/form/pdf?formKey=')##=FormKey#&docId=#=Id#' style='color: white; margin-left: 5px;'><i class='fa fa-download'></i></a>")
+                                            .Width(200)
+                                            .HtmlAttributes(new { @class = "text-center" })
+                                            .HeaderHtmlAttributes(new { @class="text-center" });
+                                    })
+                                    .NoRecords(config => config.Template(@"<div class=""text-center p-1"">" + Localizer["No annual plan data available"].Value + "</div>"))
+                                    .DataSource(ds => ds
+                                        .Ajax()
+                                        .Read(
+                                            r => r.Url(Url.Content("~/api/annual-planning/get-subordinate-annual-planning")).Data(@<text>
+                                            function() {
+                                                var yearPeriodFilter = $("#PeriodFilter").data("kendoComboBox");
+                                                var formTypeFilter = $("#FormTypeFilter").data("kendoComboBox");
+                                                return {
+                                                    yearPeriod: yearPeriodFilter.value(),
+                                                    formKey: formTypeFilter.value()
+                                                }
+                                            }</text>)
+                                        )
+                                        .PageSize(10)
+                                        .Sort(s => {
+                                            s.Add("YearPeriod").Descending();
+                                            s.Add("ModifiedOn").Descending();
+                                        })
+                                    )
+                                    .Sortable(true)
+                                    .Scrollable(s => s.Enabled(true))
+                                    .Deferred()
+                                )
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @* End of Data Grid *@
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @*#treeview .k-sprite {
+        background-image: url("@Url.Content("~/Content/web/treeview/coloricons-sprite.png")");
+    }*@
+
+    .rootfolder { background-position: 0 0; }
+    .folder { background-position: 0 -16px; }
+    .pdf { background-position: 0 -32px; }
+    .html { background-position: 0 -48px; }
+    .image { background-position: 0 -64px; }
+</style>

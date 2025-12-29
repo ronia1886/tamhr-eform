@@ -1,0 +1,334 @@
+﻿@model DocumentRequestDetailViewModel<VaccineViewModel>
+@{ 
+    var familyMembers = ViewData["FamilyMember"] as IEnumerable<TAMHR.ESS.Domain.PersonalDataFamilyMemberStoredEntity>;
+    var childCount = 1;
+    DocumentRequestDetailViewModel<VaccineViewModel> vaccineModel = new DocumentRequestDetailViewModel<VaccineViewModel>();
+    List<VaccineDetailViewModel> vaccineDetailModels = new List<VaccineDetailViewModel>();
+}
+@inject FormService FormService
+@inject UserService UserService
+@inject OthersService OthersService
+@inject ProfileService ProfileService 
+@inject PersonalDataQueryService PersonalDataQueryService
+@{
+    // Hide default approval history and conversation panel.
+    ViewBag.ShowApprovalAndConversation = false;
+
+    // Hide default action button.
+    ViewBag.ShowActionButton = false;
+
+    // Determine whether current document status is completed or not.
+    var isCompleted = Model.DocumentStatusCode == "completed";
+
+    // Determine whether current user session can edit this document or not.
+    var canEdit = AclHelper.CanEdit();
+
+    // Determine whether current document is new or not.
+    var isNew = Model.Id == Guid.Empty;
+
+    // Get and set document requester (if new then get from current user session noreg).
+    var noreg = isNew ? User.GetClaim("NoReg") : Model.Requester;
+
+    // Get and set current user data by given noreg.
+    var user = UserService.GetByNoReg(noreg);
+
+    // Get and set employee name.
+    var employeeName = user?.Name;
+
+    // Get and set employee display name.
+    var displayName = string.Format("{0} - {1}", employeeName, noreg);
+
+    // Get and set list of form questions by form key.
+    var formQuestions = FormService.GetFormQuestions(Model.FormKey);
+
+    // Get and set list of root form questions.
+    var roots = formQuestions.Where(x => x.ParentFormQuestionId == null);
+
+    // Get and set list of form answers from current view model.
+    var answers = Model.Object.FormAnswers.ToDictionary(x => x.FormQuestionId);
+
+    // Get and set latest common attribute data by noreg.
+    var commonAttribute = PersonalDataQueryService.GetPersonalDataCommonAttribute(noreg);
+
+    // If current document is new then filled with default value.
+    if (isNew)
+    {
+        // Get and set latest submitted health declaration document by noreg.
+        //var latestSubmission = OthersService.GetLatestSubmittedVaccine(noreg);
+
+        // Get and set latest submitted form answer view models by noreg.
+        var latestSubmittedViewModel = OthersService.GetLatestFormAnswerViewModels(noreg);
+    }
+
+    var channelId = noreg + "_" + Model.FormKey;
+    familyMembers = ProfileService.GetFamilyMembers(noreg).ToList();
+}
+@section styles {
+    <style type="text/css">
+        @@media (max-width: 736px) {
+            .form-check {
+                padding-left: 1.55rem !important;
+            }
+
+            .form-check-input {
+                margin-top: 0.15rem !important;
+                margin-left: -1.55rem !important;
+            }
+        }
+
+        .card.tracking-approval .actions > div {
+            border-top: 1px solid #ddd;
+            display: block !important;
+            margin-top: 1.5rem !important;
+            padding-top: 0.75rem !important;
+            padding-bottom: 1.5rem !important;
+            float: none !important;
+        }
+    </style>
+}
+@section formScripts {
+    <script type="text/javascript">
+        app.set("url", "~/others/form/view?formKey=vaccine&docid=@Model.DocumentApprovalId");
+        app.set("channelId", "@channelId");
+    </script>
+    <script type="text/javascript" src="~/js/pages/common-conversation.js" asp-append-version="true"></script>
+}
+@section scripts {
+    <script type="text/javascript">
+        (function ($, app) {
+            let canEdit = @canEdit.ToString().ToLower(),
+                $bodyTemperatureEl = $("input[name='Object.BodyTemperature']"),
+                $bodyTemperatureOtherEl = $("input[name='Object.BodyTemperatureOtherValue']");
+
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                onOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
+
+            app.registerHandler("dataInterceptor", function (d) {
+                let checkedRadios = $(".question-wrapper input[type='radio']:checked");
+
+                d.Object.FormAnswers = $.map(checkedRadios, function (item) {
+                    return {
+                        FormQuestionId: item.getAttribute("data-uid"),
+                        Value: item.value
+                    };
+                });
+
+                return d;
+            });
+
+            if (!canEdit) {
+                $("input[type='radio']").prop("disabled", true);
+            }
+
+            $bodyTemperatureEl.on("change", function () {
+                let $this = $(this),
+                    value = $this.val();
+
+                $bodyTemperatureOtherEl.prop("readonly", value !== "others");
+
+                if (value !== "others") {
+                    $bodyTemperatureOtherEl.val("");
+                }
+            });
+
+            $bodyTemperatureOtherEl.trigger("change");
+
+            $("main.page-content-wrapper").css("overflow", "inherit");
+        })(jQuery, app);
+    </script>
+}
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-4">
+            <div class="p-4" style="height: 100%; background: url('@Url.Content("~/img/assets/vaccine.jpg")') 0 0 no-repeat; background-size: cover;">
+                <div class="section-heading d-block d-md-none">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Vaccine Form"]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["Juklak pengisian form deklarasi kesehatan karyawan."]
+                    </h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8 col-12">
+            <div class="card-body">
+                <div class="section-heading mb-2 d-none d-md-block">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Vaccine Form for {0}", displayName]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["Juklak pengisian form vaccine COVID-19."]
+                    </h5>
+                </div>
+                <div class="mb-2">@Html.Raw(Localizer["Vaccine.PlaceholderDescription"].Value)</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="row no-gutters">
+        <div class="col-md-4">
+            <div class="section-heading p-4" style="background-color: #eff2f7; height: 100%; position: relative;">
+                <div class="position-md-sticky">
+                    <p class="text-uppercase font-weight-bold mb-0">@Localizer["Self Health Assessment"]</p>
+                    <h5 class="text-header m-0">
+                        @Localizer["To ensure health and safety at work, please be <b>honest</b> in answering these questions."]
+                    </h5>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-toggle="tab" href="#family-0">Karyawan</a>
+                    </li>
+                    @if (familyMembers.Count() > 0)
+                    {
+                        int i = 1;
+                        foreach (var family in familyMembers)
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link" data-toggle="tab" href="#family-@i">
+                                    @if (family.FamilyTypeCode == "Pasangan" && family.GenderCode == "Perempuan")
+                                    {
+                                        <label>Istri</label>
+                                    }
+                                    else if (family.FamilyTypeCode == "Pasangan" && family.GenderCode == "Laki - Laki")
+                                    {
+                                        <label>Suami</label>
+                                    }
+                                    else
+                                    {
+                                        if (family.FamilyTypeCode == "Orang Tua")
+                                        {
+                                            <label>@(family.GenderCode == "Laki - Laki" ? "Ayah" : "Ibu")</label>
+                                        }
+                                        else if (family.FamilyTypeCode == "Anak Kandung" || family.FamilyTypeCode == "Anak Angkat")
+                                        {
+                                            <label>Anak @(childCount++) </label>
+                                        }
+                                        else
+                                        {
+                                            <label>@family.FamilyTypeCode </label>
+                                        }
+                                    }
+                                </a>
+                            </li>
+                            i++;
+                        }
+                    }
+                </ul>
+                <!-- Tab panes -->
+                <div class="tab-content mt-3">
+                    @{
+                        vaccineDetailModels.Add(new VaccineDetailViewModel
+                        {
+                            FamilyStatus = "employee",
+                            Name = commonAttribute.Name,
+                            BirthDate = commonAttribute.BirthDate,
+                            Age = DateTime.Now.Year - commonAttribute.BirthDate.Year,
+                            PhoneNumber = commonAttribute.PhoneNumber,
+                            Address = commonAttribute.Address,
+                            Domicile = commonAttribute.Address,
+                            FormKey = Model.FormKey
+                        });
+
+                        if (familyMembers.Count() > 0)
+                        {
+                            int i = 1;
+                            foreach (var family in familyMembers)
+                            {
+                                vaccineDetailModels.Add(new VaccineDetailViewModel
+                                {
+                                    FamilyStatus = family.FamilyTypeCode.Replace(" ", "") + i.ToString(),
+                                    Name = family.Name,
+                                    BirthDate = family.BirthDate,
+                                    Age = DateTime.Now.Year - family.BirthDate.Year,
+                                    PhoneNumber = family.PhoneNumber,
+                                    Address = commonAttribute.Address,
+                                    Domicile = commonAttribute.Address,
+                                    FormKey = Model.FormKey
+                                });
+
+                                i++;
+                            }
+                        }
+                    }
+                    @await Html.PartialAsync("_VaccineDetail", vaccineDetailModels)
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section pageFooter
+{
+    @if (Model.DocumentStatusCode == "completed")
+    {
+        if (AclHelper.HasPermission("Core.ViewAllVaccineReport"))
+        {
+            <div class="card tracking-approval">
+                <div class="card-header bordered">
+                    <h4 class="card-title">@Localizer["Tracking Approval"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body pb-0">
+                    @(await Component.InvokeAsync<TrackingApproval>(new { id = Model.DocumentApprovalId }))
+                </div>
+            </div>
+        }
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Conversation"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                @(await Component.InvokeAsync<CommonConversation>(new { id = channelId }))
+                <div style="padding: 0 12px; margin-top: -15px; padding-bottom: 1rem;">
+                    <span class="small">@Localizer["Conversation.Placeholder1"]</span>
+                </div>
+            </div>
+        </div>
+    }
+}
+@if (AclHelper.CanSubmit())
+{
+    <div class="row mb-5">
+        <label class="col-6 d-flex align-items-center">@Localizer["Send Update?"]</label>
+        <div class="col-6">
+            <div class="float-right">
+                <a class="btn btn-primary" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false">
+                    <i class="ft-check mr-1"></i> @Localizer["Submit"]
+                </a>
+            </div>
+        </div>
+    </div>
+}

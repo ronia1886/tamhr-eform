@@ -1,0 +1,333 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as ShiftMealAllowanceViewModel;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string DepartmentHead = "";
+    string HRDivisionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRDivisionHead")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+
+
+    //get Bulan
+    string bulan = "";
+    if (obj.EndPeriod == "1")
+    {
+        bulan = "Januari";
+    }
+    else if (obj.EndPeriod == "2")
+    {
+        bulan = "Februari";
+    }
+    else if (obj.EndPeriod == "3")
+    {
+        bulan = "Maret";
+    }
+    else if (obj.EndPeriod == "4")
+    {
+        bulan = "April";
+    }
+    else if (obj.EndPeriod == "5")
+    {
+        bulan = "Mei";
+    }
+    else if (obj.EndPeriod == "6")
+    {
+        bulan = "Juni";
+    }
+    else if (obj.EndPeriod == "7")
+    {
+        bulan = "Juli";
+    }
+    else if (obj.EndPeriod == "8")
+    {
+        bulan = "Agustus";
+    }
+    else if (obj.EndPeriod == "9")
+    {
+        bulan = "September";
+    }
+    else if (obj.EndPeriod == "10")
+    {
+        bulan = "Oktober";
+    }
+    else if (obj.EndPeriod == "11")
+    {
+        bulan = "November";
+    }
+    else if (obj.EndPeriod == "12")
+    {
+        bulan = "Desember";
+    }
+}
+
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:50px;" />
+
+<h3 style="text-align:center ;font-family:'Segoe UI';">PERMOHONAN PENGGANTIAN UANG MAKAN SHIFT</h3>
+
+<table class="tableizer-table" border="0" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse; font-family:'Segoe UI'; font-size:12px;">
+    <colgroup>
+        <col style="width: 15%">
+        <col style="width: 35%">
+        <col style="width: 10%">
+        <col style="width: 15%">
+        <col style="width: 20%">
+    </colgroup>
+
+    <tr>
+        <td height="20px">
+        <td>
+    </tr>
+    <tr>
+        <td valign="top">DIVISI<label style="float:right">:</label></td>
+        <td>&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        <td></td>
+        <td>PERIODE<label style="float:right">:</label></td>
+        <td>&nbsp; @bulan - @obj.StartPeriod</td>
+    </tr>
+    <tr>
+        <td>DEPARTMENT<label style="float:right">:</label></td>
+        <td>&nbsp; @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        <td></td>
+        <td>SHIFT<label style="float:right">:</label></td>
+        <td>&nbsp; @obj.ShiftType</td>
+    </tr>
+    <tr>
+        <td height="50px">
+        <td>
+    </tr>
+</table>
+
+<table class="tableizer-table" border="1" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse; font-family:'Segoe UI'; font-size:12px;">
+    <thead>
+        <tr class="tableizer-firstrow">
+            <th>NO</th>
+            <th>NOREG</th>
+            <th>NAMA</th>
+            <th>TANGGAL</th>
+            <th>TANDA TANGAN</th>
+            <th>KETERANGAN</th>
+        </tr>
+    </thead>
+    <tbody>
+        @{ var index = 1;}
+        @foreach (var item in obj.Summaries.Where(s => s.Employees != null))
+        {
+            foreach (var emp in item.Employees)
+            {
+                string tanggal = "";
+                <tr>
+                    <td align="center">@index</td>
+                    <td>&nbsp;@emp.NoReg</td>
+                    <td>&nbsp;@emp.Name</td>
+                    @foreach (var date in obj.Summaries.Where(s => s.Employees != null))
+                    {
+                        @foreach (var noreg in date.Employees.Where(x => x.NoReg == emp.NoReg))
+                        {
+                            var gettanggal = @date.Date.Date.Day;
+                            if (string.IsNullOrEmpty(tanggal))
+                            {
+                                tanggal = gettanggal.ToString();
+                            }
+                            else
+                            {
+                                tanggal = tanggal.ToString() + "," + gettanggal.ToString();
+                            }
+
+                        }
+                    }
+                    <td>&nbsp; @tanggal</td>
+                    <td></td>
+                    <td></td>
+                </tr>
+                index++;
+            }
+            break;
+        }
+
+    </tbody>
+</table>
+<p>&nbsp;</p>
+
+<table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="0" cellpadding="0" cellspacing="0">
+    <colgroup>
+        <col style="width: 20%">
+        <col style="width: 20%">
+        <col style="width: 60%">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="0" cellpadding="0" cellspacing="0">
+                <colgroup>
+                    <col style="width: 30%">
+                    <col style="width: 70%">
+                </colgroup>
+                <tr>
+                    <td>............................................</td>
+                    <td>...................................................</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="1" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">HR ADMIN</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center">@Approver</td>
+                </tr>
+            </table>
+        </td>
+        <td></td>
+        <td>
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="1" cellpadding="0" cellspacing="0">
+                <colgroup>
+                    <col style="width: 30%">
+                    <col style="width: 30%">
+                    <col style="width: 30%">
+                </colgroup>
+                <tr>
+                    <td align="center">DIVISION HEAD</td>
+                    <td align="center">DEPARTMENT HEAD</td>
+                    <td align="center">ADMINISTRATION</td>
+                </tr>
+                <tr>
+                    <td align="center" height="100px"></td>
+                    <td align="center" height="100px"></td>
+                    <td align="center" height="100px"></td>
+                </tr>
+                <tr>
+                    <td align="center" height="25px">@HRDivisionHead</td>
+                    <td align="center" height="25px">@DepartmentHead</td>
+                    <td align="center" height="25px"></td>
+                </tr>
+                <tr></tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+@*<table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="0">
+    
+    <tr>
+        <td style="width:20%">
+            <table border="1" style="font-family:'Segoe UI' ; font-size:12px ;" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">HR ADMIN</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center">@Approver</td>
+                </tr>
+            </table>
+        </td>
+        <td style="width:20%"></td>
+        
+        <td style="width:20%">
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="1" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">DIVISION HEAD</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center">@HRDivisionHead</td>
+                </tr>
+            </table>
+        </td>
+        <td style="width:20%">
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="1" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">DEPARTMENT HEAD</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center">@DepartmentHead</td>
+                </tr>
+            </table>
+        </td>
+
+        <td style="width:20%">
+            <table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="1" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">ADMINISTRATOR</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center"></td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>*@
+
+@*<table style="width:100%; font-family:'Segoe UI'; font-size:12px;margin:0px; font-size:12px" border="0">
+    <tr>
+        <td align="center" style="width:25%" height="50px"></td>
+        <td align="center" style="width:50%" height="50px"></td>
+        <td align="center" style="width:25%" height="50px"></td>
+    </tr>
+    <tr>
+        <td align="center" style="width:25%" valign="bottom">@org.Name</td>
+        <td align="center" style="width:50%">&nbsp;</td>
+        <td align="center" style="width:25%" valign="bottom">@DepartmentHead</td>
+    </tr>
+    <tr>
+        <td align="center" style="width:25%" class="border-top">Pemohon</td>
+        <td align="center" style="width:50%">&nbsp;</td>
+        <td align="center" style="width:25%" class="border-top">Mengetahui Division Head</td>
+    </tr>
+    <tr>
+        <td align="center" style="width:25%" height="10px" colspan="3"></td>
+    </tr>
+    <tr>
+        <td colspan="3">Note : Coret yang tidak perlu.</td>
+    </tr>
+</table>*@

@@ -1,0 +1,2217 @@
+﻿@using Microsoft.AspNetCore.Localization
+@using Newtonsoft.Json
+@inject IScriptManager ScriptManager
+@inject TAMHR.ESS.Infrastructure.DomainServices.WeeklyWFHPlanningService WeeklyWFHPlanningService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "tooltip");
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+    var workPlaceData = (IEnumerable<DropDownListItem>)ViewBag.WorkPlaceData;
+
+    var currentUser = User.GetClaim("NoReg");
+    var aos = MdmService.GetActualOrganizationStructure(currentUser);
+    var now = DateTime.Now;
+
+    Config testerDateCat = ConfigService.GetConfig("Others.TesterDate");
+    if(testerDateCat != null && testerDateCat.ConfigText == "True")
+    {
+        now = DateTime.Parse(testerDateCat.ConfigValue);
+    }
+
+    int minWFOCount = 1;
+
+    Config minWFOCon = ConfigService.GetConfig("WeeklyWFHPlanning.MinWFOCount");
+    if(minWFOCon != null)
+    {
+        minWFOCount = Convert.ToInt32(minWFOCon.ConfigValue);
+    }
+
+    WFHGeneratePlanningDateWeekly pdw = WeeklyWFHPlanningService.GetWeeklyWFHPlanningByDate(now, 14, true);
+    var pdwJSON = JsonConvert.SerializeObject(pdw);
+
+    bool IsChief = User.GetClaim("Chief") == "True";
+
+    var languageConfig = "c=en-US|uic=en-US";
+    Context.Request.Cookies.TryGetValue(CookieRequestCultureProvider.DefaultCookieName, out languageConfig);
+
+    if(languageConfig == null)
+    {
+        languageConfig = "c=en-US|uic=en-US";
+    }
+
+    var language = languageConfig.Split("|")[1].Split("=")[1];
+    var profileAvatar = configService.GetConfig("Avatar.Url", true)?.ConfigValue;
+
+    var listMonth = new List<string> { Localizer["January"].Value, Localizer["February"].Value, Localizer["March"].Value, Localizer["April"].Value, Localizer["May"].Value, Localizer["June"].Value, Localizer["July"].Value, Localizer["August"].Value, Localizer["September"].Value, Localizer["October"].Value, Localizer["November"].Value, Localizer["December"].Value };
+    
+    var strTotalEmployee = Localizer["Total Employee"];
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/kendo/cultures/kendo.culture.id-ID.min.js"></script>
+    <script type="text/javascript" src="~/plugins/kendo/cultures/kendo.culture.en-US.min.js"></script>
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />    
+    <script>
+       var minWFOCount = '@minWFOCount';
+        var tempDate = JSON.parse('@Html.Raw(pdwJSON)');
+        tempDate.StartDate = new Date(tempDate.StartDate);
+        tempDate.EndDate = new Date(tempDate.EndDate);
+        kendo.culture('@language')
+
+        let events = [];
+
+        $(document).ready(function () {
+            // Helper function to format the text
+            function formatText(input) {
+                // Check if input is a valid string
+                if (typeof input === 'string' && input.includes('#')) {
+                    let parts = input.split('#');
+                    return parts.length > 1 ? parts[1] : input;
+                }
+                // If input is null, undefined, or not a string, return it as is
+                return input || '';
+            }
+
+            // Function to fetch data using $.ajax
+            function fetchData(url, data, callback) {
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    contentType: 'application/json',
+                    dataType: 'json',
+                    data: JSON.stringify(data),
+                    success: function (data) {
+                        // Process the data
+                        events = data.map(item => ({
+                            date: item.Date,
+                            name: formatText(item.Name),
+                            plan: item.Plan || 'Null',
+                            act: item.Actual || 'Null',
+                            division: formatText(item.Division),
+                            departement: formatText(item.Departement),
+                            section: formatText(item.Section),
+                            NoReg: item.NoReg,
+                            CreatedWith : item.CreatedWith
+                        }));
+
+                        // Debugging: log the events array to ensure data is correct
+                        //console.log('Fetched events:', events);
+
+                        // Call the callback function to update the calendar
+                        if (callback) callback();
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error fetching events:', status, error);
+                        console.error('Response text:', xhr.responseText);
+                        console.error('Response status:', xhr.status);
+                    }
+                });
+            }
+
+            let firstLoad = true;
+
+            $.getParameters = function () {
+
+                var parseMonthYear = function (dateString) {
+                    var cultures = ['en-US', 'id-ID']; // English and Indonesian cultures
+                    var date = null;
+
+                    for (var i = 0; i < cultures.length; i++) {
+                        date = kendo.parseDate(dateString, 'MMMM yyyy', cultures[i]);
+                        if (date) break;
+                    }
+
+                    return date;
+                };
+
+                var keyDateString = firstLoad ? kendo.toString(new Date(), 'dd MMMM yyyy') : $("#keyDate").data("kendoDatePicker").value();
+                var keyDateParsed = parseMonthYear(keyDateString);
+                var KeyDate = keyDateParsed ? kendo.toString(keyDateParsed, 'dd MMMM yyyy') : keyDateString;
+
+                var employeeName = firstLoad ? "" : ($("#employeeName").data("kendoAutoComplete").value() || "");
+                var directorateList = firstLoad ? "" : ($("#directorate").data("kendoDropDownTree").value() || []);
+                var divisionList = firstLoad ? "" : ($("#division").data("kendoDropDownTree").value() || []);
+                var departmentList = firstLoad ? "" : ($("#department").data("kendoDropDownTree").value() || []);
+                var sectionList = firstLoad ? "" : ($("#section").data("kendoDropDownTree").value() || []);
+                var lineList = firstLoad ? "" : ($("#line").data("kendoDropDownTree").value() || []);
+                var groupList = firstLoad ? "" : ($("#group").data("kendoDropDownTree").value() || []);
+                var actualWorkPlace = firstLoad ? "" : $('#actualworkplace').val() || "";
+                var planWorkPlace = firstLoad ? "" : $('#planworkplace').val() || "";
+                var Class = firstLoad ? "" : $("#class").val() || "";
+
+                return {
+                    KeyDate: KeyDate,
+                    employeeName: employeeName,
+                    Directorate: Array.isArray(directorateList) ? directorateList.join(',') : directorateList,
+                    Division: Array.isArray(divisionList) ? divisionList.join(',') : divisionList,
+                    Department: Array.isArray(departmentList) ? departmentList.join(',') : departmentList,
+                    Section: Array.isArray(sectionList) ? sectionList.join(',') : sectionList,
+                    Line: Array.isArray(lineList) ? lineList.join(',') : lineList,
+                    Group: Array.isArray(groupList) ? groupList.join(',') : groupList,
+                    Class: Class,
+                    planWorkPlace: planWorkPlace,
+                    actualWorkPlace: actualWorkPlace,
+                    NoReg: !firstLoad && $("#employeeName").data("kendoAutoComplete") ? $("#SelectedNoReg").val() : "",
+                    PostCode: !firstLoad && $("#employeeName").data("kendoAutoComplete") ? $("#SelectedPostCode").val() : "",
+                    FirstLoad: firstLoad
+                };
+
+            };
+
+
+            $.loadSummary = function () {
+
+                kendo.ui.progress($("#chart"), true);
+                kendo.ui.progress($("#secondChart"), true);
+                kendo.ui.progress($("#thirdChart"), true);
+
+                var param = $.getParameters();
+
+                $.ajax({
+                    type: "POST",
+                    url: '@Url.Content("~/api/weekly-wfh-report/charts-summary")',
+                    contentType: "application/json", // Updated to application/json
+                    data: JSON.stringify(param), // Send JSON data
+                    success: function (result) {
+
+                        var filterActual = {
+                            logic: "and",
+                            filters: []
+                        }
+                        filterActual.filters.push(
+                            {
+                                field: 'Type',
+                                operator: 'eq',
+                                value: 'Actual'
+                            }
+                        )
+
+                        filterActual.filters.push(
+                            {
+                                field: 'Code',
+                                operator: 'neq',
+                                value: 'Other'
+                            }
+                        )
+
+                        var planSource = new kendo.data.DataSource({
+                            data: result,
+                            filter: { field: "Type", operator: "eq", value: "Plan" }
+                        });
+                        var actualSource = new kendo.data.DataSource({
+                            data: result,
+                            filter: filterActual
+                        });
+                        var chart = $("#chart").data("kendoChart");
+                        chart.setDataSource(planSource);
+                        //2024-07-29|Roni|keterangan total employee di takeout (req by Inez)
+                        //document.getElementById('total-employee-text-chart').innerText = '@strTotalEmployee';
+                        
+                        // Calculate the total amount and display it
+                        // planSource.fetch(function () {
+                        //     var totalAmount = 0
+                        //     var filteredData = this.view(); // Get the filtered data
+                        //     for (var i = 0; i < filteredData.length; i++) {
+                        //         totalAmount += filteredData[i].Total; // Assuming the data objects have a 'value' field to tally
+                        //     }
+                        //     document.getElementById('total-amount-chart').innerText = totalAmount;
+                        // });
+
+                        
+
+                        var secondChart = $("#secondChart").data("kendoChart");
+                        secondChart.setDataSource(actualSource);
+                        //2024-07-29|Roni|keterangan total employee di takeout (req by Inez)
+                        //document.getElementById('total-employee-text-secondchart').innerText = "@strTotalEmployee";
+                        
+                        // Calculate the total amount and display it
+                        // actualSource.fetch(function () {
+                        //     var totalAmount = 0
+                        //     var filteredData = this.view(); // Get the filtered data
+                        //     for (var i = 0; i < filteredData.length; i++) {
+                        //         totalAmount += filteredData[i].Total; // Assuming the data objects have a 'value' field to tally
+                        //     }
+                        //     document.getElementById('total-amount-secondchart').innerText = totalAmount;
+                        // });
+
+                        var actualLocationSource = new kendo.data.DataSource({
+                            data: result,
+                            filter: { field: "Type", operator: "eq", value: "ActualLocation" }
+                        });
+                        const Max = Math.max.apply(Math, result.map(function (o) { return o.Total; }))
+                        var thirdChart = $("#thirdChart").data("kendoChart");
+                        if (Max <= 10) {
+                            thirdChart.options.valueAxis.majorUnit = 1;
+                        } else {
+                            thirdChart.options.valueAxis.majorUnit = undefined;
+                        }
+                        thirdChart.refresh();
+                        thirdChart.setDataSource(actualLocationSource);
+
+                         kendo.ui.progress($("#chart"), false);
+                         kendo.ui.progress($("#secondChart"), false);
+                         kendo.ui.progress($("#thirdChart"), false);
+
+                    }
+                });
+
+
+            }
+
+            $.onClear = function () {
+                var parseMonthYear = function (dateString) {
+                    var cultures = ['en-US', 'id-ID']; // English and Indonesian cultures
+                    var date = null;
+
+                    for (var i = 0; i < cultures.length; i++) {
+                        date = kendo.parseDate(dateString, 'dd MMMM yyyy', cultures[i]);
+                        if (date) break;
+                    }
+
+                    return date;
+                };
+
+                var keyDateString = kendo.toString(new Date(), 'dd MMMM yyyy');
+                var keyDateParsed = parseMonthYear(keyDateString);
+                var KeyDate = keyDateParsed ? kendo.toString(keyDateParsed, 'dd MMMM yyyy') : keyDateString;
+                 
+
+
+                var employeeName = $("#employeeName").data("kendoAutoComplete").value("");
+                var keyDate = $("#keyDate").data("kendoDatePicker").value(KeyDate);
+                var directorate = $("#directorate").data("kendoDropDownTree").value("");
+                var division = $("#division").data("kendoDropDownTree").value();
+                var department = $("#department").data("kendoDropDownTree").value("");
+                var section = $("#section").data("kendoDropDownTree").value("");
+                var line = $("#line").data("kendoDropDownTree").value("");
+                var group = $("#group").data("kendoDropDownTree").value("");
+                var classValue = $("#class").data("kendoComboBox").value("");
+                var planWorkPlace = $("#planworkplace").data("kendoComboBox").value("");
+                var actualWorkPlace = $("#actualworkplace").data("kendoComboBox").value("");
+            };
+
+            // Function to handle form submission
+            $.onSubmit = function () {
+
+                kendo.ui.progress($("#calendarBody"), true);
+                // Get values from Kendo UI widgets
+                var employeeName = $("#employeeName").data("kendoAutoComplete").value();
+                var keyDate = $("#keyDate").data("kendoDatePicker").value();
+                var directorate = $("#directorate").data("kendoDropDownTree").value();
+                var division = $("#division").data("kendoDropDownTree").value();
+                var department = $("#department").data("kendoDropDownTree").value();
+                var section = $("#section").data("kendoDropDownTree").value();
+                var line = $("#line").data("kendoDropDownTree").value();
+                var group = $("#group").data("kendoDropDownTree").value();
+                var classValue = $("#class").data("kendoComboBox").value();
+                var planWorkPlace = $("#planworkplace").data("kendoComboBox").value();
+                var actualWorkPlace = $("#actualworkplace").data("kendoComboBox").value();
+
+                // Create request payload
+                var filterModel = {};
+
+                // Add parameters to filterModel only if they are provided
+                if (keyDate) {
+                    filterModel.StartDate = kendo.toString(keyDate, "MMMM yyyy"); // Optional
+                }
+                if (employeeName) filterModel.EmployeeName = employeeName;
+                if (directorate) {
+                    filterModel.Directorate = Array.isArray(directorate) ? directorate.join(';') : directorate;
+                }
+                if (division) {
+                    filterModel.Division = Array.isArray(division) ? division.join(';') : division;
+                }
+                if (department) {
+                    filterModel.Department = Array.isArray(department) ? department.join(';') : department;
+                }
+                if (section) {
+                    filterModel.Section = Array.isArray(section) ? section.join(';') : section;
+                }
+                if (line) {
+                    filterModel.Line = Array.isArray(line) ? line.join(';') : line;
+                }
+                if (group) {
+                    filterModel.Group = Array.isArray(group) ? group.join(';') : group;
+                }
+                if (classValue) filterModel.ClassName = classValue;
+                if (planWorkPlace) filterModel.PlanWorkPlace = planWorkPlace;
+                if (actualWorkPlace) filterModel.ActualWorkPlace = actualWorkPlace;
+
+                // Debugging: log the filter model to ensure it is correct
+                //console.log('Filter model:', filterModel);
+
+                //Load Summary
+                firstLoad = false;
+                $.loadSummary();
+
+                // Send AJAX request with filters and update calendar based on filters
+                fetchData('@Url.Content("~/api/weekly-wfh-report/events")', filterModel, function () {
+                    if (filterModel.StartDate) {
+                        // Function to parse the date with both Indonesian and English formats
+                        function parseDate(dateString) {
+                            const monthsIndonesian = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+                            const monthsEnglish = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+                            let parts = dateString.split(' ');
+                            let monthName = parts[0];
+                            let year = parseInt(parts[1]);
+
+                            let month = monthsIndonesian.indexOf(monthName);
+                            if (month === -1) {
+                                month = monthsEnglish.indexOf(monthName);
+                            }
+
+                            return { month, year };
+                        }
+
+                        let { month, year } = parseDate(filterModel.StartDate);
+
+                        // Debugging: log month and year to ensure they are correct
+                        //console.log('Filtered Month:', month, 'Filtered Year:', year);
+
+                        // Generate calendar with filtered month and year
+                        generateCalendar(month, year);
+
+                    } else {
+                        // Handle cases where StartDate is not provided, if necessary
+                        console.log('StartDate is not provided.');
+                        // Optionally generate a default calendar or handle as needed
+                    }
+
+                    kendo.ui.progress($("#calendarBody"), false);
+                });
+            };
+
+            // Initial load with current month and year
+             kendo.ui.progress($("#calendarBody"), true);
+
+            $.loadSummary();
+            fetchData('@Url.Content("~/api/weekly-wfh-report/events")', {}, function () {
+                let currentDate = new Date();
+                let month = currentDate.getMonth(); // 0-based month
+                let year = currentDate.getFullYear();
+
+                // Debugging: log month and year to ensure they are correct
+                //console.log('Initial Month:', month, 'Initial Year:', year);
+
+                // Generate calendar with current month and year
+                generateCalendar(month, year);
+                kendo.ui.progress($("#calendarBody"), false);
+            });
+        });
+
+
+        const monthNames = [];
+
+        @foreach (var d in listMonth)
+        {
+            @:monthNames.push("@d");
+        }
+
+        function generateCalendar(month, year) {
+            const calendarBody = document.getElementById('calendarBody');
+            calendarBody.innerHTML = '';
+
+            const firstDay = new Date(year, month).getDay();
+            const daysInMonth = 32 - new Date(year, month, 32).getDate();
+            const prevMonthDays = 32 - new Date(year, month - 1, 32).getDate();
+            let date = 1;
+            let nextMonthDate = 1;
+            const today = new Date();
+
+            for (let i = 0; i < 6; i++) {
+                const row = document.createElement('tr');
+                row.classList.add('calendar-row');
+
+                for (let j = 0; j < 7; j++) {
+                    const cell = document.createElement('td');
+                    cell.classList.add('calendar-cell');
+                    if (i === 0 && j < firstDay) {
+                        // Previous month's dates
+                        const dateNumberContainer = document.createElement('div');
+                        dateNumberContainer.classList.add('date-number-container');
+
+                        const blankSpace = document.createElement('div');
+                        blankSpace.classList.add('date-number-space');
+                        dateNumberContainer.appendChild(blankSpace);
+
+                        const dateNumber = document.createElement('div');
+                        dateNumber.classList.add('date-number', 'prev-month');
+                        dateNumber.textContent = prevMonthDays - firstDay + j + 1;
+                        dateNumberContainer.appendChild(dateNumber);
+                        cell.appendChild(dateNumberContainer);
+
+                        const eventContainer = document.createElement('div');
+                        eventContainer.classList.add('event-container');
+                        cell.appendChild(eventContainer);
+                    } else if (date > daysInMonth) {
+                        // Next month's dates
+                        const dateNumberContainer = document.createElement('div');
+                        dateNumberContainer.classList.add('date-number-container');
+
+                        const blankSpace = document.createElement('div');
+                        blankSpace.classList.add('date-number-space');
+                        dateNumberContainer.appendChild(blankSpace);
+
+                        const dateNumber = document.createElement('div');
+                        dateNumber.classList.add('date-number', 'next-month');
+                        dateNumber.textContent = nextMonthDate++;
+                        dateNumberContainer.appendChild(dateNumber);
+                        cell.appendChild(dateNumberContainer);
+
+                        const eventContainer = document.createElement('div');
+                        eventContainer.classList.add('event-container');
+                        cell.appendChild(eventContainer);
+                    } else {
+                        // Current month's dates
+                        const dateNumberContainer = document.createElement('div');
+                        dateNumberContainer.classList.add('date-number-container');
+
+                        const blankSpace = document.createElement('div');
+                        blankSpace.classList.add('date-number-space');
+                        dateNumberContainer.appendChild(blankSpace);
+
+                        const dateNumber = document.createElement('div');
+                        dateNumber.classList.add('date-number');
+                        dateNumber.textContent = date;
+
+                        // Highlight current date
+                        if (date === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                            dateNumber.classList.add('current-date');
+                        }
+                        dateNumberContainer.appendChild(dateNumber);
+                        cell.appendChild(dateNumberContainer);
+                        if (j == 0 || j == 6) { 
+                            cell.classList.add('day-off');
+                        }
+
+                        const cellDate = date; // Capture the date for the event listener
+
+                        let eventsForDate = events.filter(event => {
+                            const eventDate = new Date(event.date);
+                            return eventDate.getDate() === date && eventDate.getMonth() === month && eventDate.getFullYear() === year;
+                        });
+
+                        // Sort events to place currentUser first
+                        eventsForDate.sort((a, b) => {
+                            if (a.NoReg == '@currentUser') return -1;
+                            if (b.NoReg == '@currentUser') return 1;
+                            return a.name.localeCompare(b.name);;
+                        });
+
+                        let superiorData = eventsForDate.filter(event => {
+                            return event.NoReg == '@currentUser';
+                        })
+
+                        const eventContainer = document.createElement('div');
+                        eventContainer.classList.add('event-container');
+                        if ("@IsChief" == "True") { 
+                            const eventCount = {
+                                wfo: 0,
+                                wfh: 0,
+                                wff: 0
+                            };
+
+                            let hasOffEvent = true;
+
+                            eventsForDate.forEach(event => {
+                                if (event.plan === 'OFF') {
+                                    hasOffEvent = true;
+                                } else {
+                                    hasOffEvent = false;
+                                    if (event.plan === 'WFO') eventCount.wfo++;
+                                    if (event.plan === 'WFH') eventCount.wfh++;
+                                    if (event.plan === 'WFF') eventCount.wff++;
+                                }
+                            });
+
+                            if (!hasOffEvent) {
+                                    //------- Superior-------
+                                if (superiorData.length) {
+                                    cell.classList.add('cell-chief');
+                                    superiorData.forEach(event => {
+                                        if (event.act == 'OFF') {
+                                            return;
+                                        } else {
+                                            const eventDiv = document.createElement('div');
+                                            let eventClassName = '';
+                                            if
+                                            (event.CreatedWith === 'bysystem') {
+                                            eventClassName = 'createdwith';
+                                            } else{
+                                            eventClassName = event.plan.toLowerCase();
+                                            }
+                                            eventDiv.classList.add('event', eventClassName);
+
+                                            const eventText = document.createElement('div');
+                                            eventText.classList.add("event-text");
+                                            const eventName = document.createElement('div');
+                                            let truncatedName = event.name;
+                                            if (truncatedName.length > 15) {
+                                                const words = truncatedName.split(' ');
+                                                truncatedName = '';
+                                                for (let i = 0; i < words.length; i++) {
+                                                    if (truncatedName.length + words[i].length <= 15) {
+                                                        truncatedName += words[i] + ' ';
+                                                    } else {
+                                                        truncatedName += words[i][0] + '. ';
+                                                    }
+                                                }
+                                                truncatedName = truncatedName.trim();
+                                            }
+                                            eventName.textContent = truncatedName;
+                                            eventText.appendChild(eventName);
+
+                                            const eventDetails = document.createElement('div');
+                                            eventDetails.textContent = `Plan:${event.plan}`;
+                                            // eventDiv.appendChild(eventDetails);
+                                            eventText.appendChild(eventDetails);
+
+                                            eventDiv.appendChild(eventText);
+
+                                            const eventLogo = document.createElement('img');
+                                            eventLogo.classList.add("event-logo");
+                                            eventLogo.src = '@Url.Content("~/img/logo/")';
+                                            
+                                            eventLogo.src = eventLogo.src + event.plan + "-Logo.png";
+
+                                            eventDiv.appendChild(eventLogo);
+
+                                            eventContainer.appendChild(eventDiv);
+
+                                        }
+                                    });
+                                }
+                                
+                                    //------- WFO -------
+                                const eventDiv = document.createElement('div');
+                                eventDiv.classList.add('event', 'wfo', 'cursor-pointer');
+                                
+                                eventDiv.addEventListener('click', () => showModalSuperior(cellDate, month, year, 'wfo'));
+
+                                const eventText = document.createElement('div');
+                                eventText.classList.add("event-text");
+                                eventText.textContent = `WFO: ${eventCount.wfo}`;
+                                eventDiv.appendChild(eventText);
+
+                                const eventLogo = document.createElement('img');
+                                eventLogo.classList.add("event-logo");
+                                eventLogo.src = '@Url.Content("~/img/logo/WFO-Logo.png")';
+                                eventDiv.appendChild(eventLogo);
+
+                                eventContainer.appendChild(eventDiv);
+
+                                    //------- WFH -------
+                                const eventDiv2 = document.createElement('div');
+                                eventDiv2.classList.add('event', 'wfh', 'cursor-pointer');
+                                eventDiv2.addEventListener('click', () => showModalSuperior(cellDate, month, year, 'wfh'));
+
+                                const eventText2 = document.createElement('div');
+                                eventText2.classList.add("event-text");
+                                eventText2.textContent = `WFH: ${eventCount.wfh}`;
+                                eventDiv2.appendChild(eventText2);
+
+                                const eventLogo2 = document.createElement('img');
+                                eventLogo2.classList.add("event-logo");
+                                eventLogo2.src = '@Url.Content("~/img/logo/WFH-Logo.png")';
+                                eventDiv2.appendChild(eventLogo2);
+                                eventContainer.appendChild(eventDiv2);
+
+                                    //------- WFF -------
+                                const eventDiv3 = document.createElement('div');
+                                eventDiv3.classList.add('event', 'wff', 'cursor-pointer');
+                                eventDiv3.addEventListener('click', () => showModalSuperior(cellDate, month, year, 'wff'));
+
+                                const eventText3 = document.createElement('div');
+                                eventText3.classList.add("event-text");
+                                eventText3.textContent = `WFF: ${eventCount.wff}`;
+                                eventDiv3.appendChild(eventText3);
+
+                                const eventLogo3 = document.createElement('img');
+                                eventLogo3.classList.add("event-logo");
+                                eventLogo3.src = '@Url.Content("~/img/logo/WFF-Logo.png")';
+                                eventDiv3.appendChild(eventLogo3);
+                                eventContainer.appendChild(eventDiv3);
+
+                                //------- OnLeave -------
+                                const eventDiv4 = document.createElement('div');
+                                eventDiv4.classList.add('event', 'onleave', 'cursor-pointer');
+                                    eventDiv4.addEventListener('click', () => showModalSuperior(cellDate, month, year, 'onleave'));
+
+                                const eventText4 = document.createElement('div');
+                                eventText4.classList.add("event-text");
+                                    eventText4.textContent = `OnLeave: ${eventCount.onleave}`;
+                                eventDiv4.appendChild(eventText4);
+
+                                const eventLogo4 = document.createElement('img');
+                                eventLogo4.classList.add("event-logo");
+                                eventLogo4.src = '@Url.Content("~/img/logo/OnLeave-Logo.png")';
+                                eventDiv4.appendChild(eventLogo4);
+                                eventContainer.appendChild(eventDiv4);
+                            }
+                        } else { 
+                            //console.log(eventsForDate);
+                            eventsForDate.slice(0, 2).forEach(event => {
+                                if (event.act == 'OFF') {   
+                                    return;
+                                } else {
+                                    const eventDiv = document.createElement('div');
+                                    let eventClassName = '';
+                                    if (new Date(event.date) <= new Date()) { 
+                                        if (event.plan === event.act  && event.CreatedWith === 'byuser') {
+                                            eventClassName = event.plan.toLowerCase();
+                                        } else if
+                                            (event.plan === 'WFO' && event.plan === event.act  && event.CreatedWith === 'bysystem') {
+                                            eventClassName = 'createdwith';
+                                            } 
+                                        else {
+                                            eventClassName = "different";
+                                        }
+                                    } else {
+                                            if (event.plan === 'WFO' && event.CreatedWith === 'bysystem') {
+                                                eventClassName = 'createdwith';
+                                            } else if (event.plan === 'ABS') {
+                                                eventClassName = 'on-leave';
+                                            }else{
+                                                eventClassName = event.plan.toLowerCase();
+                                            }
+                                        
+                                    }
+                                    eventDiv.classList.add('event', eventClassName);
+
+                                    const eventText = document.createElement('div');
+                                    eventText.classList.add("event-text");
+                                    const eventName = document.createElement('div');
+                                    let truncatedName = event.name;
+                                    if (truncatedName.length > 15) {
+                                        const words = truncatedName.split(' ');
+                                        truncatedName = '';
+                                        for (let i = 0; i < words.length; i++) {
+                                            if (truncatedName.length + words[i].length <= 15) {
+                                                truncatedName += words[i] + ' ';
+                                            } else {
+                                                truncatedName += words[i][0] + '. ';
+                                            }
+                                        }
+                                        truncatedName = truncatedName.trim();
+                                    }
+                                    eventName.textContent = truncatedName;
+                                    eventText.appendChild(eventName);
+
+                                    const eventDetails = document.createElement('div');
+                                    if (event.plan === "ABS") {
+                                        eventDetails.textContent = `On Leave`;
+                                    } else {
+                                        eventDetails.textContent = `Plan:${event.plan}, Act:${event.act}`;
+                                    }
+                                    
+                                    // eventDiv.appendChild(eventDetails);
+                                    eventText.appendChild(eventDetails);
+
+                                    eventDiv.appendChild(eventText);
+
+                                    const eventLogo = document.createElement('img');
+                                    eventLogo.classList.add("event-logo");
+                                    eventLogo.src = '@Url.Content("~/img/logo/")';
+                                    if (new Date(event.date) <= new Date()) {
+                                        if (event.plan != event.act || event.plan == "Null" || event.act == "Null") {
+                                            eventLogo.src = eventLogo.src + "PlanningActualNotSame-Logo.png";
+                                        }
+                                        else {
+                                            eventLogo.src = eventLogo.src + event.act + "-Logo.png";
+                                        }
+                                    } else if(event.plan == "ABS"){
+                                            eventLogo.src = eventLogo.src + "OnLeave-Logo.png";
+                                    }else{
+                                        eventLogo.src = eventLogo.src + event.plan + "-Logo.png";
+                                    }
+
+                                    eventDiv.appendChild(eventLogo);
+
+                                    eventContainer.appendChild(eventDiv);
+
+                                }
+                            });
+
+                            if (eventsForDate.length > 2) {
+                                const showMoreDiv = document.createElement('div');
+                                showMoreDiv.classList.add('show-more');
+                                showMoreDiv.textContent = 'more';
+                                showMoreDiv.addEventListener('click', () => showModal(cellDate, month, year));
+                                eventContainer.appendChild(showMoreDiv);
+                            }
+                        }
+                        cell.appendChild(eventContainer);
+                        date++;
+                    }
+                    row.appendChild(cell);
+                }
+                calendarBody.appendChild(row);
+            }
+            let localizerMonth = '@Localizer["' + monthNames[month] + '"]';
+            document.getElementById('monthYear').textContent = `${localizerMonth} ${year}`;
+        }
+
+        function showModal(date, month, year, eventType) {
+            const modal = document.getElementById('employeeModal');
+            const modalDetails = document.getElementById('employeeModalDetails');
+            const searchBar = document.getElementById('searchBar');
+            const modalDate = document.getElementById('modalDate');
+            let searchTerm = '';
+
+            // Clear the search bar when the modal is opened
+            searchBar.value = '';
+
+            const filterEvents = () => {
+                return events.filter(event => {
+                    const eventDate = new Date(event.date);
+                    return eventDate.getDate() === date && eventDate.getMonth() === month && eventDate.getFullYear() === year;
+                }).filter(event => {
+                    if (eventType === 'wfo') return event.act === 'WFO';
+                    if (eventType === 'wfh') return event.act === 'WFH';
+                    if (eventType === 'wff') return event.act === 'WFF';
+                    return true;
+                }).filter(event => {
+                    return event.name && event.name.toLowerCase().includes(searchTerm.toLowerCase());
+                });
+            };
+
+            const renderTable = (page, eventList) => {
+                const table = document.createElement('table');
+                table.classList.add('modal-table-employee');
+
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th class='text-center'>@Localizer["Employee"]</th>
+                        <th class='text-center'>@Localizer["Work Plan"]</th>
+                        <th class='text-center'>@Localizer["Work Actual"]</th>
+                        <th class='text-center'>@Localizer["Division"]</th>
+                        <th class='text-center'>@Localizer["Department"]</th>
+                        <th class='text-center'>@Localizer["Section"]</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                // Sort events to place currentUser first
+                eventList.sort((a, b) => {
+                    if (a.NoReg == '@currentUser') return -1;
+                    if (b.NoReg == '@currentUser') return 1;
+                    return a.name.localeCompare(b.name);;
+                });
+
+                const tbody = document.createElement('tbody');
+                const start = (page - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageEvents = eventList.slice(start, end);
+
+                pageEvents.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.classList.add('modal-table-employee-row');
+                    let eventClassName = '';
+                    const eventDate = new Date(event.date);
+                    var eventDate2 = eventDate.getFullYear() + '/' + ((eventDate.getMonth() + 1) < 10 ? '0' : '') + (eventDate.getMonth() + 1) + '/' + (eventDate.getDate() < 10 ? '0' : '') + eventDate.getDate();
+                    var currDate = new Date();
+                    var currDate2 = currDate.getFullYear() + '/' + ((currDate.getMonth() + 1) < 10 ? '0' : '') + (currDate.getMonth() + 1) + '/' + (currDate.getDate() < 10 ? '0' : '') + currDate.getDate();
+                    //console.log(event);
+                    if (eventDate2 > currDate2){
+                        if(event.plan === "ABS"){
+                            eventClassName = "on-leave";
+                        }else if(event.CreatedWith === "byuser"){
+                            eventClassName = event.plan.toLowerCase();
+                        }else{
+                            if(event.plan == "WFO"){
+                                eventClassName = 'createdwith';
+                            }else{
+                                eventClassName = even.plan.toLowerCase();;
+                            }
+                            
+                        }
+                        
+                    }else{
+                        if(event.plan === "ABS"){
+                            eventClassName = "on-leave";
+                        }else if (event.plan === event.act && event.CreatedWith === 'byuser') {
+                            eventClassName = event.plan.toLowerCase();
+                        } else if (event.plan === event.act && event.CreatedWith === 'bysystem') {
+                            // if (eventDate2 > currDate2) {
+                            if(event.plan == "WFO"){
+                                eventClassName = 'createdwith';
+                            }else{
+                                eventClassName = even.plan.toLowerCase();;
+                            }
+                            // } else {
+                            //    eventClassName = event.plan.toLowerCase();
+                            //}
+
+                        }
+                        else {
+                            eventClassName = "different";
+                        }
+                    }
+                    
+                    row.classList.add(eventClassName);
+                    let profilePic = "@profileAvatar";
+                    profilePic = profilePic.replace("{0}", event.NoReg);
+                    var strTd = `<td>${event.plan}</td>
+                        <td>${event.act}</td>`;
+                    if(event.plan ==="ABS"){
+                        strTd = `<td colspan=2 class='text-center'>On Leave</td>`;
+                    }
+                    row.innerHTML = `
+                        <td>
+                            <div class="name-profile-container">
+                                <img src=${profilePic} class="employee-modal-profile">
+                                <div>${event.name}</div>
+                            </div>
+                        </td>
+                                ` + strTd + `
+                        <td>${event.division}</td>
+                        <td>${event.departement}</td>
+                        <td>${event.section}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+
+                modalDetails.appendChild(table);
+            };
+
+            const renderPagination = (eventList) => {
+                const pagination = document.createElement('div');
+                pagination.classList.add('pagination');
+
+                const createPageButton = (text, page) => {
+                    const button = document.createElement('button');
+                    button.textContent = text;
+                    if (page === currentPage) {
+                        button.classList.add('active');
+                    }
+                    button.addEventListener('click', () => {
+                        currentPage = page;
+                        updateModalContent();
+                    });
+                    return button;
+                };
+
+                if (currentPage > 1) {
+                    pagination.appendChild(createPageButton('First', 1));
+                    pagination.appendChild(createPageButton('Previous', currentPage - 1));
+                }
+
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.appendChild(createPageButton(i, i));
+                }
+
+                if (currentPage < totalPages) {
+                    pagination.appendChild(createPageButton('Next', currentPage + 1));
+                    pagination.appendChild(createPageButton('Last', totalPages));
+                }
+
+                modalDetails.appendChild(pagination);
+            };
+
+            const renderLegend = () => {
+                const legend = document.createElement('div');
+                legend.classList.add('employee-modal-legend');
+                legend.innerHTML = `
+                    <p><span class="legend-item wfo"></span> WFO</p>
+                    <p><span class="legend-item wfh"></span> WFH</p>
+                    <p><span class="legend-item wff"></span> WFF</p>
+                    <p><span class="legend-item different"></span> Plan ≠ Actual</p>
+                    <p><span class="legend-item day-off"></span> Day OFF</p>
+                    <p><span class="legend-item createdwith"></span> WFO Unplanned </p>
+                `;
+                modalDetails.appendChild(legend);
+            };
+
+            const updateModalContent = () => {
+                modalDetails.innerHTML = '';
+                modalDate.textContent = `${date} ${monthNames[month]} ${year}`;
+                const eventList = filterEvents();
+                const title = document.createElement('h2');
+                title.classList.add('employee-modal-title');
+                modalDetails.appendChild(title);
+                renderTable(currentPage, eventList);
+                totalPages = Math.ceil(eventList.length / itemsPerPage); // Recalculate totalPages based on filtered events
+                renderPagination(eventList);
+                renderLegend();
+            };
+
+            searchBar.addEventListener('input', (e) => {
+                searchTerm = e.target.value;
+                currentPage = 1;
+                updateModalContent();
+            });
+
+            let currentPage = 1;
+            const itemsPerPage = 5;
+            let totalPages = Math.ceil(filterEvents().length / itemsPerPage);
+
+            updateModalContent();
+            modal.style.display = "block";
+        }
+
+        function showModalSuperior(date, month, year, eventType) {
+            const modal = document.getElementById('employeeModal');
+            const modalDetails = document.getElementById('employeeModalDetails');
+            const searchBar = document.getElementById('searchBar');
+            const modalDate = document.getElementById('modalDate');
+            let searchTerm = '';
+
+            // Clear the search bar when the modal is opened
+            searchBar.value = '';
+
+            const filterEvents = () => {
+                return events.filter(event => {
+                    const eventDate = new Date(event.date);
+                    return eventDate.getDate() === date && eventDate.getMonth() === month && eventDate.getFullYear() === year;
+                }).filter(event => {
+                    if (eventType === 'wfo') return event.plan === 'WFO';
+                    if (eventType === 'wfh') return event.plan === 'WFH';
+                    if (eventType === 'wff') return event.plan === 'WFF';
+                    if (eventType === 'off') return event.plan === 'OFF';
+                    return true;
+                }).filter(event => {
+                    return event.name && event.name.toLowerCase().includes(searchTerm.toLowerCase());
+                });
+            };
+
+            const renderTable = (page, eventList) => {
+                const table = document.createElement('table');
+                table.classList.add('modal-table-employee');
+
+                const thead = document.createElement('thead');
+                thead.innerHTML = `
+                    <tr>
+                        <th>@Localizer["Employee"]</th>
+                        <th>@Localizer["Work Plan"]</th>
+                       <th>@Localizer["Work Actual"]</th>
+                        <th>@Localizer["Division"]</th>
+                        <th>@Localizer["Department"]</th>
+                        <th>@Localizer["Section"]</th>
+                    </tr>
+                `;
+                table.appendChild(thead);
+
+                // Sort events to place currentUser first
+                eventList.sort((a, b) => {
+                    if (a.NoReg == '@currentUser') return -1;
+                    if (b.NoReg == '@currentUser') return 1;
+                    return a.name.localeCompare(b.name);;
+                });
+
+                const tbody = document.createElement('tbody');
+                const start = (page - 1) * itemsPerPage;
+                const end = start + itemsPerPage;
+                const pageEvents = eventList.slice(start, end);
+
+                pageEvents.forEach(event => {
+                    const row = document.createElement('tr');
+                    row.classList.add('modal-table-employee-row');
+                    let eventClassName = ''
+                    if
+                        (event.CreatedWith === 'bysystem') {
+                        eventClassName = 'createdwith';
+                    }
+                    else {
+
+                        eventClassName = event.plan.toLowerCase();
+                    }
+                    row.classList.add(eventClassName);
+                    let profilePic = "@profileAvatar";
+                    profilePic = profilePic.replace("{0}", event.NoReg);
+                    row.innerHTML = `
+                        <td>
+                            <div class="name-profile-container">
+                                <img src=${profilePic} class="employee-modal-profile">
+                                <div>${event.name}</div>
+                            </div>
+                        </td>
+                        <td>${event.plan}</td>
+                        <td>${event.act}</td>
+                        <td>${event.division}</td>
+                        <td>${event.departement}</td>
+                        <td>${event.section}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                table.appendChild(tbody);
+
+                modalDetails.appendChild(table);
+            };
+
+            const renderPagination = (eventList) => {
+                const pagination = document.createElement('div');
+                pagination.classList.add('pagination');
+
+                const createPageButton = (text, page) => {
+                    const button = document.createElement('button');
+                    button.textContent = text;
+                    if (page === currentPage) {
+                        button.classList.add('active');
+                    }
+                    button.addEventListener('click', () => {
+                        currentPage = page;
+                        updateModalContent();
+                    });
+                    return button;
+                };
+
+                if (currentPage > 1) {
+                    pagination.appendChild(createPageButton('First', 1));
+                    pagination.appendChild(createPageButton('Previous', currentPage - 1));
+                }
+
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                for (let i = startPage; i <= endPage; i++) {
+                    pagination.appendChild(createPageButton(i, i));
+                }
+
+                if (currentPage < totalPages) {
+                    pagination.appendChild(createPageButton('Next', currentPage + 1));
+                    pagination.appendChild(createPageButton('Last', totalPages));
+                }
+
+                modalDetails.appendChild(pagination);
+            };
+
+            const renderLegend = () => {
+                const legend = document.createElement('div');
+                legend.classList.add('employee-modal-legend');
+                legend.innerHTML = `
+                    <p><span class="legend-item wfo"></span> WFO</p>
+                    <p><span class="legend-item wfh"></span> WFH</p>
+                    <p><span class="legend-item wff"></span> WFF</p>
+                    <p><span class="legend-item different"></span> Plan ≠ Actual</p>
+                    <p><span class="legend-item day-off"></span> Day OFF</p>
+                    <p><span class="legend-item createdwith"></span> WFO Unplanned</p>
+                `;
+                modalDetails.appendChild(legend);
+            };
+
+            const updateModalContent = () => {
+                modalDetails.innerHTML = '';
+                modalDate.textContent = `${date} ${monthNames[month]} ${year}`;
+                const eventList = filterEvents();
+                const title = document.createElement('h2');
+                title.classList.add('employee-modal-title');
+                modalDetails.appendChild(title);
+                renderTable(currentPage, eventList);
+                totalPages = Math.ceil(eventList.length / itemsPerPage); // Recalculate totalPages based on filtered events
+                renderPagination(eventList);
+                renderLegend();
+            };
+
+            searchBar.addEventListener('input', (e) => {
+                searchTerm = e.target.value;
+                currentPage = 1;
+                updateModalContent();
+            });
+
+            let currentPage = 1;
+            const itemsPerPage = 5;
+            let totalPages = Math.ceil(filterEvents().length / itemsPerPage);
+
+            updateModalContent();
+            modal.style.display = "block";
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const date = tempDate.StartDate;
+            
+            let currdate = date.getDate();
+            let month = date.getMonth();
+            let year = date.getFullYear();
+
+            document.getElementById('prevMonth').addEventListener('click', () => {
+                month--;
+                if (month < 0) {
+                    month = 11;
+                    year--;
+                }
+                generateCalendar(month, year);
+                let localizerMonth = '@Localizer["' + monthNames[month] + '"]';
+
+                 $("#keyDate").data("kendoDatePicker").value(currdate + " " + localizerMonth+' '+year);
+                $.onSubmit();
+            });
+
+            document.getElementById('nextMonth').addEventListener('click', () => {
+                month++;
+                if (month > 11) {
+                    month = 0;
+                    year++;
+                }
+                generateCalendar(month, year);
+                let localizerMonth = '@Localizer["' + monthNames[month] + '"]';
+
+                $("#keyDate").data("kendoDatePicker").value(currdate + " " + localizerMonth + ' ' + year);
+                $.onSubmit();
+            });
+
+            generateCalendar(month, year);
+
+            // Modal close functionality
+            const modal = document.getElementById('employeeModal');
+            const span = document.getElementsByClassName('employeeModalClose')[0];
+            span.onclick = function () {
+                modal.style.display = "none";
+            }
+            window.onclick = function (event) {
+                if (event.target == modal) {
+                    modal.style.display = "none";
+                }
+            }
+        });
+
+    </script>
+
+}
+@section pageToolbars {
+    <div data-role="filter">
+    <div class="dropdown custom-filter">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-right">
+            <form class="form-horizontal p-2" role="form">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["Start Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("StartDateReport")
+                                .Value(pdw.StartDate)
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>@Localizer["End Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("EndDateReport")
+                                .Value(pdw.EndDate)
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    @*@if (IsChief)
+                    {
+                        <div class="col-12 col-sm-6">
+                            <div class="form-group">
+                                <label>@Localizer["Class"]</label>
+                                @Html.KendoComboBox("Class", string.Empty, "EmployeeSubgroup", sortExpression: x => x.OrderSequence).Placeholder(Localizer["Please select employee subgroup"].Value).Deferred()
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="form-group">
+                                <label>@Localizer["Employee Status"]</label>
+                                @Html.KendoComboBox("WorkContract", string.Empty, "WorkContract", sortExpression: x => x.OrderSequence).Placeholder(Localizer["Please select employee status"].Value).Deferred()
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label>@Localizer["No Reg./Name"]</label>
+                                @Html.TextBox("Name", null, new { @class = "form-control", @placeholder = Localizer["Please input No Reg./Name"].Value })
+                            </div>
+                        </div>
+                    }*@
+                </div>
+                <hr class="mt-1"/>
+                <a href="javascript:;" class="btn green-jungle btn-block" data-trigger="handler" data-handler="downloadReportHandler">@Localizer["Download"]</a>
+            </form>
+        </div>
+    </div>
+    </div>
+}
+
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>
+        .total-amount-cointainer
+        {
+            text-align: center;
+            position: relative;
+        }
+        .total-employee-text
+        {
+            font-weight: bold;
+            color:gray;
+            font-size: 0.7em;
+        }
+        .total-amount{
+            font-weight: bold;
+            font-size:1.2em;
+        }
+         .legend-item
+         {
+            font: 12px 'Noto Sans';  
+            margin: 2px;
+            cursor:pointer;  
+         }
+         .legend-item .legend-marker
+         {
+            display:inline-block;
+            width:8px;
+            height:8px;
+         }
+
+         .k-grid tr {
+            color: black;
+         }
+
+         .k-grid-content .k-alt {
+             background-color: lightgray;
+         }
+
+         .k-grid table tr td:has(span.row-WFH){
+              background-color: rgb(99,192,223);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row-WFO){
+              background-color: rgb(0,153,68);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row-WFF){
+              background-color: rgb(0,153,68);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row-WFA){
+              background-color: rgb(0,153,68);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row-OFF){
+              background-color: rgb(240,84,30);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row-ABS){
+              background-color: rgb(240,84,30);
+              color: white;
+              font-size: 14px;
+         }
+
+         .k-grid table tr td:has(span.row--){
+              background-color: white;
+              color: black;
+         }
+
+         .selectedDay{
+              background-color: yellow !important;
+         }
+
+         .belowStandard{
+              color: red;
+         }
+
+        .calendar-container {
+            display: flex;
+            align-items: start;
+            max-width: 100%; /* Ensure the container does not exceed the viewport width */
+            overflow: auto; /* Make the container scrollable */
+        }
+
+        .custom-calendar {
+            width: 1040px; /* Fixed width for horizontal scrolling */
+        }
+
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin: 10px;
+            padding-top: 40px;
+        }
+
+            .calendar-header h2 {
+                flex-grow: 1;
+                text-align: left; /* Align month name and year to the left */
+            }
+
+            .calendar-header button {
+                background: none;
+                border: none;
+                font-size: 2rem;
+                cursor: pointer;
+                margin-left: 10px; /* Add some space between buttons */
+            }
+
+        .calendar-table {
+            width: 1040px;
+            border-collapse: collapse;
+        }
+
+            .calendar-table th {
+                border: 1px solid #ccc;
+                text-align: center;
+                padding: 5px; /* Adjust padding to fit the text height */
+                font-size: 1rem; /* Adjust font size if needed */
+                background-color: #f7f7f7
+                /* height: auto; /* Allow height to adjust based on content */
+            }
+
+        .calendar-row {
+            /* Add any specific styles for rows if needed */
+        }
+
+        .calendar-cell {
+            border: 1px solid #ccc;
+            text-align: center;
+            padding: 5px; /* Increase padding */
+            font-size: 1.2rem; /* Increase font size */
+            position: relative;
+            height: 145px; /* Ensure uniform height */
+            width: 14.28%; /* Ensure uniform width */
+        }
+        .cell-chief {
+            height: 181px; /* Ensure uniform height */
+        }
+
+        .cursor-pointer{
+            cursor: pointer; /* Add cursor pointer for hover effect */
+        }
+
+        .date-number-container {
+            display: flex;
+        }
+
+        .date-number-space {
+            width: 80%;
+        }
+
+        .date-number {
+            width: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 20px;
+            font-size: 0.9rem;
+        }
+
+            .date-number.prev-month,
+            .date-number.next-month {
+                color: #aaa; /* Different color for previous and next month's dates */
+            }
+
+        .current-date {
+            background-color: red;
+            color: white;
+            border-radius: 50%;
+        }
+
+        .event-container {
+            display: flex;
+            flex-direction: column;
+            flex-wrap: wrap;
+            justify-content: flex-start;
+            height: 80%;
+        }
+
+        .event {
+            display: flex;
+            position: relative;
+            padding: 3px;
+            text-align: left;
+            margin-top: 2px;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 0.6rem;
+        }
+
+        .event-text {
+            width: 80%;
+        }
+
+        .event-logo{
+            width: 25px;
+        }
+
+        .wfo {
+            background-color: #48689b;
+            color: white;
+        }
+
+        .wfh {
+            background-color: #c3dbff;
+            color: black;
+        }
+
+        .wff {
+            background-color: #cabdd1;
+            color: black;
+        }
+        .createdwith {
+            background-color: #dc8fd1;
+            color: black;
+        }
+
+        .different {
+            background-color: #ff8b94;
+            color: black;
+        }
+
+        .on-leave {
+            background-color: #D3D3D3;
+            color: black;
+        }
+
+        .day-off {
+            background-color: #D3D3D3;
+            color: black;
+        }
+
+        .off {
+            background-color: #D3D3D3;
+            color: black;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+            .legend p {
+                margin: 0 10px;
+                display: flex;
+                align-items: center;
+            }
+
+        .legend-item {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+        }
+
+        /* Modal styles */
+        .employee-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            overflow: auto; /* Enable scroll if needed */
+        }
+
+        .employee-modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            overflow: auto; /* Enable scroll if needed */
+        }
+
+        .employeeModalClose {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+            .employeeModalClose:hover,
+            .close:focus {
+                color: black;
+                text-decoration: none;
+                cursor: pointer;
+            }
+
+        .employee-modal-title-container {
+            padding-bottom: 20px;
+        }
+
+        .employee-modal-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: black;
+        }
+
+        .employee-modal-header {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 20px;
+        }
+
+        .employee-modal-subheader {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .employee-modal-date {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #b4d2dc;
+        }
+
+        .modal-table-employee {
+            width: 100%;
+            border-collapse: separate; /* Change from collapse to separate */
+            border-spacing: 0 10px; /* Add spacing between rows */
+            margin-top: 20px;
+        }
+
+            .modal-table-employee th, .modal-table-employee td {
+                padding: 8px;
+                text-align: left;
+            }
+
+            .modal-table-employee th {
+                background-color: #f2f2f2;
+                font-weight: bold;
+            }
+
+            .modal-table-employee tr:hover {
+                background-color: darkgray;
+            }
+
+            .modal-table-employee th {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                background-color: #f7f7f7;
+                color: black;
+            }
+
+        .modal-table-employee-row {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Add shadow for better separation */
+            height: 65px;
+        }
+
+        .name-profile-container {
+            display: flex;
+            align-items: center;
+        }
+
+        img.employee-modal-profile {
+            height: 55px;
+            padding-right: 10px;
+        }
+
+        .show-more {
+            color: blue;
+            cursor: pointer;
+            text-align: left;
+            margin-top: 5px;
+            padding: 3px;
+            font-size: 0.8rem;
+            border-radius: 5px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+            .pagination button {
+                background-color: #f1f1f1;
+                color: #333;
+                border: 1px solid #ccc;
+                padding: 10px 15px;
+                margin: 0 2px;
+                cursor: pointer;
+                font-size: 1rem;
+            }
+
+                .pagination button.active {
+                    background-color: #007bff;
+                    color: white;
+                    border: 1px solid #007bff;
+                }
+
+                .pagination button:hover:not(.active) {
+                    background-color: #ddd;
+                }
+
+        .employee-modal-legend {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+            .employee-modal-legend p {
+                margin: 0 10px;
+                display: flex;
+                align-items: center;
+            }
+
+        .legend-item {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+        }
+
+        .employee-name-search-bar {
+            width: 20%; /* Adjust width as needed */
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9; /* Light background color */
+            color: #999; /* Light text color */
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1); /* Optional: Add inner shadow for depth */
+        }
+
+        .search-bar::placeholder {
+            color: #999; /* Placeholder text color */
+        }
+
+    </style>
+}
+
+<div class="card">
+    <div class="col-md-6 col-sm-12">
+        <div class="profpic" style="background-color: white;">
+            <div class="profpic-wrapper">
+                <div class="profpic-avatar">
+                    <img src="@ConfigService.ResolveAvatar(currentUser)" style="width: 2.5rem;height: 2.8125rem;">
+                </div>
+                <div class="profpic-body">
+                    <span class="profpic-title" style="color: #4e7dbe; font-size:16px">@Localizer["Hello"], @aos.Name</span>
+                    <span class="profpic-description" style="color: grey; font-size:13px">@Localizer["Today is"] @Localizer[now.DayOfWeek.ToString()], @now.ToString("dd MMMM yyyy")</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row d-flex no-padding row-col-separator-xl">
+            <div class="col-md-4"> 
+                <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Plan Report Summary"]</h3>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12 analytic-block">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Orientation(ChartLegendOrientation.Vertical)
+                                .Labels(labels => labels
+                                .Template("${ app.translate(text) } (${ value })") // Template with text and value
+                                .Font("11px Arial") // Attempt to use Font to resize the text
+                                )
+                                )
+                                .SeriesColors(new[] { "#D3D3D3", "#c3dbff", "#dc8fd1", "#48689b", "#cabdd1", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .HoleSize(45)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("#= app.translate(category) # - #= kendo.format('{0:P}', percentage) #")
+                                )
+                                .Deferred()
+                            )
+                            <div class="total-amount-cointainer">
+                                <div class="total-employee-text" id="total-employee-text-chart"></div>
+                                <div class="total-amount" id="total-amount-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+            <div class="col-md-4">
+                <div class="m-widget">
+                    <div class="m-widget-header">
+                        <h3 class="m-widget-title">@Localizer["Actual Report Summary"]</h3>
+                    </div>
+                    <div class="m-widget-item pt-0">
+                        <div class="row">
+                            <div class="col-md-12 analytic-block">
+                                @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("secondChart")
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Orientation(ChartLegendOrientation.Vertical)
+                                    .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                )
+                                .SeriesColors(new[] { "#D3D3D3","#dc8fd1","#48689b", "#cabdd1", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .Series(series =>
+                                {
+                                    series.Donut(x => x.Total, x => x.Name)
+                                        .HoleSize(45)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("#= app.translate(category) # - #= kendo.format('{0:P}', percentage) #")
+                                )
+                                .Deferred()
+                            )
+                            <div class="total-amount-cointainer">
+                                <div class="total-employee-text" id="total-employee-text-secondchart"></div>
+                                <div class="total-amount" id="total-amount-secondchart"></div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="m-widget">
+                <div class="m-widget-header">
+                    <h3 class="m-widget-title">@Localizer["Attendance by Location"]</h3>
+                    <span class="m-widget-desc"></span>
+                </div>
+                <div class="m-widget-item pt-0">
+                    <div class="row">
+                        <div class="col-md-12 analytic-block">
+                            @(Html.Kendo().Chart<SummaryViewModel>()
+                                .Name("thirdChart")
+                                .HtmlAttributes(new { style = "max-height: 200px; position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(ChartLegendPosition.Bottom)
+                                )
+                                .Series(series =>
+                                {
+                                    series.Column(x => x.Total).Name("Total").CategoryField("Name")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .SeriesColors(new[] { "#D3D3D3", "#c3dbff", "#48689b", "#cabdd1", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                .CategoryAxis(axis => axis
+                                .Labels(labels => labels.Rotation(0))
+                                .MajorGridLines(lines => lines.Visible(false))
+                                )
+                                .ValueAxis(axis => axis.Numeric()
+                                .Labels(labels => labels.Format("{0}"))
+                                .Line(line => line.Visible(true))
+                                .AxisCrossingValue(0, int.MinValue)
+                                
+                                )
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ app.translate(category) }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">
+                    @Localizer["Monthly Hybrid Work Planning"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">   
+                    <ul class="list-inline mb-0">
+                        
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>  
+                    </ul> 
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        <input id="SelectedNoReg" hidden/>
+                        <input id="SelectedPostCode" hidden/>
+                        <div class="col-md-3">
+                            <label>@Localizer["Employee"]</label>
+                            @(Html.Kendo().AutoComplete()
+                            .Name("employeeName")
+                            .DataTextField("Name")
+                            .Filter("contains")
+                            .Placeholder(Localizer["Find user..."].Value)
+                            .MinLength(3)
+                            .Delay(500)
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .DataSource(source =>
+                            {
+                                source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/weekly-wfh-report/getactives"))))
+                                    .PageSize(30)
+                                    .Sort(sort => sort.Add("Name"))
+                                    .Schema(config => config.Data("Data").Total("Total"));
+                            })
+                            .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                            .Events(events => events.Select("EmployeeSelect"))
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Directorate"]</label>
+                            
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("directorate selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDirectorate");
+                                    })
+                                .Deferred()
+                            )
+                        
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Division"]</label>
+                            
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Enable(false)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .ClearButton(false)
+                                .AutoClose(false)
+                                .Messages(ms => 
+                                    {
+                                        ms.SingleTag("division selected");
+                                        
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDivision");
+                                    })
+                                .Deferred()
+                            )
+                        
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("department selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeDepartment");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("section selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeSection");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Line"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("line")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select line"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("line selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                    {
+                                        e.Change("$.OnChangeLine");
+                                    })
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Group"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("group")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .Placeholder(Localizer["Please select group"].Value)
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                    {
+                                        ms.SingleTag("group selected");
+                                    })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Enable(false)
+                                .Deferred()
+                            )
+                        </div>
+                        @* @if(IsChief){ *@
+                        <div class="col-md-3 hidden">
+                        @* } else {
+                            @:<div class="col-md-3 hidden">
+                        } *@
+                                    <label>@Localizer["Class"]</label>
+                                    @(Html.Kendo().ComboBox()
+                                    .Name("class")
+                                    .HtmlAttributes(new { @class = "form-control" })
+                                    .DataTextField("Class")
+                                    .DataValueField("Class")
+                                    .Placeholder(Localizer["Select class"].Value)
+                                    .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/weekly-wfh-report/get-class")))
+                                    .Sort(s => s.Add("Class"))
+                                    )
+                                    .SelectedIndex(-1)
+                                    .Deferred()
+                                    )
+                                </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Month"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("keyDate")
+                                .Value(now)
+                                @* .Start(CalendarView.Year)
+                                .Depth(CalendarView.Year) *@
+                                .Format("dd MMMM yyyy")
+                                .HtmlAttributes(new { placeholder = "Select Date", style = "width:100%" })
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDate");
+                                })
+                                .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Plan Work Schedule"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("planworkplace")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .Placeholder(Localizer["Select location"].Value)
+                            .BindTo(workPlaceData)
+                            .SelectedIndex(-1)
+                            .Deferred()
+                            )
+                        </div>
+                        <div class="col-md-3">
+                            <label>@Localizer["Actual Work Schedule"]</label>
+                            @(Html.Kendo().ComboBox()
+                            .Name("actualworkplace")
+                            .HtmlAttributes(new { @class = "form-control" })
+                            .Placeholder(Localizer["Select location"].Value)
+                            .BindTo(workPlaceData)
+                            .SelectedIndex(-1)
+                            .Deferred()
+                            )
+                        </div>
+                            @* @if(IsChief){ *@
+                             <div class="col-md-3" style="text-align:right">
+                            @* } else
+                            {
+                                @:<div class="col-md-6" style="text-align:right">
+                            } *@
+                            <label>&nbsp;</label>
+                            <div class="form-group">
+                                <button type="button" class="btn btn-primary" onclick="$.onSubmit();"><span class="ft-search"></span> Search</button>
+                                <button type="button" class="btn btn-primary" onclick="$.onClear();"><span class="ft-refresh-cw"></span> Clear</button>
+                            </div>
+                            </div>
+                        <div class="col-md-12">&nbsp;</div>
+                    </div>
+
+                </div>
+                @* <div class="col-md-12" hidden>
+                    @(Html.Kendo().Grid<TAMHR.ESS.Domain.WeeklyWFHStoredEntity>()
+                        .Name("grid")
+                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                        .Columns(columns =>
+                        {
+                            columns.Bound(c => c.NoReg).Title(Localizer["Employee"].Value).Width(130).ClientTemplate(@"
+                                #if(Type == 'Plan'){#
+                                    <div class=""media pull-left"">
+                                        <div class=""media-img mr-2"">
+                                            <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                        </div>
+                                        <div class=""media-body"">
+                                            <h6 class=""mb-0"">#:Name#</h6>
+                                            <!--<span class=""d-block"">#:$.toDefault(PostName, '-')#</span>-->
+                                        </div>
+                                    </div>
+                                #}else{#
+                                    #:Type#
+                                #}#
+                        ");
+                        columns.Bound(c => c.Percentage).Title(Localizer["% WFO"].Value).Width(80).HeaderHtmlAttributes(new { @class = "k-text-center" }).ClientTemplate("<span class=\"#if(!checkStandard(Day1, Day2, Day3, Day4, Day5, Day6, Day7, Day8, Day9, Day10, Day11, Day12, Day13, Day14, minWFOCount)){#belowStandard#}#\">#:Percentage# %</span>");
+                        columns.Group(
+                            group => group
+                            .Title(Localizer["Day"].Value)
+                            .HeaderHtmlAttributes(new { @class = "k-text-center " })
+                            .Columns(info => {
+                                info.Bound(c => c.Day1).Width(50).Title("1").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day1#'>#:Day1#</span>");
+                                info.Bound(c => c.Day2).Width(50).Title("2").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day2#'>#:Day2#</span>");
+                                info.Bound(c => c.Day3).Width(50).Title("3").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day3#'>#:Day3#</span>");
+                                info.Bound(c => c.Day4).Width(50).Title("4").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day4#'>#:Day4#</span>");
+                                info.Bound(c => c.Day5).Width(50).Title("5").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day5#'>#:Day5#</span>");
+                                info.Bound(c => c.Day6).Width(50).Title("6").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day6#'>#:Day6#</span>");
+                                info.Bound(c => c.Day7).Width(50).Title("7").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day7#'>#:Day7#</span>");
+                                info.Bound(c => c.Day8).Width(50).Title("8").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day8#'>#:Day8#</span>");
+                                info.Bound(c => c.Day9).Width(50).Title("9").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day9#'>#:Day9#</span>");
+                                info.Bound(c => c.Day10).Width(50).Title("10").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day10#'>#:Day10#</span>");
+                                info.Bound(c => c.Day11).Width(50).Title("11").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day11#'>#:Day11#</span>");
+                                info.Bound(c => c.Day12).Width(50).Title("12").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day12#'>#:Day12#</span>");
+                                info.Bound(c => c.Day13).Width(50).Title("13").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day13#'>#:Day13#</span>");
+                                info.Bound(c => c.Day14).Width(50).Title("14").HeaderHtmlAttributes(new { @class = "k-text-center headerDay" }).ClientTemplate("<span class='row-#:Day14#'>#:Day14#</span>");
+                            })
+                        );
+                    })
+                    //.BindTo(wfhReportData)
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/weekly-wfh-report/get-reports"))
+                        .Data("$.getDataReport")
+                        )
+                        .PageSize(20)
+                    )
+                    .Pageable(options =>
+                        {
+                            options.Input(true);
+                            options.Numeric(false);
+                            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                        })
+                    .HtmlAttributes(new { style = "height:600px;" })
+                    .Sortable()
+                    .Resizable(resizable => resizable.Columns(true))
+                    .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                    .Scrollable()
+                    .Events(events =>
+                    {
+                        events.DataBound("$.onDataBound");
+                    })
+                    .Deferred()
+                    )
+            </div> *@
+                <div class="col-md-12">
+                    <div class="calendar-container">
+                        <div class="custom-calendar">
+                            <div class="calendar-header">
+                                <h2 id="monthYear"></h2>
+                                <button id="prevMonth">‹</button>
+                                <button id="nextMonth">›</button>
+                            </div>
+                            <table class="calendar-table">
+                                <thead>
+                                    <tr>
+                                        <th>@Localizer["Sunday"]</th>
+                                        <th>@Localizer["Monday"]</th>
+                                        <th>@Localizer["Tuesday"]</th>
+                                        <th>@Localizer["Wednesday"]</th>
+                                        <th>@Localizer["Thursday"]</th>
+                                        <th>@Localizer["Friday"]</th>
+                                        <th>@Localizer["Saturday"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendarBody">
+                                    <!-- Calendar dates will be generated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="legend">
+                        <p><span class="legend-item wfo"></span> WFO</p>
+                        <p><span class="legend-item wfh"></span> WFH</p>
+                        <p><span class="legend-item wff"></span> WFF</p>
+                        <p><span class="legend-item different"></span> Plan ≠ Actual</p>
+                        <p><span class="legend-item day-off"></span> Day OFF</p>
+                        <p><span class="legend-item createdwith"></span> WFO Unplanned</p>
+                    </div>
+                    <!-- Modal Structure -->
+                    <div id="employeeModal" class="employee-modal">
+                        <div class="employee-modal-content">
+                            <span class="employeeModalClose">&times;</span>
+                            <div class="employee-modal-header">
+                                <h2 class="employee-modal-title">@Localizer["Employee List"]</h2>
+                                <div class="employee-modal-subheader">
+                                    <p class="employee-modal-date" id="modalDate"></p>
+                                    <input type="text" id="searchBar" class="employee-name-search-bar" placeholder="Search by name...">
+                                </div>
+                            </div>
+                            <div id="employeeModalDetails"></div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+</div>

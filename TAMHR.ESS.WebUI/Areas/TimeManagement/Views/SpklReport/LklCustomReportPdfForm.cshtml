@@ -1,0 +1,134 @@
+﻿@using TAMHR.ESS.Domain
+@using Agit.Common.Extensions
+@model PdfViewModel
+@{
+    Layout = null;
+    var keyDate = (DateTime)Model.ViewBag.KeyDate;
+    var details = Model.Object as IEnumerable<SpklRequestOrganizationStoredEntity>;
+    var objectDescriptions = Model.ViewData as IEnumerable<ObjectDescriptionStoredEntity>;
+
+    var divisionName = objectDescriptions.Where(x => x.ObjectDescription == "Division").FirstOrDefaultIfEmpty().OrgName;
+    var departmentName = objectDescriptions.Where(x => x.ObjectDescription == "Department").FirstOrDefaultIfEmpty().OrgName;
+    var sectionName = objectDescriptions.Where(x => x.ObjectDescription == "Section").FirstOrDefaultIfEmpty().OrgName;
+
+    var actor = User.GetClaim("NoReg");
+}
+<hr style="margin-bottom: 10px; margin-top: 0;" />
+<div style="text-align:center; width:100%;">
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%; margin-right: 5%;" border="0" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 20%;" />
+            <col style="width: 40%;" />
+            <col style="width: 15%;" />
+            <col style="width: 25%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td class="bold" style="font-size: 18px; font-weight: bold; border-top: 0px !important;" colspan="4" align="center">LAPORAN KERJA LEMBUR</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Divisi<label style="float: right;">:</label></td>
+                <td>@divisionName</td>
+                <td>OT Period<label style="float: right;">:</label></td>
+                <td>@keyDate.ToString("MMM yyyy")</td>
+            </tr>
+            <tr>
+                <td>Department<label style="float: right;">:</label></td>
+                <td>@departmentName</td>
+                <td>Created Date<label style="float: right;">:</label></td>
+                <td>@DateTime.Now.ToString("dd/MM/yyyy")</td>
+            </tr>
+            <tr>
+                <td>Section<label style="float: right;">:</label></td>
+                <td>@sectionName</td>
+                <td>Print By<label style="float: right;">:</label></td>
+                <td>@actor</td>
+            </tr>
+        </tbody>
+        <tr>
+            <td colspan="11" height="50px"></td>
+        </tr>
+        <tr class="tableizer-firstrow">
+            <td class="bold" style="font-size: 14px; border-top: 0px !important;" colspan="11" align="left"><h3 style="text-align:left !important">Overtime Transaction</h3></td>
+        </tr>
+    </table>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">No</td>
+                <td style="text-align: center;">Noreg</td>
+                <td style="text-align: center;">Nama</td>
+                <td style="text-align: center;">Class</td>
+                <td style="text-align: center;">OT Date</td>
+                <td style="text-align: center;">OT In</td>
+                <td style="text-align: center;">OT Out</td>
+                <td style="text-align: center;">Break</td>
+                <td style="text-align: center;">OT Hour</td>
+                <td style="text-align: center;">Category</td>
+                <td style="text-align: center;">Reason</td>
+            </tr>
+        </thead>
+        <tbody>
+            @{ var index = 1;}
+            @foreach (var item in details)
+            {
+                <tr class="tableizer-firstrow" style="height:50px">
+                    <td style="text-align: center;">@index</td>
+                    <td style="text-align: center;">@item.NoReg</td>
+                    <td style="text-align: center;">@item.Name</td>
+                    <td style="text-align: center;">@item.EmployeeClass</td>
+                    <td style="text-align: center;">@item.OvertimeDate.ToString("dd/MM/yyyy")</td>
+                    <td style="text-align: center;">@item.OvertimeInAdjust.ToString("HH:mm")</td>
+                    <td style="text-align: center;">@item.OvertimeOutAdjust.ToString("HH:mm")</td>
+                    <td style="text-align: center;">@item.OvertimeBreakAdjust</td>
+                    <td style="text-align: center;">@item.DurationAdjust</td>
+                    <td style="text-align: center;">@item.OvertimeCategory</td>
+                    <td style="text-align: center;">@item.OvertimeReason</td>
+                </tr>
+                index++;
+            }
+        </tbody>
+    </table>
+    @*<br />
+    <h3 style="text-align:left !important;font-family: 'Segoe UI'; font-size: 14px;">Approved</h3>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 50%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+        <colgroup>
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+            <col style="width: 10%;" />
+        </colgroup>
+        <thead>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">Division Head</td>
+                <td style="text-align: center;">Department Head</td>
+                <td style="text-align: center;">Section Head</td>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td style="text-align: center;">signed</td>
+                <td style="text-align: center;">signed</td>
+                <td style="text-align: center;">signed</td>
+            </tr>
+            <tr class="tableizer-firstrow">
+                <td style="text-align: center;">Division Head</td>
+                <td style="text-align: center;">Department Head</td>
+                <td style="text-align: center;">Section Head</td>
+            </tr>
+        </tbody>
+    </table>*@
+</div>

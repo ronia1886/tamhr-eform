@@ -1,0 +1,257 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.BdjkService BdjkService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityBdjkService AbnormalityBdjkService;
+@{
+    Layout = null;
+
+    IEnumerable<BdjkRequestStoredEntity> getData;
+    var id = Model.DocumentApproval.Id;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var dataRequester = Model.OrgInfo.Name;
+    var culture = new System.Globalization.CultureInfo("id-ID");
+    var bdjk = (Model.Object as BdjkPlanningViewModel);
+
+    if(bdjk.Period != DateTime.MinValue)
+    {
+        getData = BdjkService.GetBdjkList(bdjk.Period.Year, bdjk.Period.Month, org.NoReg, id).Where(x => x.Selected);
+    } else
+    {
+        getData = AbnormalityBdjkService.GetAbnormalityBdjkByDocApprovalId(id);
+        bdjk.Period = getData.ToList()[0].WorkingDate;
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .boder-all {
+        border: 1px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+<table style="width: 100%;padding:0px; font-family:'Segoe UI'; font-size:12px">
+    <thead>
+        <tr>
+            <td>
+                <table style="width: 100%;padding:0px; font-family:'Segoe UI'; font-size:12px;border-collapse:collapse" border="1">
+                    <tr>
+                        <td align="center">
+                            <strong style="font-size:18px">LOG SHEET BDJK ( Officer - Up )</strong><br />
+                            <strong>Divisi : @orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</strong>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </thead>
+</table>
+
+<table border="0" cellspacing="4" cellpadding="2" style="padding:2px;width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 30px">
+        <col style="width: 100px">
+        <col style="width: 200px">
+        <col style="width: 100px">
+    </colgroup>
+
+    <tr>
+        <td></td>
+        <td>No Reg<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.NoReg</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.Name</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Departemen<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Bulan<label style="float:right">:</label></td>
+        <td class="border-bottom">@bdjk.Period.ToString("MMMM", culture)</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Kelas<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.EmployeeSubgroupText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td height="50px"></td>
+    </tr>
+</table>
+
+
+<table border="1" cellpadding="0" cellspacing="0" style="border-collapse:collapse; width: 100%; font-family:'Segoe UI'; font-size:12px;">
+    <thead>
+        <tr class="tableizer-firstrow">
+            <th rowspan="2" style="width: 20px;">No.</th>
+            <th colspan="3" rowspan="2" style="width:80px;">Hari/ Tanggal </th>
+            <th rowspan="2" style="width: 50px">Durasi &nbsp;</th>
+            <th colspan="6" rowspan="2" style="width: 150px">Aktifitas</th>
+            <th colspan="5" style="width: 500px;">KODE</th>
+            <th colspan="2" style="width: 200px;">Paraf</th>
+        </tr>
+        <tr>
+            <th class="fr-thick ">A</th>
+            <th class="fr-thick ">B</th>
+            <th class="fr-thick ">C</th>
+            <th class="fr-thick ">D</th>
+            <th class="fr-thick ">T</th>
+            <th class="fr-thick " style="width: 100px;">Karyawan</th>
+            <th class="fr-thick" style="width: 100px;">Atasan</th>
+        </tr>
+    </thead>
+    <tbody>
+    @{
+        var index = 1;
+        var countA = 0;
+        var countB = 0;
+        var countC = 0;
+        var countD = 0;
+        var countT = 0;
+
+        foreach (var value in getData)
+        {
+            var formatDate = value.WorkingDate.ToString("dddd dd/MM/yyyy", culture);
+            var durasi = value.Overtime;
+            var activityName = value.ActivityName;
+            var dataApprover = value.DocumentStatusCode == "completed" ? value.LastApproverName : string.Empty;
+            var bdjkCodeUpper = (value.BdjkCode ?? string.Empty).ToUpper();
+
+            <tr>
+                <td align="center"><strong>@index</strong></td>
+                <td colspan="3">&nbsp; @formatDate</td>
+                <td align="center">@durasi</td>
+                <td colspan="6">&nbsp; @activityName</td>
+                <td align="center">
+                    @if (bdjkCodeUpper == "A")
+                    {
+                        countA += 1;
+                        <strong>&radic;</strong>
+                    }
+                </td>
+                <td align="center">
+                    @if (bdjkCodeUpper == "B")
+                    {
+                        countB += 1;
+                        <strong>&radic;</strong>
+                    }
+                </td>
+                <td align="center">
+                    @if (bdjkCodeUpper == "C")
+                    {
+                        countC += 1;
+                        <strong>&radic;</strong>
+                    }
+                </td>
+                <td align="center">
+                    @if (value.UangMakanDinas)
+                    {
+                        countD += 1;
+                        <strong>&radic;</strong>
+                    }
+                </td>
+                <td align="center">
+                    @if (value.Taxi)
+                    {
+                        countT += 1;
+                        <strong>&radic;</strong>
+                    }
+                </td>
+                <td align="center">@dataRequester</td>
+                <td align="center">@dataApprover</td>
+            </tr>
+            index++;
+        }
+    }
+    </tbody>
+    <tfoot>
+        <tr>
+            <td align="center"><strong>&radic;</strong></td>
+            <td colspan="7" style="width: 44.8%;">&nbsp; Berikan tanda Checklis di masing- masing Kolom BDJK</td>
+            <td colspan="3" style="width: 17.5788%;" align="center"><strong>TOTAL</strong></td>
+            <td align="center">
+                @if (countA == 0)
+                {<span></span>}
+                else
+                {<span>@countA</span>}
+            </td>
+            <td align="center">
+                @if (countB == 0)
+                {<span></span>}
+                else
+                {<span>@countB</span>}
+            </td>
+            <td align="center">
+                @if (countC == 0)
+                {<span></span>}
+                else
+                {<span>@countC</span>}
+            </td>
+            <td align="center">
+                @if (countD == 0)
+                {<span></span>}
+                else
+                {<span>@countD</span>}
+            </td>
+            <td align="center">
+                @if (countT == 0)
+                {<span></span>}
+                else
+                {<span>@countT</span>}
+            </td>
+        </tr>
+    </tfoot>
+</table>
+<p>
+    <h2 style="font-family:'Segoe UI';">Kode BDJK</h2>
+</p>
+<table style="border-collapse:collapse; width: 100%; font-family:'Segoe UI'; font-size:12px;" border="0">
+    <tbody>
+        <tr>
+            <td align="center">A</td>
+            <td style="width: 33.8164%;">: Hari Kerja Biasa Minimal 2 Jam</td>
+            <td align="center">D</td>
+            <td style="width: 59.5357%;">: Uang Makan Dinas Luar &nbsp; &nbsp; &nbsp; &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center">B</td>
+            <td style="width: 34.4605%;">: Hari Libur Minimal 2 Jam &gt; 5 Jam &nbsp; &nbsp; &nbsp; &nbsp;</td>
+            <td align="center">T</td>
+            <td style="width: 60.6965%;">: Uang Taksi diatas diatas Jam 21:00 WIB, Berlaku untuk Kelas 7 s.d 08 SpV &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</td>
+        </tr>
+        <tr>
+            <td align="center">C</td>
+            <td style="width: 33.4992%;">: Hari Libur diatas 5 Jam &nbsp; &nbsp; &nbsp; &nbsp;</td>
+        </tr>
+    </tbody>
+</table>

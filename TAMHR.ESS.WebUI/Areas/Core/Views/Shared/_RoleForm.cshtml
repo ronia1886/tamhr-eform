@@ -1,0 +1,62 @@
+﻿@model TAMHR.ESS.Domain.Role
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/role">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Role Key"]</label>
+                @Html.TextBoxFor(x => x.RoleKey, new { @class = "form-control", @data_validation_for = "RoleKey", @placeholder = Localizer["Please input key"].Value })
+                <span class="invalid" data-validation-for="RoleKey"></span>
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+        <div class="col-md-4 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Role Type"]</label>
+                @Html.KendoComboBoxFor(x => x.RoleTypeCode, "RoleType").Placeholder(Localizer["Please select role type"].Value)
+                <span class="invalid" data-validation-for="RoleTypeCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextAreaFor(x => x.Description, new { @class = "form-control", @rows = "3", @data_validation_for = "Description", placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Permissions"]</label>
+                <span class="invalid" data-validation-for="Permissions"></span>
+                @(Html.Kendo().ListView<TAMHR.ESS.Domain.RolePermissionStoredEntity>()
+                    .Name("rolePermissionListView")
+                    .TagName("div")
+                    .HtmlAttributes(new { @class = "row" })
+                    .Events(evt => evt.DataBinding(@<text>function() { this.element.removeClass("k-widget k-listview") }</text>))
+                    .ClientTemplateId("template")
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/role/getpermissions")).Data(@<text>function() { return { "roleId": "@Model.Id" }; }</text>))
+                        .Sort(sort => sort.Add("Description"))
+                    )
+                )
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">Save</a>
+    </div>
+</form>

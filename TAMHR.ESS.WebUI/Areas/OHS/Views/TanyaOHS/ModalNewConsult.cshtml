@@ -1,0 +1,66 @@
+﻿<style>
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        margin: 0;
+    }
+</style>
+<script type="text/javascript">
+    document.addEventListener("DOMContentLoaded", function(event) {
+        var ncBNext = $("#ncBNext");
+        var mFeedback = $("#mFeedback");
+        ncBNext.click(()=>{
+            console.log("masuk");
+        });
+    });
+</script>
+<div id="mdlNewConsult" class="modal fade" role="dialog">
+    <form method="post" action="~/vaccine/">
+        <div class="modal-dialog">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" onclick="mdlNewConsultToggle();" class="close" data-dismiss-modal="modal2">&times;</button>
+                    <h4 class="modal-title">User Input</h4>
+
+                </div>
+                <div class="modal-body">
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Nama
+                        </label>
+                        <br/>
+                        <input id="ncName" class="form-control" type="text" />
+                        <div id="ncNameFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Noreg
+                        </label>
+                        <br/>
+                        <input id="ncNoreg" class="form-control" type="number" />
+                        <div id="ncNoregFeedback" class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Keluhan
+                        </label>
+                        <br/>
+                        <textarea id="ncComplaint" class="form-control"></textarea>
+                        <div id="ncComplaintFeedback" class="invalid-feedback"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="ncBNext" class="btn btn-primary" onclick="newConsultNext();">Next</button>
+                    <button type="button" name="btnCloseNewConsult" onclick="mdlNewConsultToggle();" class="btn btn-default" data-dismiss-modal="modal2">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>

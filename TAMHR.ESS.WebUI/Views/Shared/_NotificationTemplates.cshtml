@@ -1,0 +1,66 @@
+﻿<script type="text/x-kendo-tmpl" id="_taskTpl">
+    <li class="external notifications-header">
+        <h3>
+            @Localizer[@"<span class=""bold""> #: Total # pending</span> tasks"]
+        </h3>
+        <a href="#: ViewAllUrl #">@Localizer["view all"]</a>
+    </li>
+    <li class="notification-content">
+        <ul class="dropdown-menu-list #: Messages.length > 4 ? 'scroller' : '' #" data-height="363" data-handle-color="\\#A7B3C1">
+            # if (Messages.length == 0) { #
+            <li>
+                <a class="user-notification-item user-notification-item-unread">
+                    <span class="details">
+                        @Localizer["No tasks"].
+                    </span>
+                </a>
+            </li>
+            # } else { #
+            # for (var i = 0; i < Messages.length; i++) { #
+            <li>
+                <a class="user-notification-item user-notification-item-unread" href="#= app.resolveUrl('~/core/form/redirectto?formKey=' + Messages[i].FormKey + '&id=' + Messages[i].Id) #" style="position:relative;">
+                    <span class="details">
+                        #= $.toDefault(Messages[i].Title, '-') #
+                    </span>
+                    <span class="progress">
+                        <span style="width: #: Messages[i].Progress #%;" class="progress-bar progress-bar-success" aria-valuenow="#: Messages[i].Progress #" aria-valuemin="0" aria-valuemax="100"></span>
+                    </span>
+                    <span class="progress-detail">#: Messages[i].Progress #%</span>
+                </a>
+            </li>
+            # } #
+            # } #
+        </ul>
+    </li>
+</script>
+<script type="text/x-kendo-tmpl" id="_notificationTpl">
+    <li class="external notifications-header">
+        <h3>
+            @Localizer[@"<span class=""bold""> #: Total # unread</span> notifications"]
+        </h3>
+        <a href="#: ViewAllUrl #">@Localizer["view all"]</a>
+    </li>
+    <li class="notification-content">
+        <ul class="dropdown-menu-list #: Messages.length > 4 ? 'scroller' : '' #" data-height="363" data-handle-color="\\#A7B3C1">
+            # if (Messages.length == 0) { #
+            <li>
+                <a class="user-notification-item user-notification-item-unread">
+                    <span class="details">
+                        @Localizer["No pending notifications"].
+                    </span>
+                </a>
+            </li>
+            # } else { #
+            # for (var i = 0; i < Messages.length; i++) { #
+            <li>
+                <div class="user-notification-item user-notification-item-unread" style="padding: 10px; font-size: 0.75rem; color: \\#888; border-bottom: 1px solid \\#EFF2F6 !important;">
+                    <div class="details">
+                        #= $.toDefault(Messages[i].Message, '-') # <b>at #: kendo.toString(Messages[i].CreatedOn, 'dd MMM yyyy - hh:mm') #</b>
+                    </div>
+                </div>
+            </li>
+            # } #
+            # } #
+        </ul>
+    </li>
+</script>

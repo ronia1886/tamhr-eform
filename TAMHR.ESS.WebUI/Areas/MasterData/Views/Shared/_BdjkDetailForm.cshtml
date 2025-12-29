@@ -1,0 +1,65 @@
+﻿@model TAMHR.ESS.Domain.BdjkDetail
+@{ 
+    var isNew = (Model?.Id ?? Guid.Empty) == Guid.Empty;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/bdjk-detail">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["BDJK Code"]</label>
+                @Html.TextBoxFor(x => x.BdjkCode, new { @class = "form-control", @data_validation_for = "BdjkCode", @placeholder = Localizer["Please input bdjk code"].Value })
+                <span class="invalid" data-validation-for="BdjkCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.Description, new { @class = "form-control", @data_validation_for = "Description", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["BDJK Value"]</label>
+                @Html.TextBoxFor(x => x.BdjkValue, new { @class = "form-control", @data_validation_for = "BdjkValue", @placeholder = Localizer["Please input bdjk value"].Value })
+                <span class="invalid" data-validation-for="BdjkValue"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Class From"]</label>
+                @Html.TextBoxFor(x => x.ClassFrom, new { @class = "form-control", @data_validation_for = "ClassFrom", @placeholder = Localizer["Please input class from"].Value })
+                <span class="invalid" data-validation-for="ClassFrom"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Class To"]</label>
+                @Html.TextBoxFor(x => x.ClassTo, new { @class = "form-control", @data_validation_for = "ClassTo", @placeholder = Localizer["Please input class to"].Value })
+                <span class="invalid" data-validation-for="ClassTo"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Flag Holiday"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.FlagHoliday)
+                <span class="invalid" data-validation-for="FlagHoliday"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Flag Duration"]</label>
+                @Html.TextBoxFor(x => x.FlagDuration, new { @class = "form-control", @data_validation_for = "FlagDuration", @placeholder = Localizer["Please input flag duration if any"].Value })
+                <span class="invalid" data-validation-for="FlagDuration"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

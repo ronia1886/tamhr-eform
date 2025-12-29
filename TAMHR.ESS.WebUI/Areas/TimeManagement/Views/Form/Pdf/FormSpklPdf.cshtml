@@ -1,0 +1,105 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+
+    // Buat matrix Print Out
+    // var getPrintOut = coreService.GetPrintOut().ToList();
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+<div style="text-align:center;width:100%">
+    <h3>SURAT PERINTAH KERJA LEMBUR</h3>
+</div>
+
+<table style="width: 100%">
+    <colgroup>
+        <col style="width: 100px">
+        <col style="width: 377px">
+        <col style="width: 94px">
+        <col style="width: 150px">
+    </colgroup>
+    <tr>
+        <th>Document#</th>
+        <th colspan="3"></th>
+    </tr>
+    <tr>
+        <td>Divisi</td>
+        <td></td>
+        <td>OT Date</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>Department</td>
+        <td></td>
+        <td>Created Date</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>Section</td>
+        <td></td>
+        <td>Created By</td>
+        <td></td>
+    </tr>
+</table>
+<hr />
+<h4>OVERTIME PLANNING</h4>
+<table border="1" cellspacing="1" cellpadding="1" style="width:100%">
+    <thead>
+        <tr>
+            <th>No.</th>
+            <th>NoReg</th>
+            <th>Nama</th>
+            <th>Class</th>
+            <th>OT In</th>
+            <th>OT Out</th>
+            <th>Break</th>
+            <th>OT Hour</th>
+            <th>Category</th>
+            <th>Reason</th>
+            <th>Sign</th>
+        </tr>
+    </thead>
+</table>

@@ -1,0 +1,456 @@
+﻿@model DocumentRequestDetailViewModel<EyeglassesAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var lensType = string.IsNullOrEmpty(Model.Object.LensType) ? "lensa" : Model.Object.LensType;
+}
+@section scripts {
+    <script type="text/javascript">
+        var AllowFrame = false;
+        var AllowLens = false;
+
+        $(document).ready(function () {
+            if ('@Model.Object.IsLens' == 'True') {
+                $("#Object_IsLens").prop("checked", true);
+                $("#spanLensType").show();
+                $("#spanAmountLens").show();
+                $("#spanPurchaseLens").show();
+                $("#spanLensAttachment").show();
+                $(".file-LensAttachment").removeClass("div-disable");
+            }
+            else {
+                $("#Object_LensType").attr("disabled", "disabled");
+                $("#Object_AmountLens").attr("disabled", "disabled");
+                $("#Object_PurchaseLens").attr("disabled", "disabled");
+                $("#spanLensType").hide();
+                $("#spanAmountLens").hide();
+                $("#spanPurchaseLens").hide();
+                $("#spanLensAttachment").hide();
+                $(".file-LensAttachment").addClass("div-disable");
+            }
+
+            if ('@Model.Object.IsFrame' == 'True') {
+                $("#Object_IsFrame").prop("checked", true);
+                $("#spanAmountFrame").show();
+                $("#spanPurchaseFrame").show();
+                $("#spanFrameAttachment").show();
+                $(".file-FrameAttachment").removeClass("div-disable");
+            }
+            else {
+                $("#Object_AmountFrame").attr("disabled", "disabled");
+                $("#Object_PurchaseFrame").attr("disabled", "disabled");
+                $("#spanAmountFrame").hide();
+                $("#spanPurchaseFrame").hide();
+                $("#spanFrameAttachment").hide();
+                $(".file-FrameAttachment").addClass("div-disable");
+            }
+
+            $('input[type=checkbox][id=Object_IsLens]').change(function () {
+                if ($(this).is(':checked')) {
+                    $("#Object_LensType").data("kendoComboBox").readonly(false);
+                    $("#Object_AmountLens").data("kendoNumericTextBox").readonly(false);
+                    $("#Object_PurchaseLens").data("kendoDatePicker").readonly(false);
+                    $("#spanLensType").show();
+                    $("#spanAmountLens").show();
+                    $("#spanPurchaseLens").show();
+                    $("#spanLensAttachment").show();
+                    $(".file-LensAttachment").removeClass("div-disable");
+                    onChangeAmount()
+                }
+                else {
+                    $("#Object_LensType").data("kendoComboBox").readonly(true);
+                    $("#Object_AmountLens").data("kendoNumericTextBox").readonly(true);
+                    $("#Object_AmountLens").data("kendoNumericTextBox").value(0);
+                    $("#Object_LensAttachment").val("");
+                    $("#Object_PurchaseLens").data("kendoDatePicker").readonly(true);
+                    $("#Object_PurchaseLens").val("");
+                    $("#spanLensType").hide();
+                    $("#spanAmountLens").hide();
+                    $("#spanPurchaseLens").hide();
+                    $("#spanLensAttachment").hide();
+                    $(".file-LensAttachment").addClass("div-disable");
+                    $(".file-LensAttachment").data("uploadFile").clearFiles();
+                    onChangeAmount()
+                }
+            });
+
+            $('input[type=checkbox][id=Object_IsFrame]').change(function () {
+                if ($(this).is(':checked')) {
+                    $("#Object_AmountFrame").data("kendoNumericTextBox").readonly(false);
+                    $("#Object_PurchaseFrame").data("kendoDatePicker").readonly(false);
+                    $("#spanAmountFrame").show();
+                    $("#spanPurchaseFrame").show();
+                    $("#spanFrameAttachment").show();
+                    $(".file-FrameAttachment").removeClass("div-disable");
+                    onChangeAmount()
+                }
+                else {
+                    $("#Object_AmountFrame").data("kendoNumericTextBox").readonly(true);
+                    $("#Object_AmountFrame").data("kendoNumericTextBox").value(0);
+                    $("#Object_FrameAttachment").val("");
+                    $("#Object_PurchaseFrame").data("kendoDatePicker").readonly(true);
+                    $("#Object_PurchaseFrame").val("");
+                    $("#spanAmountFrame").hide();
+                    $("#spanPurchaseFrame").hide();
+                    $("#spanFrameAttachment").hide();
+                    $(".file-FrameAttachment").addClass("div-disable");
+                    $(".file-FrameAttachment").data("uploadFile").clearFiles();
+                    onChangeAmount()
+                }
+            });
+        });  
+
+        
+        if ('@isCanEdit' == 'False'){
+            $("#divLens").hide();
+            $("#divFrame").hide();
+            $("#divHeader").hide();
+
+            if ('@Model.Object.IsLens' == 'True' && '@Model.Object.IsFrame' == 'True') {
+                $("#divLens").show();
+                $("#divFrame").show();
+            }
+            else if ('@Model.Object.IsLens' == 'True' && '@Model.Object.IsFrame' != 'True') {
+                $("#divLens").show();
+                $("#divFrame").hide();
+            }
+            else if ('@Model.Object.IsFrame' == 'True'  && '@Model.Object.IsLens' != 'True') {
+                $("#divFrame").show();
+                $("#divLens").hide();
+            }
+        }
+        
+        $("#TotalAmount").text("0.00");
+
+        $.ajax(
+        {
+            type: 'POST',
+            url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+            dataType: 'json',
+            data: {
+                noreg: '@requester', type: 'EyewearAllowanceType', subtype: 'frame'
+            },
+                success: function (result) {
+                    $('#User').text(result.Name);
+                    $('#Kelas').text(result.Kelas);
+                    $('#MaxFrame').text('Rp. ' + app.formatNumber(result.Ammount));
+                    amountFrame = result.Ammount
+                    
+                    if (result.Kelas === 'B.O.D.') {
+                        $("#divHeader").hide();
+                    }
+                    
+            }
+        });
+
+        if ('@isCanEdit' == 'True') {
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/claimbenefit/geteyeglassesalert'),
+                dataType: 'json',
+                success: function (result) {
+                    var objFrame = result.find(x => x.type === 'frame');
+                    var objLensa = result.find(x => x.type === 'lensa');
+
+                    if (objFrame !== undefined) {
+                        $("#lblAlertFrame").text(objFrame.val);
+                        $("#lblAlertFrame").show();
+                        $("#lblframe").hide();
+                        $("#divFrame").hide();
+                    }
+
+                    if (objLensa !== undefined) {
+                        $("#lblAlertLensa").text(objLensa.val);
+                        $("#lblAlertLensa").show();
+                        $("#lbllens").hide();
+                        $("#divLens").hide();
+                    }
+                }
+            });
+        }
+
+        $.ajax(
+        {
+            type: 'POST',
+            url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+            dataType: 'json',
+            data: {
+                noreg: '@requester', type: 'EyewearAllowanceType', subtype: 'lensa'
+            },
+            success: function (result) {
+                $('#User').text(result.Name);
+                $('#Kelas').text(result.Kelas);
+                $('#MaxLens').text('Rp. ' + app.formatNumber(result.Ammount));
+
+                amountLens = result.Ammount;
+            }
+        });
+
+        $.ajax(
+        {
+            type: 'POST',
+            url: app.resolveUrl('~/api/allowancedetail/getinfo'),
+            dataType: 'json',
+            data: {
+                noreg: '@requester', type: 'EyewearAllowanceType', subtype: 'lensa-bifocal'
+            },
+            success: function (result) {
+                $('#MaxLensBifocal').text('Rp. ' + app.formatNumber(result.Ammount));
+
+                amountBifocalLens = result.Ammount;
+            }
+        });
+            
+        var amountFrame = 0;
+        var amountLens = 0;
+        var amountBifocalLens = 0;
+
+        $("#spanLensType").hide();
+        $("#spanAmountLens").hide();
+        $("#spanPurchaseLens").hide();
+        $("#spanLensAttachment").hide();
+        $("#spanAmountFrame").hide();
+        $("#spanPurchaseFrame").hide();
+        $("#spanFrameAttachment").hide();
+
+        function onChangeAmount() {
+            var lensType = $("#Object_LensType").val();
+
+            if (amountLens == undefined)
+                amountLens = 0;
+
+            if (amountBifocalLens == undefined)
+                amountBifocalLens = 0;
+
+            if (amountFrame == undefined)
+                amountFrame = 0;
+
+            if (lensType == "lensa" && $("#Object_AmountLens").val() > amountLens) {
+                app.warning("Cannot input amount more than max amount " + $('#MaxLens').text());
+                $("#Object_AmountLens").data("kendoNumericTextBox").value(amountLens);
+            }
+            else if (lensType == "lensa-bifocal" && $("#Object_AmountLens").val() > amountBifocalLens) {
+                app.warning("Cannot input amount more than max amount " + $('#MaxLensBifocal').text());
+                $("#Object_AmountLens").data("kendoNumericTextBox").value(amountBifocalLens);
+            }
+
+            if ($("#Object_AmountFrame").val() > amountFrame) {
+                app.warning("Cannot input amount more than max amount " + $('#MaxFrame').text())
+                $("#Object_AmountFrame").data("kendoNumericTextBox").value(amountFrame);
+            }
+
+            var lens = parseFloat($("#Object_AmountLens").val());
+            var frame = parseFloat($("#Object_AmountFrame").val());
+            var total = 0;
+
+            total = (lens + frame);
+
+            $("#TotalAmount").text(app.formatNumber(total) + '.00')
+        }
+
+        var aa = $("#Object_AmountFrame").val();
+        var bb = $("#Object_AmountLens").val();
+        var cc = parseInt(aa) + parseInt(bb);
+
+        $("#TotalAmount").text(app.formatNumber(cc) + '.00')
+
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+        } else if('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ){
+            $("#textanda").show()
+        }
+    </script>
+}
+<div class="row" id="divHeader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">Information</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='Kelas'></b>."]</span>
+                    <ul class="list-style-icons margin-top-10">
+                        <li id="lbllens">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Maximum Lens Cost Allowed is <b class='font-red' id='MaxLens'></b> for Single Vision Lens and <b class='font-red' id='MaxLensBifocal'></b> for Bifocal Lens"]
+                        </li>
+                        <li id="lblframe">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Maximum Frame Cost Allowed is <b class='font-red' id='MaxFrame'></b>"]
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Eyeglasses Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["Eyeglasses Data"]</legend>
+                                <label id="lblAlertLensa" class="font-red-haze" style="display: none;"></label>
+                                <label id="lblAlertFrame" class="font-red-haze" style="display: none;"></label>
+                                <div id="divLens">
+                                    <div class="form-group">
+                                        <div class="mt-checkbox-inline">
+                                            <label class="mt-checkbox green mt-checkbox-outline">
+                                                <input type="checkbox" id="Object_IsLens" name="Object.IsLens" class="form-control" data_validation_for="Object.IsLens" @(!isCanEdit ? "disabled" : "") />
+                                                @Localizer["Lens"]
+                                                <span></span>
+                                            </label>
+                                            <label id="lblAlertLensa" class="font-red-haze"></label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true" id="spanLensType"> * </span>@Localizer["Lens Type"]</label>
+                                        @(Html.KendoListComboBoxFor(x => x.Object.LensType, new[] { "Lensa|lensa", "Lensa Bifocal|lensa-bifocal" }).HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.LensType", placeholder = Localizer["Please select lens type"].Value })
+                                            .Enable(isCanEdit)
+                                            .Events(events => events.Change(@<text>function() { onChangeAmount(); }</text>))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true" id="spanAmountLens"> * </span>@Localizer["Lens Cost"]</label>
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.AmountLens)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.AmountLens" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Math.Floor(Model.Object.AmountLens))
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Min(0)
+                                            .Spinners(false)
+                                            .Events(e => e.Change("onChangeAmount"))
+                                            .Enable(isCanEdit)
+                                            .Round(false)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true" id="spanPurchaseLens"> * </span>@Localizer["Purchase Date"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.PurchaseLens)
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.PurchaseLens", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                            .Enable(isCanEdit)
+                                            .Format("dd/MM/yyyy")
+                                            .Max(DateTime.Now)
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="exampleInputEmail2"><span class="required" aria-required="true" id="spanLensAttachment"> * </span>@Localizer["Lens Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.LensAttachment" })
+                                            }
+                                            else
+                                            {
+                                                        <br />
+                                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "LensAttachment" })
+                                            }
+                                        }
+                                        <label class="font-red"><small>@Localizer["Please send original receipts to HRIS and Payroll Section for processing"]</small></label>
+                                    </div>
+                                </div>
+                                <div id="divFrame">
+                                    <div class="form-group">
+                                        <div class="mt-checkbox-inline">
+                                            <label class="mt-checkbox green mt-checkbox-outline">
+                                                <input type="checkbox" id="Object_IsFrame" name="Object.IsFrame" class="form-control" , data_validation_for="Object.IsFrame" @(!isCanEdit ? "disabled" : "") />
+                                                @Localizer["Frame"]
+                                                <span></span>
+                                            </label>
+                                            <label id="lblAlertFrame" class="font-red-haze"></label>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true" id="spanAmountFrame"> * </span>@Localizer["Frame Cost"]</label>
+                                        @(Html.Kendo().NumericTextBoxFor(x => x.Object.AmountFrame)
+                                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "Object.AmountFrame" })
+                                            .Placeholder(Localizer["Input Amount"].Value)
+                                            .Value(Math.Floor(Model.Object.AmountFrame))
+                                            .Format("##,#")
+                                            .Decimals(0)
+                                            .Min(0)
+                                            .Spinners(false)
+                                            .Events(e => e.Change("onChangeAmount"))
+                                            .Round(false)
+                                            .Enable(isCanEdit)
+                                            .Deferred()
+                                        )
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true" id="spanPurchaseFrame"> * </span>@Localizer["Purchase Date"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.PurchaseFrame)
+                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.PurchaseFrame", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                            .Enable(isCanEdit)
+                                            .Max(DateTime.Now)
+                                            .Format("dd/MM/yyyy")
+                                            .Deferred()
+                                        )
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="exampleInputEmail2"><span class="required" aria-required="true" id="spanFrameAttachment"> * </span>@Localizer["Frame Attachment"]</label>
+                                        @{
+                                            if (isCanEdit)
+                                            {
+                                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.FrameAttachment" })
+                                            }
+                                            else
+                                            {
+                                                        <br />
+                                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "FrameAttachment" })
+                                            }
+                                        }
+                                        <label class="font-red"><small>@Localizer["Please send original receipts to HRIS and Payroll Section for processing"]</small></label>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label>@Localizer["Total Cost"] : &nbsp;</label><label id="TotalAmount" style="color:red"></label>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

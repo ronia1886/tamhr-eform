@@ -1,0 +1,11 @@
+{
+  "profiles": {
+    "WSL": {
+      "commandName": "Project",
+      "distributionName": ""
+    },
+    "TAMHR.ESS.WinService": {
+      "commandName": "Project"
+    }
+  }
+}

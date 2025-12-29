@@ -1,0 +1,555 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@*@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService CoreService*@
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var documentNumber = string.Empty;
+    var parentId = Guid.Empty;
+    var hasParentId = ViewContext.HttpContext.Request.Query.ContainsKey("id");
+
+    if (hasParentId)
+    {
+        parentId = Guid.Parse(ViewContext.HttpContext.Request.Query["id"]);
+        //var documentApproval = CoreService.GetDocumentApprovalById(parentId);
+        //documentNumber = documentApproval.DocumentNumber;
+    }
+}
+@section styles  {
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+            left: -1.13rem;
+        }
+    </style>
+}
+@section scripts{
+    <script type="text/javascript" src="~/js/pages/spkl-report.js"></script>
+    <script type="text/javascript">
+        //function getParameters() {
+        //    var value = $("#Periode").data("kendoDatePicker").value(),
+        //        y = value.getFullYear(),
+        //        m = value.getMonth(),
+        //        startDate = kendo.toString(new Date(y, m, 1), "yyyy-MM-dd"),
+        //        endDate = kendo.toString(new Date(y, m + 1, 0), "yyyy-MM-dd");
+
+        //    return { startDate: startDate, endDate: endDate};
+        //}
+        function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { startDate: startDate, endDate: endDate };
+        }
+    </script>
+}
+@section pageToolbars
+{
+    @*@if (!hasParentId)
+    {*@
+        <div class="dropdown">
+            <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler" data-parameters-type="pdf">
+                        @Localizer["Download Report to PDF"]
+                    </a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler" data-parameters-type="xlsx">
+                        @Localizer["Download Report to XLSX"]
+                    </a>
+                </li>
+                @if (chief) {
+                <li class="dropdown-divider"></li>
+                <li>
+                    <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Adjustment SPKL" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/spkl-report">
+                        @Localizer["Upload"]
+                    </a>
+                </li>
+                }
+            </ul>
+        </div>
+    @*}
+    else
+    {
+        <div class="toolbars">
+            <div class="btn-group">
+                <a href="javascript:;" class="btn dark btn-sm" data-trigger="modal" data-modal-title="Tracking Approval - @documentNumber" data-modal-ajax="true" data-ajax-url="~/core/home/trackingapproval" data-parameters-id="@parentId">
+                    <i class="icon-doc"></i> <span class="d-none d-md-inline">@documentNumber</span>
+                </a>
+            </div>
+        </div>
+    }*@
+}
+@*@if (!hasParentId)
+{*@
+    <div class="card">
+        <div class="row d-flex no-padding row-col-separator-xl">
+            <div class="col-md-6">
+                <div class="m-widget">
+                    <div class="m-widget-header">
+                        <h3 class="m-widget-title">@Localizer["Document Status Summary"]</h3>
+                        <span class="m-widget-desc">@Localizer["Document status summary by period"]</span>
+                    </div>
+                    <div class="m-widget-item pt-0">
+                        <div class="row">
+                            <div class="col-md-12">
+                                @(Html.Kendo().Chart<SummaryViewModel>()
+                                    .Name("chart")
+                                    .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                    .Legend(legend => legend
+                                        .Position(ChartLegendPosition.Right)
+                                        .Align(ChartLegendAlign.Center)
+                                        .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                    )
+                                    .DataSource(ds => ds
+                                        .WebApi()
+                                        .ServerOperation(false)
+                                        .Read(read => read.Url(Url.Content("~/api/spkl-report/document-status-summary")).Data("getParameters"))
+                                    )
+                                    .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                    .Series(series => {
+                                        series.Donut(x => x.Total, x => x.Name)
+                                            .ColorField("Color")
+                                            .VisibleInLegendField("VisibleInLegend");
+                                    })
+                                    .AutoBind(false)
+                                    .Tooltip(tooltip => tooltip
+                                        .Visible(true)
+                                        .Template("${ app.translate(category) }: ${ value }")
+                                    )
+                                    .Deferred()
+                                )
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="m-widget">
+                    <div class="m-widget-header">
+                        <h3 class="m-widget-title">@Localizer["Activity Summary"]</h3>
+                        <span class="m-widget-desc">@Localizer["Activity summary by period"]</span>
+                    </div>
+                    <div class="m-widget-item pt-2">
+                        <div class="row">
+                            <div class="col-md-12">
+                                @(Html.Kendo().Chart<SummaryViewModel>()
+                                    .Name("secondChart")
+                                    .HtmlAttributes(new { style = "height: 105px; position: relative;" })
+                                    .Legend(legend => legend
+                                        .Position(ChartLegendPosition.Right)
+                                        .Align(ChartLegendAlign.Center)
+                                        .Labels(labels => labels.Template("${ app.translate(text) } (${ value })"))
+                                    )
+                                    .DataSource(ds => ds
+                                        .WebApi()
+                                        .ServerOperation(false)
+                                        .Read(read => read.Url(Url.Content("~/api/spkl-report/activity-summary")).Data("getParameters"))
+                                    )
+                                    .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8", "#005A91", "#007FAD", "#00D3E4", "#FF96DA", "#FF7D81", "#E0FF4D" })
+                                    .Series(series => {
+                                        series.Donut(x => x.Total, x => x.Name)
+                                            .ColorField("Color")
+                                            .VisibleInLegendField("VisibleInLegend");
+                                    })
+                                    .AutoBind(false)
+                                    .Tooltip(tooltip => tooltip
+                                        .Visible(true)
+                                        .Template("${ category }: ${ value }")
+                                    )
+                                    .Deferred()
+                                )
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@*}*@
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["SPKL Request List"]@*@(hasParentId ? " - " + documentNumber : string.Empty)*@</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    @*<div class="row @(hasParentId ? "hidden" : string.Empty)">*@
+                    <div class="row">
+                        <div class="col-md-12 col-sm-12">
+                            <fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+                                <legend>Filter</legend>
+                                <div class="row container-by-date">
+                                    @*<div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Period"]</label>
+                                        @(Html.Kendo().DatePicker().Name("Periode")
+                                            .Start(CalendarView.Year)
+                                            .Depth(CalendarView.Year)
+                                            .HtmlAttributes(new { @class = "form-control", placeholder = Localizer["Choose period"].Value })
+                                            .Format("yyyy MMMM")
+                                            .Events(e =>
+                                            {
+                                                e.Change("$.filterChange");
+                                            })
+                                            .Value(DateTime.Now)
+                                            .Deferred()
+                                        )
+                                    </div>*@
+                                    <div class="form-group col-md-2">
+                                        <label>@Localizer["Start Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("StartDate")
+                                            .Value(start)
+                                            .Events(e => e.Change("$.filterChange"))
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-2">
+                                        <label>@Localizer["End Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("EndDate")
+                                            .Value(end)
+                                            .Events(e => e.Change("$.filterChange"))
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-2 col-12">
+                                        <label>@Localizer["Document Status"]</label>
+                                        @(Html.KendoComboBox("DocumentStatus", string.Empty, "DocumentStatus", all: true)
+                                            .AutoBind(true)
+                                            .SelectedIndex(0)
+                                            .ClearButton(false)
+                                            .Placeholder(Localizer["Please select document status"].Value)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Category"]</label>
+                                        @(Html.KendoComboBox("CategorySpkl", string.Empty, "CategorySPKL", all: true)
+                                            .AutoBind(true)
+                                            .SelectedIndex(0)
+                                            .ClearButton(false)
+                                            .Placeholder(Localizer["Please select category"].Value)
+                                            .Events(events => events.Change("$.filterChange"))
+                                            .Deferred()
+                                        )
+                                    </div>
+                                    @if (chief)
+                                    {
+                                        <div class="form-group col-md-3 col-12">
+                                            <label>@Localizer["Employee"]</label>
+                                            <div class="input-group input-group-icon mb-3">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text font-red">
+                                                        <i class="fa fa-search"></i>
+                                                    </span>
+                                                </div>
+                                                <input type="text" id="search" class="form-control" placeholder="@Localizer["Choose Employee"]" />
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <input type="hidden" id="search" />
+                                    }
+                                </div>
+                                @*<div data-role="view" data-value="docnumber">
+                                    <div class="col-md-12">
+                                        <div class="form-group col-md-6">
+                                            <label>@Localizer["Choose Document"]</label>
+                                            <div class="input-group input-group-icon mb-3">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text font-red">
+                                                        <i class="fa fa-search"></i>
+                                                    </span>
+                                                </div>
+                                                <input type="text" id="search" class="form-control" placeholder="@Localizer["Choose Document"]" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>*@
+                            </fieldset>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.SpklRequestDetailStoredEntity>()
+                                .Name("grid")
+                                .Columns(columns =>
+                                {
+                                    if (chief)
+                                    {
+                                        columns.Bound(c => c.Id).ClientTemplate(@"
+                                            <div class=""custom-control custom-checkbox"">
+                                                <input type=""checkbox"" name=""ids[]"" id=""cb#:Id#"" value=""#:uid#|#:DocumentApprovalId#"" class=""custom-control-input"" data-trigger=""handler"" data-handler=""checkHandler"" #:!EnableDocument?'disabled':''# />
+                                                <label class=""custom-control-label"" for=""cb#:Id#""></label>
+                                            </div>
+                                        ").ClientHeaderTemplate(@"
+                                            <div class=""custom-control custom-checkbox"">
+                                                <input type=""checkbox"" id=""checkAll"" class=""custom-control-input"" data-trigger=""handler"" data-handler=""checkAllHandler"">
+                                                <label class=""custom-control-label"" for=""checkAll""></label>
+                                            </div>
+                                        ").HtmlAttributes(new { @class = "pr-0" }).Lockable(false).Locked(true).Width(50);
+                                    }
+
+                                    columns.Bound(o => o.Name).Title(Localizer["Name"].Value).Width(250).ClientTemplate(@"
+                                        <div class=""text-left"">
+                                            #:NoReg# - #:Name#
+                                        </div>
+                                    ").Locked(true).MinScreenWidth(768);
+
+                                    columns.Bound(o => o.OvertimeDate).Title(Localizer["Date"].Value).Format("{0:dd/MM/yyyy}").HtmlAttributes(new { @class = "text-center" }).Width(115).Locked(true).MinScreenWidth(768);
+
+                                    columns.Bound(o => o.Id).ClientHeaderTemplate(string.Format(@"<span class=""d-block d-md-none"">{0}</span><span class=""d-none d-md-block"">{1}</span>", Localizer["Employee"].Value, Localizer["Progress"].Value)).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                        <div class=""d-block d-md-none"">
+                                            #:NoReg# - #:Name#<br/>
+                                            <small>#:kendo.toString(OvertimeDate, 'dd/MM/yyyy')#</small>
+                                            <hr style=""margin: 10px 0;""/>
+                                        </div>
+                                        <a href=""javascript:;"" data-trigger=#if(DocumentNumber != null){#""modal""#}else{##}# data-modal-title=""Tracking Approval - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/home/trackingapproval"" data-parameters-id=""#:DocumentApprovalId#"">
+                                            <div class=""clearfix mb-1"">
+                                                <div class=""pull-left"">#:app.translate(DocumentStatusTitle)#</div>
+                                                <div class=""pull-right"">#:Progress#%</div>
+                                            </div>
+                                            <div class=""progress"" style=""height: 4px;"">
+                                                <div class=""progress-bar progress-bar-striped #: css('DocumentApproval', DocumentStatusCode) #"" role=""progressbar"" aria-valuenow=""#:Progress#"" aria-valuemin=""#:Progress#"" aria-valuemax=""#:Progress#"" style=""width:#:Progress#%;""></div>
+                                            </div>
+                                        </a>
+                                    ").Width(240);
+
+                                    columns.Group(group =>
+                                    {
+                                        group.Title(Localizer["OT In"].Value);
+                                        group.Columns(col =>
+                                        {
+                                            col.Bound(o => o.OvertimeIn).Title(Localizer["Plan"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            //col.Bound(o => o.NormalTimeIn).Title(Localizer["Normal"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            col.Bound(o => o.ProxyIn).Title(Localizer["Proxy"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            col.Bound(o => o.OvertimeInAdjust).Title(Localizer["Adjust"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<div class=""input-edit"">#:$.toDefault(kendo.toString(OvertimeInAdjust, 'HH:mm'), '')# # if (EnableDocumentAction) { # <a href=""javascript:;"" data-trigger=""handler"" data-handler=""updateInputHandler"" data-parameters-field=""OvertimeInAdjust"" data-parameters-format=""HH:mm"" data-parameters-defaultfield=""OvertimeIn""><i class=""ft-edit""></i></a> # } #</div>").Width(120);
+                                        });
+                                    });
+
+                                    columns.Group(group =>
+                                    {
+                                        group.Title(Localizer["OT Out"].Value);
+                                        group.Columns(col =>
+                                        {
+                                            col.Bound(o => o.OvertimeOut).Title(Localizer["Plan"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            //col.Bound(o => o.NormalTimeOut).Title(Localizer["Normal"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            col.Bound(o => o.ProxyOut).Title(Localizer["Proxy"].Value).Format("{0:HH:mm}").HtmlAttributes(new { @class = "text-center" }).Width(105);
+                                            col.Bound(o => o.OvertimeOutAdjust).Title(Localizer["Adjust"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<div class=""input-edit"">#:$.toDefault(kendo.toString(OvertimeOutAdjust, 'HH:mm'), '')# # if (EnableDocumentAction) { # <a href=""javascript:;"" data-trigger=""handler"" data-handler=""updateInputHandler"" data-parameters-field=""OvertimeOutAdjust"" data-parameters-format=""HH:mm"" data-parameters-defaultfield=""OvertimeOut""><i class=""ft-edit""></i></a> # } #</div>").Width(120);
+                                        });
+                                    });
+
+                                    columns.Group(group =>
+                                    {
+                                        group.Title(Localizer["Break<br/>(in minutes)"].Value);
+                                        group.Columns(col =>
+                                        {
+                                            col.Bound(o => o.OvertimeBreak).HtmlAttributes(new { @class = "text-center" }).Title(Localizer["Plan"].Value).Width(100);
+                                            col.Bound(o => o.OvertimeBreakAdjust).HtmlAttributes(new { @class = "text-center" }).Title(Localizer["Adjust"].Value).ClientTemplate(@"<div class=""input-edit"">#:OvertimeBreakAdjust# # if (EnableDocumentAction) { # <a href=""javascript:;"" data-trigger=""handler"" data-handler=""updateInputHandler"" data-parameters-field=""OvertimeBreakAdjust""><i class=""ft-edit""></i></a> # } #</div>").Width(100);
+                                        });
+                                    });
+
+                                    columns.Group(group =>
+                                    {
+                                        group.Title(Localizer["Duration<br/>(in hours)"].Value);
+                                        group.Columns(col =>
+                                        {
+                                            col.Bound(o => o.Duration).Title(Localizer["Plan"].Value).HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                            col.Bound(o => o.DurationAdjust).Title(Localizer["Adjust"].Value).HtmlAttributes(new { @class = "text-center" }).Width(100);
+                                        });
+                                    });
+                                    //columns.Bound(o => o.Division).Title(Localizer["Division"].Value).Width(250);
+                                    //columns.Bound(o => o.Department).Title(Localizer["Department"].Value).Width(250);
+                                    //columns.Bound(o => o.Section).Title(Localizer["Section"].Value).Width(250);
+                                    columns.Bound(o => o.OvertimeCategory).Title(Localizer["Category"].Value).Width(250);
+                                    columns.Bound(o => o.OvertimeReason).Title(Localizer["Reason"].Value).Width(280);
+
+                                    columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                        <div class=""btn-group"">
+                                        #if(DocumentNumber != null && DocumentStatusCode != ""locked""){#
+                                            <a class=""btn btn-sm green-jungle"" href=""" + Url.Content("~/timemanagement/form/pdf?formKey=spkl-overtime&") + @"docId=#:DocumentApprovalId#"" target=""_blank""><i class=""ft-download""></i></a>
+                                        #}else{##}#
+                                        </div>
+                                    ").Width(90);
+                                })
+                                .DataSource(dataSource => dataSource
+                                    .Ajax()
+                                    .Read(read => read.Url(Url.Content("~/api/spkl-report/gets")))
+                                    .PageSize(20)
+                                    .Sort(sort =>
+                                    {
+                                        sort.Add("Name");
+                                        sort.Add("OvertimeDate");
+                                        sort.Add("OvertimeIn");
+                                    })
+                                    .Filter(filter =>
+                                    {
+                                        if (ViewContext.HttpContext.Request.Query.ContainsKey("id"))
+                                        {
+                                            filter.Add(x => x.ParentId).IsEqualTo(Guid.Parse(ViewContext.HttpContext.Request.Query["id"]));
+                                        }
+                                        else
+                                        {
+                                            filter.Add(x => x.OvertimeDate)
+                                                .IsGreaterThanOrEqualTo(start)
+                                                .And()
+                                                .IsLessThanOrEqualTo(end);
+                                        }
+                                    })
+                                )
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .Events(events =>
+                                {
+                                    events.DataBound(@<text>
+                                        function() {
+                                            var $checkAllEl = $("#checkAll"),
+                                                data = this.dataSource.data(),
+                                                total = data.length,
+                                                totalCanSubmit = $.grep(data, function(obj) { return obj.EnableDocumentAction; }).length;
+
+                                            $checkAllEl.prop("checked", false);
+                                            $checkAllEl.prop("disabled", data.length === 0 || totalCanSubmit === 0);
+                                            $(".action-btn").prop("disabled", true);
+                                            $(".save-btn").prop("disabled", true);
+
+                                            var wrapper = this.wrapper,
+                                                header = wrapper.find(".k-grid-header"),
+                                                root = wrapper.closest(".k-grid"),
+                                                contentLocked = root.find(".k-grid-content-locked"),
+                                                content = root.find(".k-grid-content");
+
+                                            function resizeFixed() {
+                                                var paddingRight = parseInt(header.css("padding-right"));
+                                                header.css("width", wrapper.width() - paddingRight);
+                                            }
+
+                                            function scrollFixed() {
+                                                var offset = $(this).scrollTop() + 50,
+                                                    tableOffsetTop = wrapper.offset().top,
+                                                    tableOffsetBottom = tableOffsetTop + wrapper.height() - header.height();
+
+                                                if(offset < tableOffsetTop || offset > tableOffsetBottom) {
+                                                    header.removeClass("fixed-header");
+                                                    contentLocked.css("margin-top", 0);
+                                                    content.css("margin-top", 0);
+                                                } else if(offset >= tableOffsetTop && offset <= tableOffsetBottom && !header.hasClass("fixed")) {
+                                                    header.addClass("fixed-header");
+                                                    contentLocked.css("margin-top", "121px");
+                                                    content.css("margin-top", "121px");
+                                                }
+                                            }
+
+                                            resizeFixed();
+
+                                            $(window).resize(resizeFixed);
+                                            $(window).scroll(scrollFixed);
+                                            
+                                            if ($("#chart").length > 0 && $("#secondChart").length > 0) {
+                                                $("#chart").data("kendoChart").dataSource.read();
+                                                $("#secondChart").data("kendoChart").dataSource.read();
+                                            }
+                                        }
+                                    </text>);
+                                })
+                                .Scrollable(scrollable => scrollable.Height("auto"))
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@if (chief)
+{
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                            <div class="col-md-9 col-sm-8 col-8">
+                                <div class="float-right">
+                                    <button class="save-btn btn btn-info" data-trigger="handler" data-handler="saveHandler" disabled="disabled"><i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span></button>
+                                    <button class="action-btn btn btn-primary" data-trigger="handler" data-handler="postHandler" data-parameters-action="approve" disabled="disabled"><i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span></button>
+                                    <button class="action-btn btn red" data-trigger="handler" data-handler="postHandler" data-parameters-action="reject" disabled="disabled"><i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span></button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,151 @@
+﻿@model TAMHR.ESS.Domain.AbnormalityAbsenceView
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityAbsenceService svc;
+@{
+    //var isNew = !Model.AbnormaityProxyIn.HasValue ?;
+    var min = Model.WorkingDate.Date;
+    var maxMinute = min.AddMinutes(1439);
+    var max = min.AddDays(1).AddMinutes(1439);
+    ScriptManager.RegisterReferences("datetimepicker", "grid", "datepicker", "combobox", "chart", "numeric", "upload");
+    string id = ViewContext.HttpContext.Request.Query["docid"];
+    bool IsRequest = @ViewBag.request;
+    var maxFileSize = 5 * 1000000;
+    var fileUrl = svc.GetCommonFIle(Model.CommonFileId.HasValue ? Model.CommonFileId.Value : Guid.Empty);
+}
+@section scripts {
+    <partial name="_Script" />
+
+}
+@section styles {
+
+}
+<form method="post" action="~/api/abnormality-absence/new-request">
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+    
+    <script type="text/javascript">
+        $(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done',
+                autoclose: true
+            });
+        });
+
+        function OnChangePresenceCode(){
+            const exceptionPresenceCode = ['7', '8', '9', '10'];
+
+            if(exceptionPresenceCode.indexOf($('#AbnormalityAbsenStatus').val()) > -1){
+                $('#ProxyRow').hide()
+            } else {
+                $('#ProxyRow').show()
+            }
+        }
+    </script>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Absence Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+                                    @*@Html.HiddenFor(x => x.ReferenceId)
+        @Html.HiddenFor(x => x.ReferenceTable)*@
+                                    @Html.HiddenFor(x => x.Id)
+                                    @Html.HiddenFor(x => x.NoReg)
+                                    @Html.HiddenFor(x => x.Name)
+                                    @Html.HiddenFor(x => x.PostName)
+                                    @Html.HiddenFor(x => x.AbsentName)
+                                    @Html.HiddenFor(x => x.CreatedBy)
+                                    @Html.HiddenFor(x => x.CreatedOn)
+                                    @Html.HiddenFor(x => x.RowStatus)
+                                    @Html.HiddenFor(x => x.NormalTimeIn)
+                                    @Html.HiddenFor(x => x.NormalTimeOut)
+                                    @Html.HiddenFor(x => x.ShiftCode)
+                                    @Html.HiddenFor(x => x.Description)
+                                    @Html.HiddenFor(x => x.AbnormalityWorkingDate)
+                                    @Html.HiddenFor(x => x.AbnormalityAbsenceId)
+                                    @Html.HiddenFor(x => x.CommonFileId)
+
+                                    <legend>@Localizer["Absence Data"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Working Date"]</label>
+                                        @(Html.Kendo().DatePickerFor(x => x.WorkingDate)
+                                                .HtmlAttributes(new { style = "width: 100%" })
+                                                .Format("dd/MM/yyyy")
+                                                .ParseFormats("dd/MM/yyyy HH:mm tt")
+                                                .Enable(false)
+
+                                                )
+                                        <span class="invalid" data-validation-for="WorkingDate"></span>
+                                    </div>
+                                   <div class="form-group">
+                                       <div class="row" id="ProxyRow">
+                                           <div class="col-md-6">
+                                               <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Proxy In (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy In"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.AbnormaityProxyIn, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih Waktu (HH:mm)"].Value, data_validation_for = "AbnormaityProxyIn", id = "AbnormaityProxyIn", @readonly = "true"}, true))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="AbnormaityProxyIn"></span>
+                                            </div>
+                                            <div class="col-md-6">
+                                                 <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Proxy Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy Out"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.AbnormalityProxyOut, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih Waktu (HH:mm)"].Value, data_validation_for = "AbnormalityProxyOut", id = "AbnormalityProxyOut", @readonly = "true"}, true))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="AbnormalityProxyOut"></span>
+                                            </div>
+                                       </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Presence Code"]</label>
+                                        @Html.KendoComboBoxAutocompleteFor(x => x.AbnormalityAbsenStatus, Url.Content("~/api/masterdata/absence/get-defaults"), valueField: "CodePresensi", textField: "Name", pageSize: int.MaxValue).HtmlAttributes(new { style = "width: 100%", @class = "form-control", placeholder = "Please Select Presence Code", onchange = "OnChangePresenceCode()", id = "AbnormalityAbsenStatus" }).Enable(IsRequest).Events( e => {e.DataBound("OnChangePresenceCode()");})
+                                        <span class="invalid" data-validation-for="AbnormalityAbsenStatus"></span>
+                                    </div>
+
+                                </fieldset>
+                            </div>
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+                                    <legend>@Localizer["Reason"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Detail Notes"]</label>
+                                        <br />
+                                        @Html.TextAreaFor(x => x.Reason, ApplicationHelper.Enable(new { @class = "form-control", rows = 5, data_validation_for = "Reason", placeholder = Localizer["Input Notes"].Value }, IsRequest))
+                                        <span class="invalid" data-validation-for="Reason"></span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (IsRequest)
+    {
+        <div class="actions">
+            <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+        </div>
+    }
+</form>

@@ -1,0 +1,126 @@
+﻿@{
+    ScriptManager.RegisterReferences("datepicker", "combobox");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="email-template-modal" data-modal-title="Create new Email Template" data-modal-ajax="true" data-ajax-url="~/core/settings/load" data-parameters-handler="emailtemplate">
+                    @Localizer["Create Email Template"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/email-template/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Email Template" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/email-template">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="sendBpkbHandler">
+                    @Localizer["Send BPKB Reminder"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="sendStnkHandler">
+                    @Localizer["Send STNK Reminder"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+
+<link href="~/lib/summernote/summernote-lite.min.css" rel="stylesheet">
+
+@section scripts {
+    <script type="text/javascript" src="~/lib/summernote/summernote-lite.min.js"></script>
+    <script type="text/javascript">
+            
+        (function ($, app) {
+            app.registerHandler("dataInterceptor", function (d) {
+                //d.MailContent = tinyMCE.get('MailContent').getContent();
+                d.MailContent = $('#MailContent').summernote('code');
+               
+                return d;
+            });
+
+            app.registerHandler("sendBpkbHandler", function (d) {
+                app.blockUI({ boxed: true });
+                $.post("~/api/email-template/send-bpkb-reminder", {}, function () {
+                    app.unblockUI();
+                });
+            });
+
+            app.registerHandler("sendStnkHandler", function (d) {
+                app.blockUI({ boxed: true });
+                $.post("~/api/email-template/send-stnk-reminder", {}, function () {
+                    app.unblockUI();
+                });
+            });
+        })(jQuery, app);
+
+        $(document).on('focusin', function (e) {
+            if ($(event.target).closest(".note-dialog, .note-modal").length) {
+                e.stopImmediatePropagation();
+            }
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Email Templates"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("Components/_EmailTemplatesToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmailTemplate>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "email-templates-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Email Template").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Title#</h6>
+                                    <small>#:MailKey#</small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""email-template-modal"" data-modal-title=""Edit Email Template"" data-modal-ajax=""true"" data-ajax-url=""~/core/settings/load"" data-parameters-handler=""emailtemplate"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/email-template"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width(90);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/email-template/gets")))
+                        .PageSize(10)
+                        .Sort(sort => sort.Add("Title"))
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

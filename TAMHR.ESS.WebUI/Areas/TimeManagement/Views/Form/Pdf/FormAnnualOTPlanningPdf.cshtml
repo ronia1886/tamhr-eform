@@ -1,0 +1,204 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualOTPlanningService AnnualOTPlanningService;
+@{
+    Layout = null;
+    AnnualOTPlanning header = AnnualOTPlanningService.GetAnnualOTPlanningByDocumentApprovalId(Model.DocumentApproval.Id).FirstOrDefault();
+    IEnumerable<AnnualOTPlanningDetailView> details = AnnualOTPlanningService.GetDetails(Model.DocumentApproval.Id).OrderBy(a => a.OrderSequence).ThenBy(a => a.LabourType);
+    int yearPeriod = header.YearPeriod;
+    var targetVolume = details.Where(d => d.CategoryCode == "TargetVolume-DL").FirstOrDefault();
+    string lastCategory = string.Empty;
+}
+
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .bg-light-blue {
+        background-color: rgb(180, 198, 231);
+    }
+
+    .text-right {
+        text-align: right;
+    }
+
+    .text-center {
+        text-align: center;
+    }
+</style>
+<hr style="margin-bottom:20px" />
+
+
+<table class="tableizer-table bold" style="font-family:'Segoe UI'; font-size:12px; width: 100%;" border="1" cellspacing="0" cellpadding="0">
+    <tr>
+        <td colspan="15" style="text-align: center; height: 60px; vertical-align: middle;"><h2>@Localizer["ANNUAL OVERTIME PLANNING"]</h2></td>
+    </tr>
+
+    <tr>
+        <td colspan="15" style="text-align: center;"><h3>@Localizer["Division: " + Model.OrgInfo.OrgName]</h3></td>
+    </tr>
+
+    <tr>
+        <td rowspan="2" style="width: 11%"></td>
+        <td rowspan="2" style="width: 11%">@Localizer["Labour Type"]</td>
+        <td colspan="13" style="text-align:center;">@yearPeriod</td>
+    </tr>
+
+    <tr>
+        <td style="width: 6%">@Localizer["Jan"]</td>
+        <td style="width: 6%">@Localizer["Feb"]</td>
+        <td style="width: 6%">@Localizer["Mar"]</td>
+        <td style="width: 6%">@Localizer["Apr"]</td>
+        <td style="width: 6%">@Localizer["May"]</td>
+        <td style="width: 6%">@Localizer["Jun"]</td>
+        <td style="width: 6%">@Localizer["Jul"]</td>
+        <td style="width: 6%">@Localizer["Aug"]</td>
+        <td style="width: 6%">@Localizer["Sep"]</td>
+        <td style="width: 6%">@Localizer["Oct"]</td>
+        <td style="width: 6%">@Localizer["Nov"]</td>
+        <td style="width: 6%">@Localizer["Dec"]</td>
+        <td style="width: 6%">@Localizer["TOTAL"]</td>
+    </tr>
+
+
+    @if(targetVolume != null)
+    {
+    <tr>
+        <td colspan="15" class="text-center bg-light-blue"><h3>@Localizer["TARGET VOLUME (BASED ON DIVISION DELIVERABLES)"]</h3></td>
+    </tr>
+
+    <tr>
+        <td>@targetVolume.Category</td>
+        <td>@targetVolume.LabourType</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Jan)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Feb)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Mar)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Apr)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.May)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Jun)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Jul)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Aug)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Sep)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Oct)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Nov)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", double.Parse(targetVolume.Dec)))</td>
+        <td class="text-right">@(String.Format("{0:n0}", (
+                double.Parse(targetVolume.Jan) + double.Parse(targetVolume.Feb) + double.Parse(targetVolume.Mar) + double.Parse(targetVolume.Apr) + double.Parse(targetVolume.May) + double.Parse(targetVolume.Jun) +
+                double.Parse(targetVolume.Jul) + double.Parse(targetVolume.Aug) + double.Parse(targetVolume.Sep) + double.Parse(targetVolume.Oct) + double.Parse(targetVolume.Nov) + double.Parse(targetVolume.Dec)
+            )
+        ))
+        </td>
+    </tr>
+    }
+
+    <tr>
+        <td colspan="15" class="text-center bg-light-blue"><h3>@Localizer["ANNUAL ORVERTIME PLANNING"]</h3></td>
+    </tr>
+
+    @if(details != null && details.Count() > 0)
+    {        
+        @foreach(AnnualOTPlanningDetailView detail in details.Where(d => d.CategoryCode != "TargetVolume-DL"))
+        {
+    <tr>
+        @if(lastCategory != detail.Category)
+        {
+        <td rowspan="@(details.Where(d => d.Category == detail.Category).Count().ToString())">@detail.Category</td> 
+        }
+        <td class="@(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.LabourType</td>
+        @if (detail.CategoryCode != "Remark-IDL" && detail.CategoryCode != "Remark-DL" && detail.CategoryCode != "TotalMP-DL" && detail.CategoryCode != "TotalMP-IDL")
+        {
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Jan)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Feb)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Mar)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Apr)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.May)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Jun)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Jul)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Aug)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Sep)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Oct)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Nov)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", double.Parse(detail.Dec)))</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@(String.Format("{0:n0}", (
+                    double.Parse(detail.Jan) + double.Parse(detail.Feb) + double.Parse(detail.Mar) + double.Parse(detail.Apr) + double.Parse(detail.May) + double.Parse(detail.Jun) +
+                    double.Parse(detail.Jul) + double.Parse(detail.Aug) + double.Parse(detail.Sep) + double.Parse(detail.Oct) + double.Parse(detail.Nov) + double.Parse(detail.Dec)
+                )
+            ))
+            </td>
+        }
+        else if(detail.CategoryCode == "Remark-IDL" || detail.CategoryCode == "Remark-DL")
+        {
+            <td>@detail.Jan</td>
+            <td>@detail.Feb</td>
+            <td>@detail.Mar</td>
+            <td>@detail.Apr</td>
+            <td>@detail.May</td>
+            <td>@detail.Jun</td>
+            <td>@detail.Jul</td>
+            <td>@detail.Aug</td>
+            <td>@detail.Sep</td>
+            <td>@detail.Oct</td>
+            <td>@detail.Nov</td>
+            <td>@detail.Dec</td>
+            <td>@detail.Total</td>
+        }
+        else
+        {
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Jan</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Feb</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Mar</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Apr</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.May</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Jun</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Jul</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Aug</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Sep</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Oct</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Nov</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Dec</td>
+            <td class="text-right @(detail.LabourType == "TOTAL" ? "bg-light-blue" : "")">@detail.Total</td>
+        }
+    </tr>
+            { lastCategory = detail.Category; }
+        }
+    }
+    else
+    { 
+        <tr class="bg-light-blue">
+            <td colspan="15">@Localizer["No OT data available"]</td>
+        </tr>
+    }
+
+</table>

@@ -1,0 +1,115 @@
+﻿<style>
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        margin: 0;
+    }
+</style>
+<script type="text/javascript">
+    var OpenReplyFeedback = (Id) => {
+        ToggleReplyFeedback();
+        $("#MrfId").val(Id);
+        axios.get('../../api/tanyaohs/GetTanyaOhs', {
+            params: {
+                Id
+            }
+        }).then((response) => {
+            var ChatView = $("#ChatView");
+            ChatView.html("");
+            var data = response.data[0];
+            $("#MrfName").val(data.Nama);
+            $("#MrfNoreg").val(data.Noreg);
+            $("#MrfFeedback").val(data.Feedback);
+        }).catch((error) => {
+            console.log(error);
+        }).finally(() => { });
+    }
+    var SetupReplyFeedback = () => {
+        $("#MrfSubmit").click(() => {
+            var Validation = () => {
+                $("#MrffReplyFeedback").text('');
+                if ($("#MrfReplyFeedback").val() == '') {
+                    $("#MrffReplyFeedback").text('Reply Feedback required.');
+                    return false;
+                }
+                return true;
+            }
+            if (!Validation()) return;
+            axios.post('../../api/tanyaohs/ReplyFeedback', {
+                "Id": $("#MrfId").val(),
+                "ReplyFeedback": $("#MrfReplyFeedback").val()
+            }, {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            })
+                .then((response) => {
+                    Swal.fire({
+                        title: "Sukses",
+                        html: '<div style="white-space: pre-line;">Balasan dari feedback tersebut sudah terkirim!</div>',
+                        icon: "success",
+                        showConfirmButton: !true
+                    });
+                    $('#GridFeedback').data('kendoGrid').dataSource.read();
+                    ToggleReplyFeedback();
+                })
+                .catch(function (error) {
+                    console.log(error);
+                });
+        });
+    }
+    var ToggleReplyFeedback = () => {
+        $("#ModalReplyFeedback").modal("toggle");
+    }
+    document.addEventListener("DOMContentLoaded", (event) => {
+        SetupReplyFeedback();
+    });
+</script>
+<div id="ModalReplyFeedback" class="modal fade" role="dialog">
+    <form method="post" action="~/vaccine/">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <input id="MrfId" hidden />
+                    <div class="form-group col-md-12">
+                        <label>
+                            Nama
+                        </label>
+                        <br />
+                        <input id="MrfName" class="form-control" type="text" readonly />
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            Noreg
+                        </label>
+                        <br />
+                        <input id="MrfNoreg" class="form-control" type="number" readonly />
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            Feedback
+                        </label>
+                        <br />
+                        <textarea id="MrfFeedback" class="form-control" readonly></textarea>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Reply Feedback
+                        </label>
+                        <br />
+                        <textarea id="MrfReplyFeedback" class="form-control"></textarea>
+                        <div id="MrffReplyFeedback" class="invalid-feedback" style="display:block;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="MrfSubmit" type="button" class="btn btn-primary">Submit</button>
+                    <button id="MrfCancel" type="button" name="btnCloseNewConsult" onclick="ToggleReplyFeedback();" class="btn btn-default" data-dismiss-modal="modal2">Cancel</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>

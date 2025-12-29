@@ -1,0 +1,175 @@
+﻿@model TAMHR.ESS.Domain.FormQuestion
+@inject TAMHR.ESS.Infrastructure.DomainServices.FormQuestionService formQuestionService
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineService vaccineService
+<div class="form-group col-md-12">
+    <label>@Localizer[Model.Title]</label>
+    @{
+        Guid vaccineQuestionId = default(Guid);
+        if (ViewData["vaccineQuestionId"]!=null)
+        {
+            vaccineQuestionId = Guid.Parse(ViewData["vaccineQuestionId"].ToString());
+        }
+        List<VaccineQuestion> VaccineQuestionList = vaccineService.GetVaccineQuestions(vaccineQuestionId);
+
+        var data = VaccineQuestionList.Find(x => x.FormQuestionId == Model.Id);
+        
+        }
+    @*<input type="text" name="tb-@ViewData["ViewData["vaccineQuestionId"]"]" data-id="@ViewData["ViewData["vaccineQuestionId"]"]" value="@ViewData["ViewData["vaccineQuestionId"]"]" />*@
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="@ViewData["name"]" id="@ViewData["id2"]" data-uid="@Model.Id" data-id="@vaccineQuestionId" value="false" onchange="HealthValidation()" @(ViewData["answer"] != null && Convert.ToBoolean(ViewData["answer"]) == false ? "checked" : string.Empty)>
+        <label class="form-check-label" for="@ViewData["id2"]">
+            No
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="@ViewData["name"]" id="@ViewData["id1"]" data-uid="@Model.Id" data-id="@vaccineQuestionId" value="true" onchange="HealthValidation()" @(ViewData["answer"] != null && Convert.ToBoolean(ViewData["answer"]) == true ? "checked" : string.Empty)>
+        <label class="form-check-label font-red-flamingo" for="@ViewData["id1"]">
+            Yes
+        </label>
+    </div>
+    <div class="question-detail-wrapper-@Model.Id">
+        @{
+
+            var questionDetail = formQuestionService.GetQuestionDetails(Model.Id).OrderBy(x => x.OrderSequence).ToList();
+            string QuestionDetailId = "";
+            foreach (var dataDetail in questionDetail)
+            {
+                int colMdNumber = 12;
+                if (dataDetail.Description.Length <= 15)
+                {
+                    colMdNumber = 12;
+                }
+
+                string answerDetail = "";
+                Guid dataDetailId = Guid.Empty;
+                if (Guid.Parse(ViewData["vaccineQuestionId"].ToString()) != Guid.Empty)
+                {
+                    var VaccineQuestionDetailList = new List<VaccineQuestionDetail>();
+                    VaccineQuestionDetailList = vaccineService.GetVaccineQuestionDetails(vaccineQuestionId);
+                    //if(ViewData["VaccineQuestionDetailList"] != null)
+                    //{
+                    //    VaccineQuestionDetailList = ViewData["VaccineQuestionDetailList"] as List<VaccineQuestionDetail>;
+                    //}
+                    string vaccineQuestionId2 = ViewData["vaccineQuestionId"].ToString();
+                    var QuestionDetailList = VaccineQuestionDetailList.Find(x => x.FormQuestionDetailId == dataDetail.Id && x.VaccineQuestionId == Guid.Parse(vaccineQuestionId2));
+                    if (QuestionDetailList != null)
+                    {
+                        answerDetail = QuestionDetailList.Answer;
+                        dataDetailId = QuestionDetailList.Id;
+
+                    }
+                }
+
+                <div class="form-group divQuestionDetail-@Model.Id col-md-@colMdNumber  hidden">
+                    <label>@Localizer[dataDetail.Description]</label>
+                    @if (dataDetail.DescriptionType == "text")
+                    {
+                        @*@Html.Kendo().TextBox().Name("Description_" + dataDetail.Id).Value(answerDetail).HtmlAttributes(new { @class = "form-control description-detail k-input", dataDetailId = dataDetail.Id, questionDetailId = dataDetailId })*@
+                        @*<input class="form-control description-detail k-input" type="text" id="Description_@dataDetail.Id" name="Description_@dataDetail.Id" value="@answerDetail" dataDetailId="@dataDetail.Id" questionDetailId="@dataDetailId" />*@
+                        @*<input class="form-control description-detail k-input" datadetailid="@dataDetail.Id" id="Description_@dataDetail.Id"
+            name="Description_@dataDetail.Id" questiondetailid="@dataDetailId" type="text" >*@
+                        @(Html.Kendo().TextBox().Name("Description_" + dataDetail.Id).Value(answerDetail)
+                            .HtmlAttributes(new { @class = "form-control description-detail",type="text", dataDetailId = dataDetail.Id, questionDetailId = dataDetailId,onchange="HealthValidation()" })
+                                                                    )
+                    }
+                    else if (dataDetail.DescriptionType == "numeric")
+                    {
+
+                        double minNum = 0;
+                        double maxNum = 99999;
+                        double detAnswer = 0;
+                        if (dataDetail.MinVal != null && dataDetail.MinVal != "")
+                        {
+                            minNum = Convert.ToDouble(dataDetail.MinVal);
+                        }
+
+                        if (dataDetail.MaxVal != null && dataDetail.MaxVal != "")
+                        {
+                            maxNum = Convert.ToDouble(dataDetail.MaxVal);
+                        }
+
+
+                        if (answerDetail != "")
+                        {
+                            detAnswer = Convert.ToDouble(answerDetail);
+                        }
+
+                        double minTrue = 0;
+                        if (dataDetail.MinTrue != null && dataDetail.MinTrue != "")
+                        {
+                            minTrue = Convert.ToDouble(dataDetail.MinTrue);
+                        }
+
+                        double maxTrue = 0;
+                        if (dataDetail.MaxTrue != null && dataDetail.MaxTrue != "")
+                        {
+                            maxTrue = Convert.ToDouble(dataDetail.MaxTrue);
+                        }
+
+                        @(Html.Kendo().NumericTextBox().Name("Description_" + dataDetail.Id)
+                                                                        .Value(detAnswer)
+                                                                        .HtmlAttributes(new { @class = "form-control description-detail", dataDetailId = dataDetail.Id, questionDetailId = dataDetailId,onchange="HealthValidation()" })
+                                                                        .Min(minNum)
+                                                                        .Max(maxNum)
+                                                                        .Decimals(0)
+                                                                        .Format("#")
+                                                                        //.Events(e => e.Change("HealthValidation"))
+                                                                    )
+                    }
+                    else if (dataDetail.DescriptionType == "date")
+                    {
+
+                        DateTime detAnswer = DateTime.Now;
+                        if (answerDetail != "")
+                        {
+                            detAnswer = Convert.ToDateTime(answerDetail);
+                        }
+
+                        DateTime minVal = DateTime.Now;
+                        if (dataDetail.MinVal != null && dataDetail.MinVal != "")
+                        {
+                            minVal = Convert.ToDateTime(dataDetail.MinVal);
+                        }
+
+                        DateTime maxVal = DateTime.Now;
+                        if (dataDetail.MaxVal != null && dataDetail.MaxVal != "")
+                        {
+                            maxVal = Convert.ToDateTime(dataDetail.MaxVal);
+                        }
+
+                        @(Html.Kendo().DatePicker().Name("Description_" + dataDetail.Id)
+                            .Value(detAnswer)
+                            .HtmlAttributes(new { @class = "form-control description-detail", dataDetailId = dataDetail.Id, questionDetailId = dataDetailId, maxlength = 0})
+                            .Format("dd/MM/yyyy")
+                            .Min(minVal)
+                            .Max(maxVal)
+                            .Events(e => e.Change("$.onChange"))
+                        )
+                    }
+                </div>
+
+                <input type="hidden" id="description_type_@dataDetail.Id" name="description_type_@dataDetail.Id" value="@dataDetail.DescriptionType" />
+                <input type="hidden" id="criteria_type_@dataDetail.Id" name="criteria_type_@dataDetail.Id" value="@dataDetail.CriteriaType" />
+                <input type="hidden" id="issubmitted_date_@dataDetail.Id" name="issubmitted_date_@dataDetail.Id" value="@dataDetail.IsSubmittedDate.ToString().ToLower()" />
+                <input type="hidden" id="min_true_@dataDetail.Id" name="min_true_@dataDetail.Id" value="@dataDetail.MinTrue" />
+                <input type="hidden" id="max_true_@dataDetail.Id" name="max_true_@dataDetail.Id" value="@dataDetail.MaxTrue" />
+                <input type="hidden" id="data_detail_id_@dataDetail.Id" name="data_detail_id_@dataDetail.Id" value="@dataDetail.Id" />
+
+                QuestionDetailId += "" + dataDetail.Id + ",";
+
+
+            }
+            if (QuestionDetailId.Length > 0)
+            {
+                QuestionDetailId = QuestionDetailId.Substring(0, QuestionDetailId.Length - 1);
+            }
+
+            <input type="hidden" id="strQuestionDetailId-@Model.Id" value="@QuestionDetailId" />
+        }
+    </div>
+</div>
+<script type="text/javascript">
+    $.onChange = function () {
+        HealthValidation();
+    }
+</script>

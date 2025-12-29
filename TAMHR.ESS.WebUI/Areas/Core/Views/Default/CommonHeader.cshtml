@@ -1,0 +1,42 @@
+﻿@{ 
+    Layout = null;
+    var hideHeader = Context.Request.Query.ContainsKey("hide") ? Context.Request.Query["hide"] == "1" : false;
+}
+<!DOCTYPE html>
+<html>
+<head>
+    <script>
+        function subst() {
+            var vars = {};
+            var x = document.location.search.substring(1).split('&');
+            for (var i in x) { var z = x[i].split('=', 2); vars[z[0]] = unescape(z[1]); }
+            var x = ['frompage', 'topage', 'page', 'webpage', 'section', 'subsection', 'subsubsection'];
+            for (var i in x) {
+                var y = document.getElementsByClassName(x[i]);
+                for (var j = 0; j < y.length; ++j) y[j].textContent = vars[x[i]];
+
+                @if (hideHeader)
+                {
+                    @:if (vars["page"] > 1) { document.getElementById("header").style.display = 'none'; }
+                }
+            }
+        }
+    </script>
+</head>
+<body style="border: 0; margin: 0; font-size:14px; font-family:'Segoe UI'" onload="subst()">'
+    <table id="header" style="width: 100%">
+        <tr>
+            <td style="font-size:20px;font-weight:bold">PT. TOYOTA ASTRA MOTOR</td>
+            <td style="font-size:12px" align="right"></td>
+        </tr>
+        <tr>
+            <td style="font-size:12px">HUMAN RESOURCE AND GENERAL AFFAIRS DIVISION</td>
+            <td style="font-size:12px" align="right">REVISI 1</td>
+        </tr>
+        <tr>
+            <td style="font-size:12px">HUMAN RESOURCE INFORMATION SYSTEM &amp; PAYROLL SECTION</td>
+            <td style="font-size:12px" align="right">Hal <span class="page"></span> / <span class="topage"></span></td>
+        </tr>
+    </table>
+</body>
+</html>

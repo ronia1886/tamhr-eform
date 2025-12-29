@@ -1,0 +1,76 @@
+﻿@model TAMHR.ESS.Domain.VaccineHospital
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineHospitalRepoService vaccineHospitalService
+@{
+    var isNew = (Model?.Id ?? Guid.Empty) == Guid.Empty;
+    //var hospital = (vaccineHospitalService?.GetHospital() ?? Enumerable.Empty<TAMHR.ESS.Domain.Hospital>()).ToList();
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/vaccinehospital">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.HospitalId)
+    @Html.HiddenFor(x => x.ProviderType)
+    @*@Html.HiddenFor(x => x.Name)*@
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                @(Html.Kendo().CheckBox()
+               .HtmlAttributes(new { @class = "form-control", onclick="checkboxChange(this)" })
+               .Name("eq1").Checked(false).Label("Type Hospital"))
+            </div>
+        </div>
+
+        <div class="col-md-6 col-12">
+
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                @(Html.Kendo().ComboBox().Name("Hospital")
+                   .HtmlAttributes(new { @class = "form-control", data_validation_for = "Name", @required = "required" })
+                   .DataTextField("Name")
+                   .DataValueField("Id")
+                   .Placeholder(Localizer["Please select form"].Value)
+                   //.Value(Model.Name)
+                    .Value(Model?.Name ?? "")
+                   .Events(events =>
+                           {
+                        events.Change("onchangeHospital");
+                    })
+                   .DataSource(dataSource => dataSource
+                       .Ajax()
+                       .Read(read => read.Url(Url.Content("~/api/vaccinehospital/get-hospital")))
+                       .Sort(sort => sort.Add("Name"))
+                   )
+                   .Template("<span class=\"k-state-default\">#: data.ProviderType# #: data.Name # </span>")
+                   //.ValueTemplate("<span class=\"selected-value\" style=\"background-image: url(" + Url.Content("~/shared/web/Customers/") + "#:data.CustomerID#.jpg"+ ");\" ></span>" + "<span>#:data.ContactName#</span>")
+                )
+                <input type="text" name="Name" id="Name" value="" class="form-control" style="display:none" placeholder="Please input name hospital" required />
+                <span class="invalid" data-validation-for="Name"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Province"]</label>
+                @Html.TextBoxFor(x => x.Province, new { @required = "required", @class = "form-control", @data_validation_for = "Province", @placeholder = Localizer["Please input province"].Value, @readonly = "readonly" })
+                <span class="invalid" data-validation-for="Province"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["City"]</label>
+                @Html.TextBoxFor(x => x.City, new { @required = "required", @class = "form-control", @data_validation_for = "City", @placeholder = Localizer["Please input city"].Value, @readonly = "readonly" })
+                <span class="invalid" data-validation-for="City"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Address"]</label>
+                @Html.TextBoxFor(x => x.Address, new { @required = "required", @class = "form-control", @data_validation_for = "Address", @placeholder = Localizer["Please input address"].Value, @readonly = "readonly" })
+                <span class="invalid" data-validation-for="Address"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-handler="pushHandler" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+

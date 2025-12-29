@@ -1,0 +1,61 @@
+﻿@model TAMHR.ESS.Domain.PersonalDataDocument
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/personal-data-document">
+    @Html.HiddenFor(x => x.Id)
+    @Html.HiddenFor(x => x.NoReg)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Employee"]</label>
+                @(Html.Kendo().AutoComplete()
+                    .Name("noregAutoComplete")
+                    .DataTextField("Name")
+                    .Filter("contains")
+                    .Placeholder(Localizer["Find user..."].Value)
+                    .Value(Model.Name)
+                    .MinLength(3)
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .Enable(isNew)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/user/gets"))))
+                            .PageSize(10)
+                            .Sort(sort => sort.Add("Name"))
+                            .Schema(config => config.Data("Data").Total("Total"));
+                    })
+                    .Template(@"<span class=""k-state-default float-right ml-2""><span class=""font-normal"">#: Name #</span></span>")
+                    .Events(evt => evt.Select(@<text>function(e) {
+                        var dataItem = this.dataItem(e.item.index());
+
+                        $("#NoReg").val(dataItem.NoReg);
+                    }</text>))
+                )
+                <span class="invalid" data-validation-for="NoReg"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Document Type"]</label>
+                @Html.KendoComboBoxFor(x => x.DocumentTypeCode, "PersonalDocumentType").Enable(isNew)
+                <span class="invalid" data-validation-for="DocumentTypeCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Document Value"]</label>
+                @Html.TextBoxFor(x => x.DocumentValue, new { @class = "form-control", @data_validation_for = "DocumentValue", @placeholder = Localizer["Please input document value"].Value })
+                <span class="invalid" data-validation-for="DocumentValue"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

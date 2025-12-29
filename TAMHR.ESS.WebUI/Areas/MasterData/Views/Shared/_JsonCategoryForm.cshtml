@@ -1,0 +1,56 @@
+﻿@model TAMHR.ESS.Domain.JsonCategory
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/json-category">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                @Html.TextBoxFor(x => x.Category, new { @class = "form-control", @data_validation_for = "Category", @placeholder = Localizer["Please input category"].Value })
+                <span class="invalid" data-validation-for="Category"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.Description, new { @class = "form-control", @data_validation_for = "Description", @placeholder = Localizer["Please input description"].Value })
+                <span class="invalid" data-validation-for="Description"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Order Index"]</label>
+                @(Html.Kendo().NumericTextBoxFor(x => x.OrderIndex)
+                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OrderIndex" })
+                    .Decimals(0)
+                    .Format("#")
+                    .Min(1)
+                )
+                <span class="invalid" data-validation-for="OrderIndex"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["JSON Values"]</label>
+                @Html.TextAreaFor(x => x.JsonValues, new { @class = "form-control", rows = 5, @data_validation_for = "JsonValues", @placeholder = Localizer["Please input JSON values"].Value })
+                <span class="invalid" data-validation-for="JsonValues"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

@@ -1,0 +1,107 @@
+﻿@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="~/api/bpkb/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload BPKB" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/bpkb">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script id="detailTemplate" type="text/template">
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.BpkbRequest>()
+            .Name("sub-grid-#=Id#")
+            .HtmlAttributes(new { @class = "show-header header-center", style = "border: 1px solid \\#ddd;" })
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.RequestType).Title("Status")
+                    .HtmlAttributes(new { @class = "text-center" });
+
+                columns.Bound(c => c.BorrowDate).Title("Borrow Date")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"\#:$.toDefault(kendo.toString(BorrowDate, 'dd/MM/yyyy'), '-')\#")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+
+                columns.Bound(c => c.ReturnDate).Title("Return Date")
+                    .HtmlAttributes(new { @class = "text-center" })
+                    .ClientTemplate(@"\#:$.toDefault(kendo.toString(ReturnDate, 'dd/MM/yyyy'), '-')\#")
+                    .Width("8rem")
+                    .MinScreenWidth(700);
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/bpkb/details")).Data(@<text>function() { return { parentId: "#=Id#" } }</text>))
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+            .ToClientTemplate()
+        )
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of BPKB"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.BpkbView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "bpkb-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Bpkb").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Model# #:Type#</h6>
+                                    <small class=""d-block"">BPKB Number - #:NoBPKB#</small>
+                                    <small class=""d-block"">Plat Number - #:LicensePlat#</small>
+                                    <small class=""d-block"">Requester - #:$.toDefault(Name, '?')# (#:NoReg#)</small>
+                                    <small class=""d-block"">Status - #:$.toDefault(RequestType, '?')#</small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""bpkb-modal"" data-modal-title=""Edit Bpkb"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/bpkb/load"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-edit""></i>
+                            </a>
+                        ").Width(90);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .ClientDetailTemplateId("detailTemplate")
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/bpkb/gets")))
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

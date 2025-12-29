@@ -1,0 +1,189 @@
+﻿<script type="text/javascript">
+    var FeedbackType = "Konsultasi";
+    var CloseFeedback = () => {
+        $("#MFeedback").modal("toggle");
+    }
+    var InputReadOnly = (Id) => {
+        axios.get('../../api/tanyaohs/GetTanyaOhs', {
+            params: {
+                Id
+            }
+        })
+            .then((response) => {
+                var data = response.data;
+                $("#FiId").val(Id);
+                $("#FiNama").val(data.Nama);
+                $("#FiNoreg").val(data.Noreg);
+                $("#MLiveChat").modal("hide");
+                $("#MFeedback").modal("show");
+                $("input[name=Solve]").prop('disabled', false);
+                $("input[name=Rating]").prop('disabled', false);
+                $("#FiFeedback").prop('disabled', false);
+                $("#FBSubmit").prop('disabled', false);
+                if (data.Status == 'Closed' && data.Feedback != '') {
+                    $("input[name=Solve]").prop('disabled', true);
+                    $("input[name=Solve][value='" + data.Solve + "']").prop('checked', true).prop('disabled', false);
+                    $("input[name=Rating]").prop('disabled', true);
+                    $("input[name=Rating][value='" + data.Rating + "']").prop('checked', true).prop('disabled', false);
+                    $("#FiFeedback").val(data.Feedback);
+                    $("#FiFeedback").prop('disabled', true);
+                    $("#FBSubmit").prop('disabled', true);
+                }
+            })
+            .catch((error) => {
+                console.log(error);
+            })
+            .finally(() => {});
+    }
+    var OpenFeedback = (Id) => {
+        InputReadOnly(Id);
+    };
+    var OpenFeedbackFAQ = () => {
+        FeedbackType = "Kebijakan";
+        var Id = new URLSearchParams(window.location.search).get("Id");
+        InputReadOnly(Id);
+    };
+    document.addEventListener("DOMContentLoaded", (event) => {
+        $("#FBSubmit").click(() => {
+            var Solve = $('input[name="Solve"]:checked').val();
+            var Rating = $('input[name="Rating"]:checked').val();
+            var Feedback = $('#FiFeedback').val();
+
+            $("#FfSolve").removeClass("is-invalid");
+            $("#FfSolve").html("");
+            if (Solve == null) {
+                $("#FfSolve").addClass("is-invalid");
+                $("#FfSolve").html("Solve is Required.");
+                return;
+            }
+
+            $("#FfReting").removeClass("is-invalid");
+            $("#FfRating").html("");
+            if (Rating == null) {
+                $("#FfRating").addClass("is-invalid");
+                $("#FfRating").html("Rating is Required.");
+                return;
+            }
+
+            $("#FfFeedback").removeClass("is-invalid");
+            $("#FfFeedback").html("");
+            if (Feedback == "") {
+                $("#FfFeedback").addClass("is-invalid");
+                $("#FfFeedback").html("Feedback is Required.");
+                return;
+            }
+
+            axios.post('../../api/tanyaohs/EndService', {
+                "Id": $("#FiId").val(),
+                "Solve": Solve,
+                "Rating": Rating,
+                "Feedback": Feedback
+            }, {
+                headers: {
+                    Requestverificationtoken: $("[name='__RequestVerificationToken']").val()
+                }
+            })
+                .then((response) => {
+                    if (FeedbackType == "Konsultasi") {
+                        Swal.fire({
+                            title: "Sukses",
+                            html: '<div style="white-space: pre-line;">Terimakasih atas feedback yang sudah Anda berikan\nFeedback Anda akan segera kami tindak lanjuti</div>',
+                            icon: "success",
+                            showConfirmButton: !false
+                        });
+                        $('#grid').data('kendoGrid').dataSource.read();
+                        CloseFeedback();
+                    }
+                    if (FeedbackType == "Kebijakan") {
+                        CloseFeedback();
+                        Swal.fire({
+                            title: "Sukses",
+                            html: '<div style="white-space: pre-line;">Terimakasih atas feedback yang sudah Anda berikan\nFeedback Anda akan segera kami tindak lanjuti</div>',
+                            icon: "success",
+                            showConfirmButton: true
+                        }).then(() => {
+                            window.location.href = `./index`;
+                        });
+                    }
+                })
+                .catch((error) => {
+                    console.log(error);
+                });
+        });
+    });
+</script>
+<div id="MFeedback" class="modal fade" role="dialog">
+    <form method="post" action="~/vaccine/">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss-modal="modal2" onclick="CloseFeedback()">&times;</button>
+                    <h4 class="modal-title">Feedback Form</h4>
+                </div>
+                <div class="modal-body">
+                    <input id="FiId" class="form-control" type="text" readonly style="display:none;"/>
+                    <div>Terimakasih sudah menggunakan layanan TanyaOHS!</div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Nama
+                        </label>
+                        <br />
+                        <input id="FiNama" class="form-control" type="text" readonly />
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Noreg
+                        </label>
+                        <br />
+                        <input id="FiNoreg" class="form-control" type="text" readonly />
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Apakah Layanan kami sudah menjawab keluhan anda?
+                        </label>
+                        <br />
+                        <div style="display: flex;gap: 0.5em;align-items: baseline;">
+                            <input type="radio" id="s1" name="Solve" value="Belum">
+                            <label for="belum">Belum</label><br>
+                            <input type="radio" id="s2" name="Solve" value="Sudah">
+                            <label for="sudah">Sudah</label><br>
+                        </div>
+                        <div id="FfSolve" class="invalid-feedback" style="display:block;"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <label>
+                            <span class="required" aria-required="true"> * </span>
+                            Kepuasan terhadap layanan kami:
+                        </label>
+                        <br />
+                        <div style="display: flex;gap: 0.5em;align-items: baseline;">
+                            <input type="radio" id="1" name="Rating" value="Sangat Tidak Puas">
+                            <label for="1">Sangat Tidak Puas</label><br>
+                            <input type="radio" id="2" name="Rating" value="Tidak Puas">
+                            <label for="2">Tidak Puas</label><br>
+                            <input type="radio" id="3" name="Rating" value="Biasa">
+                            <label for="3">Biasa</label><br>
+                            <input type="radio" id="4" name="Rating" value="Puas">
+                            <label for="4">Puas</label><br>
+                            <input type="radio" id="5" name="Rating" value="Sangat Puas">
+                            <label for="5">Sangat Puas</label><br>
+                        </div>
+                        <div id="FfRating" class="invalid-feedback" style="display:block;"></div>
+                    </div>
+                    <div class="form-group col-md-12">
+                        <textarea id="FiFeedback" class="form-control"></textarea>
+                        <div id="FfFeedback" class="invalid-feedback" style="display:block;"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="FBSubmit" type="button" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>

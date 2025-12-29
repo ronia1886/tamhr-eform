@@ -1,0 +1,457 @@
+﻿<script>
+    function SeedDataCreated(data){
+        const listItem = [...new Set(data.filter(function (e) {return e.CreatedName != null;}).map(item => item.CreatedName))];
+
+        var CreatedNameDropDown = $("#createdName").data("kendoComboBox");
+
+        var dataSource = new kendo.data.HierarchicalDataSource({
+            data:  listItem
+        });
+        CreatedNameDropDown.setDataSource(dataSource);
+        CreatedNameDropDown.SelectedIndex = -1;
+
+        $("#createdName").data("kendoComboBox").enable(true);
+    }
+
+    function EmployeeSelect(e)
+    {
+        var DataItem = this.dataItem(e.item.index());
+        $("#SelectedNoReg").val(DataItem.NoReg);
+    }
+
+    $.OnDataBound = function (e) {
+        var data = this.dataSource.data();
+
+        if($("#createdName").data("kendoComboBox").value() == ""){
+            SeedDataCreated(data);
+        }
+    }
+
+    $.OnChangeDirectorate = function (e) {
+        var directorates = $("#directorate").data("kendoDropDownTree").value();
+
+        var directorateValue = [];
+
+        directorates.forEach(
+            Directorate =>
+                directorateValue.push(Directorate.split('#')[0])
+        )
+
+        var child = $("#division").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/absence-log-tracking//get-division")",
+            dataType: "json",   
+            data: { DirectorateList: directorateValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDivision = function (e) {
+        var divisions = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+
+        divisions.forEach(
+            division =>
+                divisionValue.push(division.split('#')[0])
+        )
+        
+
+        var child = $("#department").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/absence-log-tracking//get-department")",
+            dataType: "json",   
+            data: { DivisionList: divisionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDepartment = function (e) {
+        var departments = $("#department").data("kendoDropDownTree").value();
+
+        var departmentValue = [];
+
+        departments.forEach(
+            department =>
+                departmentValue.push(department.split('#')[0])
+        )
+
+        var child = $("#section").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/absence-log-tracking//get-section")",
+            dataType: "json",   
+            data: { DepartmentList: departmentValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeSection = function (e) {
+        var sections = $("#section").data("kendoDropDownTree").value();
+
+        var sectionValue = [];
+
+        sections.forEach(
+            section =>
+                sectionValue.push(section.split('#')[0])
+        )
+
+        var child = $("#line").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/absence-log-tracking//get-line")",
+            dataType: "json",   
+            data: { SectionList: sectionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeLine = function (e) {
+        var lines = $("#line").data("kendoDropDownTree").value();
+
+        var lineValue = [];
+
+        lines.forEach(
+            line =>
+                lineValue.push(line.split('#')[0])
+        )
+
+        var child = $("#group").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/absence-log-tracking//get-group")",
+            dataType: "json",   
+            data: { LineList: lineValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    function getGridReport() {
+        return $("#gridReport").data("kendoGrid");
+    }
+
+    $.getDataReport = function () {
+        return {
+            startDate: kendo.toString($("#startDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            endDate: kendo.toString($("#endDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            createdDate: kendo.toString($("#createdDate").data("kendoDatePicker").value(), 'yyyy-MM-dd')
+        };   
+    };
+
+    $.onSearch = function () {
+        //debugger;
+        var $grid = getGridReport();
+        if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+        var dataSource = $grid.dataSource,
+            employeeName = $("#employeeName").val();
+
+        var selectedNoReg = $("#SelectedNoReg").val();
+
+        var directorateList = $("#directorate").data("kendoDropDownTree").value();
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+        var departmentList = $("#department").data("kendoDropDownTree").value();
+        var sectionList = $("#section").data("kendoDropDownTree").value();
+        var lineList = $("#line").data("kendoDropDownTree").value();
+        var groupList = $("#group").data("kendoDropDownTree").value();
+
+        var presenceCode = $("#presenceCode").data("kendoComboBox").value();
+        var createdBy = $("#createdName").data("kendoComboBox").value();
+
+        var Class = $("#class").val();
+        
+        var finalFilter = {
+            logic: "and",
+            filters: []
+        }
+        
+        //DIRECTORATE FILTER
+        if(directorateList.length > 0){
+            var directorateFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+            directorateList.forEach(
+                directorate =>
+                directorateFilter.filters.push(
+                    {
+                        field: 'Directorate',
+                        operator: 'eq',
+                        value: directorate.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(directorateFilter);
+        }
+        
+        //DIVISION FILTER
+        if(divisionList.length > 0){
+            var divisionFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+            divisionList.forEach(
+                division =>
+                divisionFilter.filters.push(
+                    {
+                        field: 'Division',
+                        operator: 'eq',
+                        value: division.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(divisionFilter);
+        }
+        
+        //DEPARTMENT FILTER
+        if(departmentList.length > 0){
+            var departmentFilter = 
+                {
+                    logic: "or",
+                    filters: []
+                };
+            departmentList.forEach(
+                department =>
+                departmentFilter.filters.push(
+                    {
+                        field: 'Department',
+                        operator: 'eq',
+                        value: department.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(departmentFilter);
+        }
+        
+        //SECTION FILTER
+        if(sectionList.length > 0){
+            var sectionFilter = 
+                {
+                    logic: "or",
+                    filters: []
+                };
+            sectionList.forEach(
+                section =>
+                sectionFilter.filters.push(
+                    {
+                        field: 'Section',
+                        operator: 'eq',
+                        value: section.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(sectionFilter);
+        }
+        
+        //LINE FILTER
+        if(lineList.length > 0){
+            var lineFilter = 
+                {
+                    logic: "or",
+                    filters: []
+                };
+            lineList.forEach(
+                line =>
+                lineFilter.filters.push(
+                    {
+                        field: 'Line',
+                        operator: 'eq',
+                        value: line.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(lineFilter);
+        }
+        
+        //GROUP FILTER
+        if(groupList.length > 0){
+            var groupFilter = 
+                {
+                    logic: "or",
+                    filters: []
+                };
+            groupList.forEach(
+                group =>
+                groupFilter.filters.push(
+                    {
+                        field: 'Group',
+                        operator: 'eq',
+                        value: group.split('#')[1]
+                    }
+                )
+            )
+            finalFilter.filters.push(groupFilter);
+        }
+        
+        if (Class != "") {
+            finalFilter.filters.push({
+                field: 'Class',
+                operator: 'eq',
+                value: Class
+            });
+        }
+        
+        if (employeeName != "") {
+            finalFilter.filters.push({
+                field: 'Name',
+                operator: 'contains',
+                value: employeeName
+            });
+        }
+
+        if(createdBy != ""){
+            finalFilter.filters.push({
+                field: 'CreatedName',
+                operator: 'contains',
+                value: createdBy
+            });
+        }
+
+        if(presenceCode != ""){
+            finalFilter.filters.push({
+                field: 'AbsentStatus',
+                operator: 'eq',
+                value: presenceCode.split('-')[0].trim()
+            });
+        }
+
+        if(selectedNoReg != ""){
+            finalFilter.filters.push({
+                field: 'NoReg',
+                operator: 'contains',
+                value: selectedNoReg
+            });
+        }
+
+        dataSource.filter(finalFilter);
+
+        $('#titleSummary').text('@Localizer["Proxy Time Log"]' + " " + '@Localizer["for"]'  + " " + kendo.toString($("#startDate").data("kendoDatePicker").value(), 'dd-MM-yyyy')+ " - " + kendo.toString($("#endDate").data("kendoDatePicker").value(), 'dd-MM-yyyy'));
+    };
+
+    app.registerHandler("downloadReportHandler", function () {
+        var startDate = kendo.toString($("#startDate").data("kendoDatePicker").value() || new Date(), "yyyy-MM-dd");
+        var endDate = kendo.toString($("#endDate").data("kendoDatePicker").value() || new Date(), "yyyy-MM-dd");
+        var createdDate  = kendo.toString($("#createdDate").data("kendoDatePicker").value() || "", "yyyy-MM-dd");
+;
+
+        var directorateList = $("#directorate").data("kendoDropDownTree").value();
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+        var departmentList = $("#department").data("kendoDropDownTree").value();
+        var sectionList = $("#section").data("kendoDropDownTree").value();
+        var lineList = $("#line").data("kendoDropDownTree").value();
+        var groupList = $("#group").data("kendoDropDownTree").value();
+
+        var presenceCode = $("#presenceCode").data("kendoComboBox").value();
+        var createdBy = $("#createdName").data("kendoComboBox").value();
+    
+        var directorateValue = [];
+        directorateList.forEach(
+            directorate =>
+            directorateValue.push(
+                directorate.split('#')[1]
+            )
+        )
+    
+        var divisionValue = [];
+        divisionList.forEach(
+            division =>
+            divisionValue.push(
+                division.split('#')[1]
+            )
+        )
+    
+        var departmentValue = [];
+        departmentList.forEach(
+            department =>
+            departmentValue.push(
+                department.split('#')[1]
+            )
+        )
+    
+        var sectionValue = [];
+        sectionList.forEach(
+            section =>
+            sectionValue.push(
+                section.split('#')[1]
+            )
+        )
+    
+        var lineValue = [];
+        lineList.forEach(
+            line =>
+            lineValue.push(
+                line.split('#')[1]
+            )
+        )
+    
+        var groupValue = [];
+        groupList.forEach(
+            group =>
+            groupValue.push(
+                group.split('#')[1]
+            )
+        )
+    
+        var Class = $("#class").val();
+        var employeeName = $("#employeeName").val();
+        var selectedNoReg = $("#SelectedNoReg").val();
+
+        window.open(app.resolveUrl("~/api/absence-log-tracking/download-report?startDate=" + startDate + "&endDate=" + endDate + "&employeeName=" + employeeName + "&listDirectorate=" + encodeURIComponent(directorateValue) + "&listDivision=" + encodeURIComponent(divisionValue) + "&listDepartment=" + encodeURIComponent(departmentValue) + "&listSection=" + encodeURIComponent(sectionValue) + "&listLine=" + encodeURIComponent(lineValue) + "&listGroup=" + encodeURIComponent(groupValue) + "&class=" + Class + "&presenceCode=" + presenceCode.split('-')[0].trim() + "&createdName=" + createdBy + "&noReg=" + selectedNoReg + "&createdDate=" + createdDate), "_blank");
+    });
+
+    function ChangeFilterDate(){
+        var CreatedNameDropDown = $("#createdName").data("kendoComboBox");
+
+        CreatedNameDropDown.setDataSource([]);
+        CreatedNameDropDown.SelectedIndex = -1;
+        CreatedNameDropDown.enable(false);
+    }
+</script>

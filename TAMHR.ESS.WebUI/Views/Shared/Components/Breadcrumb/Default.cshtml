@@ -1,0 +1,49 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.Menu>
+@if (Model != null)
+{
+    var currentMenu = Model.FirstOrDefault();
+    var reversedOrderMenus = Model.Reverse();//.Except(new[] { Model.Count() > 1 ? currentMenu : null });
+    <h1 class="separator d-none d-lg-inline">@Localizer[currentMenu.Title]</h1>
+    <div class="row breadcrumbs-top d-inline-block d-sm-none">
+        <div class="breadcrumb-wrapper col-12">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="~/">
+                        <i class="icon-home"></i>
+                    </a>
+                </li>
+                <li class="breadcrumb-item active">
+                    @Localizer[currentMenu.Title]
+                </li>
+            </ol>
+        </div>
+    </div>
+    <div class="row breadcrumbs-top d-none d-sm-inline-block" style="position: relative; top: -2px;">
+        <div class="breadcrumb-wrapper col-12">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="~/">
+                        <i class="icon-home"></i>
+                    </a>
+                </li>
+                @foreach (var menu in reversedOrderMenus)
+                {
+                    var isActive = menu == currentMenu || string.IsNullOrEmpty(menu.Url);
+                    @:<li class="breadcrumb-item @(isActive ? "active" : string.Empty)">
+                        @if (isActive)
+                        {
+                            @Localizer[menu.Title]
+                        }
+                        else
+                        {
+                            <a href="@Url.Content(menu.Url)">@Localizer[menu.Title]</a>
+                        }
+                    @:</li>
+                }
+            </ol>
+        </div>
+    </div>
+    <script type="text/javascript">
+        document.title = "@Localizer[currentMenu.Description]";
+    </script>
+}

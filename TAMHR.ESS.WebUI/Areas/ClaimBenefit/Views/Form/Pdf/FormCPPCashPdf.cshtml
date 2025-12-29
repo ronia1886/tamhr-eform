@@ -1,0 +1,249 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var cpp = (obj as CppViewModel);
+    var vehicleTypes = coreService.GetVehicleTypesByModel(cpp.Model);
+
+
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Requester = "";
+    string DivisionHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DivisionHead")
+        {
+            DivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .border-all {
+        border: 1px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr />
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 30px">
+        <col style="width: 100px">
+        <col style="width: 300px">
+        <col style="width: 100px">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2">Kepada Yth <label style="float:right">:</label></td>
+    </tr>
+    <tr>
+        <td colspan="5" class="bold">Human Resources Administration Department</td>
+    </tr>
+
+    <tr style="height:100px">
+        <th colspan="4">
+            <h1 style="font-size:18px">Formulir Pembelian Kendaraan Karyawan Kelas 7-8 Spv </h1>
+            <h3 style="text-decoration:underline">Car Purchase Program (CPP)</h3>
+        </th>
+    </tr>
+    <tr>
+        <td colspan="2">Bersama ini saya,</td>
+        <td></td>
+    </tr>
+    <tr style="height:10px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.Name</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NoReg.<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.NoReg</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Divisi<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Kelas/Sub Kelas<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.EmployeeSubgroupText</td>
+        <td></td>
+    </tr>
+    <tr style="height:10px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="6">Mengajukan permohonan pembelian kendaraan kelas 7-8 Spv, dengan harga khusus karyawan (whole sales price) dengan spesifikasi kendaraan sebagai berikut :</td>
+    </tr>
+
+    <tr>
+        <td></td>
+        <td colspan="3">
+            Model : 
+            @if (typeof(CppViewModel) == obj.GetType())
+            {
+                <span><b>@cpp.Model</b></span>
+            }
+        </td>
+    </tr>
+
+    <tr>
+        <td colspan="5">
+            <table style="width:90%;margin-left:100px;margin-right:200px;font-family:'Segoe UI'; font-size:12px">
+                @foreach (var type in vehicleTypes)
+                {
+                    <tr>
+                        <td class="border-all" style="width:50px" align="center">
+                            @Html.Raw((cpp.TypeCode == type.Id ? "<span><b>&#10003;</b></span>" : ""))
+                            @*@Html.Raw((cpp.TypeName == $"{type.Type} - {type.ModelCode} {type.Suffix}" ? "<span><b>&#10003;</b></span>" : ""))*@
+                        </td>
+                        <td class="border-all" style="width:200px;padding:3px">@type.Type</td>
+                        <td style="width:20px"></td>
+                        <td class="border-all" style="width:200px;padding:3px">@type.ModelCode @type.Suffix</td>
+                        <td></td>
+                    </tr>
+                }
+            </table>
+        </td>
+    </tr>
+
+    <tr>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="5">
+            <table style="width:50%;margin-left:120px;margin-right:200px;font-family:'Segoe UI'; font-size:12px">
+                <tr>
+                    <td style="width:100px">Warna <label style="float:right">:</label></td>
+                    <td style="width:200px" class="border-bottom">
+                        @if (typeof(CppViewModel) == obj.GetType())
+                        {
+                             <span><b>@cpp.ColorCode</b></span>
+                        }
+                    </td>
+                </tr>
+            </table>
+        </td>
+
+
+    </tr>
+
+    <tr>
+        <td colspan="6">Adapun pilihan pengajuan pembelian kendaraan CPP saya adalah :</td>
+    </tr>
+    <tr>
+        <td colspan="5">
+            <table style="width:90%;margin-left:100px;margin-right:200px;font-family:'Segoe UI'; font-size:12px">
+                <tr>
+                    <td style="width:20px"></td>
+                    <td class="border-all" style="width:50px" align="center">
+                        @if (typeof(CppViewModel) == obj.GetType())
+                        {
+                            if (cpp.PurchaseTypeCode.ToLower() == "cash")
+                            {
+                                <span><b>&#10003;</b></span>
+                            }
+                        }
+                    </td>
+                    <td style="width:170px;padding:3px">Cash</td>
+                    <td style="width:20px"></td>
+                    <td class="border-all" style="width:50px" align="center">
+                        @if (typeof(CppViewModel) == obj.GetType())
+                        {
+                            if (cpp.PurchaseTypeCode.ToLower() != "cash")
+                            {
+                                <span><b>&#10003;</b></span>
+                            }
+                        }
+                    </td>
+                    <td style="width:200px;padding:3px">Credit by TAFS</td>
+                    <td></td>
+                </tr>
+
+            </table>
+        </td>
+    </tr>
+    <tr>
+        <td style="width:15%"></td>
+        <td style="width:250px;" valign="top">
+            <p style="font-weight:bold;text-decoration:underline">Persyaratan :</p>
+            <p>1. Foto copy KTP</p>
+        </td>
+
+        <td colspan="2">
+            <p style="font-weight:bold;text-decoration:underline">Persyaratan :</p>
+            <p>1. Foto copy KTP Suami & Isteri (bagi yang sudah menikah)</p>
+            <p>2. Foto copy Kartu Keluarga (KK) bagi pemohon</p>
+            <p>3. Foto copy Slip Gaji terakhir</p>
+            <p>4. Foto copy Rekening Min. 3 bulan terakhir</p>
+            <p>5. Foto copy Kepemilikan rumah PBB/Sertifikat</p>
+            <p>6. Foto copy ID Card Karyawan</p>
+            <p>7. Foto copy Nomor Pokok Wajib Pajak (NPWP)</p>
+
+        </td>
+    </tr>
+
+    <tr style="height:30px">
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="6">Demikian permohonan saya, terimakasih.</td>
+    </tr>
+    <tr style="height:10px">
+        <td></td>
+    </tr>
+    <tr>
+        <td style="width:200px">Jakarta, ....................<br>Pemohon</td>
+        <td></td>
+        <td>Mengetahui, ....................<br>Divion Head</td>
+    </tr>
+    <tr style="height:150px">
+        <td style="width:200px">(@Requester)<br></td>
+        <td></td>
+        <td style="width:200px">(@DivisionHead)<br></td>
+    </tr>
+
+
+</table>

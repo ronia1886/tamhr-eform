@@ -1,0 +1,140 @@
+﻿@inject TAMHR.ESS.Infrastructure.Web.Authorization.AclHelper AclHelper
+@{ 
+    ScriptManager.RemoveReferences("datepicker");
+    ScriptManager.RegisterReferences("treelist");
+    var noreg = User.GetClaim("NoReg");
+    var postCode = User.GetClaim("PostCode");
+}
+@section styles {
+    <style type="text/css">
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+    </style>
+}
+@section pageToolbars {
+    @if (AclHelper.HasPermission(TAMHR.ESS.Infrastructure.ApplicationConstants.PermissionKey.ViewReportingStructure))
+    {
+        <div class="dropdown">
+            <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="reporting-structure-modal" data-modal-title="View Reporting Structure" data-modal-ajax="true" data-ajax-url="~/core/home/reportingstructure" data-parameters-noreg="@noreg" data-parameters-postCode="@postCode">
+                        @Localizer["View Reporting Structure"]
+                    </a>
+                </li>
+            </ul>
+        </div>
+    }
+}
+@*<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row d-md-flex">
+                        <div class="col-lg-3 col-md-3 col-sm-6 col-6 border-right">
+                            <div class="d-flex h-100">
+                                <div class="media align-items-center p-2 w-100">
+                                    <div class="align-self-center">
+                                        <i class="icon-user font-large-2 font-red-mint d-none d-md-block mb-1"></i>
+                                        <i class="icon-user font-large-1 font-red-mint d-block d-md-none mb-1"></i>
+                                    </div>
+                                    <div class="media-body text-right">
+                                        <h3 class="text-bold-300 d-none d-lg-inline font-red-mint">1378</h3>
+                                        <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-red-mint">1378</h3>
+                                        <span class="font-small-2 text-muted text-right d-none d-md-block">@Localizer["Total Employee"]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-6 col-6 border-right">
+                            <div class="d-flex h-100">
+                                <div class="media align-items-center p-2 w-100">
+                                    <div class="align-self-center">
+                                        <i class="icon-user font-large-2 font-red-mint d-none d-md-block mb-1"></i>
+                                        <i class="icon-user font-large-1 font-red-mint d-block d-md-none mb-1"></i>
+                                    </div>
+                                    <div class="media-body text-right">
+                                        <h3 class="text-bold-300 d-none d-lg-inline font-red-mint">1378</h3>
+                                        <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-red-mint">1378</h3>
+                                        <span class="font-small-2 text-muted text-right d-none d-md-block">@Localizer["Total Employee"]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-6 col-6 border-right">
+                            <div class="d-flex h-100">
+                                <div class="media align-items-center p-2 w-100">
+                                    <div class="align-self-center">
+                                        <i class="icon-user font-large-2 font-red-mint d-none d-md-block mb-1"></i>
+                                        <i class="icon-user font-large-1 font-red-mint d-block d-md-none mb-1"></i>
+                                    </div>
+                                    <div class="media-body text-right">
+                                        <h3 class="text-bold-300 d-none d-lg-inline font-red-mint">1378</h3>
+                                        <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-red-mint">1378</h3>
+                                        <span class="font-small-2 text-muted text-right d-none d-md-block">@Localizer["Total Employee"]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-3 col-sm-6 col-6">
+                            <div class="d-flex h-100">
+                                <div class="media align-items-center p-2 w-100">
+                                    <div class="align-self-center">
+                                        <i class="icon-user font-large-2 font-red-mint d-none d-md-block mb-1"></i>
+                                        <i class="icon-user font-large-1 font-red-mint d-block d-md-none mb-1"></i>
+                                    </div>
+                                    <div class="media-body text-right">
+                                        <h3 class="text-bold-300 d-none d-lg-inline font-red-mint">1378</h3>
+                                        <h3 class="font-small-3 text-bold-300 d-inline d-lg-none font-red-mint">1378</h3>
+                                        <span class="font-small-2 text-muted text-right d-none d-md-block">@Localizer["Total Employee"]</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>*@
+@(Html.Kendo().TreeList<TAMHR.ESS.Domain.OrganizationStructureView>()
+    .Name("treelist")
+    .Columns(columns =>
+    {
+        columns.Add().Field(e => e.ObjectText).Title("Organization").Template(@"<a data-trigger=""modal"" data-modal=""details-modal"" data-modal-title=""#:ObjectText# #:ObjectDescription#"" data-modal-ajax=""true"" data-ajax-url=""~/core/organization/getemployeestructures"" data-parameters-id=""#:OrgCode#"">#:ObjectText# - #:ObjectDescription#</a>");
+    })
+    .DataSource(dataSource => dataSource
+        .Read(read => read.Url(Url.Content("~/api/organization/get-structures")))
+        .ServerOperation(true)
+        .Model(m =>
+        {
+            m.Id(f => f.OrgCode);
+            m.ParentId(f => f.ParentOrgCode).Nullable();
+            m.Expanded(true);
+            m.Field(f => f.ObjectText);
+            m.Field(f => f.ObjectDescription);
+            m.Field(f => f.ParentOrgCode).Nullable();
+        })
+    )
+    .Deferred()
+)

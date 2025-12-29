@@ -1,0 +1,36 @@
+﻿@model IEnumerable<TAMHR.ESS.Infrastructure.ViewModels.MenuViewModel>
+@{
+    var counter = 0;
+    var list = Model.Where(x => x.Menus.Count() > 0);
+    var length = list.Count();
+}
+<div class="row">
+    <div class="col">
+        @foreach (var menuCategory in list)
+        {
+            <h3 class="title">@Localizer[menuCategory.Category]</h3>
+            <div class="d-flex align-content-start flex-wrap w-100">
+                @foreach (var menu in menuCategory.Menus)
+                {
+                    <a class="flex-icon-item font-dark" href="@Url.Content(menu.Url)">
+                        <span class="flex-icon">
+                            @if ((menu.Title ?? "") != "SHE")
+                            {
+                                <i class="@menu.IconClass"></i>
+                            }
+                            else
+                            {
+                                <img src="~/img/logo/logo-she.png" width="45" height="45" />
+                            }
+                        </span>
+                        <span class="title">@Localizer[menu.Title]</span>
+                    </a>
+                }
+            </div>
+            @if (++counter <= length - 1)
+            {
+                <hr class="mt-0" />
+            }
+        }
+    </div>
+</div>

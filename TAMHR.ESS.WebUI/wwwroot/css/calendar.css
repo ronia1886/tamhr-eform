@@ -1,0 +1,203 @@
+﻿.calendar {
+  padding: 4px;
+  direction: ltr;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.calendar.calendar-rtl {
+  direction: rtl;
+}
+.calendar.calendar-rtl table tr td span {
+  float: right;
+}
+
+.calendar table {
+  margin: auto;
+}
+
+.calendar table td,
+.calendar table th {
+  text-align: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: none;
+  padding: 0.25rem 0.27rem;
+  font-size: 0.65rem;
+}
+
+/* Header */
+.calendar .calendar-header
+{
+	width:100%;
+	margin-bottom:20px;
+}
+
+.calendar .calendar-header table
+{
+	width:100%;
+}
+
+.calendar .calendar-header table th
+{
+	font-size:22px;
+	padding: 0.27rem 0.3rem;
+}
+
+.calendar .calendar-header table th:hover {
+  background: #eeeeee;
+  cursor: pointer;
+}
+
+.calendar .calendar-header table th.disabled,
+.calendar .calendar-header table th.disabled:hover {
+  background: none;
+  cursor: default;
+  color:white;
+}
+
+.calendar .calendar-header table th.prev,
+.calendar .calendar-header table th.next
+{
+	width:20px;
+}
+
+.calendar .year-title {
+	font-weight:bold;
+	text-align:center;
+	height:20px;
+	width:auto;
+}
+
+.calendar .year-neighbor
+{
+	color:#aaaaaa;
+}
+
+.calendar .year-neighbor2
+{
+	color:#dddddd;
+}
+
+/* Months */
+.calendar .months-container {
+    font-family: 'Open Sans', Tinos, Times, serif;
+}
+
+.calendar .month-container {
+	min-width:180px;
+	text-align:center;
+	height:200px;
+	padding:0;
+}
+
+.calendar table.month th.month-title
+{
+	font-size: 0.85rem;
+	padding-bottom: 0.25rem;
+}
+
+.calendar table.month th.day-header
+{
+	font-size:0.75rem;
+}
+
+.calendar table.month tr td,
+.calendar table.month tr th
+{
+	padding:0;
+}
+
+.calendar table.month td.week-number {
+	cursor: default;
+	font-weight:bold;
+	border-right:1px solid #eee;
+	padding:5px;
+}
+
+.calendar .round-left {
+	-webkit-border-radius: 8px 0 0 8px;
+	-moz-border-radius: 8px 0 0 8px;
+	border-radius: 8px 0 0 8px;
+}
+
+.calendar .round-right {
+	webkit-border-radius: 0 8px 8px 0 ;
+	-moz-border-radius: 0 8px 8px 0;
+	border-radius: 0 8px 8px 0;
+}
+
+.calendar table.month tr td .day-content {
+	-webkit-border-radius: 4px;
+	-moz-border-radius: 4px;
+	border-radius: 4px;
+	padding: 5px 6px;
+}
+
+.table-striped .calendar table.month tr td,
+.table-striped .calendar table.month tr th {
+  background-color: transparent;
+}
+
+.calendar table.month td.day.active {
+    /*box-shadow: rgb(156, 183, 3) 0px -4px 0px 0px inset;*/
+    position: relative;
+    cursor: pointer;
+}
+
+.calendar table.month td.day.active::before,
+.calendar table.month td.day.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0.35rem;
+    right: 0.12rem;
+    border-color: transparent;
+    border-style: solid;
+}
+
+.calendar table.month td.day.active::after {
+    border-width: 0.19rem;
+    border-right-color: #ff0047;
+    border-bottom-color: #ff0047;
+}
+
+.calendar table.month td.day .day-content:hover {
+  background: rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+}
+.calendar table.month tr td.old,
+.calendar table.month tr td.new,
+.calendar table.month tr td.old:hover,
+.calendar table.month tr td.new:hover {
+  background: none;
+  cursor: default;
+}
+.calendar table.month tr td.disabled,
+.calendar table.month tr td.disabled:hover {
+  color: #dddddd;
+}
+
+.calendar table.month td.day.disabled .day-content:hover {
+	background: none;
+	cursor: default;
+}
+
+.calendar table.month tr td.range .day-content {
+   background: rgba(0, 0, 0, 0.2);
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+}
+
+.calendar table.month tr td.range.range-start .day-content  {
+  border-top-left-radius:4px;
+  border-bottom-left-radius:4px;
+}
+
+.calendar table.month tr td.range.range-end .day-content  {
+  border-top-right-radius:4px;
+  border-bottom-right-radius:4px;
+}

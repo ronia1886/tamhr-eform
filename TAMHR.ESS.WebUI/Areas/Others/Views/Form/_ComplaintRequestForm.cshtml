@@ -1,0 +1,100 @@
+﻿@model ComplaintRequestViewModel
+<form id="complaint-request-form" method="post" action="~/api/complaint-request/validate-request">
+    @Html.HiddenFor(x => x.CommonFileId)
+    <div class="row">
+        <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Complaint"]</label>
+                @Html.KendoComboBoxFor(x => x.ComplaintCode, "ComplaintType", tabIndex: 1, autoFocus: true).Placeholder(Localizer["Please select complaint"].Value)
+                <span class="invalid" data-validation-for="ComplaintCode"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Sub Complaint"]</label>
+                @(Html.Kendo().ComboBoxFor(x => x.ComplaintSubCode)
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "ComplaintSubCode", tabindex = 2 })
+                    .DataTextField("Name")
+                    .DataValueField("Code")
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/category/getsbycategorymapping")).Data(@<text>function() { return { category: $('#ComplaintCode').val() } }</text>))
+                    )
+                    .AutoBind(false)
+                    .Placeholder(Localizer["Please select sub complaint"].Value)
+                    .CascadeFrom("ComplaintCode")
+                )
+                <span class="invalid" data-validation-for="ComplaintSubCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Detail"]</label>
+                @Html.TextAreaFor(x => x.ComplaintDetail, new { @class = "form-control", data_validation_for = "ComplaintDetail", placeholder = Localizer["Please input complaint detail"].Value, @rows = 3, tabindex = 5 })
+                <span class="invalid" data-validation-for="ComplaintDetail"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Expectation"]</label>
+                @Html.TextBoxFor(x => x.Expectation, new { @class = "form-control", data_validation_for = "Expectation", @placeholder = Localizer["Please input expectation"].Value, tabindex = 4 })
+                <span class="invalid" data-validation-for="Expectation"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label>@Localizer["Remarks"]</label>
+                @Html.TextAreaFor(x => x.Remarks, new { @class = "form-control", data_validation_for = "Remarks", placeholder = Localizer["Please input remarks if any"].Value, @rows = 3, tabindex = 5 })
+                <span class="invalid" data-validation-for="Remarks"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                @*@(await Component.InvokeAsync<FileUpload>(new { @placeholder = "Choose file", field = "FilePath" }))*@
+                <div class="file-group form-control">
+                    <div class="input-group-area">
+                        @Html.TextBoxFor(x => x.FilePath, new { @placeholder = Localizer["Choose File"].Value, @readonly = "readonly", data_validation_for = "FilePath" })
+                    </div>
+                    <div class="input-group-icon">
+                        <div class="file btn">
+                            <i class="ft-upload"></i>
+                            <input class="file" type="file" name="FilePath" accept="image/*" />
+                        </div>
+                    </div>
+                    <div class="input-group-icon d-md-none d-sm-inline-block">
+                        <div class="file btn">
+                            <i class="ft-camera"></i>
+                            <input class="file" type="file" name="FilePath" accept="image/*" capture="camera" />
+                        </div>
+                    </div>
+                </div>
+                <span class="invalid" data-validation-for="FilePath"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red" data-trigger="submit" data-callback="updateHandler" data-interceptor="complaintRequestFormInterceptor">@Localizer["Save"]</a>
+    </div>
+</form>
+@*<script type="text/javascript">
+    $(function () {
+        var $uploadEls = $("#complaint-request-form .file-upload");
+
+        if ($uploadEls.length > 0) {
+            $uploadEls.each(function () {
+                $(this).uploadFile({
+                    url: app.resolveUrl("~/api/files/upload")
+                });
+            });
+        }
+    });
+</script>*@

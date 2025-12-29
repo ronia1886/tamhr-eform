@@ -1,0 +1,175 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var fuel = (obj as CopFuelAllowanceViewModel);
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Buat matrix Print Out
+    // var getPrintOut = coreService.GetPrintOut().ToList();
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Director = "";
+    string DivisionHead = "";
+    string Requester = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Director")
+        {
+            Director = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DivisionHead")
+        {
+            DivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+
+<table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="0" cellspacing="0" cellpadding="0">
+    <colgroup> <col style="width: 30px;" /> <col style="width: 100px;" /> <col style="width: 300px;" /> <col style="width: 100px;" /> </colgroup>
+    <tbody>
+        <tr style="height:20px"></tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">&nbsp;</td>
+            <td style="width: 40.0908%;">&nbsp;</td>
+            <td style="width: 47.9092%;">&nbsp;</td>
+            <td style="width: 20%;">&nbsp;</td>
+        </tr>
+        <tr style="height: 20px;">
+            <th style="width: 134%;" colspan="5">
+                <p style="font-size: 18px;">Car Ownership Programme ( COP )</p>
+            </th>
+        </tr>
+        <tr style="height: 20px;">
+            <th style="width: 134%;" colspan="5">
+                <p style="font-size: 18px;">Formulir Klaim Bensin (Perjalanan Dinas Bulanan)</p>
+            </th>
+        </tr>
+        <tr style="height: 20px;"></tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">NoReg<label style="float: right;">:</label></td>
+            <td class="border-bottom" style="width: 40.0908%;">@org.NoReg</td>
+        </tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">Nama<label style="float: right;">:</label></td>
+            <td class="border-bottom" style="width: 40.0908%;">@org.Name</td>
+        </tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">Divisi<label style="float: right;">:</label></td>
+            <td class="border-bottom" style="width: 40.0908%;">@org.PersonalArea</td>
+        </tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">Bulan<label style="float: right;">:</label></td>
+            <td class="border-bottom" style="width: 40.0908%;">@Model.DocumentApproval.CreatedOn.ToString("MMMM yyyy")</td>
+        </tr>
+        <tr>
+            <td style="width: 4%;">&nbsp;</td>
+            <td style="width: 22%;">&nbsp;</td>
+            <td style="width: 40.0908%;">&nbsp;</td>
+            <td style="width: 47.9092%;">&nbsp;</td>
+        </tr>
+        <tr>
+            <td style="width: 134%;" colspan="5">
+                <br />
+                <table style="width: 100%; font-family: 'Segoe UI'; font-size: 12px;" border="1" cellspacing="0" cellpadding="0">
+                    <thead>
+                        <tr>
+                            <td style="width: 25px; text-align: center;" rowspan="2">No&nbsp;</td>
+                            <td style="width: 63px; text-align: center;" rowspan="2">Tanggal&nbsp;</td>
+                            <td style="width: 102px; text-align: center;" rowspan="2">&nbsp;Tujuan&nbsp;&nbsp;</td>
+                            <td style="width: 240px; text-align: center;" colspan="2">Posisi KM</td>
+                            <td style="width: 171px; text-align: center;" rowspan="2">Total Pemakaian&nbsp;</td>
+                            <td style="width: 147px; text-align: center;" rowspan="2">Keperluan</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 106px; text-align: center;">Berangkat</td>
+                            <td style="width: 128px; text-align: center;">Kembali</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{ var index = 1;}
+                        @if (fuel.data != null)
+                        {
+                            @foreach (var ot in fuel.data.Where(X => X != null))
+                            {
+                                int count = ot.Back - ot.Start;
+                                <tr>
+                                    <td height="20px" align="center">@index</td>
+                                    <td height="20px" align="center">@ot.Date?.ToString("dd/MM/yyyy")</td>
+                                    <td height="20px">@ot.Destination</td>
+                                    <td height="20px" align="center">@ot.Start</td>
+                                    <td height="20px" align="center">@ot.Back</td>
+                                    <td height="20px" align="center">@count</td>
+                                    <td height="20px">@ot.Necessity</td>
+                                </tr>
+                                index++;
+                            }
+                        }
+
+                    </tbody>
+                </table>
+                <p>&nbsp;</p>
+                <p>Note :</p>
+                <p>1. Dibayarkan bersamaan Gaji bulanan dengan periode pembayaran tanggal 1 s/d 30 bulan sebelumnya</p>
+                <p>2. Formulir ini harus sudah diserahkan ke HRD- HRIS &amp; Payroll Section paling lambat tanggal 5 setiap bulannya</p>
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 134%;" colspan="5" height="200px">
+                <table style="width: 296px; float: right; font-family: 'Segoe UI'; font-size: 12px;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 68px; text-align: left;">Jakarta,</td>
+                            <td style="width: 10px;"></td>
+                            <td style="width: 84px;" class="border-bottom">&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td style="width: 68px;">Disetujui</td>
+                            <td style="width: 10px;"></td>
+                            <td style="width: 84px;">Dibuat Oleh</td>
+                        </tr>
+                        <tr style="height:70px">
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td>@DivisionHead</td>
+                            <td></td>
+                            <td>@Requester</td>
+                        </tr>
+                        <tr>
+                            <td class="border-top" style="width: 68px;">Kepala Divisi</td>
+                            <td style="width: 10px;"></td>
+                            <td class="border-top" style="width: 84px;">Karyawan</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </td>
+        </tr>
+    </tbody>
+</table>

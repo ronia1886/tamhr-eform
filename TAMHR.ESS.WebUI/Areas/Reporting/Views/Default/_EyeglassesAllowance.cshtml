@@ -1,0 +1,132 @@
+﻿@{ 
+    var now = DateTime.Now.Date;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">
+                    @Localizer["Eyeglasses List"] <span class="date-detail">(@start.ToString("d MMM")@(start.Year != now.Year ? " " + start.Year : "") - @end.ToString("d MMM")@(end.Year != now.Year ? " " + end.Year : ""))</span>
+                </h3>
+                <div class="heading-elements">
+                    <ul id="eyeglasses-allowance-filter" class="page-toolbars" data-role="filter">
+                        <li class="dropdown dropdown-arrow">
+                            <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                                <i class="fa fa-sort-amount-desc"></i>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-right">
+                                <li>
+                                    <a href="javascript:;" data-trigger="filter" data-sort="NoReg">@Localizer["No Reg."]</a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-trigger="filter" data-sort="Name">@Localizer["Name"]</a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-trigger="filter" data-sort="Ammount">@Localizer["Ammount"]</a>
+                                </li>
+                                <li>
+                                    <a href="javascript:;" data-trigger="filter" data-sort="TransactionDate">@Localizer["Transaction Date"]</a>
+                                </li>
+                                <li class="dropdown-divider"></li>
+                                <li class="p-2">
+                                    <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="dropdown custom-filter">
+                            <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fa fa-filter"></i>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-right" style="width: 250px;">
+                                <form class="form-horizontal p-2" role="form">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label>@Localizer["Start Date"]</label>
+                                                @(Html.Kendo().DatePicker()
+                                                    .Name("StartDate")
+                                                    .Value(start)
+                                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                )
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label>@Localizer["End Date"]</label>
+                                                @(Html.Kendo().DatePicker()
+                                                    .Name("EndDate")
+                                                    .Value(end)
+                                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                )
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <hr class="mt-1"/>
+                                    <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler">@Localizer["Search"]</a>
+                                </form>
+                            </div>
+                        </li>
+                        <li class="dropdown">
+                            <a data-form-key="eyeglasses-allowance" href="~/api/eyeglasses-allowance/download?startDate=@start.ToString("yyyy-MM-dd")&endDate=@end.ToString("yyyy-MM-dd")" class="font-green-haze download">
+                                <i class="fa fa-download"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.General>()
+                    .Name("eyeglassesAllowanceGrid")
+                    .HtmlAttributes(new { @data_filter = "eyeglasses-allowance-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Employee").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-img mr-2"">
+                                    <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                    <h6 class=""mb-0"">#:NoReg# - #:Name#</h6>
+                                    <span class=""d-block"">#:PostName#</span>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.NoReg).Title("Title").ClientTemplate(@"
+                            <h6 class=""bold font-small-3 mb-0"">#:AllowanceType#</h6>
+                            <small class=""d-block"">Ammount - Rp#:kendo.toString(Ammount, 'n0')#</small>
+                            <small class=""d-block"">Transaction - #:kendo.toString(TransactionDate, 'dd/MM/yyyy')#</small>
+                        ");
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/eyeglasses-allowance/details-report")).Data("$.getFilter"))
+                        .Sort(sort =>
+                        {
+                            sort.Add("TransactionDate").Descending();
+                            sort.Add("Name");
+                        })
+                    )
+                    .NoRecords(config => config.Template(@"<div class=""text-center mt-2 p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+                    })
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                )
+            </div>
+        </div>
+    </div>
+</div>

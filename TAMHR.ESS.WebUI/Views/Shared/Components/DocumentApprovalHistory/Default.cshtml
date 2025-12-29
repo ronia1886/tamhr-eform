@@ -1,0 +1,43 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model IEnumerable<TAMHR.ESS.Domain.DocumentApprovalHistory>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{ 
+    var dicts = ApprovalAction.ApprovalCssClasses;
+}
+@if (Model == null || Model.Count() == 0)
+{
+    <div class="text-center p-3 text-muted">
+        <i class="fa fa-clipboard font-large-1"></i><br />@Localizer["No history found"]
+    </div>
+}
+else
+{
+    var ordered = Model.OrderByDescending(x => x.CreatedOn);
+    <div class="mt-comments mt-comments-bordered">
+        @foreach (var documentHistory in ordered)
+        {
+            var bgClass = dicts.ContainsKey(documentHistory.ApprovalActionCode) ? dicts[documentHistory.ApprovalActionCode] : "bg-blue-sharp";
+            <div class="mt-comment">
+                <div class="mt-comment-img">
+                    <img src="@ConfigService.ResolveAvatar(documentHistory.NoReg)" style="width: 2.5rem; height: 3rem;">
+                </div>
+                <div class="mt-comment-body">
+                    <div class="mt-comment-info">
+                        <span class="mt-comment-author">@documentHistory.Name</span>
+                        <span class="mt-comment-status">
+                            <span class="label @bgClass">@documentHistory.ApprovalActionCode</span>
+                        </span>
+                        <span class="mt-comment-sub-info">@documentHistory.PostName</span>
+                        <span class="mt-comment-time">
+                            <i class="fa fa-clock-o"></i> @documentHistory.CreatedOn.ToString("dd MMM yyyy - HH:mm tt")
+                        </span>
+                    </div>
+                    @if (!string.IsNullOrEmpty(documentHistory.Remarks))
+                    {
+                        <div class="mt-comment-text">@documentHistory.Remarks</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

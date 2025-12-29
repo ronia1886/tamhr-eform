@@ -1,0 +1,160 @@
+﻿@model TAMHR.ESS.Domain.Patient
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+
+@{
+
+    var isNew = Model.Id == default(Guid);
+}
+
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+    <h4 class="modal-title">@Localizer["Input In & Out Patient"]</h4>
+</div>
+<form method="@(isNew ? "post" : "put")" action="@(isNew ? "~/api/ohs/medical-record/insertPatient" : "~/api/ohs/medical-record/updatePatient")">
+    @Html.HiddenFor(x => x.Id)
+    <div class="modal-body">
+        <div class="row">
+            <!-- Noreg -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["No Reg"]</label>
+                   @* @(Html.Kendo().ComboBox()
+                        .Name("NoregPatient")
+                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "DivisiCode", @required = "required" })
+                        .DataTextField("Noreg")
+                        .DataValueField("Noreg")
+                        .Placeholder(Localizer["NoReg"].Value)
+                        .Value(Model.Noreg == default(string) ? string.Empty : Model.Noreg)
+                        //.Value(Model.DivisiCode.ToString())
+                        .Events(events =>
+                        {
+                            events.Change("onchangeNoregPatient");
+                        })
+
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-Noreg")))
+                        )
+                        .SelectedIndex(-1)
+                        )*@
+                    <input type="text" name="noregPatient" id="noregPatient" class="form-control" readonly="readonly" />
+
+                </div>
+            </div>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <!-- Provider -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["Provider"]</label>
+                    @Html.TextBoxFor(x => x.Provider, new { @class = "form-control"})
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- Nama -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["Patient Name"]</label>
+                    <input type="text" name="NamaPatient" id="namaPatient" class="form-control" readonly="readonly" />
+                    @*@Html.TextBoxFor(x => x.Noreg, new { @required = "required", @class = "form-control", @readonly = "readonly" })*@
+
+                </div>
+            </div>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <!-- Admmission date -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["Admission Date"]</label>
+                    @(Html.Kendo().DatePicker()
+                        .Name("AdmissionDate")
+                        .Value(Model.AdmissionDate)
+                        .Format("dd/MM/yyyy")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        //.Deferred()
+                        )
+                </div>
+            </div>
+
+        </div>
+        <div class="row">
+            <!-- jenis kelamin -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["Jenis Kelamin"]</label>
+                    <input type="text" name="GenderPatient" id="GenderPatient" class="form-control" readonly="readonly" />
+                    @*@Html.TextBoxFor(x => x.Noreg, new { @required = "required", @class = "form-control", @readonly = "readonly" })*@
+
+                </div>
+            </div>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <!-- Dischargeable date -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["DisChargeAble Date"]</label>
+                    @(Html.Kendo().DatePicker()
+                        .Name("DisChargeAbleDate")
+                        .Value(Model.DisChargeAbleDate)
+                        .Format("dd/MM/yyyy")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        //.Deferred()
+                        )
+                </div>
+            </div>
+
+
+        </div>
+        <div class="row">
+            <!-- Date of Brith -->
+            <div class="col-4">
+                <div class="form-group">
+
+                    <label>@Localizer["Date Of Birth"]</label>
+                    <input type="text" name="TglLahir" id="TglLahir" class="form-control" readonly="readonly" />
+                    @*@Html.TextBoxFor(x => x.Noreg, new {@class = "form-control"})*@
+                </div>
+            </div>
+            <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+            <!-- DiagnosisDesc -->
+            <div class="col-4">
+                <div class="form-group">
+                    <label>@Localizer["DiagnosisDesc"]</label>
+                    @Html.TextAreaFor(x => x.DiagnosisDesc, new { @class = "form-control", rows = 4 })
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</form>
+<div class="actions modal-footer">
+    <a href="javascript:;" id="submitFormPatient" class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+</div>
+
+
+<script>
+
+    $(function () {
+        function prosesDataPatient() {
+            // Simulasi proses async (contoh: AJAX, setTimeout, dsb.)
+            setTimeout(function () {
+                console.log("Proses selesai");
+
+                // Setelah proses selesai, refresh grid
+                $("#PatientGrid").data("kendoGrid").dataSource.read();
+            }, 2000); // Simulasi proses selama 2 detik
+        }
+
+        //setInterval(refreshGrid, 2000);
+
+        $("#submitFormPatient").click(function () {
+            //alert('ffff');
+            //$("#McuGrid").data("kendoGrid").dataSource.read();  //Refresh grid
+            prosesDataPatient();
+        });
+    });
+
+
+</script>

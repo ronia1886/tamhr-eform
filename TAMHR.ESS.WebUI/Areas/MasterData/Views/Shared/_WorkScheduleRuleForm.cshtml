@@ -1,0 +1,26 @@
+﻿@model TAMHR.ESS.Domain.WorkScheduleRule
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/work-schedule-rule">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-12 col-12">
+            <div class="form-group">
+                <label>@Localizer["Off Presence Code"]</label>
+                @(Html.Kendo().NumericTextBoxFor(x => x.OffPresenceCode)
+                    .Value(Model.OffPresenceCode)
+                    .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OffPresenceCode" })
+                    .Format("##")
+                    .Decimals(0)
+                    .Min(0)
+                    .Max(1000)
+                )
+                <span class="invalid" data-validation-for="OffPresenceCode"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

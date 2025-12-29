@@ -1,0 +1,36 @@
+﻿@model IEnumerable<TAMHR.ESS.Domain.News>
+@{
+    var length = Model.Count();
+    var counter = 0;
+}
+<div class="row carousel-container">
+    <div class="col-12">
+        <div id="carouselCaptions" class="carousel slide box-shadow-1 position-relative" data-ride="carousel">
+            @*<a class="btn btn-sm green-dark" href="~/core/news" style="position: absolute; right: 0; bottom: 0; z-index: 9; border-radius: 0;"><i class="ft-file-text"></i> @Localizer["Show All News"]</a>*@
+            <ol class="carousel-indicators">
+                @for (var i = 0; i < length; i++)
+                {
+                    <li data-target="#carouselCaptions" data-slide-to="@i" class="@(i == 0 ? "active" : string.Empty)"></li>
+                }
+            </ol>
+            <div class="carousel-inner">
+                @foreach (var news in Model)
+                {
+                    <div class="carousel-item @(counter++ == 0 ? "active" : string.Empty)">
+                        <a href="~/news/@news.SlugUrl">
+                            <img class="d-block w-100" data-src="holder.js/800x400?auto=yes&amp;bg=777&amp;fg=555&amp;text=First slide" alt="@news.Title" src="@Url.Content(news.ImageUrl)" data-holder-rendered="true">
+                        </a>
+                    </div>
+                }
+            </div>
+            <a class="carousel-control-prev" href="#carouselCaptions" role="button" data-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="sr-only">Previous</span>
+            </a>
+            <a class="carousel-control-next" href="#carouselCaptions" role="button" data-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="sr-only">Next</span>
+            </a>
+        </div>
+    </div>
+</div>

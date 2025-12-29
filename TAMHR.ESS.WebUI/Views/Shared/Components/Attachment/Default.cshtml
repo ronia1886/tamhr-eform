@@ -1,0 +1,17 @@
+﻿@model List<TAMHR.ESS.Domain.DocumentApprovalFile>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configs
+@if (Model == null || Model.Count <= 0)
+{
+    <label style="color: #b8b8b8;font-size: 13px;">Lampiran tidak tersedia.<label></label></label>
+}
+else
+{
+
+    @foreach (var file in Model)
+    {
+        @if (!string.IsNullOrEmpty(file.CommonFile?.FileUrl))
+        {
+            <a style="margin-left: 12px;" target="_blank" href="@Url.Content($"~/api/files/download?id={file.CommonFile?.Id}")">@file.CommonFile?.FileName</a> <br>
+        }
+    }
+}

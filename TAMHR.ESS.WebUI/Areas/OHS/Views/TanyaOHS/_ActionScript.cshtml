@@ -1,0 +1,74 @@
+<script type="text/javascript">
+    function mdlNewConsultToggle() {
+         $("#mdlNewConsult").modal("toggle");
+    };
+    function mdlSelectServiceToggle() {
+         $("#mdlSelectService").modal("toggle");
+    };
+    function newConsultValidation(){
+        var valid = true;
+
+        $("#ncName").removeClass("is-invalid");
+        $("#ncNameFeedback").html("");
+        $("#ncNoreg").removeClass("is-invalid");
+        $("#ncNoregFeedback").html("");
+        $("#ncComplaint").removeClass("is-invalid");
+        $("#ncComplaintFeedback").html("");
+        if($("#ncName").val() == ""){
+            valid = false;
+            $("#ncName").addClass("is-invalid");
+            $("#ncNameFeedback").html("Name required.");
+        }
+        if($("#ncNoreg").val() == ""){
+            valid = false;
+            $("#ncNoreg").addClass("is-invalid");
+            $("#ncNoregFeedback").html("Noreg required.");
+        }
+        if($("#ncComplaint").val() == ""){
+            valid = false;
+            $("#ncComplaint").addClass("is-invalid");
+            $("#ncComplaintFeedback").html("Keluhan required.");
+        }
+        return valid
+    }
+    function newConsultNext() {
+        console.log("masuk");
+        if(!newConsultValidation()) return;
+        mdlNewConsultToggle();
+        mdlSelectServiceToggle();
+    };
+    function selectServiceValidation(){
+        var valid = true;
+        $("#ssCategory").removeClass("is-invalid");
+        $("#ssCategoryFeedback").html("");
+        if($("#ssCategory").val() == ""){
+            valid = false;
+            $("#ssCategory").addClass("is-invalid");
+            $("#ssCategoryFeedback").html("Category required.");
+        }
+        return valid
+    }
+    function selectServiceNext() {
+        if(!selectServiceValidation()) return;
+        mdlSelectServiceToggle();
+    };
+    function ChatSend(){
+        alert("sent");
+    }
+    function GetCategory(){
+        var data = ["Konsultasi Kesehatan","Konsultasi Asuransi","Kebijakan Kesehatan","Kebijakan Keselamatan (Safety)"];
+        var option = '<option value="">@Localizer["Select Category"]</option>'
+        data.forEach(e=>{
+            option += `<option value='${e}'>${e}</option>`
+        });
+        $("#ssCategory").html(option);
+    }
+    document.addEventListener("DOMContentLoaded", function(event) {
+       //GetCategory();
+    });
+    $(document).ready(function() {
+        console.log("Ready!");
+        GetCategory();
+        $("#btnNextSS").click(() => selectServiceNext());
+    });
+</script>

@@ -1,0 +1,21 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var sessionExpireTitle = ConfigService.GetConfig("Timeout.Title")?.ConfigValue;
+    var sessionExpireMessage = ConfigService.GetConfig("Timeout.Message")?.ConfigValue;
+}
+<div id="idle-timeout-modal" class="modal fade" data-backdrop="static">
+    <div class="modal-dialog modal-small">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">@Localizer[sessionExpireTitle]</h5>
+            </div>
+            <div class="modal-body">
+                @Localizer[sessionExpireMessage]
+            </div>
+            <div class="modal-footer">
+                <button id="idle-timeout-modal-logout" type="button" class="btn dark btn-outline sbold uppercase">@Localizer["No, Logout"]</button>
+                <button id="idle-timeout-modal-keepalive" type="button" class="btn green btn-outline sbold uppercase" data-dismiss="modal">@Localizer["Yes, Keep Working"]</button>
+            </div>
+        </div>
+    </div>
+</div>

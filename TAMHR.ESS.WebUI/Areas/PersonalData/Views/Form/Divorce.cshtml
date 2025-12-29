@@ -1,0 +1,233 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.PersonalDataService personalDataService
+@model DocumentRequestDetailViewModel<DivorceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var genderObj = personalDataService.GetGender(requester).FirstOrDefault();
+    var gender = genderObj.GetType().GetProperty("GenderCode").GetValue(genderObj);
+}
+
+@section scripts {
+    <partial name="Components/_DivorceTermAndConditions" />
+    <script type="text/javascript" src="~/js/pages/termconditions.js"></script>
+    <script type="text/javascript">
+
+        $.ajax(
+            {
+                type: 'POST',
+                url: app.resolveUrl('~/api/personaldata/getinfoemployee'),
+                dataType: 'json',
+                data: {
+                        noreg: '@requester'
+                },
+                success: function (data) {
+                    $('#id_User').text(data.Data[0].Name);
+                    $('#id_Kelas').text(data.Data[0].Kelas);
+                    $('#id_TaxStatus').text(data.Data[0].TaxStatus);
+
+                    var newtaxstatus = data.Data[0].TaxStatus;
+                    if (data.Data[0].TaxStatus.length == 2) {
+                        var val = newtaxstatus.slice(-1);
+                        var str = "TK";
+                        newtaxstatus = (str + val);
+                        $("#changestatus").text(newtaxstatus);
+                    }
+                    else {
+                        $("#changestatus").text(data.Data[0].TaxStatus);
+                    }
+
+                    $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl('~/api/personaldata/getinfomedicalbpk'),
+                            dataType: 'json',
+                            data: { np: data.Data[0].NP, newtaxstatus: newtaxstatus },
+                            success: function (result) {
+                                if ($.trim(result.Data)) {
+                                    $('#id_JumlahBpk').text('Rp. ' + app.formatNumber(result.Data[0].AmmountTunjangan));
+                                    $('#text_Description').text(result.Data[0].Description)
+                                }
+                                else {
+                                    $('#id_JumlahBpk').text('Rp. 0');
+                                    $('#text_Description').text(result.Data[0].Description)
+                                }
+                            }
+                        });
+                    $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl('~/api/personaldata/getinfobpjs'),
+                            dataType: 'json',
+                            success: function (result) {
+                                $('#id_BPJS').text(result.Data[0].Name);
+                            }
+                        });
+                    $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl('~/api/personaldata/getinfoaviva'),
+                            dataType: 'json',
+                            success: function (result) {
+                                $('#id_AVIVA').text(result.Data[0].Name);
+                            }
+                        });
+                }
+            });
+
+        @if (string.IsNullOrWhiteSpace(Model.Object.PartnerName)) {
+            <text>
+                $.ajax(
+                    {
+                        type: 'POST',
+                        url: app.resolveUrl('~/api/personaldata/get-pasangan'),
+                        dataType: 'json',
+                        success: function (data) {
+                            $('#Object_PartnerName').val(data.Name);
+                            $('#Object_PartnerId').val(data.FamilyMemberId);
+                            $('#Object_DivorceDate').data('kendoDatePicker').min(data.Date);
+
+                            console.log(data)
+                        },
+                        error: function(xhr, status, error) {
+                            app.error('Error: ' + xhr.responseJSON.Message);
+                        }
+                })
+            </text>
+        }
+
+
+        if ("@gender" == 'perempuan') {
+            $("#perubahanstatus").hide();
+        }
+
+        $('#id_Module').text('@Localizer["Divorce"].Value');
+        if ('@isCanEdit' == 'True') {
+            $("#textanda").show()
+            $("#anda").show()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' != @User.GetClaim("NoReg")) {
+            $("#textanda").hide()
+            $("#anda").hide()
+        } else if ('@isCanEdit' == 'False' && '@Model.Requester' == @User.GetClaim("NoReg") ) {
+            $("#textanda").show()
+            $("#anda").show()
+        }
+    </script>
+}
+<a id="termAndConditionsBtn" class="hidden" data-trigger="modal" data-modal="term-and-conditions-modal" data-modal-title="Term and Conditions" data-modal-ajax="true" data-ajax-url="~/core/form/termandconditions" data-modal-callback="contentCallback" data-parameters='{ "documentApprovalId": "@Model.DocumentApprovalId" }'></a>
+<div class="row" id="divHeader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='id_User'></b> <label id='textanda'>you</label> are included in employee class <b class='font-red' id='id_Kelas'></b>. If <label id='anda'>you</label> complete <b class='font-red' id='id_Module'></b> form, then there are changes in data & allowance as follows:"]</span>
+                    <ul class="list-style-icons margin-top-10">
+                        <li id="perubahanstatus">
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of Tax Status from <b class='font-red' id='id_TaxStatus'></b> to <b class='font-red' id='changestatus'></b>"]
+                        </li>
+                        <li>
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Change of <span id='text_Description'></span> to <b class='font-red' id='id_JumlahBpk'></b>"]
+                        </li>
+                        <li>
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Removed membership <b class='font-red' id='id_BPJS'></b>"]
+                        </li>
+                        <li>
+                            <i class="fa fa-circle font-green-turquoise"></i> @Localizer["Removed membership of <b class='font-red' id='id_AVIVA'></b> Insurance"]
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row" id="divContent">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Divorce Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend><span class="required" aria-required="true"> * </span>@Localizer["Divorce Data"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Spouse Name"]</label>
+                                    @Html.TextBoxFor(x => x.Object.PartnerName, ApplicationHelper.Enable(new {
+                                    @class = "form-control", data_validation_for = "Object.PartnerName", placeholder =Localizer["Input Spouse Name"].Value , @readonly = "readonly"}, isCanEdit))
+                                    @Html.HiddenFor(x => x.Object.PartnerId, ApplicationHelper.Enable(new {
+                                    @class = "form-control", data_validation_for = "Object.PartnerId", placeholder = "", @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Divorce Date"]</label>
+                                    @(Html.Kendo().DatePickerFor(x => x.Object.DivorceDate)
+                                                                                            .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DivorceDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                                                            .Format("dd/MM/yyyy")
+                                                                                            .Enable(isCanEdit)
+                                                                                            .Max(DateTime.Now)
+                                                                                            .Deferred()
+                                    )
+                                </div>
+                                <div class="form-group exclude">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Divorce Certificate Attachment"]</label>
+
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.DivorceCertificatePath", enable = true })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "DivorceCertificatePath" })
+                                        }
+                                    }
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control",  placeholder = Localizer["Input Notes"].Value}, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,118 @@
+﻿@model TAMHR.ESS.Domain.News
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    var offsetWidth = int.Parse(ConfigService.GetConfig("Slider.OffsetWidth")?.ConfigValue ?? "0");
+    var offsetHeight = int.Parse(ConfigService.GetConfig("Slider.OffsetHeight")?.ConfigValue ?? "0");
+}
+<form method="@ApplicationHelper.Method(Model.Id)" action="@Url.Content(ApplicationHelper.Api("news"))">
+    @Html.Hidden("Id", Model.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Title"]</label>
+                @Html.TextBoxFor(x => x.Title, new { @class = "form-control", @onkeyup = "$('#SlugUrl').val(this.value.toLowerCase().replace(/[^\\w ]+/g,'').replace(/ +/g,'-'))", @data_validation_for = "Title", @placeholder = Localizer["Please input title"].Value })
+                <span class="invalid" data-validation-for="Title"></span>
+            </div>
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Slug Url"]</label>
+                @Html.TextBoxFor(x => x.SlugUrl, new { @class = "form-control", @data_validation_for = "SlugUrl", @placeholder = Localizer["Please input slug url"].Value, @readonly = "readonly" })
+                <span class="invalid" data-validation-for="SlugUrl"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Description"]</label>
+                @Html.TextBoxFor(x => x.ShortDescription, new { @class = "form-control", @data_validation_for = "ShortDescription", @placeholder = Localizer["Please input short description"].Value })
+                <span class="invalid" data-validation-for="ShortDescription"></span>
+            </div>
+            <div class="row">
+                <div class="col-6">
+                    <div class="form-group">
+                        <label><span class="required" aria-required="true"> * </span>@Localizer["Show in Slider"]</label>
+                        @Html.KendoYesNoComboBoxFor(x => x.Sticky)
+                        <span class="invalid" data-validation-for="Sticky"></span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="form-group">
+                        <label><span class="required" aria-required="true"> * </span>@Localizer["Order Index"]</label>
+                        @(Html.Kendo().NumericTextBoxFor(x => x.OrderIndex)
+                            .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OrderIndex" })
+                            .Decimals(0)
+                            .Format("#")
+                            .Min(1)
+                        )
+                        <span class="invalid" data-validation-for="OrderIndex"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Body Html"]</label>
+                @Html.TextAreaFor(x => x.BodyHtml, new { @class = "form-control hidden", @rows = 3 })
+                <span class="invalid" data-validation-for="BodyHtml"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group" style="overflow-x: auto; overflow-y: hidden;">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Image"]</label>
+                <div id="data-image" class="position-relative" style="margin: 0 auto; width: @(offsetWidth)px; height: @(offsetHeight)px; border: 1px solid #ddd; background-image: url('@Url.Content(Model.ImageUrl ?? string.Empty)')"></div>
+                @Html.HiddenFor(x => x.ImageUrl, new { data_validation_for = "ImageUrl" })
+                <span class="invalid" data-validation-for="ImageUrl"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-interceptor="dataInterceptor" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>
+<script type="text/javascript">
+        $(function () {
+
+        let $bodyEl = $("#BodyHtml"),
+            $modal = $bodyEl.closest(".modal");
+
+        // Init croppic tetap sama
+        // var cropImage = new Croppic("data-image", {
+        //     modal: false,
+        //     cropUrl: app.resolveUrl("~/api/files/crop"),
+        //     uploadUrl: app.resolveUrl("~/api/files/upload-common"),
+        //     onAfterImgCrop: function (response) {
+        //         $("#ImageUrl").val(response.imageUrl);
+        //     }
+        // });
+
+        // Destroy jika sebelumnya sudah initialize
+        if ($bodyEl.next('.note-editor').length) {
+            $bodyEl.summernote('destroy');
+        }
+
+        // === Summernote Lite Init ===
+        $bodyEl.summernote({
+            height: 400,
+            focus: true,
+            toolbar: [
+                ['style', ['style']],
+                ['font', ['bold', 'italic', 'underline', 'strikethrough', 'color']],
+                ['para', ['ul', 'ol', 'paragraph']],
+                ['insert', ['link', 'picture', 'video', 'table']],
+                ['view', ['codeview', 'fullscreen']],
+                ['clear', ['removeFormat']]
+            ]
+        });
+
+        $bodyEl.removeClass("hidden");
+
+        // Destroy editor saat modal ditutup (setara TinyMCE.remove)
+        $modal.off('hidden.bs.modal').on('hidden.bs.modal', function () {
+            if ($bodyEl.next('.note-editor').length) {
+                $bodyEl.summernote('destroy');
+            }
+        });
+    });
+</script>

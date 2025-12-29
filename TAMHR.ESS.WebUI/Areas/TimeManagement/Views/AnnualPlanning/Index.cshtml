@@ -1,0 +1,74 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "treelist", "dropdowntree");
+}
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    string item = "";
+    string isHidden = "hidden";
+    if (Convert.ToBoolean(User.GetClaim("Chief")))
+    {
+        isHidden = "";
+    }
+}
+
+<style>
+    .navBarMain .nav-link{
+        padding-top: 5px !important;
+        padding-bottom: 5px !important;
+        padding-left: 30px!important;
+        padding-right: 30px!important;
+    }
+    .navBarMain .nav-item{
+        box-shadow: 5px 5px 5px -2px rgba(0,0,0,.3);
+    }
+    .nav-link.active {
+        color: black !important;
+        background-color: #6399c7 !important;
+    }
+</style>
+
+
+<ul class="nav nav-tabs navBarMain" role="tablist">
+    <li class="nav-item"><a class="nav-link active show" data-toggle="tab" role="tab" aria-selected="true" href="#APD">Dashboard</a></li>
+    <li class="nav-item"><a class="nav-link" data-toggle="tab" role="tab" aria-selected="false" href="#APF">Form</a></li>
+    @*<li class="nav-item"><a class="nav-link" data-toggle="tab" role="tab" aria-selected="false" href="#APT">Tracking</a></li>*@
+    <li class="nav-item @isHidden"><a class="nav-link" data-toggle="tab" role="tab" aria-selected="false" href="#APR">Report</a></li>
+</ul>
+<div class="tab-content" style="padding-top: 10px;">
+    <div id="APD" class="tab-pane fade in active show">
+        <partial name="AnnualPlanningDashboard" model="item" />
+    </div>
+    <div id="APF" class="tab-pane fade">
+        <partial name="AnnualPlanningForm" model="item" />
+    </div>
+    @*<div id="APT" class="tab-pane fade">
+        <partial name="AnnualPlanningTracking" model="item" />
+    </div>*@
+    <div id="APR" class="tab-pane fade @isHidden">
+        <partial name="AnnualPlanningReport" model="item" />
+    </div>
+</div>
+
+@section scripts {
+    <script type="text/javascript">
+        var selectedAnnualPlanningTab = "#personal";
+
+        var module = (function ($, app) {
+            $("#btnSearch").on("click", function (e) {
+                var activeTab = $("#annualPlanningTabs li a.active").attr("href");
+                var grid;
+                console.log(activeTab);
+                if (activeTab == "#personal") {
+                    grid = $("#PersonalAnnualPlanningGrid").data("kendoGrid");
+                } else {
+                    grid = $("#SubordinateAnnualPlanningGrid").data("kendoGrid");
+                }
+                var dataSource = grid.dataSource;
+                dataSource.read();
+            });
+        })($, app);
+    </script>
+    <partial name="Script/_ScriptForm" />
+    <partial name="Script/_ScriptReport" />
+}

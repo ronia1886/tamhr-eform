@@ -1,0 +1,98 @@
+﻿@model TAMHR.ESS.Domain.Absence
+@{
+    var isNew = (Model?.Id ?? Guid.Empty) == Guid.Empty;
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/masterdata/absence">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Code"]</label>
+                @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @data_validation_for = "Code", @placeholder = Localizer["Please input code"].Value })
+                <span class="invalid" data-validation-for="Code"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Presensi Code"]</label>
+                @Html.TextBoxFor(x => x.CodePresensi, new { @class = "form-control", @data_validation_for = "CodePresensi", @placeholder = Localizer["Please input presensi code"].Value })
+                <span class="invalid" data-validation-for="CodePresensi"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Name"]</label>
+                @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @data_validation_for = "Name", @placeholder = Localizer["Please input name"].Value })
+                <span class="invalid" data-validation-for="Name"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Submit Start"]</label>
+                @Html.TextBoxFor(x => x.SubmitApplicationStart, new { @class = "form-control", @data_validation_for = "SubmitApplicationStart", @placeholder = Localizer["Please input start"].Value })
+                <span class="invalid" data-validation-for="SubmitApplicationStart"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Submit End"]</label>
+                @Html.TextBoxFor(x => x.SubmitApplicationEnd, new { @class = "form-control", @data_validation_for = "SubmitApplicationEnd", @placeholder = Localizer["Please input end"].Value })
+                <span class="invalid" data-validation-for="SubmitApplicationEnd"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Max Absence Day"]</label>
+                @Html.TextBoxFor(x => x.MaxAbsentDays, new { @class = "form-control", @data_validation_for = "MaxAbsentDays", @placeholder = Localizer["Please input max absence day"].Value })
+                <span class="invalid" data-validation-for="MaxAbsentDays"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Attachment"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.MandatoryAttachment)
+                <span class="invalid" data-validation-for="MandatoryAttachment"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Active Validation"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.ActiveValidation)
+                <span class="invalid" data-validation-for="ActiveValidation"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Planning"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.Planning)
+                <span class="invalid" data-validation-for="Planning"></span>
+            </div>
+        </div>
+        <div class="col-md-3 col-12">
+            <div class="form-group">
+                <label>@Localizer["Unplanning"]</label>
+                @Html.KendoYesNoComboBoxFor(x => x.Unplanning)
+                <span class="invalid" data-validation-for="Unplanning"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Absence Type"]</label>
+                @(Html.KendoComboBoxFor(x => x.AbsenceType, "AbsenceType")
+                    .Placeholder(Localizer["Please select absence type"].Value)
+                    .Suggest(true)
+                )
+                <span class="invalid" data-validation-for="AbsenceType"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

@@ -1,0 +1,169 @@
+﻿@using TAMHR.ESS.Domain
+@model VaccinReportEmployeeView
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineService vaccineService
+@{
+    var monitoringLog = new VaccineMonitoringLog();
+    if(Model.VaccineId != Guid.Empty){
+        var lg = vaccineService.GetMonitoringLogs().Where(x => x.VaccineId ==  Model.VaccineId  && x.NoReg == Model.NoReg && x.Closed == false).FirstOrDefault();
+        if (lg != null) { monitoringLog = lg; }
+
+    };
+    var question = vaccineService.GeVaccineQuestion().ToList();
+    if (Model.VaccineId != Guid.Empty)
+    {
+     monitoringLog.VaccineId = Model.VaccineId;
+     monitoringLog.NoReg = Model.NoReg;
+    }
+}
+
+<div class="card-body">
+    <div class="row">
+        @*<div class="col-md-6 col-sm-12">
+            <fieldset>
+                <div class="form-group">
+                    <label>@Localizer["Employee Name"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.EmployeeName).HtmlAttributes(new { @class = "form-control", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Name"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Name).HtmlAttributes(new { @class = "form-control", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Class"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Class).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter class.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Hubungan"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.FamilyStatus).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter family status.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Job Name"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.JobName).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter job name.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Department"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Department).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter department.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Section"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Section).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter section.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Email"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Email).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter email.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Phone Number"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.PhoneNumber).HtmlAttributes(new { @class = "form-control", placeholder = "Please enter phone number.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Age"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.Age).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter age.", @readonly = "true" }))
+                </div>
+
+            </fieldset>
+        </div>
+        <div class="col-md-6 col-sm-12">
+            <fieldset>
+                <div class="form-group">
+                    <label>@Localizer["Eligibel"]</label>
+                    <input class="form-control" id="Eligibel" name="StudentName" type="text" value="" placeholder="Please enter eligibel." readonly />
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Riwayat Penyakit"]</label>
+                    @{
+                        var riwayatPenyakit = "";
+                        var result = question.Where(x => x.VaccineId == Model.VaccineId.GetValueOrDefault()).ToList();
+                        foreach (var item in result)
+                        {
+                            riwayatPenyakit = riwayatPenyakit + item.Title + ", ";
+                        }
+                        riwayatPenyakit = riwayatPenyakit.Substring(0, riwayatPenyakit.Length > 0 ? riwayatPenyakit.Length - 2 : 0);
+                    }
+                    <input class="form-control" id="riwayatPenyakit" value="@riwayatPenyakit" name="StudentName" type="text" value="" placeholder="Please enter riwayat penyakit." readonly />
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Tanggal Vaccine 1"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineDate1).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter tanggal vaccine 1.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Tempat Vaccine 1"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineHospital1).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter tempat vaccine 1.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Status Upload kartu Vaccine 1"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineCard1).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter vaccine card 1.", @readonly = "true" }))
+                    @if (!string.IsNullOrEmpty(Model.VaccineCard1))
+                    {
+                        var pict = Url.Content(Model.VaccineCard1);
+
+                        <span class="mt-comment-body">
+                            <a class="mt-comment-info" style="margin: 0; padding: 0;" data-type="" data-src="@pict" href="javascript:;" data-fancybox="images">
+                                <i class="font-blue-sharp fa fa-file-image-o mr-1 col-md-3 col-sm-12" style="padding-top:10px;text-transform:capitalize;min-width: 251px">
+                                    Open
+                                </i>
+                            </a>
+                        </span>
+                    }
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Tanggal Vaccine 2"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineDate2).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter tanggal vaccine 2.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Tempat Vaccine 2"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineHospital2).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter tempat vaccine 2.", @readonly = "true" }))
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Status Upload kartu Vaccine 2"]</label>
+                    @(Html.Kendo().TextBoxFor(x => x.VaccineCard2).HtmlAttributes(new { @class = "form-control", @placeholder = "Please enter vaccine card 2.", @readonly = "true" }))
+                    @if (!string.IsNullOrEmpty(Model.VaccineCard2))
+                    {
+                        var pict = Url.Content(Model.VaccineCard2);
+
+                        <span class="mt-comment-body">
+                            <a class="mt-comment-info" style="margin: 0; padding: 0;" data-type="" data-src="@pict" href="javascript:;" data-fancybox="images">
+                                <i class="font-blue-sharp fa fa-file-image-o mr-1 col-md-3 col-sm-12" style="padding-top:10px;text-transform:capitalize;min-width: 251px">
+                                    Open
+                                </i>
+                            </a>
+                        </span>
+                    }
+                </div>
+                <div class="form-group">
+                    <label>@Localizer["Status"]</label>
+                    @{
+                        var status = "";
+                        @switch (Model.Status)
+                        {
+                            case "waiting":
+                                status = "Waiting " + Model.VaccineType;
+                                break;
+                            case "done":
+                                status = "Done " + Model.VaccineType;
+                                break;
+                            case "onprogress":
+                                status = "On Progress " + Model.VaccineType;
+                                break;
+                            default:
+                                status = "Not Submitted " + Model.VaccineType;
+                                break;
+                        }
+                    }
+                    <input class="form-control" id="Status" value="@status" name="StudentName" type="text" value="" placeholder="Please enter status." readonly />
+                </div>
+            </fieldset>
+        </div>*@
+        @if (Model.VaccineId != Guid.Empty)
+        {
+            <div class="col-md-12 col-sm-12">
+                <fieldset>
+                    <legend>@Localizer["Monitoring Notes"]</legend>
+                    <partial name="_MonitoringLog" model="monitoringLog" />
+                </fieldset>
+            </div>
+        }
+
+
+    </div>
+</div>

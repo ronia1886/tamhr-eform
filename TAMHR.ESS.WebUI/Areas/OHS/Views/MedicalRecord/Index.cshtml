@@ -1,0 +1,552 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = DateTime.Now.AddDays(-30);
+    var end = DateTime.Now;
+    var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+    var currentUser = User.GetClaim("NoReg");
+    var isOHS_ADMIN = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_ADMIN"));
+    var isOHS_KLINIK = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_KLINIK"));
+
+
+}
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>
+        .legend-item {
+            font: 12px 'Noto Sans';
+            margin: 2px;
+            cursor: pointer;
+        }
+
+            .legend-item .legend-marker {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+            }
+
+        .k-grid-header .k-grid-header-wrap th.k-header {
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow: visible;
+            white-space: normal;
+        }
+    </style>
+}
+    @section scripts {
+
+    <script type="text/javascript" src="~/plugins/bootstrap-suggest/bootstrap-suggest.js"></script>
+    <partial name="_Script" />
+
+}
+
+    @section pageToolbars
+    {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadMedicalRecord" data-parameters-type="xlsx">
+                    @Localizer["Download Medical Report"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload MCU" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/ohs/medical-record/mcu">
+                    @Localizer["Upload Medical Check Up"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload UPKK Tam" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/ohs/medical-record/upkkTam">
+                    @Localizer["Upload UPKK Visit Tam"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload UPKK Vendor" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/ohs/medical-record/upkkVendor">
+                    @Localizer["Upload UPKK Visit Vendor"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload In & Out Patient" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/ohs/medical-record/Patient">
+                    @Localizer["Upload In & Out Patient"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header bordered">
+                    <h4 class="card-title">@Localizer["Medical Record List"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+                                    <legend>Filter</legend>
+                                    <div class="row container-by-date">
+                                        <div class="form-group col-md-3">
+                                            <label>@Localizer["Start Date"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                            .Name("startDate")
+                                            .Value(start)
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["End Date"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("endDate")
+                                            .Value(end)
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+                                            .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["No Reg Tam"]</label>
+                                        @(Html.Kendo().MultiSelect()
+                                            .Name("NoReg")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .AutoClose(false)
+                                            .TagMode(MultiSelectTagMode.Single)
+                                            .DataSource(source =>
+                                            {
+                                                source.ServerFiltering(true)
+                                                .Custom()
+                                                .Type("aspnetmvc-ajax")
+                                                .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-report-all/get-unique-column-values-noreg"))));
+                                            })
+                                            .Placeholder(Localizer["Please select noreg"].Value)
+                                            .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Nama Karyawan Tam"]</label>
+                                        @(Html.Kendo().MultiSelect()
+                                            .Name("Name")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .AutoClose(false)
+                                            .TagMode(MultiSelectTagMode.Single)
+                                            .DataSource(source =>
+                                            {
+                                                source.ServerFiltering(true)
+                                                .Custom()
+                                                .Type("aspnetmvc-ajax")
+                                                .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-report-all/get-unique-column-values-name"))));
+                                            })
+                                            .Placeholder(Localizer["Please select name"].Value)
+                                            .Deferred()
+                                            )
+                                    </div>
+                                </div>
+                                <div class="row container-by-date">
+
+                                    <div class="form-group col-md-3 col-12">
+                                        <label>@Localizer["Division"]</label>
+                                        @(Html.Kendo().DropDownTree()
+                                            .Name("division")
+                                            .HtmlAttributes(new { @class = "form-control" })
+                                            .CheckAll(true)
+                                            .Checkboxes(true)
+                                            .AutoClose(false)
+                                            .Messages(ms =>
+                                            {
+                                                ms.SingleTag("division selected");
+                                            })
+                                            .TagMode(DropDownTreeTagMode.Single)
+                                            .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                                            .BindTo(divisiData)
+                                            .Placeholder(Localizer["Please select division"].Value)
+                                            .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["Tanggal Lahir Vendor"]</label>
+                                        @(Html.Kendo().DatePicker()
+                                            .Name("LahirDate")
+                                            .Value("")
+                                            .Format("dd/MM/yyyy")
+                                            .HtmlAttributes(new { style = "width:100%" })
+                                            .Deferred()
+                                            )
+                                    </div>
+                                    <div class="form-group col-md-3">
+                                        <label>@Localizer["Nama Karyawan Vendor"]</label>
+                                        @* @(Html.Kendo().TextBox()
+                                            .Name("NamaKaryawanVendor")
+                                            .HtmlAttributes(new { style = "width:100%" })
+                                            ) *@
+                                        <input type="text" class="k-textbox" name="NamaKaryawanVendor" id="NamaKaryawanVendor" style="width:100%" />
+                                    </div>
+                                    <div class="col-md-12" style="text-align:right">
+                                        <label>&nbsp;</label>
+                                        <div class="form-group">
+                                            @*<button type="button" class="btn btn-primary" onclick="$.onSearch();"><span class="ft-search"></span> Search</button>*@
+                                            <a href="javascript:;" class="btn btn-primary" id="btnSearch" style="color: #fff;" data-trigger="handler" data-handler="searchHandler">
+                                                <i class="ft-search"></i> &nbsp;@Localizer["Search"]
+                                            </a>
+                                            <a class="btn btn-danger" id="btnClear" style="color: #fff;">
+                                                <i class="ft-refresh-cw"></i> &nbsp;@Localizer["Clear"]
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </fieldset>
+                        </div>
+                    </div>
+
+
+                    <div class="card">
+                        <div class="row d-flex no-padding row-col-separator-xl">
+                            <div class="col-md-12">
+                                <div class="m-widget">
+                                    <div class="m-widget-header">
+                                        <h3 class="m-widget-title">@Localizer[""]</h3>
+                                        <span class="m-widget-desc">@Localizer[""]</span>
+                                    </div>
+                                    <div class="m-widget-item pt-0">
+
+                                        @if (isOHS_ADMIN)
+                                        {
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    @*@{
+                                                var dummyData = new List<dynamic>
+                                                {
+                                                new { Month = "Januari", MCU = 10, UPKK = 10, SickLeave = 9, InOutPatient = 4, TanyaOHS = 3 },
+                                                new { Month = "Februari", MCU = 1, UPKK = 5, SickLeave = 6, InOutPatient = 7, TanyaOHS = 2 },
+                                                new { Month = "Maret", MCU = 6, UPKK = 10, SickLeave = 9, InOutPatient = 9, TanyaOHS = 6 },
+                                                new { Month = "April", MCU = 1, UPKK = 8, SickLeave = 6, InOutPatient = 2, TanyaOHS = 1 },
+                                                new { Month = "Mei", MCU = 3, UPKK = 2, SickLeave = 9, InOutPatient = 5, TanyaOHS = 2 },
+                                                new { Month = "Juni", MCU = 1, UPKK = 3, SickLeave = 5, InOutPatient = 4, TanyaOHS = 3 },
+                                                new { Month = "Juli", MCU = 2, UPKK = 5, SickLeave = 6, InOutPatient = 10, TanyaOHS = 8 },
+                                                new { Month = "Agustus", MCU = 6, UPKK = 3, SickLeave = 4, InOutPatient = 5, TanyaOHS = 7 },
+                                                new { Month = "September", MCU = 4, UPKK = 7, SickLeave = 9, InOutPatient = 4, TanyaOHS = 6 },
+                                                new { Month = "Oktober", MCU = 7, UPKK = 3, SickLeave = 7, InOutPatient = 10, TanyaOHS = 9 },
+                                                new { Month = "November", MCU = 3, UPKK = 3, SickLeave = 5, InOutPatient = 7, TanyaOHS = 4 },
+                                                new { Month = "Desember", MCU = 2, UPKK = 2, SickLeave = 8, InOutPatient = 6, TanyaOHS = 4 }
+                                                };
+                                                }*@
+                                                    @*<label>@Localizer["Jumlah Kunjungan Rawat Inap :"]</label> <label id="totalKunjunganRawatLabel"></label>*@
+
+                                                    <h3 style="text-align: center; font-weight: bold;">Jumlah Kunjungan Rawat Inap</h3>
+
+                                                    <!-- Teks jumlah kunjungan dipindahkan langsung di bawah judul -->
+                                                    <div style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                                        <label>@Localizer["Jumlah Kunjungan Rawat Inap :"]</label>
+                                                        <label id="totalKunjunganRawatLabel"></label>
+                                                    </div>
+                                                    @(Html.Kendo().Chart<TAMHR.ESS.Domain.MedicalRecordSummaryStoredEntity>()
+                                                        .Name("chartOhsTOTAL")
+                                                        //.Title(t => t.Text("Jumlah Kunjungan Rawat Inap").Font("bold 20px Arial"))
+                                                        .DataSource(ds => ds
+                                                        .WebApi()
+                                                        .ServerOperation(false)
+                                                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-summary-MR")).Data("getFilterParams").Type(HttpVerbs.Post))
+                                                        )
+
+                                                        .Series(series =>
+                                                        {
+                                                        //series.Column(x => x.Total).Name("Total").CategoryField("Name")
+                                                            //series.Column("MCU").CategoryField("YearMonth").Name("MCU").Color("#3361ff");
+                                                            // series.Column("UPKK").CategoryField("YearMonth").Name("UPKK").Color("#ff6e33");
+                                                            // series.Column("SickLeave").CategoryField("YearMonth").Name("Sick Leave").Color("#07ad37");
+                                                            series.Column("InOutPatient").CategoryField("YearMonth").Name("In & Out Patient").Color("#96e6e5");
+                                                            //series.Column("TanyaOHS").CategoryField("YearMonth").Name("Tanya OHS").Color("#e696e6");
+
+                                                            @* series.Column("MCU").CategoryField("Month").Name("MCU").Color("#3361ff");
+                                                series.Column("UPKK").CategoryField("Month").Name("UPKK").Color("#ff6e33");
+                                                series.Column("SickLeave").CategoryField("Month").Name("Sick Leave").Color("#07ad37");
+                                                series.Column("InOutPatient").CategoryField("Month").Name("In & Out Patient").Color("#96e6e5");
+                                                series.Column("TanyaOHS").CategoryField("Month").Name("Tanya OHS").Color("#e696e6");*@
+                                                        })
+                                                        .CategoryAxis(axis => axis.Field("YearMonth"))
+                                                        .ValueAxis(axis => axis.Numeric().Title("Jumlah"))
+                                                        .Legend(legend => legend.Position(ChartLegendPosition.Top))
+                                                        .Tooltip(tooltip => tooltip.Visible(true).Format("{0}"))
+                                                        //.AutoBind(false)
+                                                        .Deferred()
+
+                                                        )
+                                                   
+                                                </div>
+                                            </div>
+                                            <br></br>
+                                        }
+
+                                        <div class="row">
+                                            <div class="col-md-12">
+
+                                                @*<label>@Localizer["Jumlah Kunjungan UPKK : "]</label> <label id="totalKunjunganUpkkLabel"></label>*@
+                                                <h3 style="text-align: center; font-weight: bold;">Jumlah Kunjungan UPKK</h3>
+
+                                                <!-- Teks jumlah kunjungan dipindahkan langsung di bawah judul -->
+                                                <div style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                                    <label>@Localizer["Jumlah Kunjungan UPKK :"]</label>
+                                                    <label id="totalKunjunganUpkkLabel"></label>
+                                                </div>
+                                                @(Html.Kendo().Chart<TAMHR.ESS.Domain.MedicalRecordUpkkSummaryStoredEntity>()
+                                                    .Name("chartUpkkTOTAL")
+                                                    //.Title(t => t.Text("Jumlah Kunjungan UPKK").Font("bold 20px Arial"))
+                                                    .DataSource(ds => ds
+                                                    .WebApi()
+                                                    .ServerOperation(false)
+                                                    .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-summary-UPKK-MR")).Data("getFilterParams").Type(HttpVerbs.Post))
+                                                    )
+
+                                                    .Series(series =>
+                                                    {
+                                                    //series.Column(x => x.Total).Name("Total").CategoryField("Name")
+                                                        series.Column("PemeriksaanKesehatan").CategoryField("YearMonth").Name("Pemeriksaan Kesehatan").Color("#3361ff");
+                                                        series.Column("BerobatTertangani").CategoryField("YearMonth").Name("Berobat Tertangani").Color("#ff6e33");
+                                                        series.Column("BerobatRujuk").CategoryField("YearMonth").Name("Berobat Rujuk").Color("#07ad37");
+                                                        series.Column("BerobatPulang").CategoryField("YearMonth").Name("Berobat Pulang").Color("#96e6e5");
+
+                                                    })
+                                                    .CategoryAxis(axis => axis.Field("YearMonth"))
+                                                    .ValueAxis(axis => axis.Numeric().Title("Jumlah"))
+                                                    .Legend(legend => legend.Position(ChartLegendPosition.Top))
+                                                    .Tooltip(tooltip => tooltip.Visible(true).Format("{0}"))
+                                                    //.AutoBind(false)
+                                                    .Deferred()
+                                                    )
+
+                                            </div>
+                                        </div>
+                                        <br></br>
+                                        @if (isOHS_ADMIN)
+                                        {
+                                            <div class="row">
+                                                <div class="col-md-12">
+
+                                                    @* @{
+                                                var dummyData = new List<dynamic>
+                                                {
+                                                new { YearMonth = "Januari", SakitBerat = 12, SakitRingan = 12 },
+                                                new { YearMonth = "Februari", SakitBerat = 5, SakitRingan = 5 },
+                                                new { YearMonth = "Maret", SakitBerat = 7, SakitRingan = 9 },
+                                                new { YearMonth = "April", SakitBerat = 6, SakitRingan = 11 },
+                                                new { YearMonth = "Mei", SakitBerat = 8, SakitRingan = 7 },
+                                                new { YearMonth = "Juni", SakitBerat = 9, SakitRingan = 10 },
+                                                new { YearMonth = "Juli", SakitBerat = 11, SakitRingan = 12 },
+                                                new { YearMonth = "Agustus", SakitBerat = 7, SakitRingan = 8 },
+                                                new { YearMonth = "September", SakitBerat = 6, SakitRingan = 9 },
+                                                new { YearMonth = "Oktober", SakitBerat = 5, SakitRingan = 7 },
+                                                new { YearMonth = "November", SakitBerat = 9, SakitRingan = 6 },
+                                                new { YearMonth = "Desember", SakitBerat = 8, SakitRingan = 10 }
+                                                };
+                                                }*@
+                                                    @*<label>@Localizer["Jumlah Sick Leave :"]</label> <label id="totalSickLeaveLabel"></label>*@
+
+                                                    <h3 style="text-align: center; font-weight: bold;">Sick Leave</h3>
+
+                                                <!-- Teks jumlah kunjungan dipindahkan langsung di bawah judul -->
+                                                <div style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                                        <label>@Localizer["Jumlah Sick Leave :"]</label>
+                                                        <label id="totalSickLeaveLabel"></label>
+                                                </div>
+                                                    @(Html.Kendo().Chart<MedicalRecordSickLeaveSummaryStoredEntity>()
+                                                        .Name("chartSickLeaveTOTAL")
+                                                        //.Title(title => title.Text("Sick Leave").Font("bold 20px Arial").Align(ChartTextAlignment.Center))
+                                                        .Legend(legend => legend.Position(ChartLegendPosition.Bottom))
+                                                        .DataSource(ds => ds
+                                                        .WebApi()
+                                                        .ServerOperation(false)
+                                                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-summary-SickLeave-MR")).Data("getFilterParams").Type(HttpVerbs.Post))
+                                                        )
+
+                                                        .Series(series =>
+                                                        {
+                                                        //series.Column(x => x.Total).Name("Total").CategoryField("Name")
+                                                            series.Line("SakitBerat").CategoryField("YearMonth").Name("Sakit Berat").Color("#2951d6").Markers(m => m.Visible(true).Size(10).Background("#0C4C8A")).Width(2); // Warna Biru
+
+                                                            series.Line("SakitRingan").CategoryField("YearMonth").Name("Sakit Ringan").Color("#ee9413").Markers(m => m.Visible(true).Size(10).Background("#FF5733")).Width(2); // Warna Orange
+
+                                                        })
+                                                        .CategoryAxis(axis => axis.Field("YearMonth").Labels(labels => labels.Rotation(-45))) // Memutar label agar lebih rapi
+                                                        .ValueAxis(axis => axis.Numeric().Title("Jumlah").Labels(labels => labels.Format("{0}")))
+                                                        //.Legend(legend => legend.Position(ChartLegendPosition.Top))
+                                                        .Tooltip(tooltip => tooltip.Visible(true).Format("{0}"))
+                                                        //.AutoBind(false)
+                                                        .Deferred()
+                                                        )
+
+                                                </div>
+                                            </div>
+                                            <br></br>
+                                            <br />
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                                                                                                                         
+
+                                                    <h3 style="text-align: center; font-weight: bold;">SickNess Rate</h3>
+                                                    <div style="text-align: center; margin-bottom: 10px; font-size: 14px;">
+                                                        <label>@Localizer["Jumlah SickNess Rate:"]</label>
+                                                        <label id="totalSickNessRateLabel"></label>
+                                                    </div>
+                                                    @(Html.Kendo().Chart<MedicalRecordSickNessRateSummaryStoredEntity>()
+                                                        .Name("chartSickNessRateTOTAL")
+                                                        .Legend(legend => legend.Position(ChartLegendPosition.Bottom))
+                                                        .DataSource(ds => ds
+                                                        .WebApi()
+                                                        .ServerOperation(false)
+                                                        .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-summary-SickNessRate-MR")).Data("getFilterParams").Type(HttpVerbs.Post))
+                                                        )
+
+                                                        .Series(series =>
+                                                        {
+                                                        //series.Column(x => x.Total).Name("Total").CategoryField("Name")
+                                                            series.Line("SickNessRate").CategoryField("YearMonth").Color("#2951d6").Markers(m => m.Visible(true).Size(10).Background("#0C4C8A")).Width(2); // Warna Biru
+
+                                                        })
+                                                        .CategoryAxis(axis => axis.Field("YearMonth").Labels(labels => labels.Rotation(-45))) // Memutar label agar lebih rapi
+                                                        .ValueAxis
+                                                        (
+                                                            axis => axis.Numeric()
+                                                            .Title("Jumlah")
+                                                            .Labels
+                                                            (
+                                                                labels => labels.Format("{0}")
+                                                                .Visible(true)
+                                                            )
+                                                        )
+                                                        .Tooltip(tooltip => tooltip.Visible(true).Format("{0}"))
+                                                        //.AutoBind(false)
+                                                        .Deferred()
+                                                        )
+
+                                                </div>
+                                            </div>
+
+
+
+                                        }
+
+
+                                        @*  <div class="row">
+                                        <div class="col-md-12">
+                                        @{
+                                        var dummyData2 = new List<object>
+                                        {
+                                        new { Category = "Sakit Ringan", Value = 50.8 },
+                                        new { Category = "Sakit Berat", Value = 40 }
+
+                                        };
+                                        }
+
+                                        @(Html.Kendo().Chart()
+                                        .Name("ohsChart2")
+                                        .ChartArea(area => area.Width(250).Height(350)) // Sesuaikan ukuran
+                                        //.Title("Distribusi Data OHS")
+                                        //.SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", "#9717A8" })
+                                        .Series(series =>
+                                        {
+                                        series.Pie(dummyData2) // Pakai data dummy
+                                        .Name("chart2")
+                                        .CategoryField("Category")
+                                        .Field("Value")
+                                        .Labels(labels => labels
+                                        .Visible(false) // Menampilkan label
+                                        .Template("${ category }: ${ value }") // Format label: Kategori - Nilai%
+                                        .Background("transparent") // Menghilangkan background putih di label
+                                        );
+                                        })
+                                        .Legend(legend => legend
+                                        .Visible(true)
+                                        .Position(ChartLegendPosition.Bottom)
+                                        .Align(ChartLegendAlign.Center)
+
+                                        )
+                                        .Tooltip(tooltip => tooltip
+                                        .Visible(true).Format("{0}%")
+                                        )
+                                        .AutoBind(false)
+                                        .Deferred()
+                                        )
+
+                                        </div>
+                                        </div>*@
+                                    </div>
+                                </div>
+                            </div>
+                      
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            @(Html.Kendo().Grid<TAMHR.ESS.Domain.MedicalRecordHeaderStoredEntity>
+                                ()
+                                .Name("gridReport")
+                                .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                .Pageable(options =>
+                                {
+                                    options.Input(true);
+                                    options.Numeric(false);
+                                    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                })
+                                .HtmlAttributes(new { style = "height:600px;" })
+                                .Sortable()
+                                .Resizable(resizable => resizable.Columns(true))
+                                .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                                .Scrollable()
+                                .DataSource(dataSource => dataSource
+                                .Ajax()
+                                .Read(read => read.Url(Url.Content("~/api/ohs/medical-record/gets-header"))
+                                .Data("$.getDataReport")
+                                )
+                                )
+                                .Columns(columns =>
+                                {
+                                    columns.Bound(x => x.ClassNp).Title("Class").Hidden(true);
+                                    columns.Bound(x => x.NoReg).Title("NoReg").Width(200);
+                                    columns.Bound(x => x.Name).Title("Name").Width(200);
+                                    columns.Bound(x => x.Gender).Title("Jenis Kelamin").Width(200);
+                                    columns.Bound(x => x.Division).Title("Division").Width(200);
+                                    columns.Bound(x => x.NoReg).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                            <a class=""btn btn-sm purple"" href=""#:app.resolveUrl('~/OHS/MedicalRecord/MedicalRecordDetail?noreg='.concat(NoReg))#&startDate=#: kendo.toString(kendo.parseDate(StartDateParam), 'yyyy-MM-dd')#&endDate=#: kendo.toString(kendo.parseDate(EndDateParam), 'yyyy-MM-dd')#&name=#:Name # &Gender=#:Gender # &Division=#:Division # &ClassNp=#:ClassNp #"" title=""view"">
+
+                            <i class=""ft-eye""></i>
+                            </a>
+                            </div>
+                            ").Width(100);
+                                })
+
+                                .Scrollable()
+                                .Deferred()
+                                )
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

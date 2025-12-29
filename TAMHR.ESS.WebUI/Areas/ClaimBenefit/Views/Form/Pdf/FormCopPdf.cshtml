@@ -1,0 +1,366 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService claimBenefitService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var jobCode = org.JobCode;
+    var cop = (obj as CopViewModel);
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    // Get Kelas
+    var getkelas = claimBenefitService.GetInfo(org.NoReg).FirstOrDefault();
+    string kelas = getkelas.GetType().GetProperty("Kelas").GetValue(getkelas).ToString().Replace(" ","");
+
+    //Get Final Price By VEHICLE ID
+    //var getFinalPrice = coreService.GetById(cop.VechicleId).FirstOrDefault();
+    //double FinalPrice = Convert.ToInt64(getFinalPrice.GetType().GetProperty("FinalPrice").GetValue(getFinalPrice));
+    //var Type = getFinalPrice.GetType().GetProperty("Type").GetValue(getFinalPrice);
+    var getFinalPrice = coreService.GetTypeVehicleMatrixById(cop.VechicleId, kelas);
+    int FinalPrice = Convert.ToInt32(getFinalPrice.GetType().GetProperty("GroupSequence").GetValue(getFinalPrice));
+    var SelectedVehicle = coreService.GetById(cop.VechicleId).FirstOrDefault();
+    var Type = SelectedVehicle.GetType().GetProperty("Type").GetValue(SelectedVehicle);
+
+    //Get Final Price FROM MATRIX By Class
+    //var getFinalPriceMatrix = coreService.GetVehicleByClass(org.EmployeeSubgroup).FirstOrDefault();
+    //double FinalPriceMatrix = Convert.ToInt64(getFinalPriceMatrix.GetType().GetProperty("FinalPrice").GetValue(getFinalPriceMatrix)) ;
+    var getFinalPriceMatrix = coreService.GetTypeVehicleMatrixByKelas(org.EmployeeSubgroup);
+    int FinalPriceMatrix = Convert.ToInt32(getFinalPriceMatrix.GetType().GetProperty("GroupSequence").GetValue(getFinalPriceMatrix));
+    
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Approver = "";
+    string DivisionHead = "";
+    string FinanceAdminDirector = "";
+    string HRDivisionHead = "";
+    string Requester = "";
+    string DirectorDivision = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DivisionHead")
+        {
+            DivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "FinanceAdminDirector")
+        {
+            FinanceAdminDirector = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRDivisionHead")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DirectorDivision")
+        {
+            DirectorDivision = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+    }
+}
+
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+
+    .border-all {
+        border: 1px solid black
+    }
+</style>
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 30px">
+        <col style="width: 100px">
+        <col style="width: 300px">
+        <col style="width: 100px">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="2">Kepada Yth <label style="float:right">:</label></td>
+    </tr>
+    <tr>
+        <td colspan="5" class="bold">Human Resources Administration Department</td>
+    </tr>
+    <tr style="height:50px">
+        <th colspan="4"><p style="font-size:18px">Formulir Pemesanan Kendaraan COP </p></th>
+    </tr>
+    <tr>
+        <td colspan="2">Bersama ini saya,</td>
+        <td></td>
+    </tr>
+    <tr style="height:10px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Nama<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.Name</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>NoReg.<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.NoReg</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Divisi<label style="float:right">:</label></td>
+        <td class="border-bottom">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Kelas/Sub Kelas<label style="float:right">:</label></td>
+        <td class="border-bottom">@org.EmployeeSubgroupText</td>
+        <td></td>
+    </tr>
+    <tr style="height:10px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td colspan="6">Mengajukan permohonan pemesanan kendaraan COP : (pilih salah satu) :</td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%; height:28px" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    @if (FinalPrice == FinalPriceMatrix)
+                    {
+                    <td style="width:100%" align="center">&#10003;</td>
+                    }
+                    else
+                    {
+                    <td style="width:100%"></td>
+                    }
+                </tr>
+            </table>
+        </td>
+        <td colspan="3">Sesuai dengan kelas/sub kelas saya, dengan spesifikasi sebagai berikut :</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Model<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice == FinalPriceMatrix)
+            {
+                <span>@cop.Model - @Type</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Warna<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice == FinalPriceMatrix)
+            {
+                <span>@cop.ColorCode</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%; height:28px" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    @if (FinalPrice > FinalPriceMatrix)
+                    {
+                        <td style="width:100%" align="center">&#10003;</td>
+                    }
+                    else
+                    {
+                        <td style="width:100%"></td>
+                    }
+                </tr>
+            </table>
+        </td>
+        <td colspan="3">Grade up dari kelas/sub kelas saya, dengan spesifikasi sebagai berikut :</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Model<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice > FinalPriceMatrix)
+            {
+            <span>@cop.Model - @Type</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Warna<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice > FinalPriceMatrix)
+            {
+                <span>@cop.ColorCode</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>
+            <table style="width:100%; height:28px" border="1" cellpadding="1" cellspacing="0">
+                <tr>
+                    @if (FinalPrice < FinalPriceMatrix)
+                    {
+                        <td style="width:100%" align="center">&#10003;</td>
+                    }
+                    else
+                    {
+                        <td style="width:100%"></td>
+                    }
+                </tr>
+            </table>
+        </td>
+        <td colspan="3">Down Grade dari kelas/sub kelas saya, dengan spesifikasi sebagai berikut : </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Model<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice < FinalPriceMatrix)
+            {
+            <span>@cop.Model - @Type</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr>
+        <td></td>
+        <td>Warna<label style="float:right">:</label></td>
+        <td class="border-bottom">
+            @if (FinalPrice < FinalPriceMatrix)
+            {
+                <span>@cop.ColorCode</span>
+            }
+            else
+            {
+                <span>&nbsp;</span>
+            }
+        </td>
+        <td></td>
+    </tr>
+    <tr style="height:60px">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+
+</table>
+
+<table border="0" cellspacing="0" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 25%">
+        <col style="width: 25%">
+        <col style="width: 25%">
+        <col style="width: 25%">
+    </colgroup>
+    <tr>
+        <td> .................................,      ................................</td>
+        <td></td>
+    </tr>
+
+    <tr style="height:10px"></tr>
+    <tr>
+        <td class="bold">Pemohon,</td>
+        <td></td>
+        <td class="bold">Mengetahui/Menyetujui,</td>
+    </tr>
+
+    <tr>
+        <td class="border-all" align="center">Karyawan</td>
+        <td></td>
+        <td class="border-all" align="center">Direktur ybs</td>
+        <td class="border-all" align="center">Div. Head ybs</td>
+    </tr>
+    <tr>
+        <td height="150px" class="border-all"></td>
+        <td height="150px"></td>
+        <td height="150px" class="border-all"></td>
+        <td height="150px" class="border-all"></td>
+    </tr>
+    <tr>
+        <td height="20px" class="border-all">@Requester</td>
+        <td height="20px"></td>
+        <td height="20px" class="border-all">@DirectorDivision</td>
+        <td height="20px" class="border-all">@DivisionHead</td>
+    </tr>
+    <tr>
+        <td height="20px"></td>
+    </tr>
+    <tr>
+        <td class="bold">Menyetujui,</td>
+    </tr>
+    <tr>
+        <td class="border-all" align="center">Finance Director</td>
+        <td class="border-all" align="center">HRGA Div. Head</td>
+        <td class="border-all" align="center">HRIS & Payroll</td>
+        <td align="left"></td>
+    </tr>
+    <tr>
+        <td height="150px" class="border-all"></td>
+        <td height="150px" class="border-all"></td>
+        <td height="150px" class="border-all"></td>
+        <td height="150px"></td>
+    </tr>
+    <tr>
+        <td height="20px" class="border-all">@FinanceAdminDirector</td>
+        <td height="20px" class="border-all">@HRDivisionHead</td>
+        <td height="20px" class="border-all">@Approver</td>
+        <td ></td>
+    </tr>
+    <tr>
+        <td colspan="4">Note : Harap dilampirkan Foto Copy KTP (yang jelas).</td>
+    </tr>
+</table>

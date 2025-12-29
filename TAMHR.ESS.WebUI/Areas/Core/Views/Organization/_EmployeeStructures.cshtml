@@ -1,0 +1,40 @@
+﻿@{ 
+    var orgCode = (string)ViewBag.OrgCode;
+}
+<div class="row">
+    <div class="col-md-12 no-table-header">
+        @(Html.Kendo().Grid<TAMHR.ESS.Domain.EmployeeOrganizationStoredEntity>()
+            .Name("grid")
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.Id).ClientTemplate(@"
+                    <div class=""media"">
+                        <img class=""rounded mt-1"" src=""#:app.resolveImageUrl(NoReg)#"" alt=""avatar"" style=""width: 2.5rem; height: 2.5rem;"">
+                        <div class=""media-body ml-3"">
+                            <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                            <small class=""d-block"">#if (Staffing == 0) { #<span class=""font-red"">* #:PostName#</span> # } else { ##:PostName##}#</small>
+                        </div>
+                    </div>
+                ");
+            })
+            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .Read(read => read.Url(Url.Content("~/api/organization/get-employee-structures")).Data(@<text>function() { return { orgCode: "@orgCode" } }</text>))
+                .PageSize(10)
+                .Sort(sort =>
+                {
+                    sort.Add("JobLevel");
+                    sort.Add("Name");
+                    sort.Add("Staffing").Descending();
+                })
+            )
+            .Pageable(options =>
+            {
+                options.Input(true);
+                options.Numeric(false);
+                options.AlwaysVisible(false);
+            })
+        )
+    </div>
+</div>

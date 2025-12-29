@@ -1,0 +1,32 @@
+﻿@model TAMHR.ESS.Infrastructure.ViewModels.DismembermentViewModel
+
+@{
+    ViewData["Title"] = "Kematian";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Kematian</h2>
+
+@section scripts {
+    @Html.Kendo().DeferredScripts(true)
+
+    <script type="text/javascript">
+        function ParameterData() {
+            return { Param1: 1, Param2: 2 };
+        }
+    </script>   
+}
+
+@(Html.Kendo().DropDownList()
+            .Name("Nama")
+            .DataSource(
+                    datasource => datasource.Read(r => r.Action("Action", "Controller").Type(HttpVerbs.Post).Data("ParameterData"))
+            )
+            .DataTextField("Name")
+            .DataValueField("Id")
+            .Events(events =>
+            {
+                events.Change("OnChange");
+                events.Select("OnSelect");
+            })
+            .AutoBind(false))

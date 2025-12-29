@@ -1,0 +1,71 @@
+﻿@model VaccineSchedule
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineHospitalService vaccineHospitalService
+@{ 
+
+    var newmodel = Model;
+
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Schedule Detail"]</h3>
+                <div class="heading-elements">
+                    <div class="dropdown">
+                        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+                            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-right">
+                            <li>
+                                <a href="javascript:;" data-target="DetailGrid" data-trigger="modal" data-modal="scheduledetail-modal" data-modal-title="Create New Schedule Detail" data-modal-ajax="true" data-ajax-url="~/masterdata/vaccineschedule/loaddetail" data-parameters-VaccineScheduleId="@Model.Id">
+                                    @Localizer["Create Schedule Detail"]
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap">
+                @*@{ var test = hospitalList.Find(x => x.Id == Guid.Parse("")).Name;}*@
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.VaccineScheduleLimitStoredEntity>()
+                    .Name("DetailGrid")
+                    //.HtmlAttributes(new { data_filter = "vaccinedetail-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.VaccineDate).Title("Date").Format("{0:dd/MM/yyyy}");
+                        columns.Bound(c => c.HospitalName).Title("Hospital");
+                        columns.Bound(c => c.Qty).Title("Quota");
+                        columns.Bound(c => c.RemainingQty).Title("Remaining Quota");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""scheduledetail-modal"" data-modal-title=""Edit Schedule Detail"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/vaccineschedule/loaddetail"" data-parameters-Id=""#:Id#"" data-parameters-VaccineScheduleId=""#:VaccineScheduleId#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                                <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/vaccineschedule/delete-detail"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i>
+                                </a>
+                            </div>
+                        ").Width(150);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/vaccineschedule/get-details")).Data("function() { return { 'vaccineScheduleId': '"+Model.Id+"' } }"))
+                        .Sort(sort =>
+                        {
+                            sort.Add("VaccineDate");
+                        })
+                        .PageSize(8)
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    
+                )
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,194 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker","grid","treeview","dropdownlist");
+    int Period = ViewBag.Period;
+    string NoReg = ViewBag.NoReg;
+    string Name = ViewBag.Name;
+    string PostName = ViewBag.PostName;
+
+}
+
+@section Scripts{
+    <script type="text/javascript">
+        $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/absence/getbynoreg"),
+                dataType: 'json',
+                data: {
+                    noreg: '@NoReg',
+                    iddoc: '@Guid.Empty'
+                },
+                success: function (result) {
+                    let $sisaCuti = $('#sisacuti'),
+                        $remainingDaysOff = $('#Object_RemainingDaysOff'),
+                        $sisaCutiPanjang = $('#sisacutipanjang'),
+                        $remainingLongLeave = $('#Object_RemainingLongLeave');
+
+                    if (result !== null || result !== undefined) {
+                        $sisaCuti.text(result.AnnualLeave);
+                        $remainingDaysOff.val(result.AnnualLeave);
+                        $sisaCutiPanjang.text(result.LongLeave);
+                        $remainingLongLeave.val(result.LongLeave);
+                    } else {
+                        $sisaCuti.text("");
+                        $remainingDaysOff.val("");
+                        $sisaCutiPanjang.text("");
+                        $remainingLongLeave.val("");
+                    }
+                }
+        });
+
+        $.ajax({
+                type: 'POST',
+            url: app.resolveUrl("~/api/annual-planning/get-total-leave-planning"),
+                dataType: 'json',
+            data: {
+                    Period: '@Period',
+                    NoReg: '@NoReg'
+                },
+                success: function (result) {
+                    let $totalplanning = $('#totalplanning')
+
+                    if (result !== null || result !== undefined) {
+                        $totalplanning.text(result);
+                    } else {
+                        $totalplanning.text("");
+                    }
+                }
+        });
+
+        $.downloadLeaveDetail = function () {
+            Period = "@Period";
+            NoReg = "@NoReg";
+        
+            window.open(app.resolveUrl("~/api/annual-planning/download-leave-planning-detail?Period=" + Period + "&NoReg=" + NoReg, "_blank"));
+        };
+    </script>
+}
+
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h4 class="card-title">@Localizer["Annual Leave Planning"] @Period</h4>
+                <div class="heading-elements">
+                    <button type="button" class="btn btn-sm btn-primary" onclick="$.downloadLeaveDetail();"><span class="ft-download"></span> @Localizer["Download"].Value</button>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="portlet light profile-light">
+                                    <div class="portlet-body">
+                                        <div class="profpic">
+                                            <div class="profpic-wrapper">
+                                                <div class="profpic-avatar">
+                                                    <img src="@ConfigService.ResolveAvatar(@NoReg)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                                </div>
+                                                <div class="profpic-body">
+                                                    <span class="profpic-title">@Name</span>
+                                                    <span class="profpic-description">@PostName</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-8 col-sm-12">
+
+                                <div class="row d-flex">
+                                    <div class="col-md-4 border-right">
+                                        <div class="media d-flex p-2">
+                                            <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer[" Annual Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                                <i class="iconmoon-timemanagement font-large-1 font-red-mint mb-1"></i>
+                                            </a>
+                                            <div class="media-body text-right">
+                                                <h3 class="font-small-3 text-bold-300 d-inline font-red-mint"><span id="sisacuti"></span></h3>
+                                                <span class="font-small-3 text-muted text-right d-block">@Localizer["Annual Leave"]</span>
+                                                <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 border-right">
+                                        <div class="media d-flex p-2">
+                                            <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer[" Long Leave"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=long-leave">
+                                                <i class="icon-plane font-large-1 font-green-haze mb-1"></i>
+                                            </a>
+                                            <div class="media-body text-right">
+                                                <h3 class="font-small-3 text-bold-300 d-inline font-green-haze"><span id="sisacutipanjang"></span></h3>
+                                                <span class="font-small-3 text-muted text-right d-block">@Localizer["Long Leave"]</span>
+                                                <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="media d-flex p-2">
+                                            <a href="javascript:;" class="align-self-center" data-trigger="modal" data-modal="leave-modal" data-modal-title="@Localizer[" Total Planning"]" data-modal-ajax="true" data-ajax-url="~/core/home/leave?type=annual-leave">
+                                                <i class="iconmoon-timemanagement font-large-1 font-green-haze mb-1"></i>
+                                            </a>
+                                            <div class="media-body text-right">
+                                                <h3 class="font-small-3 text-bold-300 d-inline font-red-mint"><span id="totalplanning"></span></h3>
+                                                <span class="font-small-3 text-muted text-right d-block">@Localizer["Total Planning"]</span>
+                                                <span class="font-yellow-casablanca text-right d-block" style="font-size: 0.7rem; font-style: italic; font-weight: bold">(@Localizer["remaining"])</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="col-md-12">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AnnualLeavePlanningDetailStoredEntity>()
+                                        .Name("grid")
+                                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                                        .Columns(columns =>
+                                        {
+                                            columns.Bound(c => c.PlanDate)
+                                                .Title(Localizer["Leave Date"].Value)
+                                                .Width(150)
+                                                .ClientTemplate(@"#= kendo.toString(PlanDate, ""dd/MM/yyyy"" )#")
+                                                .HtmlAttributes(new { @class = "text-center" });
+                                            columns.Bound(c => c.Plans)
+                                                .Width(60)
+                                                .Title(Localizer["Plan"].Value)
+                                                .Width(150);
+                                            columns.Bound(c => c.Actual)
+                                                .Width(60)
+                                                .Title(Localizer["Actual"].Value)
+                                                .Width(150);
+                                            columns.Bound(c => c.Remark)
+                                                .Width(60)
+                                                .Title(Localizer["Remark"].Value)
+                                                .Width(150);
+                                        })
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/annual-planning/get-leave-details?Period=" + Period + "&NoReg=" + NoReg))
+                                            .Data("function() { return { 'Period': '#=Period#','NoReg': '#=NoReg#' } }"))
+                                            .PageSize(30)
+                                        )
+                                        .Resizable(resizable => resizable.Columns(true))
+                                        //.Pageable(options =>
+                                        //{
+                                        //    options.Input(true);
+                                        //    options.Numeric(false);
+                                        //    options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                        //})
+                                        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                                        .Scrollable()
+                                        .Deferred()
+                    )
+                    </div>
+                        </div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+    
+</div>

@@ -1,0 +1,891 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService configService
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService mdmService
+@model DocumentRequestDetailViewModel<CopViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    bool IsRoleForm = User.GetClaim("Roles").Split(",").Contains(Model.FormRoleKey);
+    if (Model.Requester == User.GetClaim("NoReg") && Model.FormRoleKey == "R")
+    { IsRoleForm = true; }
+    Model.Object.IsInputUnit = Model.Permision.Contains("(inputUnit)");
+    Model.Object.IsInputStnk = Model.Permision.Contains("(inputStnk)");
+    Model.Object.IsKonfirmationPemabyaran = Model.Permision.Contains("(inputKonfirmasiPembayaran)");
+    Model.Object.IsInputJasa = Model.Permision.Contains("(inputJasa)");
+    Model.Object.IsPaymentMethod = Model.Permision.Contains("(inputPembayaranJasa)");
+    Model.Object.IsInputFA = Model.Permision.Contains("(inputFA)");
+    var dealerCode = configService.GetConfig("Default.Dealer").ConfigValue;
+    //var dealerCode = configService.GetConfig("COP.DealerCode").ConfigValue;
+    Model.Object.Dealer = string.IsNullOrEmpty(Model.Object.Dealer) ? dealerCode : Model.Object.Dealer;
+    Model.Object.IsAttachmentVld1 = Model.Permision.Contains("(InputAttachVld1)");
+    Model.Object.IsEditFrameEngine = Model.Permision.Contains("(EditFrameEngine)");
+
+    var org = mdmService.GetActualOrganizationStructure(string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester);
+    //var defaultVehicleMatrix = coreService.GetTypeVehicleMatrixByKelas(org.EmployeeSubgroup);
+    //var defaultVehicle = coreService.GetTypeVehicleByKelas(org.EmployeeSubgroup);
+
+    //var selectedVehicle = coreService.GetById(Model.Object.VechicleId);
+    var noreg = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+}
+@section scripts {
+    <script type="text/javascript">
+        if ('@isCanEdit' == 'True') {
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl('~/api/claimbenefit/getinfo'),
+                dataType: 'json',
+                success: function (data) {
+                    $('#User').text(data.Data[0].Name);
+                    $('#Kelas').text(data.Data[0].Kelas);
+
+                }
+            });
+        } else {
+            $("#divheader").hide();
+
+             @*$.ajax({
+                    type: 'POST',
+                 url: app.resolveUrl('~/api/vehicle/getmatrixbyid'),
+                 data: { id: '@Model.Object.VechicleId', class: '@org.EmployeeSubgroup'},
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data.GroupSequence > @defaultVehicleMatrix.GroupSequence) {
+                            $("#lblUpgradeDowngrade").text("Upgrade from Employee's Class");
+                        } else if (data.GroupSequence < @defaultVehicleMatrix.GroupSequence) {
+                            $("#lblUpgradeDowngrade").text("Downgrade from Employee's Class");
+                        } else {
+                            $("#lblUpgradeDowngrade").text('');
+                        }
+                    }
+            });*@
+        }
+
+        function casscadeDatabound(e) {
+            if ('@isCanEdit' == 'False') {
+                this.readonly(true);
+            }
+        }
+
+        function readonlyObject(e) {
+            if ('@isCanEdit' === 'False') {
+                this.readonly(true);
+            }
+        }
+
+        function readonlyObjectModel(e) {
+            if ('@isCanEdit' === 'False') {
+                this.readonly(true);
+            }
+
+            @*if ('@Model.Object.Model' == null || '@Model.Object.Model' == '') {
+                this.value('@defaultVehicle.TypeName');
+                $("#Object_TypeCode").data("kendoComboBox").value('@defaultVehicle.Id');
+                $('#Object_VechicleId').val('@defaultVehicle.Id');
+            }*@
+        }
+
+        function onChangeModel() {
+            $("#lblUpgradeDowngrade").text('');
+            $("#Object_TypeCode").data("kendoComboBox").value(null);
+        }
+
+        function onChange() {
+            var value = $("#Object_TypeCode").data("kendoComboBox").value();
+            var text = $("#Object_TypeCode").data("kendoComboBox").text();
+            //$("#Object_TypeCode").data("kendoComboBox").value($("#Object_TypeCode").data("kendoComboBox").text())
+            if (value == "") {
+                value = "@Guid.Empty";
+            }
+            $("#Object_VechicleId").val(value);
+            $("#Object_TypeName").val(text);
+            //$("#lblUpgradeDowngrade").text('');
+
+            @*if (value != '' && value != null) {
+                $.ajax({
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/vehicle/getmatrixbyid'),
+                    data: { id: value, class: '@org.EmployeeSubgroup'},
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data.GroupSequence > @defaultVehicleMatrix.GroupSequence) {
+                            $("#lblUpgradeDowngrade").text("Upgrade from Employee's Class");
+                        } else if (data.GroupSequence < @defaultVehicleMatrix.GroupSequence) {
+                            $("#lblUpgradeDowngrade").text("Downgrade from Employee's Class");
+                        } else {
+                            $("#lblUpgradeDowngrade").text('');
+                        }
+                    }
+                });
+            }*@
+        }
+
+        function typeJasaChange() {
+            var value = $("#Object_PaymentMethod").data("kendoComboBox").value();
+            if (value == "Transfer") {
+                $("#tfinfo").show();
+            } else {
+                $("#tfinfo").hide();
+            }
+        }
+
+        if ('@Model.Object.PaymentMethod' == 'Transfer') {
+            $("#tfinfo").show();
+        } else {
+            $("#tfinfo").hide();
+        }
+    </script>
+}
+<div class="row" id="divheader">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Information"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <span class="description">@Localizer["<b class='font-red' id='User'></b> with class <b class='font-red' id='Kelas'></b> will submit COP request."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["COP Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <fieldset>
+                                <legend>@Localizer["COP Data"]</legend>
+                                <div class="form-group">
+                                    <input type="hidden" id="requester" name="requester" value="@noreg" />
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["COP Type"]</label>
+                                    @(Html.Kendo().ComboBoxFor(x => x.Object.SubmissionCode)
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.SubmissionCode" })
+                                        .Placeholder(Localizer["Select COP Type"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=JenisCOP")))
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Events(e => e.DataBound("readonlyObject"))
+                                        //.Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.SubmissionCode"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>Model</label>
+                                    @(Html.Kendo().ComboBoxFor(x => x.Object.Model)
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Model" })
+                                        .Placeholder(Localizer["Select Model"].Value)
+                                        .DataTextField("Typename")
+                                        .DataValueField("Typename")
+                                        .DataSource(dataSource => dataSource.Custom()
+                                            .Type("aspnetmvc-ajax")
+                                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/vehicle/getmodelcop"))
+                                                .Data(@"function() { return { kelas: '" + org.EmployeeSubgroup + "', checkEmployeeSubgroup: " + isCanEdit.ToString().ToLower() + " } }"))
+                                            )
+                                            .ServerFiltering(true)
+                                            .Schema(schema => schema.Data("Data")
+                                                .Total("Total")
+                                            )
+                                        )
+                                        .SelectedIndex(-1)
+                                        .Events(e => e.DataBound("readonlyObjectModel").Change("onChangeModel"))
+                                        //.Enable(isCanEdit)
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.Model"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label id="lblUpgradeDowngrade"></label><br />
+                                    <label><span class="required" aria-required="true"> * </span>Type</label>
+                                    @Html.HiddenFor(x => x.Object.VechicleId)
+                                    @Html.HiddenFor(x => x.Object.TypeName)
+                                    @(Html.Kendo().ComboBoxFor(x => x.Object.TypeCode)
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.TypeCode" })
+                                        .Placeholder(Localizer["Select Type"].Value)
+                                        .DataTextField("TypeVechicle")
+                                        .DataValueField("VechicleId")
+                                        .DataSource(dataSource => dataSource.Custom()
+                                            .Type("aspnetmvc-ajax")
+                                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/vehicle/gettypebymodel"))
+                                                .Data(@"function() { return { model: $('#Object_Model').val(), type: 'COP', noreg:'" + noreg + "', checkEmployeeSubgroup: " + isCanEdit.ToString().ToLower() + " } }"))
+                                            )
+                                            .ServerFiltering(true)
+                                            .Schema(schema => schema.Data("Data")
+                                                .Total("Total")
+                                            )
+                                        )
+                                        //.Enable(isCanEdit)
+                                        .AutoBind(false)
+                                        .Enable(false)
+                                        .SelectedIndex(-1)
+                                        .CascadeFrom("Object_Model")
+                                        .CascadeFromField("Typename")
+                                        .Events(e => e.DataBound("readonlyObject").Change("onChange"))
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.TypeCode"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Color"]</label>
+                                    @(Html.Kendo().ComboBoxFor(x => x.Object.ColorCode)
+                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.ColorCode" })
+                                        .Placeholder(Localizer["Select Color"].Value)
+                                        .DataTextField("Name")
+                                        .DataValueField("Code")
+                                        .DataSource(dataSource => dataSource.Custom()
+                                            .Type("aspnetmvc-ajax")
+                                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/vehicle/getcolor"))
+                                                .Data(@"function() { return { id: $('#Object_TypeCode').val(),colorCode : $('#Object_ColorCode').val() } }"))
+                                            )
+                                            .ServerFiltering(true)
+                                            .Schema(schema => schema.Data("Data")
+                                                .Total("Total")
+                                            )
+                                        )
+                                        .AutoBind(false)
+                                        .Enable(false)
+                                        .SelectedIndex(-1)
+                                        .CascadeFrom("Object_TypeCode")
+                                        .CascadeFromField("VechicleId")
+                                        .Events(e => e.DataBound("readonlyObject"))
+                                        .Deferred()
+                                    )
+                                    <span class="invalid" data-validation-for="Object.ColorCode"></span>
+                                </div>
+                                <div class="form-group">
+                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Identitity Card Attachment"]</label>
+
+                                    @{
+                                        if (isCanEdit)
+                                        {
+                                            @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.PopulationAttachmentPath" })
+                                        }
+                                        else
+                                        {
+                                            <br />
+                                            @Html.HiddenFor(x => x.Object.PopulationAttachmentPath)
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "PopulationAttachmentPath" })
+                                        }
+                                    }
+                                    <span class="invalid" data-validation-for="Object.PopulationAttachmentPath"></span>
+                                </div>
+                                @if (Model.Permision.Contains("(viewKonfirmasiPembayaran)") || Model.DocumentStatusCode == "completed")
+                                {
+                                    @Html.HiddenFor(x => x.Object.IsKonfirmationPemabyaran)
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Payment Proof Attachment"]</label>
+                                        @{
+                                            if (IsRoleForm && Model.Permision.Contains("inputKonfirmasiPembayaran)"))
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.PembayaranAttachmentPath" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @Html.HiddenFor(x => x.Object.PembayaranAttachmentPath)
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "PembayaranAttachmentPath", showPreview = true })
+                                            }
+                                        }
+                                        <span class="invalid" data-validation-for="Object.PembayaranAttachmentPath"></span>
+                                    </div>
+                                }
+                                else if (!string.IsNullOrEmpty(Model.Object.PembayaranAttachmentPath))
+                                {
+                                    <div class="form-group">
+                                        <label>@Localizer["Payment Proof Attachment"]</label>
+                                        @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "PembayaranAttachmentPath", showPreview = true })
+                                    </div>
+                                }
+                            </fieldset>
+                            @if (Model.Permision.Contains("(viewUnit)") || Model.DocumentStatusCode == "completed")
+                            {
+                                @Html.HiddenFor(x => x.Object.IsInputUnit)
+                                @Html.HiddenFor(x => x.Object.IsEditFrameEngine)
+                                <fieldset>
+                                    <legend>Data Unit</legend>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>DTRRN</label>
+                                        @Html.TextBoxFor(x => x.Object.DTRRN, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTRRN" }, IsRoleForm && Model.Object.IsInputUnit))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>DTMOCD</label>
+                                        @Html.TextBoxFor(x => x.Object.DTMOCD, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTMOCD" }, IsRoleForm && Model.Object.IsInputUnit))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>SFX</label>
+                                        @Html.TextBoxFor(x => x.Object.DTMOSX, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTMOSX" }, IsRoleForm && Model.Object.IsInputUnit))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Color</label>
+                                        @Html.TextBoxFor(x => x.Object.DTEXTC, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTEXTC" }, IsRoleForm && Model.Object.IsInputUnit))
+
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>COLOR NAME</label>
+                                        @Html.TextBoxFor(x => x.Object.DataUnitColorName, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DataUnitColorName", maxlength = 35 }, IsRoleForm && Model.Object.IsInputUnit))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>DTPLOD</label>
+                                        @Html.TextBoxFor(x => x.Object.DTPLOD, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTPLOD" }, IsRoleForm && Model.Object.IsInputUnit))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>
+                                            @if (Model.Object.IsEditFrameEngine)
+                                            {
+                                                <span class="required" aria-required="true"> * </span>
+                                            } FRAME
+                                        </label>
+                                        @Html.TextBoxFor(x => x.Object.DTFRNO, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DTFRNO", maxlength = 30 }, (IsRoleForm && Model.Object.IsInputUnit) || Model.Permision.Contains("(EditFrameEngine)")))
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label>
+                                            @if (Model.Object.IsEditFrameEngine)
+                                            {
+                                                <span class="required" aria-required="true"> * </span>
+                                            } ENGINE
+                                        </label>
+                                        @Html.TextBoxFor(x => x.Object.Engine, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.Engine", maxlength = 20 }, (IsRoleForm && Model.Object.IsInputUnit) || Model.Permision.Contains("(EditFrameEngine)")))
+                                    </div>
+
+                                    @if (Model.Permision.Contains("(viewFA)") || Model.DocumentStatusCode == "completed")
+                                    {
+                                        @Html.HiddenFor(x => x.Object.IsInputFA)
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>Dealer</label>
+                                            @Html.TextBoxFor(x => x.Object.Dealer, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.Dealer", @readonly = "readonly" }, IsRoleForm && Model.Object.IsInputFA))
+                                        </div>
+                                    }
+                                </fieldset>
+                            }
+                        </div>
+
+                        <div class="col-md-6">
+                            @if (Model.Permision.Contains("(ViewAttachVld1)") || Model.DocumentStatusCode == "completed")
+                            {
+                                @Html.HiddenFor(x => x.Object.IsAttachmentVld1)
+                                <fieldset>
+                                    <legend>@Localizer["VLD Attachment"]</legend>
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+                                        @{
+                                            if (IsRoleForm && Model.Permision.Contains("(InputAttachVld1)"))
+                                            {
+                                                @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.AttachmentVld1Path" })
+                                            }
+                                            else
+                                            {
+                                                <br />
+                                                @Html.HiddenFor(x => x.Object.AttachmentVld1Path)
+                                                @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "AttachmentVld1Path" })
+                                            }
+                                        }
+                                    </div>
+                                </fieldset>
+                            }
+
+                            @if (Model.Permision.Contains("(viewStnk)") || Model.DocumentStatusCode == "completed")
+                            {
+                                @Html.HiddenFor(x => x.Object.IsInputStnk)
+                                @if (IsRoleForm || Model.Object.DoDate != null)
+                                {
+                                    <fieldset>
+                                        <legend>Data STNK</legend>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["DO Date"]</label>
+                                            @if (IsRoleForm && Model.Object.IsInputStnk)
+                                            {
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.DoDate)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.DoDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                )
+                                            }
+                                            else if (Model.Object.DoDate.HasValue)
+                                            {
+                                                @Html.TextBoxFor(x => x.Object.DoDate, Model.Object.DoDate.Value.ToString("dd/MM/yyyy"), ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.DoDate" }, isCanEdit))
+                                            }
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Date Publication STNK"]</label>
+                                            @if (IsRoleForm && Model.Object.IsInputStnk)
+                                            {
+                                                @(Html.Kendo().DatePickerFor(x => x.Object.StnkDate)
+                                                    .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.StnkDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Deferred()
+                                                )
+                                            }
+                                            else if (Model.Object.StnkDate.HasValue)
+                                            {
+                                                @Html.TextBoxFor(x => x.Object.StnkDate, Model.Object.StnkDate.Value.ToString("dd/MM/yyyy"), ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.StnkDate" }, isCanEdit))
+                                            }
+                                        </div>
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["License Plat"]</label>
+                                            @Html.TextBoxFor(x => x.Object.LisencePlat, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.LisencePlat" }, IsRoleForm && Model.Object.IsInputStnk))
+                                        </div>
+                                    </fieldset>
+                                }
+                            }
+                            @if (Model.Permision.Contains("(viewJasa)") || Model.DocumentStatusCode == "completed")
+                            {
+                                @Html.HiddenFor(x => x.Object.IsInputJasa)
+                                <fieldset>
+                                    @if (Model.Object.Jasa == null)
+                                    {
+                                        <legend>Kelebihan / Kekurangan Biaya BBN</legend>
+                                    }
+                                    else if (Model.Object.Jasa < 0)
+                                    {
+                                        <legend>Pelunasan Kekurangan Biaya BBN</legend>
+                                    }
+                                    else if (Model.Object.Jasa > 0)
+                                    {
+                                        <legend>Pengembalian Kelebihan Biaya BBN</legend>
+                                    }
+                                    <div class="form-group">
+                                        <label><span class="required" aria-required="true"> * </span>Amount</label>
+                                        @if (IsRoleForm && Model.Object.IsInputJasa)
+                                        {
+                                            @(Html.Kendo().NumericTextBoxFor(x => x.Object.Jasa)
+                                                //.Format("###")
+                                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Jasa" })
+                                                .Value(Model.Object.Jasa.HasValue ? Math.Floor(Model.Object.Jasa.Value) as decimal? : null)
+                                                .Format("##,#")
+                                                .Decimals(0)
+                                                .Min(0)
+                                                .Spinners(false)
+                                                .Placeholder(Localizer["Please Input Service Fee"].Value)
+                                                //.Enable(isCanEdit)
+                                                .Deferred()
+                                            )
+                                        }
+                                        else
+                                        {
+                                            @Html.TextBoxFor(x => x.Object.Jasa, ApplicationHelper.Readonly(new { @class = "form-control", data_validation_for = "Object.Jasa" }, isCanEdit))
+                                        }
+                                    </div>
+                                    @if (IsRoleForm && Model.Object.IsPaymentMethod || Model.DocumentStatusCode == "completed")
+                                    {
+                                        @Html.HiddenFor(x => x.Object.IsPaymentMethod)
+                                        <div class="form-group">
+                                            @if (Model.Object.Jasa < 0)
+                                            {
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Payment Type"]</label>
+                                            }
+
+                                            @if (IsRoleForm && Model.Object.IsPaymentMethod)
+                                            {
+                                                @(Html.Kendo().ComboBoxFor(x => x.Object.PaymentMethod)
+                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PaymentMethod" })
+                                                    .Placeholder(Localizer["Select Payment Type"].Value)
+                                                    .DataTextField("Name")
+                                                    .DataValueField("Name")
+                                                    .DataSource(dataSource => dataSource
+                                                        .Ajax()
+                                                        .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=BiayaJasaVehicle")))
+                                                    )
+                                                    .SelectedIndex(-1)
+                                                    .Events(e => e.Change("typeJasaChange"))
+                                                    .Deferred()
+                                                )
+                                            }
+                                            else
+                                            {
+                                                @if (Model.Object.Jasa < 0)
+                                                {
+                                                    @(Html.Kendo().ComboBoxFor(x => x.Object.PaymentMethod)
+                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.PaymentMethod" })
+                                                        .Placeholder(Localizer["Select Payment Type"].Value)
+                                                        .DataTextField("Name")
+                                                        .DataValueField("Name")
+                                                        .DataSource(dataSource => dataSource
+                                                            .Ajax()
+                                                            .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=BiayaJasaVehicle")))
+                                                        )
+                                                        .SelectedIndex(-1)
+                                                        .Events(e => e.DataBound("readonlyObject"))
+                                                        .Deferred()
+                                                    )
+                                                }
+                                                else if (Model.Object.Jasa > 0)
+                                                {
+                                                    Model.Object.PaymentMethod = "Transfer";
+                                                    @Html.HiddenFor(x => x.Object.PaymentMethod)
+                                                }
+                                            }
+
+                                            @if (Model.Object.Jasa < 0)
+                                            {
+                                                <div id="tfinfo">
+                                                    <br />
+                                                    <p>Transfer to:</p>
+                                                    <label style="margin:0px">Bank Permata No. Rekening 0701551044</label>
+                                                    <label>Atas Nama: Koperasi Konsumen Karyawan TAM</label>
+                                                </div>
+                                            }
+                                            else if (Model.Object.Jasa > 0)
+                                            {
+                                                <div id="tfinfo">
+                                                    <br />
+                                                    <p>Pengembalian Kelebihan Biaya BBN akan di-transfer ke rekening Karyawan.</p>
+                                                </div>
+                                            }
+                                        </div>
+                                    }
+                                </fieldset>
+                            }
+                        <fieldset>
+                            <legend>@Localizer["Notes"]</legend>
+                            <div class="form-group inline">
+                                <label>@Localizer["Notes Detail"]</label>
+                                @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new
+                                {
+                                 @class = "form-control",
+                                    placeholder = Localizer["Input Notes"].Value
+                                }, isCanEdit))
+                            </div>
+@*                            <div class="form-group">
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Attachment"]</label>
+
+                                @{
+                                    if (isCanEdit)
+                                    {
+                                        @await Component.InvokeAsync("FileUpload", new { docId = Model.DocumentApprovalId, field = "Object.AttachmentCop" })
+                                    }
+                                    else
+                                    {
+                                        <br />
+                                        @Html.HiddenFor(x => x.Object.PopulationAttachmentPath)
+                                            @await Component.InvokeAsync("Attachment", new { files = Model.Attachments, fieldCategory = "AttachmentCop" })
+                                    }
+                                }
+                                    <span class="invalid" data-validation-for="Object.AttachmentCop"></span>
+                            </div>*@
+                        </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions {
+    @if (!string.IsNullOrEmpty(Model.Permision))
+    {
+
+    }
+
+    @if (IsRoleForm && Model.Permision.Contains("(approveTersedia)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Unit Allocation Available"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanReject())
+                                        {
+                                            <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Unit Not Available"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(inputKonfirmasiPembayaran)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </a>
+                                        }
+                                        @if (AclHelper.CanCancel())
+                                        {
+                                            if (ApplicationHelper.IsDefault(Model.Id))
+                                            {
+                                                <a class="btn btn-danger" href="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                </a>
+                                            }
+                                            else
+                                            {
+                                                <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(stnkReady)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/stnkready" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["INFORMING RECEIVES"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(inputJasa)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(isComplete)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Completed"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(verivikasitersedia)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Open DO"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && Model.Permision.Contains("(UnitReady)"))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (AclHelper.CanApprove())
+                                        {
+                                            <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Unit Ready"]</span>
+                                            </a>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (IsRoleForm && (Model.Permision.Contains("(konfirmasipembayaran)") || Model.Permision.Contains("(unitDiterima)") || Model.Permision.Contains("(BBNProses)") || Model.Permision.Contains("(BBNDone)")
+        || Model.Permision.Contains("(afitersedia)") || Model.Permision.Contains("(fakturready)") || Model.Permision.Contains("(unitDo)")))
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (Model.Permision.Contains("(afitersedia)"))
+                                        {
+                                            @if (AclHelper.CanApprove())
+                                            {
+                                                <a class="btn btn-success" href="#" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="saveHandler" data-url="@Url.Content(ApplicationHelper.Api(Model.FormKey))/approve" data-interceptor="dataInterceptor" data-method="post">
+                                                    <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["AFI Letter Ready"]</span>
+                                                </a>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            @if (AclHelper.CanApprove())
+                                            {
+                                                <a class="btn btn-success" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor">
+                                                    <i class="ft-check"></i>
+                                                    @if (Model.Permision.Contains("(konfirmasipembayaran)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                    }
+                                                    @*else if (Model.Permision.Contains("(afitersedia)"))
+                                                        {
+                                                            <span class="d-none d-md-inline">@Localizer["AFI Letter Ready"]</span>
+                                                        }*@
+                                                    else if (Model.Permision.Contains("(fakturready)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">@Localizer["Invoice Ready"]</span>
+                                                    }
+                                                    else if (Model.Permision.Contains("(unitDo)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">Unit DO</span>
+                                                    }
+                                                    else if (Model.Permision.Contains("(unitDiterima)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">@Localizer["Unit Received"]</span>
+                                                    }
+                                                    else if (Model.Permision.Contains("(BBNProses)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">@Localizer["BBN Process"]</span>
+                                                    }
+                                                    else if (Model.Permision.Contains("(BBNDone)"))
+                                                    {
+                                                        <span class="d-none d-md-inline">@Localizer["BBN Done"]</span>
+                                                    }
+                                                </a>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else if (!IsRoleForm && !string.IsNullOrEmpty(Model.Permision))
+    {
+
+    }
+    else
+    {
+        @(await Html.PartialAsync("Components/_ActionButtons"))
+    }
+}

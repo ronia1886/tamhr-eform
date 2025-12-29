@@ -1,0 +1,341 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService service;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    string formKey = ViewContext.HttpContext.Request.Query["formKey"].ToString();
+    var noreg = Model.OrgInfo.NoReg;
+    var loan = (obj as Loan36ViewModel);
+    var personalData = service.GetPdfInfoPersonal(org.NoReg).FirstOrDefault();
+    string KTP = (string)personalData.GetType().GetProperty("KTP").GetValue(personalData);
+    string Address = (string)personalData.GetType().GetProperty("Address").GetValue(personalData);
+    string rt = (string)personalData.GetType().GetProperty("RT").GetValue(personalData);
+    string rw = (string)personalData.GetType().GetProperty("RW").GetValue(personalData);
+    string City = (string)personalData.GetType().GetProperty("City").GetValue(personalData);
+    string PostalCode = (string)personalData.GetType().GetProperty("PostalCode").GetValue(personalData);
+    DateTime BirthDate = Convert.ToDateTime(personalData.GetType().GetProperty("BirthDate").GetValue(personalData).ToString());
+    DateTime StartDate = Convert.ToDateTime(personalData.GetType().GetProperty("StartDate").GetValue(personalData).ToString());
+    // Buat matrix Print Out
+    var getPrintOut = coreService.GetPrintOut(Model.DocumentApproval.Id).ToList();
+    string Requester = "";
+    string Approver = "";
+    string HRSectionHead = "";
+    string DivisionHead = "";
+    string HRAdmin = "";
+    string SectionHead = "";
+    string HRDivisionHead = "";
+    string DepartmentHead = "";
+    foreach (var i in getPrintOut)
+    {
+        var getApproverLocation = i.GetType().GetProperty("ApproverLocation").GetValue(i).ToString();
+        var getSubType = i.GetType().GetProperty("SubType").GetValue(i) == null ? "" : i.GetType().GetProperty("SubType").GetValue(i).ToString();
+        if (getApproverLocation == "Requester")
+        {
+            Requester = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "Approver")
+        {
+            Approver = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "HRSectionHead" && getSubType == "36")
+        {
+            HRSectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "DivisionHead")
+        {
+            DivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "HRAdmin")
+        {
+            HRAdmin = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "SectionHead")
+        {
+            SectionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+        if (getApproverLocation == "HRDivisionHead")
+        {
+            HRDivisionHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+        if (getApproverLocation == "DepartmentHead")
+        {
+            DepartmentHead = i.GetType().GetProperty("Name").GetValue(i) == null ? "" : i.GetType().GetProperty("Name").GetValue(i).ToString();
+        }
+
+    }
+}
+<style type="text/css">
+    * {
+        font-family: 'Segoe UI';
+        font-size: 14px
+    }
+
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+
+<hr style="margin-bottom:20px" />
+
+<div style="align-content:center;text-align:center;width:100%; margin-left: auto;
+    margin-right: auto;">
+    <h5 style="margin-left:30%;margin-right:30%; text-align:center;padding:10px;border:1px solid black">FORMULIR PERMOHONAN PINJAMAN</h5>
+    ( Kelas I ~ III    dan    Kelas IV ~ VI )
+</div>
+<br />
+<table border="1" cellpadding="5" cellspacing="0" style="width:100%;border-collapse:collapse">
+    <tbody>
+        <tr>
+            <td style="width:10px">Nomor Registrasi</td>
+            <td style="width:150px">@org.NoReg</td>
+        </tr>
+        <tr>
+            <td>Nama Lengkap</td>
+            <td colspan="5">@org.Name</td>
+
+        </tr>
+        <tr>
+            <td>Tanggal Lahir (Tgl / Bln / Thn)</td>
+            <td colspan="5">@BirthDate.ToString("dd/MM/yyyy")</td>
+
+        </tr>
+        <tr>
+            <td>Nomor K T P</td>
+            <td colspan="5">@KTP</td>
+
+        </tr>
+        <tr>
+            <td colspan="1" rowspan="4" valign="top">Alamat Rumah / Tinggal saat ini</td>
+            <td colspan="4">@Address</td>
+
+        </tr>
+        <tr>
+            <td colspan="5">&nbsp;</td>
+        </tr>
+        <tr>
+            <td colspan="2">&nbsp;</td>
+            <td colspan="2">RT / RW : @rt / @rw</td>
+        </tr>
+        <tr>
+            <td colspan="2">Kota : @City</td>
+            <td colspan="2">Kode POS (wajib diisi) : @PostalCode</td>
+        </tr>
+        <tr>
+            <td colspan="1" rowspan="4" valign="top">Alamat Sesuai KTP</td>
+            <td colspan="5">&nbsp;</td>
+
+        </tr>
+        <tr>
+            <td colspan="5">&nbsp;</td>
+
+        </tr>
+        <tr>
+            <td colspan="2">&nbsp;</td>
+            <td colspan="2">RT / RW</td>
+        </tr>
+        <tr>
+            <td colspan="2">Kota</td>
+            <td colspan="2">Kode POS (wajib diisi)</td>
+        </tr>
+        <tr>
+            <td>Divisi</td>
+            <td>@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText</td>
+            <td>Departemen</td>
+            <td colspan="2">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td>Kelas</td>
+            <td>@org.EmployeeSubgroupText</td>
+            <td>Jabatan</td>
+            <td colspan="2">@orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText</td>
+        </tr>
+        <tr>
+            <td>Tanggal Mulai Bekerja</td>
+            <td colspan="4">@StartDate.ToString("dd/MM/yyyy")</td>
+
+        </tr>
+        <tr>
+            <td colspan="5" align="center">
+                <table border="1" cellpadding="5" cellspacing="0" style="width:70%;border-collapse:collapse" class="tableizer-table">
+                    <thead>
+                        <tr>
+                            <th>Pinjaman untuk keperluan</th>
+                            <th>* Pembelian Rumah</th>
+                            <th>&nbsp;</th>
+                            <th>* Pendidikan Anak</th>
+                            <th>&nbsp;</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>[ beri tanda ( X ) pada</td>
+
+                            <td>* Mendirikan Rumah</td>
+                            <td>
+                                @if (loan.LoanType.ToLower() == "mendirikanrumah")
+                                {
+                                    <span>&#10006;</span>
+                                }
+                            </td>
+                            <td>* Pembelian Motor</td>
+                            <td>
+                                @if (loan.LoanType.ToLower() == "pembelianmotor")
+                                {
+                                    <span>&#10006;</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>kolom dimaksud ]</td>
+
+                            <td>* Renovasi Rumah</td>
+                            <td>
+                                @if (loan.LoanType.ToLower() == "renovasirumah")
+                                {
+                                    <span>&#10006;</span>
+                                }
+                            </td>
+                            <td>* Lain-lain............................</td>
+                            <td>
+                                @if (loan.LoanType.ToLower() == "pendidikananak")
+                                {
+                                    <span>&#10006;</span>
+                                }
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>&nbsp;</td>
+                            <td>* Kontrak Rumah</td>
+                            <td>
+
+                                @if (loan.LoanType.ToLower() == "kontrakrumah")
+                                {
+                                    <span>&#10006;</span>
+                                }
+                            </td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <br />
+                <table border="1" cellpadding="5" cellspacing="0" style="width:70%;border-collapse:collapse" class="tableizer-table">
+                    <thead>
+                        <tr>
+                            <th colspan="4">Dokumen yang HARUS diserahkan [ beri tanda ( X ) pada kolom dimaksud ]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>- Surat dari KPR / BTN</td>
+                            <td>&nbsp;</td>
+                            <td>- Sertifikat Kepemilikan</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>- Ijin Mendirikan Bangunan (IMB)</td>
+                            <td>&nbsp;</td>
+                            <td>- Perjanjian Kontrak</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>- Proposal Renovasi</td>
+                            <td>&nbsp;</td>
+                            <td>- Kwitansi Pembayaran</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>- Rincian Biaya</td>
+                            <td>&nbsp;</td>
+                            <td>- Aplikasi Pemesanan Motor</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </td>
+        </tr>
+        <tr style="height:100px">
+            <td valign="top" colspan="5">
+                <label class="bold">
+                    Keterangan :
+                    <span>@loan.Remarks</span>
+                </label>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<p>&nbsp;</p>
+
+<table border="0" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+    <colgroup>
+        <col style="width: 48%">
+        <col style="width: 4%">
+        <col style="width: 48%">
+    </colgroup>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>Jakarta, </td>
+    </tr>
+    <tr>
+        <td>
+            <table border="1" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+                <colgroup>
+                    <col style="width: 30%">
+                    <col style="width: 30%">
+                    <col style="width: 30%">
+                </colgroup>
+                <tr>
+                    <td colspan="3" align="center">HUMAN RESOURCES AND GENERAL AFFAIRS DIVISION</td>
+                </tr>
+                <tr>
+                    <td height="80px" valign="bottom" align="center">@HRDivisionHead</td>
+                    <td height="80px" valign="bottom" align="center">@HRSectionHead</td>
+                    <td height="80px" valign="bottom" align="center">@HRAdmin</td>
+                </tr>
+                <tr>
+                    <td height="20px" align="center">Division Head</td>
+                    <td height="20px" align="center">Section Head</td>
+                    <td height="20px" align="center">Administrasi</td>
+                </tr>
+            </table>
+        </td>
+        <td></td>
+        <td>
+            <table border="1" cellpadding="0" cellspacing="0" style="width:100%; font-family:'Segoe UI'; font-size:12px;">
+                <colgroup>
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                    <col style="width: 33%">
+                </colgroup>
+                <tr>
+                    <td colspan="3" align="left">&nbsp; Divisi Yang Bersangkutan</td>
+                </tr>
+                <tr>
+                    <td align="center">Kepala Divisi</td>
+                    <td align="center">Kepala Department</td>
+                    <td align="center">Karyawan Ybs.</td>
+                </tr>
+                <tr>
+                    <td height="100px" valign="bottom" align="center">@DivisionHead</td>
+                    <td height="100px" valign="bottom" align="center">@DepartmentHead</td>
+                    <td height="100px" valign="bottom" align="center">@Requester</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

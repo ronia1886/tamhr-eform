@@ -1,0 +1,146 @@
+﻿@model Vaccine
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineScheduleService vaccineScheduleService
+@inject TAMHR.ESS.Infrastructure.DomainServices.VaccineHospitalService vaccineHospitalService
+@{
+    var hospitalList = vaccineHospitalService.Gets().ToList();
+    //var limitSchedule = vaccineScheduleService.GetScheduleLimit();
+
+}
+<script type="text/javascript">
+
+
+    $("#ScheduleVaccineDate_dateview .k-state-disabled").css("background-color", "grey");
+    $("button[data-dismiss-modal=modal2]").click(function () {
+        $('.modal').css('overflow-y', 'auto');
+        $('#vaccineScheduleModal').modal('hide');
+    });
+
+    $("#btnSaveVaccineSchedule").click(function () {
+
+        event.preventDefault();
+
+        var vaccineDate = $("#ScheduleVaccineDate").val();
+        splitDate = vaccineDate.split("/");
+        newVaccineDate = splitDate[2] + "-" + splitDate[1] + "-" + splitDate[0];
+        var vaccineHospital = $("#ScheduleVaccineHospital").val();
+        $.get(app.resolveUrl("~/api/vaccine/get-schedule-limit"), { vaccineDate: newVaccineDate, vaccineHospitalId: vaccineHospital },
+            function (data) {
+                if (data > 0) {
+                    $('.modal').css('overflow-y', 'auto');
+                    if ($("#VaccineNo").html() == "1") {
+                        $(".Vaccine1 .k-datepicker").removeClass("hidden");
+                        $("input[name='VaccineDate1']").removeClass("hidden");
+                        $("input[name='VaccineDate1']").val($("#ScheduleVaccineDate").val());
+                        $("input[name='VaccineHospital1']").removeClass("hidden");
+                        $("input[name='VaccineHospital1']").val($("#ScheduleVaccineHospital").data("kendoComboBox").text());
+
+                        $("input[name='VaccineType1']").val("internal");
+                        $(".vaccineCard1Div").removeClass("hidden");
+                        //if date vaccine 2 < date 1 or create data
+                        if (validateDate($("#ScheduleVaccineDate").val())) {
+                            $("input[name='VaccineDate2']").val("");
+                            $("input[name='VaccineHospital2']").val("");
+                        }
+
+                    } else {
+                        $(".Vaccine2 .k-datepicker").removeClass("hidden");
+                        $("input[name='VaccineDate2']").removeClass("hidden");
+                        $("input[name='VaccineDate2']").val($("#ScheduleVaccineDate").val());
+                        $("input[name='VaccineHospital2']").removeClass("hidden");
+                        $("input[name='VaccineHospital2']").val($("#ScheduleVaccineHospital").data("kendoComboBox").text());
+
+                        $("input[name='VaccineType2']").val("internal");
+                        $(".vaccineCard2Div").removeClass("hidden");
+                    }
+                    clearInput();
+                    $('#vaccineScheduleModal').modal('hide');
+                } else {
+                    app.error("Quota is not available");
+                }
+
+            }
+        );
+
+    });
+
+    function validateDate(stringDate) {
+        debugger;
+        var setDate = new Date();
+        var mindate = new Date();
+
+        var obj = $("input[name='VaccineDate2']").val().split("/");
+        mindate = new Date(obj[1] + "/" + obj[0] + "/" + obj[2]);
+        var rs = stringDate.split("/")
+        setDate = new Date(rs[1] + "/" + rs[0] + "/" + rs[2]);
+
+        if (setDate > mindate) {
+            return true
+        } else {
+            return false
+        }
+    }
+
+    function clearInput() {
+        $("#ScheduleVaccineDate").val("");
+        $("#ScheduleVaccineHospital").data("kendoComboBox").value("");
+    }
+
+    $.filterChange = function () {
+        CheckQuotaSchedule();
+    };
+
+</script>
+<div id="vaccineScheduleModal" class="modal fade" role="dialog">
+    <form method="post" action="~/vaccine/">
+        <div class="modal-dialog">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss-modal="modal2">&times;</button>
+                    <h4 class="modal-title">@Localizer["Jadwal Vaksin"]</h4>
+
+                </div>
+                <div class="modal-body">
+                    <div class="form-group col-md-12 material">
+                        <label>@Localizer["Vaksin ke-"]<span id="VaccineNo"></span></label>
+                    </div>
+                    <div class="form-group col-md-12 material">
+                        <label>@Localizer["Tanggal"]</label>
+                        @*@Html.Kendo().DatePicker().Name("ScheduleVaccineDate").HtmlAttributes(new { @class = "form-control" }).Min(startDate1).Max(endDate1)*@
+                        <input type="text" id="ScheduleVaccineDate" />
+                    </div>
+                    <div class="form-group col-md-12 material">
+                        <label>@Localizer["Rumah Sakit"]</label>
+                        @(Html.Kendo().ComboBox()
+                .Name("ScheduleVaccineHospital")
+                .HtmlAttributes(new { placeholder = "Please Select Hospital", @class = "form-control" })
+                .DataTextField("Name")
+                .DataValueField("Id")
+                .BindTo(hospitalList)
+                .AutoBind(true)
+                .Filter(FilterType.Contains)
+                .Events(events => events.Change("$.filterChange"))
+                        )
+                        @*<input id="ScheduleVaccineHospital" name="ScheduleVaccineHospital" />*@
+                        <span class="k-invalid-msg" data-for="ScheduleVaccineHospital"></span>
+                    </div>
+                    <div class="form-group col-md-12 material">
+                        <label>@Localizer["Quota"]</label>
+                        @Html.Kendo().TextBox().Name("Qty").HtmlAttributes(new { @class = "form-control", placeholder = "Enter Quota" }).Enable(false)
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="btnSaveVaccineSchedule">Save</button>
+                    <button type="button" name="btnCloseVaccineSchedule" class="btn btn-default" data-dismiss-modal="modal2">Close</button>
+                </div>
+            </div>
+
+        </div>
+    </form>
+</div>
+@*<script type="text/javascript">
+        var combobox = $("#ScheduleVaccineHospital").data("kendoComboBox");
+            combobox.select(function (dataItem) {
+                return dataItem.Name === $("#VaccineHospital2").val();
+            });
+    </script>*@

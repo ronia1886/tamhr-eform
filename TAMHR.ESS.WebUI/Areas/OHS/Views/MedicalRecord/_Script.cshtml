@@ -1,0 +1,572 @@
+﻿@{
+
+    bool isOHS_ADMIN = User.Claims.Where(c => c.Type == "Roles").Any(x => x.Value.Contains("OHS_ADMIN"));
+
+}
+<script>
+    var isAdmin = "@isOHS_ADMIN";
+    $.getDataReport = function () {
+
+        return {
+            startDate: kendo.toString($("#startDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            endDate: kendo.toString($("#endDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            lahirDate: kendo.toString($("#LahirDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            namaKaryawanVendor: $("#NamaKaryawanVendor").val()
+
+        };
+    };
+
+    function getFilterParams() {
+        var values = $("#division").data("kendoDropDownTree").value();
+        var names = values.map(item => item.split("#")[1]); // Ambil bagian setelah #
+        //console.log(names); // Output: ["AFTER SALES BUSINESS", "AREA MANAGEMENT", ...]
+
+        return {
+            startDate: kendo.toString($("#startDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            endDate: kendo.toString($("#endDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            lahirDate: kendo.toString($("#LahirDate").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            namaKaryawanVendor: $("#NamaKaryawanVendor").val(),
+            NoReg: $("#NoReg").data("kendoMultiSelect").value(),
+            NamakaryawanTam: $("#Name").data("kendoMultiSelect").value(),
+            Divisi: names
+        };
+
+    }
+
+    $(function () {
+        $(document).ready(function () {
+            var startDateValue = $("#startDate").data("kendoDatePicker").value();
+            var endDateValue = $("#endDate").data("kendoDatePicker").value();
+            var startDate = startDateValue ? kendo.toString(startDateValue, "yyyy-MM-dd") : "1800-01-01";
+            var endDate = endDateValue ? kendo.toString(endDateValue, "yyyy-MM-dd") : "9999-12-31";
+            var lahirDateValue = $("#LahirDate").data("kendoDatePicker").value();
+            var lahirDate = lahirDateValue ? kendo.toString(lahirDateValue, "yyyy-MM-dd") : "";
+            var namaKaryawanVendor = $("#NamaKaryawanVendor").val();
+            var NoReg = $("#NoReg").data("kendoMultiSelect").value();
+            var NamakaryawanTam = $("#Name").data("kendoMultiSelect").value();
+            var values = $("#division").data("kendoDropDownTree").value();
+            var names = values.map(item => item.split("#")[1]);
+            var Divisi = names;
+
+
+            if (isAdmin == "True") {
+                //var chartRawat = $("#chartOhsTOTAL").data("kendoChart");
+
+                //// Tunggu sampai chart selesai di-load
+                //chartRawat.dataSource.fetch().then(function () {
+                //    var data = chartRawat.dataSource.data();
+                //    var total = 0;
+
+                //    // Loop semua data dan jumlahkan
+                //    for (var i = 0; i < data.length; i++) {
+                //        total += (data[i].InOutPatient || 0);
+                //    }
+
+                //    // Tampilkan hasil di label
+                //    $("#totalKunjunganRawatLabel").text(total);
+                //});
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganRawat"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate,
+                        lahirDate: lahirDate,
+                        namaKaryawanVendor: namaKaryawanVendor,
+                        NoReg: NoReg,
+                        NamakaryawanTam: NamakaryawanTam,
+                        Divisi: Divisi
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalKunjunganRawatLabel").text(respon.total);
+                        if (respon.total <= 10) {
+                            var chartOhsTOTAL1 = $("#chartOhsTOTAL").data("kendoChart");
+                            chartOhsTOTAL1.options.valueAxis.majorUnit = 1;
+                            chartOhsTOTAL1.refresh();
+
+                        }
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+                //var chartSickLeave = $("#chartSickLeaveTOTAL").data("kendoChart");
+
+                //// Tunggu sampai chart selesai di-load
+                //chartSickLeave.dataSource.fetch().then(function () {
+                //    var data = chartSickLeave.dataSource.data();
+                //    var total = 0;
+
+                //    // Loop semua data dan jumlahkan
+                //    for (var i = 0; i < data.length; i++) {
+                //        total += (data[i].SakitBerat || 0) +
+                //            (data[i].SakitRingan || 0);
+                //    }
+
+                //    // Tampilkan hasil di label
+                //    $("#totalSickLeaveLabel").text(total);
+                //});
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganSickLeave"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalSickLeaveLabel").text(respon.total);
+                        if (respon.total <= 10) {
+                            var chartSickLeaveTOTAL1 = $("#chartSickLeaveTOTAL").data("kendoChart");
+                            chartSickLeaveTOTAL1.options.valueAxis.majorUnit = 1;
+                            chartSickLeaveTOTAL1.refresh();
+
+                        }
+
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganSickNessRate"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalSickNessRateLabel").text(respon.total);
+                       
+
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+            }
+
+
+
+            //var chartUpkk = $("#chartUpkkTOTAL").data("kendoChart");
+
+            //// Tunggu sampai chart selesai di-load
+            //chartUpkk.dataSource.fetch().then(function () {
+            //    var data = chartUpkk.dataSource.data();
+            //    var total = 0;
+
+            //    // Loop semua data dan jumlahkan
+            //    for (var i = 0; i < data.length; i++) {
+            //        total += (data[i].PemeriksaanKesehatan || 0) +
+            //            (data[i].BerobatTertangani || 0) +
+            //            (data[i].BerobatRujuk || 0) +
+            //            (data[i].BerobatPulang || 0);
+            //    }
+
+            //    // Tampilkan hasil di label
+            //    $("#totalKunjunganUpkkLabel").text(total);
+            //});
+
+            $.ajax({
+                url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganUpkk"),
+                type: "POST",
+                contentType: "application/x-www-form-urlencoded",
+                data: {
+                    startDate: startDate,
+                    endDate: endDate
+
+                },
+                success: function (respon) {
+
+                    $("#totalKunjunganUpkkLabel").text(respon.total);
+                    if (respon.total <= 10) {
+                        var chartUpkkTOTAL1 = $("#chartUpkkTOTAL").data("kendoChart");
+                        chartUpkkTOTAL1.options.valueAxis.majorUnit = 1;
+                        chartUpkkTOTAL1.refresh();
+
+                    }
+
+                },
+                error: function (xhr) {
+                    app.error("Error: " + xhr.responseText);
+                }
+            });
+
+
+
+
+        });
+
+
+        $("#btnSearch").on("click", function (e) {
+            var startDateValue = $("#startDate").data("kendoDatePicker").value();
+            var endDateValue = $("#endDate").data("kendoDatePicker").value();
+            var startDate = startDateValue ? kendo.toString(startDateValue, "yyyy-MM-dd") : "1800-01-01";
+            var endDate = endDateValue ? kendo.toString(endDateValue, "yyyy-MM-dd") : "9999-12-31";
+            var lahirDateValue = $("#LahirDate").data("kendoDatePicker").value();
+            var lahirDate = lahirDateValue ? kendo.toString(lahirDateValue, "yyyy-MM-dd") : "";
+            var namaKaryawanVendor = $("#NamaKaryawanVendor").val();
+            var NoReg = $("#NoReg").data("kendoMultiSelect").value();
+            var NamakaryawanTam = $("#Name").data("kendoMultiSelect").value();
+            var values = $("#division").data("kendoDropDownTree").value();
+            var names = values.map(item => item.split("#")[1]);
+            var Divisi = names;
+
+
+            var filter = {
+                logic: "and",
+                filters: []
+            };
+
+
+            //DIVISION FILTER
+            var divisi = $("#division").data("kendoDropDownTree").value();
+            //console.log(divisi);
+            if (divisi.length > 0) {
+                var divisionFilter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                divisi.forEach(
+                    division =>
+                        divisionFilter.filters.push(
+                            {
+                                field: 'Division',
+                                operator: 'eq',
+                                value: division.split('#')[1]
+                            }
+                        )
+                )
+                filter.filters.push(divisionFilter);
+            }
+
+            //NOREG FILTER
+            var NoReg = $("#NoReg").data("kendoMultiSelect").value();
+            if (NoReg != undefined && NoReg != null && NoReg.length > 0) {
+
+                var tempFilters = [];
+                $.each(NoReg, function (index, value) {
+                    tempFilters.push({
+                        field: "NoReg",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            //NAME FILTER
+            var Name = $("#Name").data("kendoMultiSelect").value();
+            if (Name != undefined && Name != null && Name.length > 0) {
+
+                var tempFilters = [];
+                $.each(Name, function (index, value) {
+                    tempFilters.push({
+                        field: "Name",
+                        operator: "eq",
+                        value: value
+                    });
+                });
+
+                filter.filters.push({
+                    logic: "or",
+                    filters: tempFilters
+                });
+            }
+
+            var grid = $("#gridReport").data("kendoGrid");
+            grid.dataSource.filter(filter);
+
+            if (isAdmin == "True") {
+
+                $("#chartOhsTOTAL").data("kendoChart").dataSource.read();
+                $("#chartSickLeaveTOTAL").data("kendoChart").dataSource.read();
+                $("#chartSickNessRateTOTAL").data("kendoChart").dataSource.read();
+
+
+
+                //var chartRawat = $("#chartOhsTOTAL").data("kendoChart");
+                //// Tunggu sampai chart selesai di-load
+                //chartRawat.dataSource.fetch().then(function () {
+                //    var data = chartRawat.dataSource.data();
+                //    var total = 0;
+
+                //    // Loop semua data dan jumlahkan
+                //    for (var i = 0; i < data.length; i++) {
+                //        total += (data[i].InOutPatient || 0);
+                //    }
+                //    // Tampilkan hasil di label
+                //    $("#totalKunjunganRawatLabel").text(total);
+                //});
+
+                //var chartSickLeave = $("#chartSickLeaveTOTAL").data("kendoChart");
+                //// Tunggu sampai chart selesai di-load
+                //chartSickLeave.dataSource.fetch().then(function () {
+                //    var data = chartSickLeave.dataSource.data();
+                //    var total = 0;
+
+                //    // Loop semua data dan jumlahkan
+                //    for (var i = 0; i < data.length; i++) {
+                //        total += (data[i].SakitBerat || 0) +
+                //            (data[i].SakitRingan || 0);
+                //    }
+
+                //    // Tampilkan hasil di label
+                //    $("#totalSickLeaveLabel").text(total);
+                //});
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganRawat"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate,
+                        lahirDate: lahirDate,
+                        namaKaryawanVendor: namaKaryawanVendor,
+                        NoReg: NoReg,
+                        NamakaryawanTam: NamakaryawanTam,
+                        Divisi: Divisi
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalKunjunganRawatLabel").text(respon.total);
+                        if (respon.total <= 10) {
+                            var chart = $("#chartOhsTOTAL").data("kendoChart");
+                            chart.options.valueAxis.majorUnit = 1;
+                            chart.refresh();
+                        }
+
+
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganSickLeave"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate,
+                        lahirDate: lahirDate,
+                        namaKaryawanVendor: namaKaryawanVendor,
+                        NoReg: NoReg,
+                        NamakaryawanTam: NamakaryawanTam,
+                        Divisi: Divisi
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalSickLeaveLabel").text(respon.total);
+                        if (respon.total <= 10) {
+                            var chart = $("#chartSickLeaveTOTAL").data("kendoChart");
+                            chart.options.valueAxis.majorUnit = 1;
+                            chart.refresh();
+                        }
+
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+                $.ajax({
+                    url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganSickNessRate"),
+                    type: "POST",
+                    contentType: "application/x-www-form-urlencoded",
+                    data: {
+                        startDate: startDate,
+                        endDate: endDate,
+                        lahirDate: lahirDate,
+                        namaKaryawanVendor: namaKaryawanVendor,
+                        NoReg: NoReg,
+                        NamakaryawanTam: NamakaryawanTam,
+                        Divisi: Divisi
+
+                    },
+                    success: function (respon) {
+
+                        $("#totalSickNessRateLabel").text(respon.total);
+                        
+
+                    },
+                    error: function (xhr) {
+                        app.error("Error: " + xhr.responseText);
+                    }
+                });
+
+            }
+
+
+            $("#chartUpkkTOTAL").data("kendoChart").dataSource.read();
+
+            $.ajax({
+                url: app.resolveUrl("~/api/ohs/medical-record/GetTotalKunjunganUpkk"),
+                type: "POST",
+                contentType: "application/x-www-form-urlencoded",
+                data: {
+                    startDate: startDate,
+                    endDate: endDate,
+                    lahirDate: lahirDate,
+                    namaKaryawanVendor: namaKaryawanVendor,
+                    NoReg: NoReg,
+                    NamakaryawanTam: NamakaryawanTam,
+                    Divisi: Divisi
+
+                },
+                success: function (respon) {
+
+                    $("#totalKunjunganUpkkLabel").text(respon.total);
+                    if (respon.total <= 10) {
+                        var chart = $("#chartUpkkTOTAL").data("kendoChart");
+                        chart.options.valueAxis.majorUnit = 1;
+                        chart.refresh();
+                    }
+
+                },
+                error: function (xhr) {
+                    app.error("Error: " + xhr.responseText);
+                }
+            });
+
+            //var chartUpkk = $("#chartUpkkTOTAL").data("kendoChart");
+
+            //// Tunggu sampai chart selesai di-load
+            //chartUpkk.dataSource.fetch().then(function () {
+            //    var data = chartUpkk.dataSource.data();
+            //    var total = 0;
+
+            //    // Loop semua data dan jumlahkan
+            //    for (var i = 0; i < data.length; i++) {
+            //        total += (data[i].PemeriksaanKesehatan || 0) +
+            //            (data[i].BerobatTertangani || 0) +
+            //            (data[i].BerobatRujuk || 0) +
+            //            (data[i].BerobatPulang || 0);
+            //    }
+
+            //    // Tampilkan hasil di label
+            //    $("#totalKunjunganUpkkLabel").text(total);
+            //});
+
+
+
+        });
+
+        $('#btnClear').on('click', function () {
+            // Reset filter form
+            //$('#Periode').data('kendoDatePicker').value(null);
+            $('#NoReg').data('kendoMultiSelect').value('');
+            $('#Name').data('kendoMultiSelect').value('');
+            $('#division').data('kendoDropDownTree').value('');
+
+            // Hapus filter dari semua grid
+            // applyFiltersToAllGrids([]);
+        });
+
+        app.registerHandler("downloadMedicalRecord", function (parameters) {
+
+            var startDateValue = $("#startDate").data("kendoDatePicker").value();
+            var endDateValue = $("#endDate").data("kendoDatePicker").value();
+
+            var startDate = startDateValue ? kendo.toString(startDateValue, "yyyy-MM-dd") : "1800-01-01";
+            var endDate = endDateValue ? kendo.toString(endDateValue, "yyyy-MM-dd") : "9999-12-31";
+            var lahirDateValue = $("#LahirDate").data("kendoDatePicker").value();
+            var lahirDate = lahirDateValue ? kendo.toString(lahirDateValue, "yyyy-MM-dd") : "";
+            var namaKaryawanVendor = $("#NamaKaryawanVendor").val();
+            var Noreg = $("#NoReg").data("kendoMultiSelect").value();
+            var NamakaryawanTam = $("#Name").data("kendoMultiSelect").value();
+            var values = $("#division").data("kendoDropDownTree").value();
+            var names = values.map(item => item.split("#")[1]); // Ambil bagian setelah #
+            //console.log(names);
+            var Divisi = encodeURIComponent(names.join(","));  // Encode dengan benar
+            //var urlDownload = "~/api/ohs/medical-record/downloadMedicalRecord?startDate=" + startDate + "&endDate=" + endDate + "&Noreg=" + Noreg + "&Divisi=" + Divisi;
+            // Perbaikan URL Download dengan encoding
+            var urlDownload = "~/api/ohs/medical-record/downloadMedicalRecord"
+                + "?startDate=" + startDate
+                + "&endDate=" + endDate
+                + "&lahirDate=" + lahirDate
+                + "&namaKaryawanVendor=" + namaKaryawanVendor
+                + "&Noreg=" + encodeURIComponent(Noreg)  // Encode untuk keamanan
+                + "&NamakaryawanTam=" + encodeURIComponent(NamakaryawanTam)
+                + "&Divisi=" + Divisi;  // Encode Divisi agar tidak ada error
+            var requestData = {
+                Requestor: '@User.GetClaim("Name")'  // Pastikan ini menghasilkan string
+            };
+            $.ajax({
+                url: app.resolveUrl("~/api/ohs/medical-record/CekValidasi"),
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(requestData),  // Pastikan JSON.stringify digunakan
+                success: function (respon) {
+                    if (respon.datarequest == true) {
+                        // call fungsi download excel
+                        window.open(app.resolveUrl(urlDownload), "_blank");
+                        app.success("Success Download Excel");
+
+                    }
+                    else // call fungsi request new
+                    {
+
+                        app.confirm(app.translate("Are you going to submit it for approval?"), function (d) {
+                            if (!d.value) {//Klik No
+                                return;
+                            }
+
+                            else { // Klik Yes
+
+                                $.ajax({
+                                    url: app.resolveUrl("~/api/ohs/medical-record/InsertNewRequest"),
+                                    type: "POST",
+                                    contentType: "application/json",
+                                    data: JSON.stringify(requestData),  // Pastikan JSON.stringify digunakan
+                                    success: function () {
+                                        app.success("Success Request");
+                                    },
+                                    error: function (xhr) {
+                                        app.error("Error: " + xhr.responseText);
+                                    }
+                                });
+
+
+                            }
+
+
+                        });
+
+                    }
+
+                },
+                error: function (xhr) {
+                    app.error("Error: " + xhr.responseText);
+                }
+            });
+
+        });
+
+    });
+
+
+
+</script>

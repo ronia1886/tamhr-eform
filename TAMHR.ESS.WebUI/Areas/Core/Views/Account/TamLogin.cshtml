@@ -1,0 +1,56 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_LoginLayout.cshtml";
+    ViewData["Title"] = "Welcome to e-Form";
+    var baseContentUrl = Url.Content("~");
+    var returnUrl = @Context.Request.Query["returnUrl"].ToString();
+    var url = returnUrl.StartsWith(baseContentUrl) ? returnUrl.Substring(baseContentUrl.Length) : string.Empty;
+    var passportUrl = ConfigService.GetConfigValue("Passport.Url", string.Empty);
+    var passportJsUrl = ConfigService.GetConfigValue("Passport.JsUrl", string.Empty);
+    var passportAppId = ConfigService.GetConfigValue("Passport.AppId", string.Empty);
+}
+@section scripts {
+    <script type="text/javascript" src="@passportJsUrl"></script>
+    <script type="text/javascript">
+        $(function () {
+            $("#tam-sso-button").addClass("btn btn-circle");
+        });
+    </script>
+}
+<section class="flexbox-container">
+    <div class="col-12 d-flex align-items-center justify-content-center">
+        <div class="col-sm-8 col-md-7 col-lg-5 col-xl-4 col-12 box-shadow-2 p-0">
+            <div class="card border-grey border-lighten-3 m-0">
+                <div class="card-header border-0">
+                    <div class="card-title d-block text-center">
+                        <div class="pt-2">
+                            <img src="~/img/logo/logo1.png" style="width: 5rem;" alt="branding logo">
+                        </div>
+                    </div>
+                    <h6 class="card-subtitle line-on-side text-muted text-center font-small-3 pt-3 bold"><span>@Localizer["Login with e-Form"]</span></h6>
+                </div>
+                <div class="card-content mb-2">
+                    <div class="card-body">
+                        <form id="LoginForm" class="form-horizontal form-simple" method="post" action="~/core/account/TamLoginAsync">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="returnUrl" value="@url" />
+                            <div class="form-actions text-center" style="border: 0;">
+                                <tam-sso server="@passportUrl" app="@passportAppId" auto-submit="LoginForm"></tam-sso>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                <div class="card-footer position-relative">
+                    <div class="">
+                        <p class="float-sm-left m-0">@Localizer["Best Viewed With"]</p>
+                        <p class="float-sm-right m-0 position-absolute font-medium-4" style="top: 18px;right: 20px;">
+                            <img src="~/img/chrome.svg" width="30" height="30">
+                            <img src="~/img/firefox.svg" width="30" height="30">
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+

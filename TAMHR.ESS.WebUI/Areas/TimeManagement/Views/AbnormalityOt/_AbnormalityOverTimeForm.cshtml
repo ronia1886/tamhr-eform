@@ -1,0 +1,418 @@
+﻿@using TAMHR.ESS.Infrastructure.DomainServices
+@model TAMHR.ESS.Domain.AbnormalityOverTimeView
+@inject TAMHR.ESS.Infrastructure.DomainServices.AbnormalityOverTimeService svc;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService ;
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService ;
+@{
+    //var isNew = !Model.AbnormaityProxyIn.HasValue ?;
+    var IsNew = !Model.AbnormalityOverTimeId.HasValue && string.IsNullOrEmpty(Model.DocumentStatusCode);
+    ScriptManager.RegisterReferences("datetimepicker", "grid", "datepicker", "combobox", "chart", "numeric", "upload", "listview");
+    string id = ViewContext.HttpContext.Request.Query["docid"];
+    bool IsRequest = @ViewBag.request;
+    var maxFileSize = 5 * 1000000;
+    //var fileUrl = svc.GetCommonFIle(Model.CommonFileId.HasValue ? Model.CommonFileId.Value : Guid.Empty);
+    var currentNoReg = User.GetClaim("NoReg");
+    var name = @User.GetClaim("Name");
+    var postName = @User.GetClaim("PostName");
+    var postCode = @User.GetClaim("PostCode");
+    var organizationStructure = MdmService.GetActualOrganizationStructure(currentNoReg, postCode);
+    var orgCode = organizationStructure?.OrgCode;
+    Model.Level = Convert.ToInt32(organizationStructure?.EmployeeSubgroupText.Substring(0, 1));
+    if (IsNew)
+    {
+        Model.NoReg = currentNoReg;
+    }
+    var haveDocId = string.IsNullOrEmpty(id);
+
+    DateTime abnormalityDateFrom = DateTime.Parse(ConfigService.GetConfig("Abnormality.StartDate").ConfigValue);
+    DateTime abnormalityDateTo = DateTime.Parse(ConfigService.GetConfig("Abnormality.EndDate").ConfigValue);
+}
+
+@section styles {
+    <link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+}
+
+<form method="post" action="~/api/abnormality-over-time/request">
+    <script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+
+    <script type="text/javascript">
+        var disabledDatesList = [];
+        var enableDateInformattion = [];
+
+        $(function () {
+            $('.clockpicker').clockpicker({
+                donetext: 'Done',
+                autoclose: true
+            });
+
+            $.ajax({
+                url: app.resolveUrl("~/api/abnormality-over-time/get-date-create-ot"),
+                type: 'POST'
+            }).done(function (data) {
+                disabledDatesList = [];
+
+                JSON.parse(data).forEach((el) => {
+                    if(!el.Available){
+                        disabledDatesList.push(new Date(el.OvertimeDate))
+                    } else {
+                        enableDateInformattion.push(el);
+                    }
+                });
+
+                var overtimeDate = $("#OvertimeDate").data("kendoDatePicker");
+
+                overtimeDate.setOptions({
+                    disableDates: disableDatesFunc
+                });
+
+                //overtimeDate.trigger("change");
+            });
+        });
+
+        function CalculateDuration(){
+
+            var postData = {
+                ProxyIn : $('#OvertimeDate').val() + ' ' + $('#ProxyIn').val(),
+                ProxyOut : $('#OvertimeDate').val() + ' ' + $('#ProxyOut').val(),
+                OvertimeIn : $('#OvertimeDate').val() + ' ' + $('#OvertimeIn').val(),
+                OvertimeOut : $('#OvertimeDate').val() + ' ' + $('#OvertimeOut').val(),
+                OvertimeBreak : $('#OvertimeBreak').val(),
+                OvertimeDate : $('#OvertimeDate').val()
+            }
+
+            $.ajax({
+                url: app.resolveUrl("~/api/abnormality-over-time/calculate-overtime-duration"),
+                data: postData,
+                type: 'POST'
+            }).done(function (data) {
+                var numerictextbox = $("#OvertimeTimeDuration").data("kendoNumericTextBox");
+                numerictextbox.value(data);
+                //$('#OvertimeTimeDuration').trigger("change");
+            });
+        }
+
+        function ChangeWorkingDate(){
+            var overtimeDate = $('#OvertimeDate').val().split('/');
+            var overtimeDateDt = new Date(parseInt(overtimeDate[2], 10),
+                  parseInt(overtimeDate[1], 10) - 1,
+                  parseInt(overtimeDate[0], 10));
+
+            var filtered = enableDateInformattion.filter((el) => {
+                var tempDate = new Date(el.OvertimeDate);
+                if (    tempDate.getDate() == overtimeDateDt.getDate() &&
+                        tempDate.getMonth() == overtimeDateDt.getMonth() &&
+                        tempDate.getYear() == overtimeDateDt.getYear()) {
+                        return true;
+                } else {
+                    return false;
+                }
+            });
+            var tempProxyIn = new Date(filtered[0].ProxyIn);
+            var tempProxyOut = new Date(filtered[0].ProxyOut);
+
+            var proxyInHours = ("0" + tempProxyIn.getHours()).slice(-2);
+            var proxyInMinutes = ("0" + tempProxyIn.getMinutes()).slice(-2);
+            var proxyOutHours = ("0" + tempProxyOut.getHours()).slice(-2);
+            var proxyOutMinutes = ("0" + tempProxyOut.getMinutes()).slice(-2);
+
+            $('#ProxyIn').val(`${proxyInHours}:${proxyInMinutes}`);
+            $('#ProxyOut').val(`${proxyOutHours}:${proxyOutMinutes}`);
+
+            $('#OvertimeIn').val('00:00');
+            $('#OvertimeOut').val('00:00');
+
+            CalculateDuration();
+        }
+
+        app.registerHandler("dataInterceptor", function (d) {
+            d.ProxyIn = $('#ProxyIn').val() + ":00";
+            d.ProxyOut = $('#ProxyOut').val() + ":00";
+            d.OvertimeIn = $('#OvertimeIn').val() + ":00";
+            d.OvertimeOut = $('#OvertimeOut').val() + ":00";
+            d.OvertimeDate = $('#OvertimeDate').val();
+            d.OvertimeCategoryCode = $('#OvertimeCategoryCode').val();
+
+            return d;
+        });
+
+        app.registerHandler("saveHandler", function (data) {
+            var viewModel = {
+                //viewModel : {
+                    Id : '@Model.Id',
+                    ProxyIn : $('#ProxyIn').val() + ":00",
+                    ProxyOut : $('#ProxyOut').val() + ":00",
+                    OvertimeIn : $('#OvertimeIn').val() + ":00",
+                    OvertimeOut : $('#OvertimeOut').val() + ":00",
+                    OvertimeInAdjust : $('#OvertimeIn').val() + ":00",
+                    OvertimeOutAdjust : $('#OvertimeOut').val() + ":00",
+                    OvertimeBreakAdjust : $('#OvertimeBreak').val(),
+                    DurationAdjust : $('#OvertimeTimeDuration').val(),
+                    OvertimeReason : $('#OvertimeReason').val(),
+                    OvertimeCategoryCode : $('#OvertimeCategoryCode').val(),
+                    OvertimeBreak : $('#OvertimeBreak').val()
+                //}
+            }
+
+            var saveUrl = app.resolveUrl("~/api/spkl-report/update-detail");
+            $.post(saveUrl, viewModel, function () {
+                app.success(app.translate("Success update items"), window.location.reload());
+                
+            }).fail(function (xhr, status, error) {
+                console.log(xhr);
+            });
+        });
+
+        function disableDatesFunc(date) {
+            if (date && compareDates(date, disabledDatesList)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        function compareDates(date, dates) {
+            for (var i = 0; i < dates.length; i++) {
+                if (dates[i].getDate() == date.getDate() &&
+                  dates[i].getMonth() == date.getMonth() &&
+                    dates[i].getYear() == date.getYear()) {
+                    return true
+                }
+            }
+        }
+    </script>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer["Over Time Detail"]</h4>
+                    <a class="heading-elements-toggle">
+                        <i class="ft-ellipsis-h font-medium-3"></i>
+                    </a>
+                    <div class="heading-elements">
+                        <ul class="list-inline mb-0">
+                            <li>
+                                <a data-action="collapse">
+                                    <i class="ft-minus"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-12 col-sm-12">
+                                <fieldset>
+                                    @Html.HiddenFor(x => x.Id)
+                                    @Html.HiddenFor(x => x.AbnormalityOverTimeId)
+                                    @Html.HiddenFor(x => x.DocumentApprovalId)
+                                    @Html.HiddenFor(x => x.ParentId)
+                                    @Html.HiddenFor(x => x.NoReg)
+                                    @Html.HiddenFor(x => x.Name)
+                                    @Html.HiddenFor(x => x.Email)
+                                    @Html.HiddenFor(x => x.OvertimeInAdjust)
+                                    @Html.HiddenFor(x => x.OvertimeOutAdjust)
+                                    @Html.HiddenFor(x => x.Level)
+
+                                    @Html.HiddenFor(x => x.OvertimeBreakAdjust)
+                                    @Html.HiddenFor(x => x.DurationAdjust)
+                                    @Html.HiddenFor(x => x.EmployeeSubgroup)
+                                    @Html.HiddenFor(x => x.DocumentNumber)
+                                    @Html.HiddenFor(x => x.DocumentStatusCode)
+                                    @Html.HiddenFor(x => x.DocumentStatusTitle)
+                                    @Html.HiddenFor(x => x.ParentDocumentNumber)
+                                    @Html.HiddenFor(x => x.Progress)
+                                    @Html.HiddenFor(x => x.RowStatus)
+                                    @Html.HiddenFor(x => x.CreatedBy)
+                                    @Html.HiddenFor(x => x.CreatedOn)
+                                    @Html.HiddenFor(x => x.ModifiedBy)
+                                    @Html.HiddenFor(x => x.ModifiedOn)
+                                    @Html.HiddenFor(x => x.OvertimeCategory)
+
+                                    <legend>@Localizer["Over Time Data"]</legend>
+
+                                    <div class="row">
+                                        <div class="form-group col-md-12 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Working Date"]</label>
+
+                                            @if (IsNew)
+                                            {
+                                                @(Html.Kendo().DatePicker()
+                                                    .Name("OvertimeDate")
+                                                    .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value, @onchange = "ChangeWorkingDate()" })
+                                                    .Format("dd/MM/yyyy")
+                                                    .Min(abnormalityDateFrom)
+                                                    .Max(abnormalityDateTo)
+                                                )
+                                            }
+                                            else
+                                            {
+                                                @Html.TextBoxFor(x => x.OvertimeDate, "{0:dd/MM/yyyy}", ApplicationHelper.Enable(new { @class = "form-control", @onchange = "ChangeWorkingDate()", id = "OvertimeDate", name = "OvertimeDate"}, false))
+                                            }
+
+                                            <span class="invalid" data-validation-for="OvertimeDate"></span>
+                                        </div>
+                                        @if (IsNew)
+                                        {
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="d-none d-md-inline">@Localizer["Proxy In (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy In"]</span></label>
+                                                <div class="input-group">
+                                                    @Html.TextBoxFor(x => x.ProxyIn, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "ProxyIn", @onchange = "CalculateDuration()", id = "ProxyIn", @readonly = "true"}, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-grey text-black"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="ProxyIn"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="d-none d-md-inline">@Localizer["Proxy Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy Out"]</span></label>
+                                                <div class="input-group">
+                                                    @Html.TextBoxFor(x => x.ProxyOut, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "ProxyOut", @onchange = "CalculateDuration()", id = "ProxyOut", @readonly = "true" }, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-grey text-black"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="ProxyOut"></span>
+                                            </div>
+
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Overtime In (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Overtime In"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    <input class="form-control" data-val="true" data-val-required="'Overtime In' must not be empty." data-validation-for="OvertimeIn" disabled="disabled" id="OvertimeIn" onchange="CalculateDuration()" placeholder="Pilih waktu (HH:mm)" readonly="true" type="text">
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="OvertimeIn"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Overtime Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Overtime Out"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    <input class="form-control" data-val="true" data-val-required="'Overtime Out' must not be empty." data-validation-for="OvertimeOut" disabled="disabled" id="OvertimeOut" onchange="CalculateDuration()" placeholder="Pilih waktu (HH:mm)" readonly="true" type="text">
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="OvertimeOut"></span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="d-none d-md-inline">@Localizer["Proxy In (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy In"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.ProxyIn, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "ProxyIn", @onchange = "CalculateDuration()", id = "ProxyIn", @readonly = "true"}, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-grey text-black"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="ProxyIn"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="d-none d-md-inline">@Localizer["Proxy Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Proxy Out"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.ProxyOut, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "ProxyOut", @onchange = "CalculateDuration()", id = "ProxyOut", @readonly = "true" }, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-grey text-black"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="ProxyOut"></span>
+                                            </div>
+
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Overtime In (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Overtime In"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.OvertimeIn, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "OvertimeIn", @onchange = "CalculateDuration()", id = "OvertimeIn", @readonly = "true"}, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="OvertimeIn"></span>
+                                            </div>
+                                            <div class="form-group col-md-6 col-xs-12">
+                                                <label><span class="required" aria-required="true"> * </span><span class="d-none d-md-inline">@Localizer["Overtime Out (HH:mm)"]</span><span class="d-inline d-md-none">@Localizer["Overtime Out"]</span></label>
+                                                <div class="input-group clockpicker">
+                                                    @Html.TextBoxFor(x => x.OvertimeOut, "{0:HH:mm}", ApplicationHelper.Enable(new { @class = "form-control", placeholder = Localizer["Pilih waktu (HH:mm)"].Value, data_validation_for = "OvertimeOut", @onchange = "CalculateDuration()", id = "OvertimeOut", @readonly = "true" }, false))
+                                                    <div class="input-group-append input-group-addon">
+                                                        <span class="input-group-text bg-blue text-white"><i class="fa fa-clock-o"></i></span>
+                                                    </div>
+                                                </div>
+                                                <span class="invalid" data-validation-for="OvertimeOut"></span>
+                                            </div>
+                                        }
+                                        
+                                        <div class="form-group col-md-6 col-xs-12">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Overtime Break (in Minute)"]</label>
+                                            @(Html.Kendo().NumericTextBoxFor(x => x.OvertimeBreak)
+                                                .Value(Model.OvertimeBreak)
+                                                .HtmlAttributes(new { @class = "form-control text-right", @data_validation_for = "OvertimeBreak", @onchange = "CalculateDuration()", id = "OvertimeBreak" })
+                                                .Format("##.#")
+                                                .Decimals(1)
+                                                .Min(0)
+                                                .Max(1000)
+                                                .Enable(IsRequest)
+                                            )
+                                            <span class="invalid" data-validation-for="OvertimeBreak"></span>
+                                        </div>
+                                        <div class="form-group col-md-6 col-xs-12">
+                                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Duration"]</label>
+                                                    @(Html.Kendo().NumericTextBoxFor(x => x.Duration)
+                                                .Value(Model.Duration)
+                                                .HtmlAttributes(new { style = "width: 100%", @class = "form-control text-right", @data_validation_for = "Duration", id = "OvertimeTimeDuration", @readonly = "true"})
+                                                .Format("##.#")
+                                                .Decimals(1)
+                                                .Min(0)
+                                                .Enable(true)
+                                                .Max(1000)
+                                            )
+                                            <span class="invalid" data-validation-for="Duration"></span>
+                                        </div>
+                                        <div class="form-group col-md-12 col-xs-12">
+                                                    <label><span class="required" aria-required="true"> * </span>@Localizer["Category"]</label>
+                                                    @(Html.KendoComboBoxFor(x => x.OvertimeCategoryCode, "CategorySPKL")
+                                                .HtmlAttributes(new { @class = "form-control", data_validation_for = "OvertimeCategory" })
+                                                .Placeholder(Localizer["Select Category"].Value)
+                                                .SelectedIndex(-1)
+                                                .Enable(IsRequest)
+                                            )
+                                            <span class="invalid" data-validation-for="OvertimeCategoryCode"></span>
+                                        </div>
+                                    </div>
+
+                                </fieldset>
+                            </div>
+
+                            <div class="col-md-12 col-sm-12">
+
+                                <fieldset>
+                                    <legend>@Localizer["Reason"]</legend>
+                                    <div class="form-group ">
+                                        <label><span class="required" aria-required="true"> * </span>@Localizer["Detail Notes"]</label>
+                                        <br />
+                                        @Html.TextAreaFor(x => x.OvertimeReason, ApplicationHelper.Enable(new { @class = "form-control", rows = 5, data_validation_for = "OvertimeReason", placeholder = Localizer["Input Notes"].Value }, IsRequest))
+                                        <span class="invalid" data-validation-for="OvertimeReason"></span>
+                                    </div>
+                                </fieldset>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (IsRequest)
+    {
+        @if (Model.AbnormalityOverTimeId != Guid.Empty)
+        {
+            <div class="actions">
+                <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler" data-interceptor="dataInterceptor">@Localizer["Save"]</a>
+            </div>
+        } else {
+             <div class="actions">
+               <a class="btn red-haze" data-trigger="handler" data-handler="saveHandler">@Localizer["Save"]</a>
+            </div>
+        }
+    }
+
+</form>

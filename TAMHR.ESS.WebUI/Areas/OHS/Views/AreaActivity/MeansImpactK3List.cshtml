@@ -1,0 +1,381 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+	// Layout = "~/Views/Shared/_Layout.cshtml";
+	ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+	//var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+	var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+	var now = DateTime.Now;
+	var start = new DateTime(now.Year, now.Month, 1);
+	var end = start.AddMonths(1).AddDays(-1);
+	var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+}
+@section styles {
+	<style type="text/css">
+		.k-grid th {
+			white-space: nowrap;
+			text-align: center !important;
+			vertical-align: middle !important;
+		}
+
+		td {
+			white-space: nowrap;
+		}
+
+		.adjustment {
+			width: 40px;
+			text-align: center;
+		}
+
+		.fixed-header {
+			top: 50px;
+			position: fixed;
+			width: auto;
+			z-index: 1;
+		}
+
+		.k-grid-header {
+			width: auto !important;
+			padding-right: 0 !important;
+			border-right: 0px solid #fff !important;
+		}
+
+		.k-grid-content.k-auto-scrollable {
+			overflow-y: hidden !important;
+		}
+
+		.k-grid-content-locked {
+			border-right: 1px solid #ddd;
+			height: 100% !important;
+		}
+
+		.custom-control-label::before, .custom-control-label::after {
+			left: -1.13rem;
+		}
+
+		.nav-item {
+			margin-right: 15px; /* Sesuaikan dengan kebutuhan Anda */
+		}
+	</style>
+}
+@section scripts {
+	<script type="text/javascript" src="~/js/pages/ayo-sekolah-report.js"></script>
+	<script type="text/javascript">
+		function getParameters() {
+			var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+				endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+			return { startDate: startDate, endDate: endDate };
+		}
+	</script>
+}
+<div class="col-md-12">
+	<nav class="navbar navbar-light justify-content-between">
+		<ul class="nav nav-tabs" role="tablist" id="dynamicButtons">
+			<li class="nav-item ml-2">
+				<a class="btn btn-secondary btn-sm active" id="btnsarana" data-toggle="tab" href="#facility" role="tab" aria-controls="sarana" aria-selected="true">Sarana Facility Inspection</a>
+			</li>
+			<li class="nav-item">
+				<a class="btn btn-secondary btn-sm" id="btnfire" data-toggle="tab" href="#fire_protection" role="tab" aria-controls="sarana" aria-selected="false">Fire Protection Equipments</a>
+			</li>
+			<li class="nav-item">
+				<a class="btn btn-secondary btn-sm" id="btnapar" data-toggle="tab" href="#apar" role="tab" aria-controls="sarana" aria-selected="false">APAR Refill</a>
+			</li>
+		</ul>
+	</nav>
+</div>
+<div class="row tab-content">
+	<div id="facility" class="col-md-12 tab-pane fade show active">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Safety Facility Inspection"]</h3>
+			<div class="heading-elements">
+				<ul id="SafetyFacility-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["AreaName" , "DivisionName", "TotalPlanSearch", "TotalActualSearch","EquipmentName", "Remark"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="EquipmentName">@Localizer["Equipment"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="TotalPlanSearch">@Localizer["Plan (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="TotalActualSearch">@Localizer["Actual (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Remark">@Localizer["Remark"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_facility" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Safety Facility" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadSafetyFacility">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.SafetyFacilityViewModel>()
+				.Name("grid_facility")
+				.HtmlAttributes(new { data_filter = "SafetyFacility-filter" })
+				.Columns(columns =>
+				{
+					columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+					columns.Bound(o => o.EquipmentName).Title("Equipment").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.DivisionName).Title("Division").Width(200);
+					columns.Bound(o => o.AreaName).Title("Area").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.TotalPlan).Title("Plan (Unit)").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.TotalActual).Title("Actual (Unit)").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Remark).Title("Remark").Width(180).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					
+
+					// Action column
+					columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate(@"
+					<div class=""btn-group"">
+		<a class="" btn btn-sm blue-sharp"" data-target=""grid_facility"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Safety Facility"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadSafetyFacility"" data-parameters-id="" #:Id#"">
+					<i class=""ft-edit""></i>
+					</a>
+					</div>
+					<div class=""btn-group"">
+		<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteSafetyFacility"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+					<i class=""ft-trash""></i>
+					</a>
+					</div>").Width(150);
+				})
+				.DataSource(dataSource => dataSource
+				.Ajax()
+				.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/safetyFacility/gets"))
+				.Data("filterGridByUrlParameters"))
+				.PageSize(20)
+				.Sort(sort =>
+				{
+					sort.Add("CreatedOn").Descending();
+				})
+				)
+				.Pageable(options =>
+				{
+					options.Input(true);
+					options.Numeric(false);
+					options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+				})
+				.Events(events => events.DataBound("onDataBound"))
+				.Scrollable(scrollable => scrollable.Height("auto"))
+				.Deferred()
+				)
+	</div>
+	<div id="fire_protection" class="col-md-12 tab-pane fade">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of Fire Protection"]</h3>
+			<div class="heading-elements">
+				<ul id="FireProtection-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "Category", "InstalledSearch","ReadySearch", "Readiness"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Category">@Localizer["Category"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="InstalledSearch">@Localizer["Installed (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="ReadySearch">@Localizer["Ready (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Readiness">@Localizer["Readiness"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_fire_protection" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create Fire Protection" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadFireProtection">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>	 
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.FireProtectionViewModel>()
+				.Name("grid_fire_protection")
+				.HtmlAttributes(new { data_filter = "FireProtection-filter" })
+				.Columns(columns =>
+				{
+					columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+					columns.Bound(o => o.Category).Title("Category").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.DivisionName).Title("Division").Width(200);
+					columns.Bound(o => o.AreaName).Title("Area").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Installed).Title("Installed (Unit)").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Ready).Title("Ready (Unit)").Width(250).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Readiness).Title("Readiness").Width(180).HtmlAttributes(new { @class = "text-center" }).Width(150);
+					// Action column
+					columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate(@"
+					<div class=""btn-group"">
+					<a class="" btn btn-sm blue-sharp"" data-target=""grid_fire_protection"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit Fire Protection"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadFireProtection"" data-parameters-id="" #:Id#"">
+					<i class=""ft-edit""></i>
+					</a>
+					</div>
+					<div class=""btn-group"">
+					<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteFireProtection"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+					<i class=""ft-trash""></i>
+					</a>
+					</div>").Width(150);
+				})
+				.DataSource(dataSource => dataSource
+				.Ajax()
+				.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/fireProtection/gets"))
+				.Data("filterGridByUrlParameters"))
+				.PageSize(20)
+				.Sort(sort =>
+				{
+					sort.Add("CreatedOn").Descending();
+				})
+				)
+				.Pageable(options =>
+				{
+					options.Input(true);
+					options.Numeric(false);
+					options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+				})
+				.Events(events => events.DataBound("onDataBound"))
+				.Scrollable(scrollable => scrollable.Height("auto"))
+				.Deferred()
+				)
+	</div>
+	<div id="apar" class="col-md-12 tab-pane fade">
+		<div class="card-header bordered">
+			<h3 class="card-title">@Localizer["List of APAR Refill"]</h3>
+			<div class="heading-elements">
+				<ul id="FireProtection-filter" class="page-toolbars" data-role="filter">
+					<li>
+						<a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+							<i class="icon-magnifier"></i>
+						</a>
+						<input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NamaArea" , "DivisionName", "Category", "InstalledSearch","ReadySearch", "Readiness"]' />
+					</li>
+					<li class="dropdown dropdown-arrow">
+						<a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+							<i class="fa fa-sort-amount-desc"></i>
+						</a>
+						<ul class="dropdown-menu dropdown-menu-right">
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Category">@Localizer["Category"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="NamaArea">@Localizer["Nama Area"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="DivisionName">@Localizer["Division Name"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="InstalledSearch">@Localizer["Installed (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="ReadySearch">@Localizer["Ready (Unit)"]</a>
+							</li>
+							<li>
+								<a href="javascript:;" data-trigger="filter" data-sort="Readiness">@Localizer["Readiness"]</a>
+							</li>
+							<li class="dropdown-divider"></li>
+							<li class="p-2">
+								<a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+							</li>
+						</ul>
+					</li>
+
+					<li class="dropdown">
+						<a href="javascript:;" class="font-green-haze" data-target="grid_apar_refill" data-trigger="modal" data-modal="nearmiss-rule-modal" data-modal-title="Create APAR Refill" data-modal-ajax="true" data-ajax-url="~/ohs/areaactivity/LoadAparRefill">
+							<i class="fa fa-plus-circle"></i>
+						</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+		@(Html.Kendo().Grid<TAMHR.ESS.Domain.APARRefillViewModel>()
+				.Name("grid_apar_refill")
+				.Columns(columns =>
+				{
+					columns.Bound(o => o.RowNum).Title("No").HtmlAttributes(new { @class = "text-center" }).Width(50);
+					columns.Bound(o => o.Merk).Title("Merk").HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Type).Title("Type").HtmlAttributes(new { @class = "text-center" }).Width(150);
+					columns.Bound(o => o.Qty).Title("Qty").HtmlAttributes(new { @class = "text-center" }).Width(100);
+					columns.Bound(o => o.DivisionName).Title("Division").Width(150);
+					columns.Bound(o => o.AreaName).Title("Nama Area").Width(180).HtmlAttributes(new { @class = "text-center" });
+					columns.Bound(o => o.UseAparFor).Title("Kegunaan").Width(150).HtmlAttributes(new { @class = "text-center" });
+					columns.Bound(o => o.Remark).Title("Remark").Width(170).HtmlAttributes(new { @class = "text-center" });
+
+					// Action column
+					columns.Bound(o => o.Id).Title(Localizer["Action"].Value).HtmlAttributes(new { @class = "text-center" })
+					.ClientTemplate(@"
+					<div class=""btn-group"">
+		<a class="" btn btn-sm blue-sharp"" data-target=""grid_apar_refill"" data-trigger=""modal"" data-modal=""nearmiss-rule-modal"" data-modal-title=""Edit APAR Refill"" data-modal-ajax=""true"" data-ajax-url=""~/ohs/areaactivity/LoadAparRefill"" data-parameters-id="" #:Id#"">
+					<i class=""ft-edit""></i>
+					</a>
+					</div>
+					<div class=""btn-group"">
+					<a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/ohs/area-activity/deleteAparRefill"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+					<i class=""ft-trash""></i>
+					</a>
+					</div>").Width(150);
+				})
+				.DataSource(dataSource => dataSource
+				.Ajax()
+				.Read(read => read.Url(Url.Content("~/api/ohs/area-activity/apar-refill/gets"))
+				.Data("filterGridByUrlParameters"))
+				.PageSize(20)
+				.Sort(sort =>
+				{
+					sort.Add("CreatedOn").Descending();
+				})
+				.Filter(filter =>
+				{
+				})
+				)
+				.Pageable(options =>
+				{
+					options.Input(true);
+					options.Numeric(false);
+					options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+				})
+				.Events(events => events.DataBound("onDataBound"))
+				.Scrollable(scrollable => scrollable.Height("auto"))
+				.Deferred()
+				)
+	</div>
+</div>

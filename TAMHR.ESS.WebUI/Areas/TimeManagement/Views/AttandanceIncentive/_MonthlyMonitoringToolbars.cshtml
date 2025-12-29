@@ -1,0 +1,86 @@
+﻿@{ 
+    var now = DateTime.Now;
+    var startDate = new DateTime(now.Year, now.Month, 1);
+    var endDate = startDate.AddMonths(1).AddDays(-1);
+    var chief = bool.Parse(User.GetClaim("Chief"));
+}
+<ul id="absence-filter" class="page-toolbars" data-role="filter">
+    @if (chief)
+    {
+        <li class="dropdown dropdown-arrow">
+            <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+                <i class="fa fa-sort-amount-desc"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-right">
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-sort="NoReg">@Localizer["Noreg"]</a>
+                </li>
+                <li>
+                    <a href="javascript:;" data-trigger="filter" data-sort="Name">@Localizer["Name"]</a>
+                </li>
+                <li class="dropdown-divider"></li>
+                <li class="p-2">
+                    <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+                </li>
+            </ul>
+        </li>
+    }
+    <li class="dropdown custom-filter">
+        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fa fa-filter"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-right" style="width: @(chief ? "370px" : "200px");">
+            <form class="form-horizontal p-2" role="form">
+                <div class="row">
+                    <div class="col-12 @(chief ? "col-sm-6" : string.Empty)">
+                        <div class="form-group">
+                            <label>@Localizer["Start Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("StartDate")
+                                .Value(startDate)
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    <div class="col-12 @(chief ? "col-sm-6" : string.Empty)">
+                        <div class="form-group">
+                            <label>@Localizer["End Date"]</label>
+                            @(Html.Kendo().DatePicker()
+                                .Name("EndDate")
+                                .Value(endDate)
+                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                .Format("dd/MM/yyyy")
+                                .Deferred()
+                            )
+                        </div>
+                    </div>
+                    @if (chief)
+                    {
+                        <div class="col-12 col-sm-6">
+                            <div class="form-group">
+                                <label>@Localizer["Class"]</label>
+                                @Html.KendoComboBox("Class", string.Empty, "EmployeeSubgroup", sortExpression: x => x.OrderSequence).Placeholder(Localizer["Please select employee subgroup"].Value).Deferred()
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <div class="form-group">
+                                <label>@Localizer["Employee Status"]</label>
+                                @Html.KendoComboBox("WorkContract", string.Empty, "WorkContract", sortExpression: x => x.OrderSequence).Placeholder(Localizer["Please select employee status"].Value).Deferred()
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label>@Localizer["No Reg./Name"]</label>
+                                @Html.TextBox("Name", null, new { @class = "form-control", @placeholder = Localizer["Please input No Reg./Name"].Value })
+                            </div>
+                        </div>
+                    }
+                </div>
+                <hr class="mt-1"/>
+                <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler">@Localizer["Search"]</a>
+            </form>
+        </div>
+    </li>
+</ul>

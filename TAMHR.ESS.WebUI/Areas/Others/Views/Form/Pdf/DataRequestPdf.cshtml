@@ -1,0 +1,193 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model PdfViewModel
+@{
+    Layout = null;
+    var org = Model.OrgInfo;
+    var orgObjects = Model.OrgObjects;
+    var obj = Model.Object as DataRequestViewModel;
+    var completed = Model.DocumentApproval.DocumentStatusCode == DocumentStatus.Completed;
+    var noreg = org.NoReg;
+    var name = org.Name;
+    var position = org.PostName;
+    var division = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText;
+    var department = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText;
+    var sectionText = orgObjects.FirstOrDefault(x => x.ObjectDescription == "Section")?.ObjectText;
+    var dataDescription = obj.DataDescription;
+    var purposeOfUsage = obj.PurposeOfUsage;
+    var requestDate = obj.RequestDate.ToString("dd/MM/yyyy");
+    var known = Model.PrintoutMatrix.FirstOrDefault(x => x.ApproverLocation == "Known")?.Name;
+    var requester = Model.PrintoutMatrix.FirstOrDefault(x => x.ApproverLocation == "Requester")?.Name;
+}
+<table style="border-collapse: collapse; width: 510pt; margin: 0 auto;" border="0" width="626" cellspacing="0" cellpadding="0">
+    <colgroup><col style="width: 128pt;" width="170" /> <col style="width: 17pt;" width="22" /> <col style="width: 175pt;" width="233" /> <col style="width: 151pt;" width="201" /></colgroup>
+    <tbody>
+        <tr style="height: 48.75pt;">
+            <td style="height: 48.75pt; width: 471pt; font-size: 18pt; font-weight: bold; text-align: center; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" colspan="4" width="626" height="65">FORM PERMINTAAN DATA</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Dengan ini saya,</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Nama</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@name</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Noreg</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@noreg</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Posisi</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@position</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Divisi</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@division</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Department</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@department</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Seksi</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">:</td>
+            <td style="font-size: 14pt; text-align: left; vertical-align: middle; border: 0.5pt solid windowtext; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; white-space: nowrap;" colspan="2">@sectionText</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="3" height="25">memohon permintaan data:</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 104.25pt;">
+            <td style="border-width: 0.5pt; border-style: solid; border-color: windowtext black windowtext windowtext; height: 104.25pt; font-size: 14pt; text-align: left; vertical-align: top; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border-image: initial; white-space: nowrap;" colspan="4" height="139">@dataDescription</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="3" height="25">untuk kebutuhan:</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 104.25pt;">
+            <td style="border-width: 0.5pt; border-style: solid; border-color: windowtext black windowtext windowtext; height: 104.25pt; font-size: 14pt; text-align: left; vertical-align: top; padding-left: 9px; padding-top: 1px; padding-right: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border-image: initial; white-space: nowrap;" colspan="4" height="139">@purposeOfUsage</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="4" height="25">agar data tersebut dapat kami terima tanggal : @requestDate</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="4" height="25">Demikian permintaan tersebut kami buat, atas perhatian dan kerja samanya kami</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="4" height="25">ucapkan terima kasih,</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 15.0pt;">
+            <td style="height: 15pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="20">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-size: 11pt; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="2" height="25">Jakarta,</td>
+            <td style="font-size: 14pt; text-align: right; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="2">Mengetahui Division Head&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">Hormat Saya</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; text-align: left; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="2" height="25">
+                <div style="display: inline-block; position: relative; text-align: center;">
+                    <div style="position: relative; left: 0px; font-style: italic; width: 100%; margin-bottom: 10px;">
+                        @(completed ? "signed" : string.Empty)
+                    </div>
+                    (<span style="border-bottom: 1pt dotted;">@requester</span>)
+                </div>
+            </td>
+            <td style="font-size: 14pt; text-align: right; vertical-align: middle; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; border: none; white-space: nowrap;" colspan="2">
+                <div style="display: inline-block; position: relative; text-align: center;">
+                    <div style="position: relative; left: 0px; font-style: italic; width: 100%; margin-bottom: 10px;">
+                        @(completed ? "signed" : string.Empty)
+                    </div>
+                    (<span style="border-bottom: 1pt dotted;">@known</span>)
+                </div>
+            </td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+        <tr style="height: 18.75pt;">
+            <td style="height: 18.75pt; font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;" height="25">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+            <td style="font-size: 14pt; padding-top: 1px; padding-right: 1px; padding-left: 1px; color: black; font-weight: 400; font-style: normal; font-family: Calibri, sans-serif; vertical-align: bottom; border: none; white-space: nowrap;">&nbsp;</td>
+        </tr>
+    </tbody>
+</table>

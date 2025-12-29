@@ -1,0 +1,17 @@
+{
+  "name": "e-Form",
+  "short_name": "e-Form",
+  "description": "Employee Self Service Electronic Form",
+  "icons": [
+    {
+      "src": "/img/logo/logo1.png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/img/logo/splash-logo.png",
+      "sizes": "512x512"
+    }
+  ],
+  "display": "standalone",
+  "start_url": "/"
+}

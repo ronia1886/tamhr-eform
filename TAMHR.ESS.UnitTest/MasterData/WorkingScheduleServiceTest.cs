@@ -1,0 +1,69 @@
+﻿using Agit.Domain.Repository;
+using Agit.Domain.UnitOfWork;
+using Moq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using TAMHR.ESS.Domain;
+using TAMHR.ESS.Infrastructure.DomainServices;
+using Xunit;
+
+namespace TAMHR.ESS.UnitTest.MasterData
+{
+    public class WorkingScheduleServiceTest
+    {
+        private readonly Mock<IUnitOfWork> _mockUnitOfWork;
+        private readonly Mock<IRepository<WorkSchedule>> _mockRepo;
+        private readonly TestWorkScheduleService _service;
+
+        public WorkingScheduleServiceTest()
+        {
+            _mockUnitOfWork = new Mock<IUnitOfWork>();
+            _mockRepo = new Mock<IRepository<WorkSchedule>>();
+
+            _mockUnitOfWork.Setup(u => u.GetRepository<WorkSchedule>())
+                           .Returns(_mockRepo.Object);
+
+            _mockUnitOfWork.Setup(u => u.SaveChanges());
+
+            _service = new TestWorkScheduleService(_mockUnitOfWork.Object);
+        }
+
+        [Fact]
+        public void Upsert_ShouldCallRepositoryUpsert_AndSaveChanges()
+        {
+            // Arrange
+            var model = new WorkSchedule { Id = Guid.NewGuid() };
+
+            // Act
+            _service.Upsert(model);
+
+            // Assert
+            _mockRepo.Verify(r => r.Upsert<Guid>(model, It.IsAny<string[]>()), Times.Once);
+            _mockUnitOfWork.Verify(u => u.SaveChanges(), Times.Once);
+        }
+
+        [Fact]
+        public void Delete_ShouldCallRepositoryUpsert_AndSaveChanges()
+        {
+            // Arrange
+            var Id = Guid.NewGuid();
+
+            // Act
+            _service.DeleteById(Id);
+
+            // Assert
+            _mockRepo.Verify(r => r.DeleteById(Id), Times.Once);
+            _mockUnitOfWork.Verify(u => u.SaveChanges(), Times.Once);
+        }
+    }
+
+    public class TestWorkScheduleService : WorkScheduleService
+    {
+        public TestWorkScheduleService(IUnitOfWork unitOfWork) : base(unitOfWork) { }
+
+        protected override string[] Properties => Array.Empty<string>();
+    }
+}

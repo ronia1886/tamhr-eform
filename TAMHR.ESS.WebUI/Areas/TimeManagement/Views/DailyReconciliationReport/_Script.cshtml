@@ -1,0 +1,589 @@
+﻿<script>
+
+    $.filterDepartment = function () {
+
+        //return {
+        //    Division: $("#division").val()
+        //};
+    }
+
+    function ClearDropDownTree(id){
+        $("#"+id).data("kendoDropDownTree").enable(false);
+        $("#"+id).data("kendoDropDownTree").value("");
+    }
+
+    function EmployeeSelect(e)
+    {
+        var DataItem = this.dataItem(e.item.index());
+        $("#SelectedNoReg").val(DataItem.NoReg);
+    }
+
+    $.OnChangeDirectorate = function (e) {
+        ClearDropDownTree("division");
+        ClearDropDownTree("department");
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var directorates = $("#directorate").data("kendoDropDownTree").value();
+
+        var directorateValue = [];
+
+        directorates.forEach(
+            Directorate =>
+                directorateValue.push(Directorate.split('#')[0])
+        )
+
+        var child = $("#division").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-division")",
+            dataType: "json",
+            data: { DirectorateList: directorateValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDivision = function (e) {
+        ClearDropDownTree("department");
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var divisions = $("#division").data("kendoDropDownTree").value();
+
+        var divisionValue = [];
+
+        divisions.forEach(
+            Division =>
+                divisionValue.push(Division.split('#')[0])
+        )
+
+        var child = $("#department").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-department")",
+            dataType: "json",
+            data: { DivisionList: divisionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeDepartment = function (e) {
+        ClearDropDownTree("section");
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var departments = $("#department").data("kendoDropDownTree").value();
+
+        var departmentValue = [];
+
+        departments.forEach(
+            Department =>
+                departmentValue.push(Department.split('#')[0])
+        )
+
+        var child = $("#section").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-section")",
+            dataType: "json",
+            data: { DepartmentList: departmentValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeSection = function (e) {
+        ClearDropDownTree("line");
+        ClearDropDownTree("group");
+
+        var sections = $("#section").data("kendoDropDownTree").value();
+        var sectionValue = [];
+
+        sections.forEach(
+            Section =>
+                sectionValue.push(Section.split('#')[0])
+        )
+
+        var child = $("#line").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-line")",
+            dataType: "json",
+            data: { SectionList: sectionValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    $.OnChangeLine = function (e) {
+        ClearDropDownTree("group");
+
+        var lines = $("#line").data("kendoDropDownTree").value();
+        var lineValue = [];
+
+        lines.forEach(
+            Line =>
+                lineValue.push(Line.split('#')[0])
+        )
+
+        var child = $("#group").data("kendoDropDownTree");
+        $.ajax({
+            method: "POST",
+            url: "@Url.Content("~/api/daily-reconciliation/get-group")",
+            dataType: "json",
+            data: { LineList: lineValue },
+            success: function (result) {
+                var listItem = [];
+                result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                var dataSource = new kendo.data.HierarchicalDataSource({
+                    data:  listItem
+                });
+                child.setDataSource(dataSource);
+                child.enable(true);
+                child.trigger("change");
+            }
+        });
+    }
+
+    function getGrid() {
+        return $("#grid").data("kendoGrid");
+    }
+
+    //function getChart() {
+    //    return $("#chart").data("kendoChart");
+    //}
+
+    $.getData = function () {
+        return {
+            employeeName: $("#employeeName").data("kendoAutoComplete").value(),
+            dateFrom: kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+            dateTo: kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd'),
+        };
+    };
+
+    function FilterData (){
+        var directorateList = $("#directorate").data("kendoDropDownTree").value();
+        var divisionList = $("#division").data("kendoDropDownTree").value();
+        var departmentList = $("#department").data("kendoDropDownTree").value();
+        var sectionList = $("#section").data("kendoDropDownTree").value();
+        var lineList = $("#line").data("kendoDropDownTree").value();
+        var groupList = $("#group").data("kendoDropDownTree").value();
+
+        dateFrom = $("#dateFrom").val();
+        dateTo = $("#dateTo").val();
+        Class = $("#class").val();
+        presenceCode = $("#presenceCode").val();
+
+        var selectedNoReg = $("#SelectedNoReg").val();
+
+        filters = [{
+
+        }];
+
+        var finalFilter = {
+            logic: "and",
+            filters: []
+        }
+        //DIRECTORATE FILTER
+        if (directorateList.length > 0) {
+            var directorateFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+
+            directorateList.forEach(
+                directorate =>
+                    directorateFilter.filters.push(
+                        {
+                            field: 'Directorate',
+                            operator: 'eq',
+                            value: directorate.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(directorateFilter);  
+        }
+
+        //DIVISION FILTER
+        if (divisionList.length > 0) {
+            var divisionFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+
+            divisionList.forEach(
+                division =>
+                    divisionFilter.filters.push(
+                        {
+                            field: 'Division',
+                            operator: 'eq',
+                            value: division.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(divisionFilter);  
+        }
+
+        //DEPARTMENT FILTER
+        if (departmentList.length > 0) {
+            var departmentFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            departmentList.forEach(
+                department =>
+                    departmentFilter.filters.push(
+                        {
+                            field: 'Department',
+                            operator: 'eq',
+                            value: department.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(departmentFilter);
+        }
+
+        //SECTION FILTER
+        if (sectionList.length > 0) {
+            var sectionFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            sectionList.forEach(
+                section =>
+                    sectionFilter.filters.push(
+                        {
+                            field: 'section',
+                            operator: 'eq',
+                            value: section.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(sectionFilter);
+        }
+
+        //LINE FILTER
+        if (lineList.length > 0) {
+            var lineFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            lineList.forEach(
+                line =>
+                    lineFilter.filters.push(
+                        {
+                            field: 'Line',
+                            operator: 'eq',
+                            value: line.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(lineFilter);
+        }
+
+        //GROUP FILTER
+        if (groupList.length > 0) {
+            var groupFilter =
+            {
+                logic: "or",
+                filters: []
+            };
+            groupList.forEach(
+                group =>
+                    groupFilter.filters.push(
+                        {
+                            field: 'Group',
+                            operator: 'eq',
+                            value: group.split("#")[1]
+                        }
+                    )
+            )
+            finalFilter.filters.push(groupFilter);
+        }
+
+        if (Class != "") {
+            finalFilter.filters.push({
+                field: 'Class',
+                operator: 'eq',
+                value: Class
+            });
+        }
+
+        if (presenceCode != "") {
+            finalFilter.filters.push({
+                field: 'AbsentStatus',
+                operator: 'eq',
+                value: presenceCode
+            });
+        }
+
+        if(selectedNoReg != ""){
+            finalFilter.filters.push({
+                field: 'NoReg',
+                operator: 'contains',
+                value: selectedNoReg
+            });
+        }
+
+        return finalFilter;
+    }
+$.onSubmit = function() {
+    var $grid = getGrid();
+    if (typeof $grid === 'undefined' || typeof $grid.dataSource === 'undefined') return;
+    var dataSource = $grid.dataSource,
+        employeeName = $("#employeeName").val();
+
+    //var $chart = getChart();
+    //if (typeof $chart === 'undefined' || typeof $chart.dataSource === 'undefined') return;
+    //var dataSource_chart = $chart.dataSource;
+
+    finalFilter = FilterData();
+
+    dataSource.filter(finalFilter);
+
+};
+
+    (function ($, app) {
+        $.getParameters = function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var EmployeeClass = $("#class").val();
+            var AbsentStatus = $("#presenceCode").val();
+
+            var directorateList = $("#directorate").data("kendoDropDownTree").value();
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            
+            var departmentList = $("#department").data("kendoDropDownTree").value();
+            var sectionList = $("#section").data("kendoDropDownTree").value();
+            var lineList = $("#line").data("kendoDropDownTree").value();
+            var groupList = $("#group").data("kendoDropDownTree").value();
+
+            var directorateValue = [];
+
+            directorateList.forEach(
+                Directorate =>
+                    directorateValue.push(Directorate.split('#')[1])
+            );
+
+            var divisionValue = [];
+
+            divisionList.forEach(
+                Division =>
+                    divisionValue.push(Division.split('#')[1])
+            );
+
+            var departmentValue = [];
+
+            departmentList.forEach(
+                Department =>
+                    departmentValue.push(Department.split('#')[1])
+            );
+
+            var sectionValue = [];
+
+            sectionList.forEach(
+                Section =>
+                    sectionValue.push(Section.split('#')[1])
+            );
+
+            var lineValue = [];
+
+            lineList.forEach(
+                Line =>
+                    lineValue.push(Line.split('#')[1])
+            );
+
+            var groupValue = [];
+
+            groupList.forEach(
+                Group =>
+                    groupValue.push(Group.split('#')[1])
+            );
+
+            return { employeeName:EmployeeName, startDate: DateFrom, endDate: DateTo,listDirectorate:directorateValue,
+                     listDivision:divisionValue,listDepartment:departmentValue,listSection:sectionValue,listLine:lineValue,listGroup:groupValue,
+                     class : EmployeeClass,absentStatus : AbsentStatus};
+        };
+
+        $.download = function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            window.open(app.resolveUrl("~/api/daily-reconciliation/download?EmployeeName='"+EmployeeName+"'DateFrom='" + DateFrom + "'&DateTo='" + DateTo + "'&whereClause=" + JSON.stringify($.filterDownload())), "_blank");
+        };
+
+        $.filterDownload = function () {
+            var dirdata = andScript($("#directorate").data("kendoDropDownList").text().split("&"));
+            var divdata = andScript($("#division").data("kendoDropDownList").text().split("&"));
+            var depdata = andScript($("#department").data("kendoDropDownList").text().split("&"));
+            var secdata = andScript($("#section").data("kendoDropDownList").text().split("&"));
+            var linedata = andScript($("#line").data("kendoDropDownList").text().split("&"));
+            var groupdata = andScript($("#group").data("kendoDropDownList").text().split("&"));
+            var entity = {
+                Name: $("#employeeName").val(),
+                Division: divdata,
+                Department: depdata,
+                Section: secdata,
+                Line: linedata,
+                Group: groupdata,
+                Class: $("#class").val(),
+                AbsentStatus: $("#presenceCode").val()
+            };
+
+            return entity;
+        };
+
+        function andScript(arrData) {
+            var str = "";
+            for (var i = 0; i < arrData.length; i++) {
+                str = str + arrData[i] + "xtx";
+            }
+            return str.substring(0, str.length - 3);
+        }
+
+        $.loadSummary = function () {
+            var param = $.getParameters();
+
+            $.ajax({
+                method: "POST",
+                url: "@Url.Content("~/api/daily-reconciliation/absence-summary")",
+                dataType: "json",   
+                data: { employeeName:param.employeeName, startDate: param.startDate, endDate: param.endDate, 
+                        listDirectorate:param.listDirectorate,listDivision:param.listDivision,listDepartment:param.listDepartment,
+                        listSection:param.listSection,listLine:param.listLine,listGroup:param.listGroup,className : param.class,absentStatus : param.absentStatus},
+                success: function (result) {
+                    var chart = $("#chart").data("kendoChart");
+                    chart.setDataSource(result);
+                }
+            });         
+        }
+
+        $.onDataBound = function () {
+            $.loadSummary();
+        };
+
+        app.registerHandler("downloadReportHandler", function () {
+            var EmployeeName = $("#employeeName").data("kendoAutoComplete").value();
+            var DateFrom = kendo.toString($("#dateFrom").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+            var DateTo = kendo.toString($("#dateTo").data("kendoDatePicker").value(), 'yyyy-MM-dd');
+
+            var directorateList = $("#directorate").data("kendoDropDownTree").value();
+            var divisionList = $("#division").data("kendoDropDownTree").value();
+            var departmentList = $("#department").data("kendoDropDownTree").value();
+            var sectionList = $("#section").data("kendoDropDownTree").value();
+            var lineList = $("#line").data("kendoDropDownTree").value();
+            var groupList = $("#group").data("kendoDropDownTree").value();
+
+            var directorateValue = [];
+
+            directorateList.forEach(
+                Directorate =>
+                    directorateValue.push(Directorate.split('#')[1])
+            );
+
+            var divisionValue = [];
+
+            divisionList.forEach(
+                Division =>
+                    divisionValue.push(Division.split('#')[1])
+            );
+
+            var departmentValue = [];
+
+            departmentList.forEach(
+                Department =>
+                    departmentValue.push(Department.split('#')[1])
+            );
+
+            var sectionValue = [];
+
+            sectionList.forEach(
+                Section =>
+                    sectionValue.push(Section.split('#')[1])
+            );
+
+            var lineValue = [];
+
+            lineList.forEach(
+                Line =>
+                    lineValue.push(Line.split('#')[1])
+            );
+
+            var groupValue = [];
+
+            groupList.forEach(
+                Group =>
+                    groupValue.push(Group.split('#')[1])
+            );
+
+            //var dirdata = andScript($("#directorate").data("kendoDropDownTree").value().split("&"));
+            //var divdata = andScript($("#division").data("kendoDropDownTree").value().split("&"));
+            //var depdata = andScript($("#department").data("kendoDropDownTree").value().split("&"));
+            //var secdata = andScript($("#section").data("kendoDropDownTree").value().split("&"));
+            //var linedata = andScript($("#line").data("kendoDropDownTree").value().split("&"));
+            //var groupdata = andScript($("#group").data("kendoDropDownTree").value().split("&"));
+            var entity = {
+                Name: $("#employeeName").val(),
+                Division: directorateValue,
+                Department: departmentValue,
+                Section: sectionValue,
+                Line: lineValue,
+                Group: groupValue,
+                Class: $("#class").val(),
+                AbsentStatus: $("#presenceCode").val()
+            };
+            strEntity = JSON.stringify(entity);
+            //console.log(strEntity);
+            var selectedNoReg = $("#SelectedNoReg").val();
+
+            window.open(app.resolveUrl("~/api/daily-reconciliation/download?employeeName="+EmployeeName + "&noReg=" + selectedNoReg +"&dateFrom=" + DateFrom 
+            + "&dateTo=" + DateTo + "&listDirectorate=" + encodeURIComponent(directorateValue) 
+            + "&listDivision=" + encodeURIComponent(divisionValue) + "&listDepartment=" + encodeURIComponent(departmentValue) 
+            + "&listSection=" + encodeURIComponent(sectionValue) + "&listLine=" + encodeURIComponent(lineValue) 
+            + "&listGroup=" + encodeURIComponent(groupValue) + "&class=" + $("#class").val()+"&absentStatus="+$("#presenceCode").val()), "_blank");
+        });
+     })(jQuery, app);
+</script>

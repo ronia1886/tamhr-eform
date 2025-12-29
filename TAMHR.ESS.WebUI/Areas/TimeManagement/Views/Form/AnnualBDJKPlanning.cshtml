@@ -1,0 +1,1405 @@
+﻿@using TAMHR.ESS.Infrastructure
+@model DocumentRequestDetailViewModel<AnnualBDJKPlanningViewModel>
+@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.UserService UserService
+@inject TAMHR.ESS.Infrastructure.DomainServices.ApprovalService ApprovalService
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService MdmService
+@inject TAMHR.ESS.Infrastructure.DomainServices.AnnualBDJKPlanningService AnnualBDJKPlanningService
+@{
+    bool canEdit = AclHelper.CanEdit();
+    var currentUser = User.GetClaim("NoReg");
+    var requester = UserService.GetByNoReg(Model.Requester);
+    bool isRequester = Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid)
+                     || (!string.IsNullOrEmpty(Model.Requester) && Model.Requester == User.GetClaim("NoReg"));
+    bool otherVersionExists = false;
+
+    ScriptManager.RegisterReferences("datepicker","grid","multiselect","treelist", "dropdowntree");
+
+    // If the form is new request form, then use the current user as the noreg. If the form is opened by his/her superior, then use requester as the noreg
+    currentUser = (Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid) ? User.GetClaim("NoReg") : Model.Requester);
+    string postCode = User.GetClaim("PostCode");
+    string postName = User.GetClaim("PostName");
+    var aos = MdmService.GetActualOrganizationStructure(currentUser);
+
+    var now = DateTime.Now;
+    // If this is a new request form, then use next year as the default period. Otherwise, use the submitted period.
+    int periodYear = Model.Object.AnnualBDJKPlanning == null ?  (now.Month != 12 ? now.Year : now.Year + 1) : Model.Object.AnnualBDJKPlanning.YearPeriod;
+
+    var mode = ViewData["mode"] == null ? string.Empty : ViewData["mode"].ToString();
+
+    var descriptions = ConfigService.GetGeneralCategories("bdjkcode");
+
+    DateTime minDate = new DateTime(periodYear, 1, 1);
+    DateTime maxDate = new DateTime(periodYear, 12, 31);
+
+    AnnualBDJKPlanning abp = AnnualBDJKPlanningService.GetByKey(currentUser,postCode, periodYear);
+    if (abp != null)
+    {
+        otherVersionExists = true;
+    }
+
+    if (mode.ToLower() == "edit")
+    {
+        canEdit = true;
+
+        if (Model.DocumentApprovalId == null)
+        {
+            canEdit = false;
+        }
+
+        // If the approved data is going to be edited, then the new leave data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+    else if(otherVersionExists)
+    {
+        // If the approved data is going to be edited, then the new leave data could only be in next month dates.
+        minDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, 1);
+        maxDate = new DateTime(periodYear, DateTime.Today.AddMonths(1).Month, (new DateTime(@periodYear, DateTime.Today.AddMonths(2).Month, 1).AddDays(-1).Day));
+    }
+
+    bool isApprover = false;
+    if (Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty)
+    {
+        TrackingApproval trackingApproval = ApprovalService.GetTrackingApprovals(Model.DocumentApprovalId).Where(a => a.NoReg != Model.Requester).FirstOrDefault();
+        if (trackingApproval != null)
+        {
+            isApprover = true;
+        }
+    }
+}
+
+@*@if ((otherVersionExists && Model.DocumentApprovalId != null && Model.DocumentApprovalId != Guid.Empty) 
+    || (Model.DocumentApprovalId == Guid.Empty && !otherVersionExists) 
+    || (Model.DocumentStatusCode == DocumentStatus.Draft || Model.DocumentStatusCode == DocumentStatus.InProgress|| Model.DocumentStatusCode == DocumentStatus.Revised|| Model.DocumentStatusCode == DocumentStatus.Rejected)) *@
+@if (otherVersionExists && (Model.DocumentApprovalId == null || Model.DocumentApprovalId == Guid.Empty))
+{
+    <div class="bd-callout bd-callout-warning bg-white mt-0">
+        <h4 id="conveying-meaning-to-assistive-technologies"><i class="fa fa-warning font-yellow-crusta"></i> &nbsp;@Localizer["Cannot create request"]</h4>
+        <p>@Localizer["Tidak dapat membuat permohonan baru karena Annual BDJK Planning untuk tahun "+ periodYear +" telah diinput sebelumnya."]</p>
+        <a href="@Url.Content("~/timemanagement/annualplanning")" class="btn btn-warning font-white btn-sm"><i class="ft-arrow-left"></i> @Localizer["Back"]</a>
+    </div>
+    @section formActions{
+
+    }
+}else
+{
+    
+@section scripts {
+    <script type="text/javascript">
+        if('@Model.DocumentApprovalId'!=""){
+            $("#download-@Model.DocumentApprovalId").remove();
+        }
+        var annualBDJKPlanningDetails = [];
+        var selectedEmp = [];
+        var period;
+        function uuidv4() {
+            return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
+
+        var BDJKTotal = function (item) {
+            var totalBDJK = 0;
+            $.each(item, function (i, v) {
+               totalBDJK += v.Days;
+            });
+            return totalBDJK;
+        };
+
+        var avatarURL = function (noreg) {
+            var linkUrlAvatar = $('#UrlAvatar').val();
+            return linkUrlAvatar + noreg;
+        }
+
+        function selectEmployee(item) {
+            var emp = {
+                NoReg: item.dataItem.NoReg,
+                Name: item.dataItem.Name,
+                PostName: item.dataItem.PostName
+            };
+            selectedEmp.push(emp);
+
+            //$.OnChangeDate();
+        }
+        function deselectEmployee(item) {
+            selectedEmp = $.grep(selectedEmp, function (e) {
+                return e.NoReg != item.dataItem.NoReg;
+            });
+
+            //$.OnChangeDate();
+        }
+        function refreshGrid(details) {
+            $.each(details,function(i,dt){
+                
+                var today = new Date();
+                var dd = String(today.getDate()).padStart(2, '0');
+                var mm = String(today.getMonth() + 2).padStart(2, '0'); //January is 0!
+                
+                var yyyy = today.getFullYear();
+
+                if(mm>12){
+                    mm = '01';
+                    yyyy = yyyy + 1;
+                }
+
+                currentMonth = yyyy + "-" + mm;
+
+                if(kendo.toString(kendo.parseDate(dt.StartDate), "yyyy-MM")>currentMonth && '@canEdit' && '@mode' == "edit"){
+                    details[i].IsHidden = 1;
+                }else{
+                    details[i].IsHidden = 0;
+                }
+            });
+
+            // Define Annual BDJK Planning Grid (bind to local data)
+            var dataSource = new kendo.data.DataSource({
+                data: details,
+                pageSize: 10,
+                schema: {
+                    total: function () {
+                        return details.length;
+                    }
+                },
+                group: [
+                    { field: "Name", aggregates: [{ field: "Days", aggregate: "sum" }, { field: "NoReg", aggregate: "max" }, { field: "PostName", aggregate: "max" }] }
+                ],
+                sort: [
+                    { field: "Name", dir: "asc" },
+                    { field: "StartDate", dir: "asc" }
+                ]
+            });
+
+            var annualBDJKPlanningDetailGrid = $("#annualBDJKPlanningDetailGrid").data("kendoGrid");
+
+            if (annualBDJKPlanningDetailGrid != null) {
+                annualBDJKPlanningDetailGrid.setDataSource(dataSource);
+                annualBDJKPlanningDetailGrid.refresh();
+            }
+        }
+
+        function clearForm() {
+            $startDate = $("#StartDate").data("kendoDatePicker");
+            $endDate = $("#EndDate").data("kendoDatePicker");
+            //$bdjkCode = $("#BDJKCode").data("kendoComboBox");
+            $bdjkCode = $("#BDJKCode").data("kendoDropDownTree");
+            $activity = $("#Activity").data("kendoComboBox");
+            $employees = $("#employees").data("kendoMultiSelect");
+
+            $startDate.value('');
+            $endDate.value('');
+            $bdjkCode.value([]);
+            $bdjkCode.trigger("change");
+            $activity.value('');
+            $employees.value([]);
+            $employees.trigger("change");
+            selectedEmp = [];
+        }
+
+        function deleteRow(id) {
+            var removeIndex = annualBDJKPlanningDetails.map(item => item.Id).indexOf(id);
+            (removeIndex >= 0) && annualBDJKPlanningDetails.splice(removeIndex, 1);
+
+            refreshGrid(annualBDJKPlanningDetails);
+        }
+
+        function recalculate(result) {
+            $.each(result, function (index, item) {
+                // Format date
+                item.StartDate = kendo.parseDate(item.StartDate);
+                item.EndDate = kendo.parseDate(item.EndDate);
+
+                if (item.IsUpdated == true)
+                    item.IsUpdated = 1;
+                else
+                    item.IsUpdated = 0;
+
+                item.IsNew = 0;
+
+                annualBDJKPlanningDetails.push(item);
+            });
+
+            refreshGrid(annualBDJKPlanningDetails);
+        }
+
+        var indexOfDataItem = function (dataItem) {
+            var result = -1;
+            $.each(annualBDJKPlanningDetails, function (index, item) {
+                if (dataItem.NoReg == item.NoReg && dataItem.StartDate == item.StartDate && dataItem.EndDate == item.EndDate)
+                    result = index;
+            });
+            return result;
+        };
+
+        function onDataBound(e) {
+            var startDateColumnIndex = this.wrapper.find(".k-grid-header [data-field=StartDate]").index();
+            var endDateColumnIndex = this.wrapper.find(".k-grid-header [data-field=EndDate]").index();
+
+            var rows = e.sender.tbody.children();
+            for (var i = 0; i < rows.length; i++) {
+                var row = $(rows[i]);
+                if (!row.hasClass("k-grouping-row")) {
+                    var dataItem = e.sender.dataItem(row);
+                    var startDate = dataItem.get("StartDate");
+                    var endDate = dataItem.get("EndDate");
+                    var startDateCell = row.children().eq(startDateColumnIndex);
+                    var endDateCell = row.children().eq(endDateColumnIndex);
+                    startDateCell.html("<div>" + kendo.toString(startDate, "dd/MM/yyyy")+ "</div>"
+                    //+ "<span class='invalid' data-validation-for='Object.AnnualBDJKPlanningDetails[" + indexOfDataItem(dataItem) + "].StartDate'></span>"
+                    );
+                    endDateCell.html("<div>" + kendo.toString(endDate, "dd/MM/yyyy")+ "</div>"
+                    //+ <span class='invalid' data-validation-for='Object.AnnualBDJKPlanningDetails[" + indexOfDataItem(dataItem) + "].EndDate'></span>"
+                    );
+                }
+            }
+        }
+
+        function getObject() {
+            var annualBDJKPlanning = {
+                Submitter: '@currentUser',
+                YearPeriod: '@periodYear'
+            }
+
+            // Parse Kendo Date To Date only (excluding time)
+            $.each(annualBDJKPlanningDetails, function (index, item) {
+                item.StartDate = kendo.toString(item.StartDate, "yyyy-MM-dd");
+                item.EndDate = kendo.toString(item.EndDate, "yyyy-MM-dd");
+            });
+
+            return {
+                AnnualBDJKPlanning: annualBDJKPlanning,
+                AnnualBDJKPlanningDetails: annualBDJKPlanningDetails
+            };
+        }
+
+        function search() {
+            var startDate = $("#StartDateFilter").data("kendoDatePicker").value();
+            var endDate = $("#EndDateFilter").data("kendoDatePicker").value();
+            var bdjkCode = $("#BDJKCodeFilter").data("kendoComboBox").value();
+            var activity = $("#ActivityFilter").data("kendoComboBox").value();
+
+            var grid = $("#annualBDJKPlanningDetailGrid").data("kendoGrid");
+            var dataSource = grid.dataSource;
+            var filters = [];
+
+            if (startDate != undefined && startDate != null) {
+                filters.push({
+                    field: "StartDate",
+                    operator: "gte",
+                    value: kendo.parseDate(startDate)
+                });
+            }
+
+            if (endDate != undefined && endDate != null) {
+                filters.push({
+                    field: "EndDate",
+                    operator: "lte",
+                    value: kendo.parseDate(endDate)
+                });
+            }
+
+            if (bdjkCode != undefined && bdjkCode != null && bdjkCode != "" && bdjkCode != '%') {
+                filters.push({
+                    field: "BDJKCode",
+                    operator: "eq",
+                    value: bdjkCode
+                });
+            }
+
+            if (activity != undefined && activity != null && activity != "" && activity != '%') {
+                filters.push({
+                    field: "ActivityCode",
+                    operator: "eq",
+                    value: activity
+                });
+            }
+
+            dataSource.filter(filters);
+        }
+
+        $(window).on('load', function () {
+            var checkInterval = setInterval(function () {
+                let $startDate = $("#StartDate").data("kendoDatePicker"),
+                    $endDate = $("#EndDate").data("kendoDatePicker");
+                var mode = '@mode';
+            @if(mode.ToLower() == "edit" || otherVersionExists)
+            {
+                @* If this is edit form, allow leave data input only for next month *@
+                <text>
+                if ($startDate != undefined && $startDate != null && $endDate != undefined && $endDate != null) {
+                    //console.log($startDate);
+                    //console.log($endDate);
+                    $startDate.min(new Date(@minDate.Year, @(minDate.Month - 1), 1));
+                    $startDate.max(new Date(@maxDate.Year, @(maxDate.Month - 1), @maxDate.Day));
+                    $endDate.min(new Date(@minDate.Year, @(minDate.Month - 1), 1));
+                    $endDate.max(new Date(@maxDate.Year, @(maxDate.Month - 1), @maxDate.Day));
+
+                    clearInterval(checkInterval);
+                }
+                </text>
+            }
+            else
+            {
+                @* If this is a new data form, allow leave data input for the whole next calendar year *@
+                <text>
+                if ($startDate != null && $endDate != null) {
+                    //console.log($startDate);
+                    //console.log($endDate);
+                    if ($startDate != undefined && $startDate != null) {
+                        $startDate.min(new Date(@periodYear, 0, 1));
+                        $startDate.max(new Date(@periodYear, 11, 31));
+                    }
+                    if ($endDate != undefined && $endDate != null) {
+                        $endDate.min(new Date(@periodYear, 0, 1));
+                        $endDate.max(new Date(@periodYear, 11, 31));
+                    }
+                    clearInterval(checkInterval);
+                }
+                </text>
+            }
+            }, 100);
+        });
+
+        function recalculateUploadedData(result) {
+            annualBDJKPlanningDetails = [];
+            $.each(result, function (index, item) {
+                // Format date
+                item.StartDate = kendo.parseDate(item.StartDate);
+                item.EndDate = kendo.parseDate(item.EndDate);
+
+                if (item.IsUpdated == true)
+                    item.IsUpdated = 1;
+                else
+                    item.IsUpdated = 0;
+
+                item.IsNew = 1;
+
+                annualBDJKPlanningDetails.push(item);
+            });
+
+            refreshGrid(annualBDJKPlanningDetails);
+        }
+
+        function isValid(noReg, startDateToBeChecked, endDateToBeChecked, arrayOfObjects) {
+            var result = true;
+            $.each(arrayOfObjects, function (index, obj) {
+                if (((startDateToBeChecked <= kendo.parseDate(obj.EndDate) && startDateToBeChecked >= kendo.parseDate(obj.StartDate)) ||
+                    (endDateToBeChecked <= kendo.parseDate(obj.EndDate) && endDateToBeChecked >= kendo.parseDate(obj.StartDate))) && obj.NoReg == noReg) {
+
+                    result = false;
+                    return false;
+                }
+            });
+            return result;
+        }
+
+        var module = (function ($, app) {
+            
+            
+            $("#btnSearch").on("click", function () {
+                search();
+            });
+
+            $("#btnClear").on("click", function () {
+                $("#StartDateFilter").data("kendoDatePicker").value('');
+                $("#EndDateFilter").data("kendoDatePicker").value('');
+                $("#BDJKCodeFilter").data("kendoComboBox").value('');
+                $("#ActivityFilter").data("kendoComboBox").value('');
+            });
+                       
+
+            $("#btnAddBDJKPlanning").on("click", function (e) {
+                var isSamePeriod = true;
+                var startDate = $("#StartDate").data("kendoDatePicker").value();
+                var endDate = $("#EndDate").data("kendoDatePicker").value();
+                var bdjkCode = $("#BDJKCode").data("kendoDropDownTree").value();
+                var activity = $("#Activity").data("kendoComboBox");
+                var startYear = kendo.toString(startDate, "yyyy");
+                var endYear = kendo.toString(endDate, "yyyy");
+                //check if inputted date is same period with alreay inputted data
+                $.each(annualBDJKPlanningDetails, function (index, item) {
+                    var inputtedStartYear = kendo.toString(item.StartDate, "yyyy");
+                    var inputtedEndYear = kendo.toString(item.EndDate, "yyyy");
+                    if (startYear != endYear || startYear != inputtedStartYear || startYear != inputtedEndYear || endYear != inputtedStartYear || endYear != inputtedEndYear) {
+                        isSamePeriod = false;
+                    }
+                    item.IsNew = 0;
+                });
+
+                if (startDate == undefined || startDate == null || startDate == '') {
+                    app.warning("@Localizer["Start Date cannot be empty."]");
+                } else if (endDate == undefined || endDate == null || endDate == '') {
+                    app.warning("@Localizer["End Date cannot be empty."]");
+                } else if (endDate < startDate) {
+                    app.warning("@Localizer["End Date must be bigger than Start Date"]");
+                }else if (selectedEmp.length < 1) {
+                    app.warning("@Localizer["Employees cannot be empty."]")
+                } else if (bdjkCode == undefined || bdjkCode == null || bdjkCode == '') {
+                    app.warning("@Localizer["BDJK Code cannot be empty."]");
+                } else if (activity.value() == undefined || activity.value() == null || activity.value() == '') {
+                    app.warning("@Localizer["Activity cannot be empty."]");
+                } else if (isSamePeriod == false) {
+                    app.warning("@Localizer["Can only input the same period (year)"]")
+                } else {
+                    var errorMessage = "";
+                    $.each(selectedEmp, function (index, item) {
+                        if (!isValid(item.NoReg, kendo.parseDate(startDate), kendo.parseDate(endDate), annualBDJKPlanningDetails)) {
+                            errorMessage = app.translate("BDJK Date for " + item.Name + " is already selected before.");
+                            //return false;
+                        }
+
+                        //20211208
+                        var Period = startDate.getFullYear();
+                        $.ajax({
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/annual-bdjk-planning/get-bdjk-planning-by-noreg/@User.GetClaim("NoReg")/"+item.NoReg+"/"+Period),
+                            dataType: 'json',
+                            success: function(result){
+                                if(result.length>0){
+                                    if (!isValid(item.NoReg, kendo.parseDate(startDate), kendo.parseDate(endDate), result)) {
+                                        errorMessage = app.translate("BDJK Date for " + item.Name + " is already selected in superior "+result[0].Superior+".");
+                                
+                                        //return false;
+                                    }
+                                }
+                                
+                                if (errorMessage != "") {
+                                    app.warning(errorMessage);
+                                } else {
+                                    var totalDays = 0;
+                                    $.ajax({
+                                        type: 'POST',
+                                        url: app.resolveUrl("~/api/absence/getinfocalculationloan"),
+                                        dataType: 'json',
+                                        data: {
+                                            strDate: startDate.toUTCString(),
+                                            endDate: endDate.toUTCString()
+                                        },
+                                        success: function (result) {
+                                            period = startYear;
+                                            totalDays = Math.round((endDate - startDate) / 1000 / 60 / 60 / 24) + 1;// - offDays.length (Because BDJK could be requested for holidays); //Difference in days
+
+                                            $.each(selectedEmp, function (index, item) {
+                                                var annualBDJKPlanningDetail = {
+                                                    Id: uuidv4(),
+                                                    IsNew: 1,
+                                                    StartDate: startDate,
+                                                    EndDate: endDate,
+                                                    BDJKCode: bdjkCode.filter(function(bdjkCode){
+                                                        return bdjkCode != 'T' && bdjkCode != 'D'
+                                                    })[0],
+                                                    BDJKCodeName: bdjkCode.join(','),
+                                                    Activity: activity.text(),
+                                                    ActivityCode: activity.value(),
+                                                    NoReg: item.NoReg,
+                                                    Name: item.Name,
+                                                    PostName: item.PostName,
+                                                    Days: totalDays,
+                                                    IsUpdated: false,
+                                                    Taxi: bdjkCode.includes('T'),
+                                                    UangMakanDinas: bdjkCode.includes('D')
+                                                };
+                                                annualBDJKPlanningDetails.push(annualBDJKPlanningDetail);
+                                            });
+
+                                            refreshGrid(annualBDJKPlanningDetails);
+                                            clearForm();
+                                        }
+                                    });
+                                }
+
+                            }
+                        });
+                    });
+
+                    
+                }
+            });
+
+            @if(Model.DocumentApprovalId != null && Model.DocumentApprovalId != default(Guid))
+            {
+                <text>
+            $.ajax({
+                type: 'POST',
+                url: app.resolveUrl("~/api/annual-bdjk-planning/get-details/" + '@Model.DocumentApprovalId'),
+                dataType: 'json',
+                success: function (result) {
+                    $.each(result, function (index, item) {
+                        // Format date
+                        item.StartDate = kendo.parseDate(item.StartDate);
+                        item.EndDate = kendo.parseDate(item.EndDate);
+                        item.IsNew = 0;
+                        item.IsUpdated = 0;
+                        annualBDJKPlanningDetails.push(item);
+                    });
+                    refreshGrid(annualBDJKPlanningDetails);
+                }
+            });
+                </text>
+            }
+
+            app.registerHandler("dataInterceptor", function (d) {
+                d.Object = getObject();
+                return d;
+            });
+
+            app.registerHandler("saveHandler", function (d) {
+                swal({
+                    title: "Save Changes",
+                    text: "Annual BDJK Planning Data saved successfully",
+                    type: "success"
+                }).then(function () {
+                    window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                });
+            });
+
+            app.registerHandler("errorHandler", function (d, obj) {
+
+                var errMsg = "";
+
+                Object.entries(obj).forEach(entry => {
+                    const [key, value] = entry;
+
+                    var keys = key.split('.');
+
+                    var index1 = keys[1].split('[')[1];
+
+                    var index2 = index1.split(']')[0];
+
+                    errMsg = errMsg + keys[2] + " at item " + index2 + ": ";
+
+                    value.forEach(msg => {
+                        errMsg = errMsg + msg + " ";
+                    });
+
+                    errMsg = errMsg + "<br/>";
+                });
+
+                swal({
+                    title: "Something Wrong!",
+                    html: errMsg,
+                    type: "warning"
+                })
+
+                return obj;
+            });
+
+            let $form = $("#annual-bdjk-planning-upload-form"),
+                $actionsWrapper = $form.next(".actions"),
+                $uploadBtn = $actionsWrapper.find(".action-upload-merge"),
+                oldText = $uploadBtn.text(),
+                $actionsBtn = $actionsWrapper.find(".btn"),
+                $file = $form.find("input[type='file']");
+
+            $file.on("change", function () {
+                var $this = $(this),
+                    fileName = $this.val();
+
+                $(this).data("autoUpload", false);
+
+                if (fileName) {
+                    $this.next("label").text(fileName.substring(fileName.lastIndexOf("\\") + 1));
+                }
+            });
+
+            app.registerHandler("uploadDataHandler", function () {
+                $.each(annualBDJKPlanningDetails, function (index, item) {
+                    item.StartDate = kendo.toString(kendo.parseDate(item.StartDate), "yyyy-MM-dd");
+                    item.EndDate = kendo.toString(kendo.parseDate(item.EndDate), "yyyy-MM-dd");
+                });
+
+                let formData = new FormData();
+                formData.append("file", $file[0].files[0]);
+                formData.append("mode", "@mode");
+                formData.append("yearPeriod", @periodYear);
+                formData.append("details", JSON.stringify(annualBDJKPlanningDetails));
+
+                $actionsBtn.addClass("disabled");
+                $uploadBtn.text("@Localizer["Uploading, please wait..."].Value");
+
+                $.ajax({
+                    url: $form.attr("action"),
+                    data: formData,
+                    context: document.body,
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    type: 'POST',
+                    success: function (data) {
+                        app.success(app.translate("Success upload and merge data"));
+                        $file.val("");
+                        $file.next("label").text(app.translate("Please choose a file"));
+                        $actionsBtn.removeClass("disabled");
+                        $uploadBtn.text(oldText);
+                        $("#annual-bdjk-planning-upload-modal").modal("hide");
+                        recalculateUploadedData(data);
+                    },
+                    error: function (error) {
+                        console.error(error);
+                        app.warning(error.Message);
+                        $file.val("");
+                        $file.next("label").text(app.translate("Please choose a file"));
+                        $actionsBtn.removeClass("disabled");
+                        $uploadBtn.text(oldText);
+                    }
+                });
+            });
+
+            $("#btn-edit-save").on("click", function (e) {
+                e.preventDefault();
+
+                app.confirm(app.translate("Save Changes"), app.translate("Save changes?"), function (d) {
+                    if (!d.value) return;
+
+                    var data = {
+                        DocumentApprovalId: '@Model.DocumentApprovalId',
+                        Object: getObject()
+                    };
+
+                    $.ajax({
+                        url: app.resolveUrl("~/api/annual-bdjk-planning/update-annual-bdjk-planning?action=save"),
+                        data: JSON.stringify(data),
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function (d) {
+                            swal({
+                                title: "Save Changes",
+                                text: "Annual BDJK Planning Data saved successfully",
+                                type: "success"
+                            }).then(function () {
+                                window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                            });
+                        },
+                        error: function (error) {
+                            //show error from validator
+                            $.each(error.responseJSON, function (k, v) {
+                                var spanEl = $("span[data-validation-for='" + k + "']")[0];
+                                spanEl.innerText = v;
+                            });
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            app.error("Something went wrong when saving changes.");
+                        }
+                    });
+                });
+            });
+
+            $("#btn-edit-submit").on("click", function (e) {
+                e.preventDefault();
+
+                app.confirm(app.translate("Submit Data"), app.translate("Do you want to submit this document?"), function (d) {
+                    if (!d.value) return;
+
+                    var data = {
+                        DocumentApprovalId: '@Model.DocumentApprovalId',
+                        Object: getObject()
+                    };
+
+                    $.ajax({
+                        url: app.resolveUrl("~/api/annual-bdjk-planning/update-annual-bdjk-planning?action=submit"),
+                        data: JSON.stringify(data),
+                        type: 'POST',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        success: function (resp) {
+                            swal({
+                                title: "Submit Changes",
+                                text: "Annual BDJK Planning Data submitted successfully",
+                                type: "success"
+                            }).then(function () {
+                                window.location.href = app.resolveUrl("~/timemanagement/annualplanning");
+                            });
+                        },
+                        error: function (error) {
+                            //show error from validator
+                            $.each(error.responseJSON, function (k, v) {
+                                var spanEl = $("span[data-validation-for='"+k+"']")[0];
+                                spanEl.innerText = v;
+                            });
+                        },
+                        fail: function (error) {
+                            console.error(error);
+                            app.error("Something went wrong when submitting changes.");
+                        }
+                    });
+                });
+            });
+
+            $.OnChangeDate = function (e) {
+                let startDate = kendo.toString($( "#StartDate" ).data( "kendoDatePicker" ).value(), 'd' );
+                let endDate = kendo.toString($( "#EndDate" ).data( "kendoDatePicker" ).value(), 'd' );
+
+                //let startDate = $("#StartDate").data("kendoDatePicker").value()
+                //    endDate = $("#EndDate").data("kendoDatePicker").value();
+
+
+                //let selectedNoReg = [];
+                //
+                //$.each(selectedEmp, function (index, item) {
+                //    selectedNoReg.push(item.NoReg);
+                //});
+
+                if(
+                    //selectedNoReg.length > 0 && startDate != undefined && 
+                    startDate != null && endDate != undefined && endDate != null)
+                {
+                    var child = $("#BDJKCode").data("kendoDropDownTree");
+                    $.ajax({
+                        method: "POST",
+                        url: "@Url.Content("~/api/annual-bdjk-planning//get-bdjk-list")",
+                        dataType: "json",   
+                        data: { 
+                            //noReg: selectedNoReg, 
+                            startDate: startDate, endDate: endDate },
+                        success: function (result) {
+                            var listItem = [];
+                            result.forEach(elements => listItem.push({text: elements.Text, value: elements.Value}));
+                            var dataSource = new kendo.data.HierarchicalDataSource({
+                                data:  listItem
+                            });
+                            child.setDataSource(dataSource);
+                            child.enable(true);
+                            child.trigger("change");
+                        }
+                    });
+                }
+            }
+
+            $.OnChangeBDJK = function (e) {
+                 var BDJKList = $("#BDJKCode").data("kendoDropDownTree").value();
+                 if(BDJKList.includes('B') && BDJKList.includes('C')){
+                     $("#BDJKCode").data("kendoDropDownTree").close();
+                     $("#BDJKCode").data("kendoDropDownTree").value('');
+                     app.warning("Cannot use BDJK B and C at the same time");
+                 }
+            }
+
+        })(jQuery, app);
+    </script>
+
+    <style>
+
+        .dropdown-header {
+            border-width: 0 0 1px 0;
+            text-transform: uppercase;
+        }
+
+            .dropdown-header > span {
+                display: inline-block;
+                padding: 10px;
+            }
+
+                .dropdown-header > span:first-child {
+                    width: 50px;
+                }
+
+        .selected-value {
+            display: inline-block;
+            vertical-align: middle;
+            width: 18px;
+            height: 18px;
+            background-size: 100%;
+            margin-right: 5px;
+            border-radius: 50%;
+        }
+
+        #employees-list .k-item {
+            line-height: 1em;
+            min-width: 300px;
+        }
+
+        /* Material Theme padding adjustment*/
+
+        .k-material #employees-list .k-item,
+        .k-material #employees-list .k-item.k-state-hover,
+        .k-materialblack #employees-list .k-item,
+        .k-materialblack #employees-list .k-item.k-state-hover {
+            padding-left: 5px;
+            border-left: 0;
+        }
+
+        #employees-list .k-item > span {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            display: inline-block;
+            vertical-align: top;
+            margin: 20px 10px 10px 5px;
+        }
+
+            #employees-list .k-item > span:first-child {
+                -moz-box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                -webkit-box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                box-shadow: inset 0 0 30px rgba(0,0,0,.3);
+                margin: 10px;
+                width: 50px;
+                height: 50px;
+                border-radius: 50%;
+                background-size: 100%;
+                background-repeat: no-repeat;
+            }
+
+        #employees-list h3 {
+            font-size: 1.2em;
+            font-weight: normal;
+            margin: 0 0 1px 0;
+            padding: 0;
+        }
+
+        #employees-list p {
+            margin: 0;
+            padding: 0;
+            font-size: .8em;
+        }
+
+        .employeeHeader .profilePicture {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-size: 100%;
+            float: left;
+            margin-left: 3rem;
+            margin-right: 1rem;
+            margin-top: 0.3125rem;
+            display: inline-block;
+        }
+
+        .employeeHeader span {
+            line-height: 0.001rem;
+            display: inline-block;
+        }
+
+        .employeeHeader .planInfo {
+            float: right;
+        }
+    </style>
+}
+
+@if (isRequester && (Model.Progress < 100 || mode.ToLower() == "edit") && canEdit)
+{
+@section pageToolbars {
+    <div class="toolbars" style="margin-left: 10px;">
+        <div class="toolbars" style="margin-left: 10px;">
+            <div class="dropdown">
+                <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown" style="width: 100%;">
+                    <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-right">
+                    <li>
+                    <a href="/core/form/download?formKey=annual-bdjk-planning&amp;id=@Model.DocumentApprovalId" id="download-@Model.DocumentApprovalId" target="_blank">
+                        @Localizer["Download"]
+                    </a>
+                    </li>
+                    <li>
+                        <a href="~/api/annual-bdjk-planning/download-template?mode=@mode&docApprovalID=@Model.DocumentApprovalId">
+                            @Localizer["Download Template"]
+                        </a>
+                    </li>
+                    <li>
+                        <a href="javascript:;" data-trigger="modal" data-modal="annual-bdjk-planning-upload-modal">
+                            @Localizer["Upload"]
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+}
+}
+
+@if(isApprover && mode.ToLower() != "edit")
+{
+    @section pageToolbars {
+         <div class="toolbars" style="margin-left: 10px;">
+                <div class="toolbars" style="margin-left: 10px;">
+                <div class="dropdown">
+                    <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown" style="width: 100%;">
+                        <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-right">
+                        <li>
+                            <a href="~/api/annual-bdjk-planning/download-summary/@Model.DocumentApprovalId">
+                            @Localizer["Download Summary"]
+                            </a>
+                        </li>
+                    
+                    </ul>
+                </div>
+            </div>
+        </div>    
+    }
+          
+
+}
+
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Annual BDJK Planning"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        @Html.Hidden("UrlAvatar", ConfigService.ResolveAvatar(""))
+                        @* Profile and BDJK Information *@
+                        <div class="col-md-12 col-sm-12">
+                            <div class="row" style="margin-bottom: 10px;">
+                                <div class="col-md-6 col-sm-12">
+                                    <div class="profpic">
+                                        <div class="profpic-wrapper">
+                                            <div class="profpic-avatar">
+                                                <img src="@ConfigService.ResolveAvatar(aos.NoReg)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                            </div>
+                                            <div class="profpic-body">
+                                                <span class="profpic-title">@aos.Name</span>
+                                                <span class="profpic-description">@aos.PostName</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @if (Model.DocumentApprovalId == null || Model.DocumentApprovalId == default(Guid) || Model.Progress == 0 || mode.ToLower() == "edit")
+                            {
+                                @* Add BDJK Form *@
+                                <div class="row">
+                                    <div class="col-md-12 col-sm-12">
+                                        <fieldset>
+                                            <div class="form-wrapper" style="padding: 15px 15px 0px 15px;">
+                                                <div class="form-group">
+                                                    <div class="row">
+                                                        <div class="col-md-2">
+                                                            <label>@Localizer["Date From"]</label>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            @(Html
+                                                        .Kendo()
+                                                        .DatePicker()
+                                                        .Name("StartDate")
+                                                        .Format("dd/MM/yyyy")
+                                                        .Enable(canEdit)
+                                                        .Events(e =>
+                                                        {
+                                                            e.Change("$.OnChangeDate");
+                                                        })
+                                                        .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Date From"].Value })
+                                                        .Deferred())
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label>@Localizer["Date To"]</label>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            @(Html
+                                                        .Kendo()
+                                                        .DatePicker()
+                                                        .Name("EndDate")
+                                                        .Format("dd/MM/yyyy")
+                                                        .Enable(canEdit)
+                                                        .Events(e =>
+                                                        {
+                                                            e.Change("$.OnChangeDate");
+                                                        })
+                                                        .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Date To"].Value })
+                                                        .Deferred())
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <div class="row">
+                                                        <div class="col-md-2">
+                                                            <label>@Localizer["BDJK Code"]</label>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            @*@(Html.KendoComboBox("BDJKCode", string.Empty, "BdjkCode", all: false)
+                                                            .AutoBind(true)
+                                                            .ClearButton(false)
+                                                            .Placeholder(Localizer["Please select BDJK Code"].Value)
+                                                            .Enable(canEdit)
+                                                            .Deferred()
+                                                            )*@
+                                                            @(Html.Kendo().DropDownTree()
+                                                            .Name("BDJKCode")
+                                                            .HtmlAttributes(new { @class = "form-control", @style = "width: 100%;" })
+                                                            .CheckAll(false)
+                                                            .AutoClose(false)
+                                                            .Checkboxes(true)
+                                                            .Messages(ms => 
+                                                                {
+                                                                    ms.SingleTag(Localizer["BDJK code selected"].Value);
+                                                                })
+                                                            .TagMode(DropDownTreeTagMode.Single)
+                                                            .Events(e =>
+                                                            {
+                                                                e.Change("$.OnChangeBDJK");
+                                                            })
+                                                            .Placeholder(Localizer["Please select BDJK Code"].Value)
+                                                            .Enable(false)
+                                                            .Deferred()
+                                                        )
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <label>@Localizer["Activity"]</label>
+                                                        </div>
+                                                        <div class="col-md-4">
+                                                            @(Html.KendoComboBox("Activity", string.Empty, "CategorySPKL", all: false)
+                                                            .AutoBind(true)
+                                                            .ClearButton(false)
+                                                            .Placeholder(Localizer["Please select activity"].Value)
+                                                            .Enable(canEdit)
+                                                            .Deferred()
+                                                            )
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <div class="row">
+                                                        <div class="col-md-2">
+                                                            <label>@Localizer["Employee"]</label>
+                                                        </div>
+                                                        <div class="col-md-10">
+                                                            @(Html.Kendo().MultiSelect()
+                                                              .Name("employees")
+                                                              .DataTextField("Name")
+                                                              .DataValueField("NoReg")
+                                                              .Placeholder(Localizer["Please select employee"].Value)
+                                                              @*.DataSource(dataSource => dataSource
+                                                                .Ajax()
+                                                                .Read(read => read
+                                                                .Url(Url.Content("~/api/annual-bdjk-planning/get-employee")))
+                                                              )*@
+                                                              .DataSource(source => {
+                                                                  source.Read(read =>
+                                                                  {
+                                                                      read.Url(Url.Content("~/api/annual-bdjk-planning/get-employee"));
+                                                                  })
+                                                                  .ServerFiltering(true);
+                                                              })
+                                                              .Height(400)
+                                                              .HeaderTemplate("<div class=\"dropdown-header k-widget k-header\">" +
+                                                                            "<span>Karyawan</span>" +
+                                                                        "</div>")
+                                                              .FooterTemplate("Total <strong>#: instance.dataSource.total() #</strong> employees found")
+                                                              .ItemTemplate("<span class=\"k-state-default\" style=\"background-image: url(\'#: data.AvatarURL #\');\"></span>" +
+                                                                        "<span class=\"k-state-default\"><h3>#: data.Name #</h3><p>#: data.PostName #</p></span>")
+                                                              .TagTemplate("<span class=\"selected-value\" style=\"background-image: url(\'#: data.AvatarURL #\');\"></span>" +
+                                                                           "<span>#: data.Name #</span>")
+                                                              .Enable(canEdit)
+                                                              .Events(e => e.Select("selectEmployee").Deselect("deselectEmployee"))
+                                                              .Deferred())
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="form-group horizontal">
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <button style="float:right;" type="button" id="btnAddBDJKPlanning" @(canEdit ? "" : "disabled") class="btn btn-success">@Localizer["Add BDJK List"]</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12 col-sm-12">
+                                                <label class="bold">@Localizer["Notes"] :</label>
+                                                @foreach (var description in descriptions)
+                                                {
+                                                    <div class="row">
+                                                        <div class="col-md-1 col-sm-1"><label class="font-small-3" style="float:right">@description.Name</label></div>
+                                                        <div class="col-md-10 col-sm-10"><label class="font-small-3">@description.Description</label></div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </fieldset>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                @* Filtering if document has been submitted *@
+                                <div class="row">
+                                    <div class="col">
+                                        <div class="card">
+                                            <div class="card-body">
+                                                <div class="row">
+                                                    <div class="col-md-2">
+                                                        @(Html
+                                                            .Kendo()
+                                                            .DatePicker()
+                                                            .Name("StartDateFilter")
+                                                            .Format("dd/MM/yyyy")
+                                                            .Enable(true)
+                                                            .HtmlAttributes(new { style = "width: 100%;", placeholder = @Localizer["Start Date"].Value })
+                                                            .Deferred()
+                                                        )
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        @(Html
+                                                            .Kendo()
+                                                            .DatePicker()
+                                                            .Name("EndDateFilter")
+                                                            .Format("dd/MM/yyyy")
+                                                            .Enable(true)
+                                                            .HtmlAttributes(new { style = "width: 100%;", placeholder = @Localizer["End Date"].Value })
+                                                            .Deferred()
+                                                        )
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        @(Html.KendoComboBox("BDJKCodeFilter", string.Empty, "BdjkCode", all: true)
+                                                            .AutoBind(true)
+                                                            .ClearButton(false)
+                                                            .Placeholder(Localizer["Please select BDJK code"].Value)
+                                                            .Deferred()
+                                                            )
+                                                    </div>
+                                                    <div class="col-md-2">
+                                                        @(Html.KendoComboBox("ActivityFilter", string.Empty, "CategorySPKL", all: true)
+                                                        .AutoBind(true)
+                                                        .ClearButton(false)
+                                                        .Placeholder(Localizer["Please select activity"].Value)
+                                                        .Deferred()
+                                                        )
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <div class="row">
+                                                            <div class="col-md-6 text-right">
+                                                                <button type="button" style="width: 100%;" id="btnSearch" class="btn btn-primary">@Localizer["Search"].Value</button>
+                                                            </div>
+
+                                                            <div class="col-md-6 text-right">
+                                                                <button type="button" style="width: 100%;" id="btnClear" class="btn btn-danger">@Localizer["Clear"].Value</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@* Profile and BDJK Information *@
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 text-left">
+                        <h5 class="font-weight-bold">@Localizer["Employee"]</h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 text-center" style="overflow:scroll">
+                        @(Html.Kendo()
+                            .Grid<AnnualBDJKPlanningDetailView>()
+                            .Name("annualBDJKPlanningDetailGrid")
+                            .Columns(col => {
+                                col.Bound(c => c.Name).Title("Nama karyawan").Width(200).Hidden(true)
+                                .ClientGroupHeaderTemplate("<div class=\"row\">" +
+                                    "<div class=\"col-md-8\">" +
+                                        "<div class=\"media pull-left\" style=\"margin-left: 40px; margin-top: -10px;\">" +
+                                            "<div class=\"media-img mr-2\"><img src=\"#:app.resolveImageUrl(aggregates.NoReg.max)#\" class=\"rounded\" style=\"width: 2.5rem; height: 2.5rem;\" /></div>" +
+                                            "<div class=\"media-body\">" +
+                                                "<h6 class=\"mb-0\">#:value#</h6>" +
+                                                "<span class=\"d-block\"><h6 style=\"font-weight: 500;\">#=aggregates.PostName.max#</h6></span>" +
+                                            "</div>" +
+                                        "</div>" +
+                                    "</div>" +
+                                    "<div class=\"col-md-4 text-right\" style=\"padding-right: 20px;\">" +
+                                        "<span class=\"d-block\"><h6 style=\"font-weight: 500;\">" + @Localizer["Plans"].Value + " BDJK : #=BDJKTotal(items)# "+@Localizer["Days"].Value+"</h6></span>" +
+                                    "</div>" +
+                                "</div>");
+                                col.Bound(c => c.StartDate).Title(Localizer["Date From"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" });
+                                col.Bound(c => c.EndDate).Title(Localizer["Date To"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" });
+                                col.Bound(c => c.BDJKCodeName).Title(Localizer["BDJK Code"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" });
+                                col.Bound(c => c.Activity).Title(Localizer["Activity"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" });
+                                col.Bound(c => c.Days).Title(Localizer["Days"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" })
+                                    .ClientTemplate("# if(IsUpdated == 1){ #" +
+                                    "<span style='background-color: yellow;'>#=Days# "+@Localizer["Days"].Value+"</span>" +
+                                    "#} else {#" +
+                                    "<span>#=Days# "+@Localizer["Days"].Value+"</span>" +
+                                    "#}#");
+                                col.Bound(c => c.Id).Title(Localizer["Action"].Value).Width(150).HeaderHtmlAttributes(new { @class = "text-center text-bold" }).HtmlAttributes(new { @class = "text-center" })
+                                    .ClientTemplate("#if(IsHidden==0 || IsNew==1){#"+
+                                        "<button type='button' onclick=\"deleteRow('#:Id#')\" class='btn btn-delete btn-danger' id='#:Id#'><i class='fa fa-trash'></i></button>"+
+                                    "#}#")
+                                    .Hidden(!(canEdit || isRequester));
+                            })
+                            .DataSource(d => d
+                                .Custom()
+                                .PageSize(10)
+                                .Sort(s => s.Add("EndDate").Descending())
+                                .Group(g => g.Add(x => x.Name))
+                            )
+                            .Sortable(true)
+                            .Pageable()
+                            .Events(e => e.DataBound("onDataBound"))
+                            .Deferred(true)
+                        )
+                        <span class="invalid" data-validation-for="Object.AnnualBDJKPlanningDetails.Count"></span>
+                        <span class="invalid" data-validation-for="Object.AnnualBDJKPlanningDetails"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section formActions
+{
+    @if (canEdit)
+    {
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-content">
+                        <div class="card-body">
+                            <div class="row">
+                                <label class="col-md-3 col-sm-3">@Localizer["Send Update?"]</label>
+                                <div class="col-md-9 col-sm-9">
+                                    <div class="float-right">
+                                        @if (mode.ToLower() == "edit" && Model.Requester == User.GetClaim("NoReg"))
+                                        {
+                                            <button name="btnAction" class="btn-custom btn btn-info" id="btn-edit-save" data-error-handler="errorHandler">
+                                                <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                            </button>
+                                            <button type="button" class="btn-custom btn btn-primary" id="btn-edit-submit" data-error-handler="errorHandler">
+                                                <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                            </button>
+                                            <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            @if (AclHelper.CanEdit())
+                                            {
+                                                <button name="btnAction" class="btn-custom btn btn-info" data-trigger="submit" data-target-form="mainForm" data-callback="saveHandler" data-confirmation="true" data-confirmationmsg="@Localizer["Save Changes?"]" data-interceptor="dataInterceptor" data-draft="true" data-error-handler="errorHandler">
+                                                    <i class="ft-save"></i> <span class="d-none d-md-inline">@Localizer["Save"]</span>
+                                                </button>
+                                            }
+                                            @if (AclHelper.CanSubmit())
+                                            {
+                                                <button type="button" class="btn-custom btn btn-primary" data-trigger="submit" data-target-form="mainForm" data-confirmation="true" data-confirmationmsg="@Localizer["Do you want to submit this document?"]" data-callback="submitHandler" data-precallback="precallbackHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="initiate" data-interceptor="dataInterceptor" data-draft="false" data-parameters-redirecturl="~/timemanagement/annualplanning" data-error-handler="errorHandler">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Submit"]</span>
+                                                </button>
+                                            }
+                                            @if (AclHelper.CanCancel())
+                                            {
+                                                if (ApplicationHelper.IsDefault(Model.Id))
+                                                {
+                                                    <a class="btn btn-danger" href="~/timemanagement/annualplanning">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Cancel"]</span>
+                                                    </a>
+                                                }
+                                                else
+                                                {
+                                                    <a class="btn btn-danger" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="cancel" data-parameters-redirecturl="~/core/form/index?formKey=@Model.FormKey">
+                                                        <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Drop Request"]</span>
+                                                    </a>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (AclHelper.CanApprove() || AclHelper.CanReject() || AclHelper.CanRevise()){
+            <div class="row">
+                <div class="col">
+                    <div class="card">
+                        <div class="card-content">
+                            <div class="card-body">
+                                <div class="row">
+                                    <label class="col-md-3 col-sm-4 col-4">@Localizer["Send Update?"]</label>
+                                    <div class="col-md-9 col-sm-8 col-8">
+                                        <div class="float-right">
+                                            @if (AclHelper.CanApprove())
+                                            {
+                                                <a class="btn btn-success mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="approve" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                    <i class="ft-check"></i> <span class="d-none d-md-inline">@Localizer["Approve"]</span>
+                                                </a>
+                                            }
+                                            @if (AclHelper.CanReject())
+                                            {
+                                                <a class="btn btn-danger mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="reject" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                    <i class="ft-x"></i> <span class="d-none d-md-inline">@Localizer["Reject"]</span>
+                                                </a>
+                                            }
+                                            @if (AclHelper.CanRevise())
+                                            {
+                                                <a class="btn btn-warning mr-2" href="#" data-trigger="handler" data-handler="postHandler" data-parameters-id="@Model.DocumentApprovalId" data-parameters-action="revise" data-interceptor="dataInterceptor" data-parameters-redirecturl="@(Url.Content("~/timemanagement/annualplanning"))">
+                                                    <i class="ft-rotate-ccw"></i> <span class="d-none d-md-inline">@Localizer["Revise"]</span>
+                                                </a>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    
+    }
+}
+
+@section pageFooter
+{
+    @* Upload Modal *@
+    <div id="annual-bdjk-planning-upload-modal" class="modal fade bs-modal-md" role="dialog" aria-hidden="true" style="display: none;">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true"><i class="fa fa-times"></i></button>
+                    <h4 class="modal-title">Upload Annual BDJK Plan</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="annual-bdjk-planning-upload-form" role="form" enctype="multipart/form-data" method="post" action="~/api/annual-bdjk-planning/upload">
+                        <div class="custom-file">
+                            <input type="file" class="custom-file-input" required="required" id="upload-field" autoUpload="false" />
+                            <label class="custom-file-label" style="text-overflow: ellipsis;">Choose file...</label>
+                        </div>
+                        <div class="list-group"></div>
+                    </form>
+                    <div class="actions modal-footer">
+                        <button type="button" class="btn dark btn-outline" data-dismiss="modal">@Localizer["Close"]</button>
+                        <a class="btn red-haze action-upload-merge" data-trigger="handler" data-handler="uploadDataHandler">@Localizer["Upload"]</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @* End of Upload Modal *@
+}
+}
+

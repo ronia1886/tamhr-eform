@@ -1,0 +1,551 @@
+﻿@model DocumentRequestDetailViewModel<ShiftMealAllowanceViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    var noreg = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+    var org = ViewData["OrganizationInfo"] as IEnumerable<EmployeeeOrganizationObjectStoredEntity>;
+    Model.Object.Division = org.FirstOrDefault(x => x.ObjectDescription == "Division")?.ObjectText;
+    Model.Object.Department = org.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectText;
+    var orgCode = org.FirstOrDefault(x => x.ObjectDescription == "Department")?.ObjectID;
+
+    var summaries = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Object.Summaries);
+    var _year = string.IsNullOrEmpty(Model.Object?.StartPeriod) ? DateTime.Now.Year.ToString() : Model.Object?.StartPeriod;
+    //var _month = string.IsNullOrEmpty(Model.Object?.EndPeriod) ? System.Globalization.DateTimeFormatInfo.CurrentInfo.MonthNames.GetValue(DateTime.Now.Month - 1) : Model.Object?.EndPeriod;
+    var _month = string.IsNullOrEmpty(Model.Object?.EndPeriod) ? (DateTime.Now.Month).ToString() : Model.Object?.EndPeriod;
+}
+
+@section scripts {
+<script type="text/javascript">
+        var allowances = [];
+        var dates = [];
+
+        function employeeChange(el) {
+            var datesEmp = [];
+
+            var attendance = $(el).data("attendance").split(",");
+            $.each(attendance, function (i, o) {
+                var dateAttendance = kendo.toString(kendo.parseDate(o), 'yyyy-MM-dd');
+                var qty = 0;
+                var total = 0;
+                if ($(el).is(":checked")) {
+                    qty = 1;
+                    total = $(el).data("meal-allowance");
+                } else {
+                    qty = -1;
+                    total= -$(el).data("meal-allowance");
+                }
+
+                datesEmp.push({
+                    dateAttendance: dateAttendance,
+                    qty: qty,
+                    total: total
+                })
+            });
+
+            if ($(".employee:checkbox:checked").length == $(".employee").length) {
+                $('.select-all').prop("checked", true);
+            } else {
+                $('.select-all').prop("checked", false);
+            }
+
+            updateSummarize(datesEmp);
+        }
+
+        $('.select-all').change(function () {
+
+            if (!this.checked) {
+
+                $(".employee").each(function () {
+                    $(this).click();
+                });
+
+            } else {
+                $(".employee").each(function () {
+                    if (!this.checked) {
+                        $(this).click();
+                    }
+                });
+            }
+            return false;
+        });
+
+        //employee
+        //$('.select-all').change(function () {
+        //    dates.map(function (e) {
+        //        e.Employees.length = 0;
+        //        e.Qty = 0;
+        //        e.Total = 0;
+        //        return e;
+        //    });
+
+        //    if ($(this).is(":checked")) {
+        //        $(this).attr('checked', true);
+
+        //        $(".employee").each(function () {
+        //            //$(this).attr('checked', true);
+        //            $(this).prop("checked", true);
+
+        //            var empData = $(this).data();
+        //            var attendance = $(this).data("attendance").split(",");
+
+        //            $.grep(attendance, function (x) {
+
+        //                var pos = dates.map(function (e) { return e.Date.toString(); }).indexOf(x.toString());
+
+        //                if (pos >= 0) {
+
+        //                    dates[pos].Employees.push(empData);
+        //                    dates[pos].Qty += 1;
+        //                    dates[pos].Total += parseFloat(empData.mealAllowance);
+        //                }
+
+        //                return true;
+        //            });
+
+        //        });
+
+        //    } else {
+        //        //$(".employee").attr('checked', false);
+        //        $(".employee").prop("checked", false);
+        //    }
+
+        //    console.log(dates)
+        //    summarize2(dates);
+        //    return false;
+        //});
+
+        var year = '@_year';
+        var month = '@_month';
+
+            function onYearBound(e) {
+                e.sender.value('@_year');
+            }
+            function onYearChange(e) {
+                year = e.sender.value();
+                getDatesPeriod();
+            }
+
+            function onMonthBound(e) {
+                e.sender.value('@_month');
+            }
+
+            function onMonthChange(e) {
+                month = e.sender.value();
+                getDatesPeriod();
+            }
+
+            function prepareData() {
+                var options = @Html.Raw(summaries);
+
+                if (options === null)
+                {
+                    return;
+                }
+
+                summarize2(options);
+
+                if ('@isCanEdit' !== 'Fasle') {
+                    $(".employee").attr("disabled", "disabled");
+                }
+
+                $(".employee").each(function (index, obj) {
+                    if ('@isCanEdit' !== 'True') {
+                        $(this).attr("disabled", "disabled");
+                    }
+                    var cb = $(this);
+                    var data = $(obj).data();
+                    var code = data.noReg.toString();
+                    var attendance = data.attendance.split(",");
+                    
+                    $.each(options, function (i, o) {
+                        if (o.Employees != null) {
+                            $.grep(o.Employees, function (n) {
+                                if (n.NoReg == code) {
+                                    $(cb).attr("checked", true);
+                                }
+                                return true;
+                            })
+                        }
+                    })
+
+                });
+                
+                if ($(".employee:checkbox:checked").length == $(".employee").length) {
+                    $('.select-all').prop("checked", true);
+                }
+
+            }
+
+        function getEmployees() {
+            $("#data_perserta").html("");
+                var period = year + "-" + month + "-01"
+                kendo.ui.progress($("#data_perserta"), true);
+
+            $.ajax(
+                    {
+                    type: 'GET',
+                    url: app.resolveUrl('~/api/organization/employee-shift-meal-by-dept?noreg=' + @noreg + "&period=" + period),
+                    dataType: 'json',
+                    success: function (data) {
+                        if (data !== undefined && data !== null) {
+                            $.each(data, function (i, o) {
+                                var listDate = [];
+                                if (o.AttendanceDate !== null) {
+                                    var listAttendanceDate = o.AttendanceDate.split(',');
+                                    $.each(listAttendanceDate, function (i, o) {
+                                        listDate.push(new Date(o).getDate());
+                                    })
+                                }
+                                var item = $('<tr><td><input onchange="employeeChange(this)" class="employee" type="checkbox" data-name="' + o.Name + '" data-no-reg="' + o.NoReg + '" data-classification="' + o.Classification + '" data-meal-allowance="' + o.Amount + '" data-attendance="' + o.AttendanceDate + '" data-shiftcode="' + o.ShiftCode + '"></td> <td><div>' + o.Name + '</td><td><div style="width:275px;white-space: nowrap; overflow: hidden;text-overflow: ellipsis;"> : ' + listDate.join(',') + '</div></td></tr>');
+                                $("#data_perserta").append(item);
+                            });
+                        }
+
+                        @if (!ApplicationHelper.IsDefault(Model.DocumentApprovalId))
+                         {
+                             @:prepareData();
+                         }
+
+                        kendo.ui.progress($("#data_perserta"), false);
+
+                    },
+                    done: function () {
+                        kendo.ui.progress($("#data_perserta"), false);
+                    }
+                });
+        }
+
+        function getDatesPeriod() {
+
+            var _period = year + "-" + month + "-01"
+
+            $.post(app.resolveUrl('~/api/claimbenefit/get-dates-period?period=' + _period, { period: _period }))
+                .done(function (data) {
+                    summarize(data);
+                    getEmployees();
+                    $(".total").html(0);
+                    $('.select-all').prop("checked", false);
+            });
+        }
+
+        function summarize(data) {
+            $(".summary-data").html("");
+
+            dates = [];
+            if (data !== undefined && data !== null) {
+                $.each(data, function (i, o) {
+                    o = kendo.toString(kendo.parseDate(o), 'yyyy-MM-dd');
+                    if (dates[i] === undefined) {
+                        dates[i] = {
+                            Date: o,
+                            Qty: 0,
+                            Total: 0,
+                            Employees: []
+                        };
+                    }
+
+                    var tr = $("<tr data-date='" + kendo.toString(kendo.parseDate(o), 'yyyy-MM-dd') + "'></tr>");
+                    if (dates[i].Qty > 0) {
+                        $(tr).show();
+                    } else {
+                        $(tr).hide();
+                    }
+                    var td1 = $("<td>" + kendo.toString(kendo.parseDate(o), 'dd/MM/yyyy') + "</td>").appendTo(tr);
+                    var td2 = $("<td align='center'>" + dates[i].Qty + "</td>").appendTo(tr);
+                    var td3 = $("<td align='right'>" + kendo.toString(dates[i].Total, 'n0') + "</td>").appendTo(tr);
+
+                    $(".summary-data").append(tr);
+                });
+            }
+        }
+
+        function summarize2(data) {
+            $(".summary-data").html("");
+            $(".hidden-summary").html("");
+
+            var grandTotal = 0;
+            if (data !== undefined && data !== null) {
+                $.each(data, function (i, o) {
+                    var tr = $("<tr data-date='" + kendo.toString(kendo.parseDate(o.Date), 'yyyy-MM-dd') + "'></tr>");
+                    if (o.Qty > 0) {
+                        $(tr).show();
+                    } else {
+                        $(tr).hide();
+                    }
+                    var td1 = $("<td>" + kendo.toString(kendo.parseDate(o.Date), 'dd/MM/yyyy') + "</td>").appendTo(tr);
+                    var td2 = $("<td align='center'>" + o.Qty + "</td>").appendTo(tr);
+                    var td3 = $("<td align='right'>" + kendo.toString(o.Total, 'n0') + "</td>").appendTo(tr);
+
+                    $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Date]' value='" + kendo.toString(kendo.parseDate(o.Date), 'dd/MM/yyyy') + "'/>");
+                    $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Qty]' value='" + o.Qty + "'/>");
+                    $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Total]' value='" + kendo.toString(o.Total, 'n0') + "'/>");
+
+                    if (o.Employees !== null) {
+                        $.each(o.Employees, function (ii, oo) {
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][NoReg]' value='" + oo.NoReg + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Name]' value='" + oo.Name + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Classification]' value='" + oo.Classification + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][ShiftCode]' value='" + oo.ShiftCode + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Amount]' value='" + kendo.toString(oo.Amount, 'n0') + "'/>");
+
+                        })
+                    }
+
+                    grandTotal += o.Total;
+                    
+                    //td1.append("<input type='hidden' name='Object.Summaries[" + i + "][Date]' value='" + o.Date + "'/>");
+                    //td1.append("<input type='hidden' name='Object.Summaries[" + i + "][Qty]' value='" + o.Qty + "'/>");
+                    //td1.append("<input type='hidden' name='Object.Summaries[" + i + "][Total]' value='" + o.Total + "'/>");
+
+                    //$.each(o.Employees, function (ii, oo) {
+                    //    $(
+                    //        "<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][NoReg]' value='" + oo.noReg + "'/>" +
+                    //        "<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Name]' value='" + oo.name + "'/>" +
+                    //        "<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Classification]' value='" + oo.classification + "'/>" +
+                    //        "<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + ii + "][Amount]' value='" + oo.mealAllowance + "'/>"
+                    //    ).appendTo(td1);
+
+                    //});
+
+                    //total += o.Total;
+
+                    $(".summary-data").append(tr);
+                });
+            }
+
+            //createHiddenSummary();
+            $(".total").html(kendo.toString(grandTotal, 'n0'));
+        }
+
+        function updateSummarize(data) {
+            if (data !== undefined && data !== null) {
+                $.each(data, function (i, o) {
+                    selected_date = kendo.toString(kendo.parseDate(o.dateAttendance), 'yyyy-MM-dd');
+                    var tr = $(".summary-data").find("[data-date='" + selected_date + "']");
+                    var td = tr.find("td");
+                    //qty
+                    var qty = $(td[1]).html();
+                    $(td[1]).html(parseInt(qty) + parseInt(o.qty));
+                    //total
+                    var total = $(td[2]).html().replace(',', '').replace('.', '');
+                    $(td[2]).html(kendo.toString(parseInt(total) + parseInt(o.total), 'n0'));
+
+                    if ((parseInt(qty) + parseInt(o.qty)) > 0) {
+                        $(tr).show();
+                    } else {
+                        $(tr).hide();
+                    }
+                });
+
+                //var tr = $(".summary-data").find("tr");
+                //$.each(tr, function (i, o) {
+                //    var td = tr.find("td");
+                //    var qty = $(td[1]).html();
+                //    if (parseInt(qty) > 0) {
+                //        $(tr).show();
+                //    } else {
+                //        $(tr).hide();
+                //    }
+                //})
+
+                createHiddenSummary();
+            }
+        }
+
+        function createHiddenSummary() {
+            kendo.ui.progress($("#data_perserta"), true);
+            kendo.ui.progress($(".summary-data"), true);
+            $("#hidden-summary").html("");
+            var rowSummary = $(".summary-data").find("tr");
+            var listEmployee = $("#data_perserta").find("tr");
+            
+            var totalAmount = 0;
+            //looping data summary
+            $.each(rowSummary, function (i, o) {
+                var idxEmp = 0;
+                var colomSummary = $(o).find("td");
+                var selected_date = $(o).data("date");
+                var qty = $(colomSummary[1]).html();
+                var total = $(colomSummary[2]).html().replace(',', '').replace('.', '');
+                $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Date]' value='" + selected_date + "'/>");
+                $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Qty]' value='" + qty + "'/>");
+                $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Total]' value='" + total + "'/>");
+                totalAmount += parseInt(total);
+                //looping data employee
+                $.each(listEmployee, function (ii, oo) {
+                    var emp = $(oo).find("td");
+                    var dataEmp = $(emp.find("input:checkbox")[0]);
+
+                    if ($(emp.find("input:checkbox")[0]).is(":checked")) {
+                        var listDate = dataEmp.data("attendance").split(',');
+                        if ($.inArray(selected_date, listDate) !== -1) {
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + idxEmp + "][NoReg]' value='" + dataEmp.data("no-reg") + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + idxEmp + "][Name]' value='" + dataEmp.data("name") + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + idxEmp + "][Classification]' value='" + dataEmp.data("classification") + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + idxEmp + "][ShiftCode]' value='" + dataEmp.data("shiftcode") + "'/>");
+                            $("#hidden-summary").append("<input type='hidden' name='Object.Summaries[" + i + "][Employees][" + idxEmp + "][Amount]' value='" + dataEmp.data("meal-allowance") + "'/>");
+
+                            idxEmp++;
+                        }
+                    }
+                });
+
+            });
+            $(".total").html(kendo.toString(totalAmount, 'n0'));
+            kendo.ui.progress($("#data_perserta"), false);
+            kendo.ui.progress($(".summary-data"), false);
+        }
+
+        getDatesPeriod();
+
+        if ('@Model.Object.ShiftType' == "II") {
+
+            $("#Object_ShiftType").prop("checked", true);
+        }
+        else if ('@Model.Object.ShiftType' == "III") {
+            $("#Object_ShiftType").prop("checked", false);
+        } else {
+            $("#Object_ShiftType").prop("checked", true);
+        }
+</script>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["Shift Meal Allowance Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+                    <ul class="list-inline mb-0">
+                        <li>
+                            <a data-action="collapse">
+                                <i class="ft-minus"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Shift Meal Allowance Data"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Division"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Division, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Division", placeholder = Localizer["Input Division"].Value, @readonly = "readonly" }, isCanEdit))
+
+                                </div>
+                                <div class="form-group">
+                                    <label>@Localizer["Department"]</label>
+                                    @Html.TextBoxFor(x => x.Object.Department, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.Department", placeholder = Localizer["Input Department"].Value, @readonly = "readonly" }, isCanEdit))
+                                </div>
+                                <label><span class="required" aria-required="true"> * </span>@Localizer["Period"]</label>
+                                <div class="row">
+                                    <div class="form-group col-md-4 col-sm-4">
+                                        @(Html.KendoComboBoxFor(x => x.Object.StartPeriod, "StartPeriod")
+                                                                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.StartPeriod" })
+                                                                    .Placeholder(Localizer["Select Period"].Value)
+                                                                    .DataTextField("Years")
+                                                                    .DataValueField("Years")
+                                                                    .DataSource(dataSource => dataSource
+                                                                        .Ajax()
+                                                                        .Read(read => read.Url(Url.Content("~/api/period/years")))
+                                                                    )
+                                                                    .SelectedIndex(-1)
+                                                                    .Events(events => events.DataBound("onYearBound").Change("onYearChange"))
+                                                                    .Enable(isCanEdit)
+                                                                    .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group col-md-5 col-sm-5">
+
+                                        @(Html.KendoComboBoxFor(x => x.Object.EndPeriod, "EndPeriod")
+                                                                            .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.EndPeriod" })
+                                                                            .Placeholder(Localizer["Select Period"].Value)
+                                                                            .DataTextField("Month")
+                                                                            .DataValueField("id")
+                                                                            .DataSource(dataSource => dataSource
+                                                                                .Ajax()
+                                                                                .Read(read => read.Url(Url.Content("~/api/period/month")))
+                                                                            )
+                                                                            .SelectedIndex(-1)
+                                                                            .Events(events => events.DataBound("onMonthBound").Change("onMonthChange"))
+                                                                            .Enable(isCanEdit)
+                                                                            .Deferred()
+                                        )
+                                    </div>
+                                </div>
+                                <label><span class="required" aria-required="true"> * </span>Shift</label>
+                                <div class="row">
+                                    <div class="form-group col-md-3 col-sm-3">
+                                        <label class="mt-radio green mt-radio-outline">
+                                            II
+                                            @Html.RadioButtonFor(x => x.Object.ShiftType, "II", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.ShiftType" }, isCanEdit))
+                                            <span></span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group col-md-3 col-sm-3">
+                                        <label class="mt-radio green mt-radio-outline">
+                                            III
+                                            @Html.RadioButtonFor(x => x.Object.ShiftType, "III", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.ShiftType" }, isCanEdit))
+                                            <span></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Participants Data"]</legend>
+                                <div class="form-group">
+                                    <label><input class="select-all" type="checkbox" name="select-all" @(isCanEdit ? "" : "disabled")> @Localizer["Select All"]</label>
+                                    <table id="data_perserta"></table>
+                                </div>
+                            </fieldset>
+                        </div>
+                        <div class="col-md-6 col-sm-12">
+                            <fieldset>
+                                <legend>@Localizer["Summary"]</legend>
+
+                                <div id="hidden-summary"></div>
+                                <div style="overflow:auto">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th style="text-align: center;">@Localizer["Date"]</th>
+                                                <th style="text-align: center;">@Localizer["Total Participants"]</th>
+                                                <th style="text-align: center;">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="summary-data"></tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th style="text-align: center;" colspan="2">
+                                                    Total
+                                                </th>
+                                                <th style="text-align: right;" class="total">
+
+                                                </th>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            </fieldset>
+                            <fieldset>
+                                <legend>@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

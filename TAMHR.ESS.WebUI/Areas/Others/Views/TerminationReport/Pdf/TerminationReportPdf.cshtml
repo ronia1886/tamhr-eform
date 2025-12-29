@@ -1,0 +1,130 @@
+﻿@using TAMHR.ESS.Infrastructure
+@using TAMHR.ESS.Domain
+@inject ConfigService ConfigService
+@inject TAMHR.ESS.Infrastructure.DomainServices.TerminationService terminationService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.MdmService mdmService;
+@model PdfViewModel
+@{
+
+    Layout = null;
+    var obj = Model.Object as List<TerminationReportView>;
+
+
+    var viewData = Model.ViewData as TerminationReportFilter;
+    DateTime DateFrom= viewData.DateFrom;
+    DateTime DateTo= viewData.DateTo;
+    
+    string strDateFrom = DateFrom.ToString("dd MMMM yyyy");
+    string strDateTo = DateTo.ToString("dd MMMM yyyy");
+}
+<style type="text/css">
+    td {
+        padding: 2px;
+    }
+
+    .border-bottom {
+        border-bottom: 1px dotted black
+    }
+
+    .border-top {
+        border-top: 1px solid black
+    }
+
+    .border-left {
+        border-left: 1px solid black
+    }
+
+    .border-right {
+        border-right: 1px solid black
+    }
+
+    .border {
+        border: 1px solid black
+    }
+
+    table {
+        border-collapse: collapse;
+    }
+
+    .bg-gray {
+        background: #efefef
+    }
+
+    .bold {
+        font-weight: bold
+    }
+    .breakhere {
+        page-break-after: always
+    }
+    .capitalize {
+        text-transform: capitalize;
+    }
+</style>
+<hr style="margin-bottom:10px; margin-top: 0;" />
+<div style="text-align:center; width:100%;">
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%; margin-right: 5%;" border="0" cellspacing="0" cellpadding="0">
+        @*<colgroup>
+            <col style="width: 15%;" />
+            <col style="width: 25%;" />
+            <col style="width: 15%;" />
+            <col style="width: 12%;" />
+            <col style="width: 10%;" />
+            <col style="width: 20%;" />
+
+        </colgroup>*@
+        <thead>
+            <tr class="tableizer-firstrow" style="height:60px">
+                <td class="bold" style="font-size: 18px; font-weight: bold; border-top: 0px !important;" colspan="6" align="center">
+                    Termination Report
+                </td>
+            </tr>
+        </thead>
+    </table>
+    <div style="text-align:right">@Localizer["Period"] : @strDateFrom - @strDateTo</div>
+    <table class="tableizer-table" style="font-family: 'Segoe UI'; font-size: 12px; width: 100%;  margin-right: 5%;" border="1" cellspacing="0" cellpadding="0">
+@*        <colgroup>
+            <col style="width: 5%;" />
+            <col style="width: 20%;" />
+            <col style="width: 25%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 5%;" />
+            <col style="width: 10%;" />
+
+        </colgroup>*@
+        <tbody>
+            <tr style="background-color:darkgray">
+                <td style="text-align:center">Termination Number</td>
+                <td style="text-align:center">No Reg</td>
+                <td style="text-align:center">Employee Name</td>
+                <td style="text-align:center">Division</td>
+                <td style="text-align:center">Class</td>
+                <td style="text-align:center">Reason</td>
+                <td style="text-align:center">Termination Type</td>
+                <td style="text-align:center">End Date</td>
+                <td style="text-align:center">Status</td>
+            </tr>
+        
+            @{ var index = 1;}
+            @foreach (var item in obj)
+            {
+            <tr>
+                <td>@item.DocumentNumber</td>
+                <td>@item.NoReg</td>
+                <td>@item.Name</td>
+                <td>@item.Division</td>
+                <td>@item.Class</td>
+                <td>@item.Reason</td>
+                <td>@item.TerminationName</td>
+                <td>@item.EndDate.ToString("dd MMMM yyyy")</td>
+                <td>@item.DocumentStatus</td>
+            </tr>
+                index++;
+            }
+        </tbody>
+    </table>
+    <br />
+
+
+    </div>

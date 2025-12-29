@@ -1,0 +1,68 @@
+﻿@model IEnumerable<TAMHR.ESS.Infrastructure.ViewModels.MenuViewModel>
+@foreach (var menuCategory in Model)
+{
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">@Localizer[menuCategory.Category]</h4>
+                </div>
+                <div class="card-content">
+                    <div class="card-body pt-1 pb-2">
+                        <div class="d-flex align-content-start flex-wrap">
+                            <div class="d-flex align-content-start flex-wrap flex-no-border flex-item-large w-100">
+                                @foreach (var menu in menuCategory.Menus)
+                                {
+                                    var url = menu.Url ?? "#";
+                                    var hasChild = string.IsNullOrEmpty(menu.Url);
+
+                                    if (hasChild)
+                                    {
+                                        <a href="javascript:;" class="flex-icon-item font-dark" data-trigger="modal" data-modal="submenu-modal-group" data-modal-title="@Localizer["Sub Menu"] - @Localizer[menu.Title]" data-modal-type="xl" data-modal-ajax="true" data-ajax-url="~/core/menu/submenu" data-parameters-id="@menu.Id">
+                                            <span class="flex-icon pb-1">
+                                                @if ((menu.Title ?? "") != "SHE")
+                                                {
+                                                    <i class="@menu.IconClass"></i>
+                                                }
+                                                else
+                                                {
+                                                    <img src="~/img/logo/logo-she.png" width="45" height="45" />
+                                                }
+                                            </span>
+                                            <span class="title">@Localizer[menu.Title]</span>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <a href="@Url.Content(menu.Url)" class="flex-icon-item font-dark" @Html.Raw(menu.Params)>
+                                            <span class="flex-icon pb-1">
+                                                @if ((menu.Title ?? "") != "SHE")
+                                                {
+                                                    <i class="@menu.IconClass"></i>
+                                                }
+                                                else
+                                                {
+                                                    <img src="~/img/logo/logo-she.png" width="45" height="45" />
+                                                }
+                                            </span>
+                                            <span class="title">@Localizer[menu.Title]</span>
+                                        </a>
+                                    }
+                                }
+                                @if (menuCategory.FavouriteCategory)
+                                {
+                                    <a href="javascript:;" class="flex-icon-item font-dark" data-trigger="modal" data-modal-title="@Localizer["Edit Favourite Menu"]" data-modal-type="xl" data-modal-ajax="true" data-ajax-url="~/core/menu/favourites">
+                                        <span class="flex-icon pb-1">
+                                            <i class="iconmoon-changemenu"></i>
+                                        </span>
+                                        <span class="title">@Localizer["Change Favourite Menu"]</span>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -1,0 +1,456 @@
+﻿@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //List<string> data = new List<string> { "abc", "csd", "akd", "adasdasdasda asdasdda" };
+    var data = (IEnumerable<DropDownTreeItemModel>)ViewBag.directorateData;
+    var now = DateTime.Now;
+    var year = now.Year;
+    var start = (DateTime)ViewBag.StartDate;
+    var end = (DateTime)ViewBag.EndDate;
+    var noreg = User.GetClaim("NoReg");
+    var category = ViewBag.Category;
+    var categories = (Dictionary<int, string>)ViewBag.Categories;
+    var len = categories.Count;
+    var offset = 5;
+    var gt = len > offset;
+    ScriptManager.RegisterReferences("datepicker", "grid", "chart");
+
+}
+@section scripts {
+    <script type="text/javascript">
+                function getParameters() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return { noreg: "@noreg", startDate: startDate, endDate: endDate, category: "@category", showAll: true };
+        }
+             function getParametersall() {
+            var startDate = kendo.toString($("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1), "yyyy-MM-dd"),
+                endDate = kendo.toString($("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31), "yyyy-MM-dd");
+
+            return {startDate: startDate, endDate: endDate, category: "@category", showAll: true };
+        }
+
+        app.registerHandler("searchHandler", function () {
+            var currYear = @now.Year,
+                sd = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                ed = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 12, 31);
+
+            $(".date-detail").text("(" + kendo.toString(sd, "d MMM yyyy") + " - " + kendo.toString(ed, "d MMM yyyy")+ ")");
+
+            app.refreshControl("grid");
+            app.refreshControl("chart");
+        });
+
+        $(function () {
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+    <partial name="_Script" />
+    @*<partial name="~/Areas/TimeManagement/Views/EmployeeProfile/_Script.cshtml" />*@
+
+}
+
+@section styles  {
+    <link rel="stylesheet" type="text/css" href="~/plugins/bootstrap-suggest/bootstrap-suggest.css" />
+    <style>
+        .legend-item {
+            font: 12px 'Noto Sans';
+            margin: 2px;
+            cursor: pointer;
+        }
+
+            .legend-item .legend-marker {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+            }
+
+        .k-grid-header .k-grid-header-wrap th.k-header {
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            overflow: visible;
+            white-space: normal;
+        }
+
+        .btn-grey {
+            color: #fff;
+            background-color: #9e9e9e;
+            border-color: #9e9e9e
+        }
+    </style>
+}
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title" id="titleSummary">@Localizer["Bonus-Deduction"]</h4>
+                <hr>
+            </div>
+            <div class="card-body">
+                <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Directorate"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("directorate")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("directorate selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .BindTo(data)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDirectorate");
+                                })
+                                .Placeholder(Localizer["Please select directorate"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                        .Name("Directorate")
+                        .HtmlAttributes(new { @class = "form-control" })
+                        .AutoClose(false)
+                        .TagMode(MultiSelectTagMode.Single)
+                        .DataSource(source =>
+                        {
+                            source.ServerFiltering(true)
+                            .Custom()
+                            .Type("aspnetmvc-ajax")
+                            .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-directorate"))));
+                        })
+                        .Placeholder(Localizer["Please select directorate"].Value)
+                        .Deferred()
+                    )*@
+                            @*<input type="text" class="form-control" id="Directorate" data-placeholder="@Localizer["Select Directorate"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Division"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("division")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("division selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Filter(Kendo.Mvc.UI.FilterType.Contains)
+                                .Enable(false)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDivision");
+                                })
+                                .Placeholder(Localizer["Please select division"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                    .Name("Divisi")
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .AutoClose(false)
+                    .TagMode(MultiSelectTagMode.Single)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-division"))));
+                    })
+                    .Placeholder(Localizer["Please select division"].Value)
+                    .Deferred()
+                    )*@
+                            @*<input type="text" class="form-control" id="Divisi" data-placeholder="@Localizer["Select Division"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Department"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("department")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("department selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Events(e =>
+                                {
+                                    e.Change("$.OnChangeDepartment");
+                                })
+                                .Enable(false)
+                                .Placeholder(Localizer["Please select department"].Value)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                    .Name("Department")
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .AutoClose(false)
+                    .TagMode(MultiSelectTagMode.Single)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-department"))));
+                    })
+                    .Placeholder(Localizer["Please select department"].Value)
+                    .Deferred()
+                    )*@
+                            @*<input type="text" class="form-control" id="Department" data-placeholder="@Localizer["Select Deparment"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Section"]</label>
+                            @(Html.Kendo().DropDownTree()
+                                .Name("section")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .CheckAll(true)
+                                .Checkboxes(true)
+                                .AutoClose(false)
+                                .Messages(ms =>
+                                {
+                                    ms.SingleTag("section selected");
+                                })
+                                .TagMode(DropDownTreeTagMode.Single)
+                                .Placeholder(Localizer["Please select section"].Value)
+                                .Enable(false)
+                                .Deferred()
+                                )
+                            @*@(Html.Kendo().MultiSelect()
+                    .Name("Section")
+                    .HtmlAttributes(new { @class = "form-control" })
+                    .AutoClose(false)
+                    .TagMode(MultiSelectTagMode.Single)
+                    .DataSource(source =>
+                    {
+                        source.ServerFiltering(true)
+                        .Custom()
+                        .Type("aspnetmvc-ajax")
+                        .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/employe-profile/get-unique-column-values-section"))));
+                    })
+                    .Placeholder(Localizer["Please select section"].Value)
+                    .Deferred()
+                    )*@
+                            @*<input type="text" class="form-control" id="Section" data-placeholder="@Localizer["Select Section"]" />*@
+                        </div>
+                    </div>
+                    <div class="row" style="margin-top:20px;">
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["No Reg"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("NoReg")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-reportAll/get-unique-column-values-noreg"))));
+                                })
+                                .Placeholder(Localizer["Please select noreg"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="NoReg" data-placeholder="@Localizer["Select NoReg"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Employee Name"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("Name")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-reportAll/get-unique-column-values-name"))));
+                                })
+                                .Placeholder(Localizer["Please select name"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="Name" data-placeholder="@Localizer["Select Name"]" />*@
+                        </div>
+                        <div class="col-md-3 form-group">
+                            <label>@Localizer["Employee Status"]</label>
+                            @(Html.Kendo().MultiSelect()
+                                .Name("Status")
+                                .HtmlAttributes(new { @class = "form-control" })
+                                .AutoClose(false)
+                                .TagMode(MultiSelectTagMode.Single)
+                                .DataSource(source =>
+                                {
+                                    source.ServerFiltering(true)
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-reportAll/get-unique-column-values-status"))));
+                                })
+                                .Placeholder(Localizer["Please select status"].Value)
+                                .Deferred()
+                                )
+                            @*<input type="text" class="form-control" id="Status" data-placeholder="@Localizer["Select Status"]" />*@
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12" style="margin-top:20px;">
+                            <a class="btn btn-primary" id="btnSearch" style="color: #fff;">
+                                <i class="ft-search"></i> &nbsp;@Localizer["Search"]
+                            </a>
+                            <a class="btn btn-grey" id="btnClear" style="color: #fff;">
+                                <i class="ft-refresh-cw"></i> &nbsp;@Localizer["Clear"]
+                            </a>
+                        </div>
+                    </div>
+                    <hr>
+                </div>
+                <div class="card">
+                    <div class="row d-flex no-padding row-col-separator-xl">
+                        <div class="col-md-6">
+                            <div class="m-widget">
+                                <div class="m-widget-header">
+                                    <h3 class="m-widget-title">@Localizer["Dashboard Summary"]</h3>
+                                    <span class="m-widget-desc">@Localizer["Dashboard summary chart"]</span>
+                                </div>
+                                <div class="m-widget-item pt-0">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            @(Html.Kendo().Chart<AbsenceSummaryAllStoredEntity>()
+                                .Name("chart")
+                                .HtmlAttributes(new { style = (gt ? "height: 140px;" : "height: 105px;") + " position: relative;" })
+                                .Legend(legend => legend
+                                    .Position(gt ? ChartLegendPosition.Right : ChartLegendPosition.Right)
+                                    .Align(ChartLegendAlign.Center)
+                                    .Labels(labels => labels.Template("${ text } = ${ value }"))
+                                )
+                                .DataSource(ds => ds
+                                    .Custom()
+                                    .Type("aspnetmvc-ajax")
+                                    .Transport(transport => transport.Read(read => read.Url(Url.Content("~/api/monitoring-reportAll/absence-summaryAll")).Data("getParametersall")))
+                                    .Schema(config => config.Data("Data").Total("Total"))
+                                )
+                                .SeriesColors(new[] { "#AA4839", "#D4D46A", "#5B2971", "#246B61", @"\#9717A8", @"\#005A91", @"\#007FAD", @"\#00D3E4", @"\#FF96DA", @"\#FF7D81", @"\#E0FF4D" })
+                                .Series(series => {
+                                    series.Donut(x => x.Total, x => x.DisplayName)
+                                        .ColorField("Color")
+                                        .VisibleInLegendField("VisibleInLegend");
+                                })
+                                .AutoBind(false)
+                                .Tooltip(tooltip => tooltip
+                                    .Visible(true)
+                                    .Template("${ category }: ${ value }")
+                                )
+                                .Deferred()
+                            )
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="m-widget">
+                                <div class="m-widget-header">
+                                    <h3 class="m-widget-title">@Localizer["Description"]</h3>
+                                    <span class="m-widget-desc">@Localizer["Summary description"]</span>
+                                </div>
+                                <div class="m-widget-item pt-2">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <ol class="pl-3 font-small-2 mb-0">
+                                                @foreach (var item in categories)
+                                                {
+                                                    <li>@item.Value Kode Presensi <b>@item.Key</b></li>
+                                                }
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12">
+                    @(Html.Kendo().Grid<EmployeProfileView>()
+                        .Name("gridEmployeeProfile")
+                        .HtmlAttributes(new { @class = "not-hoverable table-fixed-header" })
+                        .Pageable(options =>
+                        {
+                            options.Input(true);
+                            options.Numeric(false);
+                            options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                        })
+                        .HtmlAttributes(new { style = "height:600px;" })
+                        .Sortable()
+                        .Resizable(resizable => resizable.Columns(true))
+                        .NoRecords(config => config.Template(@"<div class="" text-center p-2 text-muted""><i class="" fa fa-clipboard font-large-1""></i><br />" + Localizer["No data found"].Value + "</div>"))
+                        .Scrollable()
+                        .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/monitoring-reportAll/get-employee"))
+                        .Data("$.getDataReport")
+                        )
+                        .PageSize(20)
+                        )
+                        .Columns(columns =>
+                        {
+                            columns.Group(groupAll => groupAll
+                            .Title(Localizer["Employee Profile"].Value)
+                            .Columns(infoAll =>
+                            {
+                                infoAll.Bound(c => c.Noreg).Title("Noreg").Width(100);
+                                @*.ClientTemplate(@"
+                                <div class=""media pull-left"">
+                                <div class=""media-img mr-2"">
+                                <img src=""#:app.resolveImageUrl(NoReg)#"" class=""rounded"" style=""width: 2.5rem; height: 2.5rem;"">
+                                </div>
+                                <div class=""media-body"">
+                                <h6 class=""mb-0"">#:Name#</h6>
+                                <span class=""d-block"">#:$.toDefault(JobName, '-')#</span>
+                                </div>
+                                </div>
+                            ")
+                            .Width(250);*@
+                                infoAll.Bound(x => x.Name).Title("Employee").Width(150);
+                                infoAll.Bound(x => x.Expr1).Title("Employee Status").Width(150);
+                                infoAll.Bound(x => x.Directorate).Title("Directorate").Width(250);
+                                infoAll.Bound(x => x.Divisi).Title("Division").Width(200);
+                                infoAll.Bound(x => x.Department).Title("Department").Width(200);
+                                infoAll.Bound(x => x.Section).Title("Section").Width(100);
+                                infoAll.Bound(x => x.Noreg).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                                    <div class=""btn-group"">
+                                        <a class=""btn btn-sm purple"" href=""#:app.resolveUrl('~/timemanagement/monitoringreport/AttandanceIncentiveAll?noreg='.concat(Noreg))#"" title=""view"">
+                                            <i class=""ft-eye""></i>
+                                        </a>
+                                    </div>
+                                ").Width(100);
+                            })
+                            );
+                        })
+                        @*.Events(events =>
+                        {
+                            events.DataBound("$.OnDataBound");
+                        })*@
+                        .Deferred()
+                        )
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div id="wrapper"></div>
+    </div>
+</div>

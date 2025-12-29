@@ -1,0 +1,71 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService profileservice;
+@{
+    var user = User.GetClaim("NoReg");
+    var data = profileservice.GetDataEducation(user).FirstOrDefault();
+}
+@if (data != null)
+{
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset class="card-header" data-toggle="collapse" href="#ijazah" role="button" aria-expanded="false" aria-controls="ijazah">
+                        <legend>Ijazah</legend>
+                        <div class="collapse show" id="ijazah">
+                            <div class="row">
+                                <label class="col-md-4">Nama Seri Ijasah</label>
+                                <span class="col-md-8">: 012312312312</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Nama</label>
+                                <span class="col-md-8">: @data.Name</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tempat Dan Tanggal Lahir</label>
+                                <span class="col-md-8">: @data.BirthDate</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">NPM</label>
+                                <span class="col-md-8">: 012312312312</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Program Studi</label>
+                                <span class="col-md-8">: @data.Major</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Fakultas</label>
+                                <span class="col-md-8">: @data.Major</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Institute</label>
+                                <span class="col-md-8">: @data.Institute</span>
+                            </div>
+                            </div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset class="card-header" data-toggle="collapse" href="#ijazahdoc" role="button" aria-expanded="false" aria-controls="ijazahdoc">
+                    <legend>Document</legend>
+                    <div class="form-group collapse show" id="ijazahdoc">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>Ijasah</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(data?.NoReg)">
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+
+
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+
+<hr />

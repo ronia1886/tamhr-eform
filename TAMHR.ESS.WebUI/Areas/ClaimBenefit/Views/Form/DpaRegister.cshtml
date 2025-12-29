@@ -1,0 +1,449 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ClaimBenefitService claimBenefitService
+@model DocumentRequestDetailViewModel<DpaRegisterViewModel>
+@{
+    bool isCanEdit = AclHelper.CanEdit();
+    ScriptManager.RegisterReferences("grid");
+
+    if (Model.DocumentApprovalId == default(Guid))
+    {
+        Model.Object = claimBenefitService.GetLastDpa(User.GetClaim("NoReg"));
+    }
+
+    var ahliwaris = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Object.AhliWaris);
+    Model.Object.AhliWarisLama = Model.Object.AhliWaris;
+    //var ahliwarislama = Newtonsoft.Json.JsonConvert.SerializeObject(Model.Object.AhliWaris);
+        string requester = string.IsNullOrEmpty(Model.Requester) ? User.GetClaim("NoReg") : Model.Requester;
+}
+@section scripts {
+    @Html.Kendo().DeferredScripts(true)
+    <script type="text/javascript">
+        if ('@isCanEdit' == 'True') {
+            $.ajax(
+                {
+                    type: 'POST',
+                    url: app.resolveUrl('~/api/claimbenefit/getinfo'),
+                    dataType: 'json',
+                    success: function (data) {
+                        $('#User').text(data.Data[0].Name);
+                        $('#Object_User').val(data.Data[0].Name)
+                    }
+                });
+        } else {
+            $('#inputahliwaris').hide();
+        }
+
+        if ('@Model.Object.AccountType' == 'rekening') {
+            $("#DivBankCode").hide();
+            $("#DivAccountNumber").hide();
+            $("#DivBranch").hide();
+            $("#DivAccountName").hide();
+            $("#Object_AccountType").prop("checked", true);
+        }
+        else if ('@Model.Object.AccountType' == 'rekeninglain') {
+            $("#DivBankCode").show();
+            $("#DivAccountNumber").show();
+            $("#DivBranch").show();
+            $("#DivAccountName").show();
+            $("#Object_AccountType").prop("checked", false);
+        } else {
+            $("#DivBankCode").hide();
+            $("#DivAccountNumber").hide();
+            $("#DivBranch").hide();
+            $("#DivAccountName").hide();
+            $("#Object_AccountType").prop("checked", true);
+        }
+
+        $('input[type=radio][id=Object_AccountType]').change(function () {
+            if (this.value == "rekening") {
+                $("#DivBankCode").hide();
+                $("#DivAccountNumber").hide();
+                $("#DivAccountName").hide();
+                $("#DivBranch").hide();
+                $("#Object_Branch").data("kendoComboBox").value("");
+                $("#Object_BankCode").data("kendoComboBox").value("");
+                $("#Object_AccountNumber").val("");
+                $("#Object_AccountName").val("");
+            }
+            if (this.value == "rekeninglain") {
+                $("#DivBankCode").show();
+                $("#DivBranch").show();
+                $("#DivAccountNumber").show();
+                $("#DivAccountName").show();
+                $("#Object_BankCode").data("kendoComboBox").value("");
+                $("#Object_Branch").data("kendoComboBox").value("");
+                $("#Object_AccountNumber").val("");
+                $("#Object_AccountName").val("");
+
+            }
+        })
+        if ('@isCanEdit' == 'False') {
+            $("#User").text('@Model.Object.User');
+        }
+
+        function databoundahliwaris(e) {
+            if ('@isCanEdit' == 'False') {
+                $(".deleteahliwaris").hide();
+            }
+        }
+        // Add Ahli Waris
+        function onSave(e) {
+            if ($("#Object_Name").val() != "" && $("#Object_BrithDate").val() != "" && $("#Object_FamilyRelation").val() != "") {
+                var grid = $("#grid").data("kendoGrid");
+                var data = grid.dataSource.data();
+                var isExists = false;
+
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].Name == $("#Object_Name").val() && data[i].BrithDate == $("#Object_BrithDate").val()) {
+                        isExists = true;
+                    }
+                }
+
+                if (isExists == false) {
+                    grid.dataSource.add({ Name: $("#Object_Name").val(), BrithDate: kendo.toString($("#Object_BrithDate").data("kendoDatePicker")._value, "yyyy-MM-dd") , FamilyRelation: $("#Object_FamilyRelation").data("kendoComboBox").text(), FamilyRelationCode: $("#Object_FamilyRelation").val(), GenderCode : genderCode})
+                }
+                $('#Object_BrithDate').val('');
+                $('#Object_Name').val('');
+                $('#Object_FamilyRelation').data("kendoComboBox").value("");
+                $('#anakkandung').data("kendoComboBox").value("");
+                $('#anakangkat').data("kendoComboBox").value("");
+                $("#divAnakKandung").hide()
+                $("#divAnakAngkat").hide()
+                $("#divPasangan").show()
+            }
+        }
+
+        //Delete AhliWaris
+        function onDelete(e) {
+            if ('@isCanEdit' == 'True') {
+                var tr = $(e).closest("tr");
+                var data = $("#grid").data("kendoGrid").dataItem(tr);
+                var grid = $("#grid").data("kendoGrid");
+                grid.removeRow(tr);
+            }
+        }
+        function ValidateNumber(e) {
+            var evt = (e) ? e : window.event;
+            var charCode = (evt.keyCode) ? evt.keyCode : evt.which;
+            if (charCode > 31 && (charCode < 48 || charCode > 57)) {
+                return false;
+            }
+            return true;
+        };
+
+        function casscadeDatabound(e) {
+            if ('@isCanEdit' == 'False') {
+            this.enable(false);
+            }
+        };
+        var genderCode = "";
+        function onChangeChild() {
+            $("#Object_Name").val(this.text());
+            genderCode = this.value()
+        };
+
+        function onchangeFamilyRelationship() {
+            var val = $("#Object_FamilyRelation").data("kendoComboBox").value()
+            if (val == '' || val == null) { }
+            else {
+                if (val.toLowerCase().includes('angkat')) {
+                    $("#divAnakKandung").hide()
+                    $('#anakkandung').data("kendoComboBox").value("");
+                    $('#anakangkat').data("kendoComboBox").value("");
+                    $("#Object_Name").val("");
+                    $("#divAnakAngkat").show()
+                    $("#divPasangan").hide()
+                    genderCode = "";
+                }
+                else if (val.toLowerCase().includes('kandung')) {
+                    $("#divAnakKandung").show()
+                    $("#divAnakAngkat").hide()
+                    $("#divPasangan").hide()
+                    $('#anakkandung').data("kendoComboBox").value("");
+                    $('#anakangkat').data("kendoComboBox").value("");
+                    $("#Object_Name").val("");
+                    genderCode = "";
+                }
+                else if (val.toLowerCase().includes('pasangan')) {
+                    $("#divAnakKandung").hide()
+                    $("#divAnakAngkat").hide()
+                    $("#divPasangan").show()
+                    $('#anakkandung').data("kendoComboBox").value("");
+                    $('#anakangkat').data("kendoComboBox").value("");
+                    $("#Object_Name").val("");
+                    genderCode = "";
+
+                    $.ajax(
+                        {
+                            type: 'POST',
+                            url: app.resolveUrl("~/api/claimbenefit/getpartner"),
+                            dataType: 'json',
+                            data: { ismainfamily: true },
+                            success: function (data) {
+                                console.log(data)
+                                $("#Object_Name").val(data.Data[0].Name);
+                                genderCode: data.Data[0].GenderCode
+                                //kendo.toString($("#Object_BrithDate").data("kendoDatePicker").value(data.Data[0].BirthDate), "dd/MM/YYYY")
+                            },
+                        });
+                }
+            }
+        }
+        $("#divAnakKandung").hide()
+        $("#divAnakAngkat").hide()
+        $("#gridLama").hide()
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title">@Localizer["DPA Detail"]</h4>
+                <a class="heading-elements-toggle">
+                    <i class="ft-ellipsis-h font-medium-3"></i>
+                </a>
+                <div class="heading-elements">
+
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-7">
+                            <fieldset class="border p-2">
+                                <legend class="w-auto">@Localizer["DPA Data"]</legend>
+                                <div class="row">
+                                    <div class="col-sm-12">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Transfer Destination"] :</label>
+                                            <div class="form-group">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["<b class='font-red' id='User'></b>'s Account"]
+                                                    @Html.RadioButtonFor(x => x.Object.AccountType, "rekening", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                                    @Html.HiddenFor(x => x.Object.User)
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="mt-radio green mt-radio-outline">
+                                                    @Localizer["Another Account"]
+                                                    @Html.RadioButtonFor(x => x.Object.AccountType, "rekeninglain", ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.AccountType" }, isCanEdit))
+                                                    <span></span>
+                                                </label>
+                                            </div>
+
+                                            <div class="form-group" id="DivBankCode">
+                                                @(Html.KendoComboBoxFor(x => x.Object.BankCode, "BankCode")
+                                                                                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.BankCode" })
+                                                                                                                        .Placeholder(Localizer["Select Bank Name"].Value)
+                                                                                                                        .DataTextField("BankName")
+                                                                                                                        .DataValueField("BankName")
+                                                                                                                        .DataSource(dataSource => dataSource
+                                                                                                                        .Ajax()
+                                                                                                                        .Read(read => read.Url(Url.Content("~/api/bank/distinct")))
+                                                                                                                        )
+                                                                                                                        .SelectedIndex(-1)
+                                                                                                                        .Enable(isCanEdit)
+                                                                                                                        .Deferred()
+                                                )
+                                            </div>
+                                            <div class="form-group" id="DivBranch">
+                                                @(Html.KendoComboBoxFor(x => x.Object.Branch, "Branch")
+                                                                                                                        .HtmlAttributes(new { @class = "form-control", data_validation_for = "Object.Branch" })
+                                                                                                                        .Placeholder(Localizer["Select Branch"].Value)
+                                                                                                                        .DataTextField("Branch")
+                                                                                                                        .DataValueField("Branch")
+                                                                                                                        .DataSource(dataSource => dataSource
+                                                                                                                        .Ajax()
+                                                                                                                        .Read(read => read.Url(Url.Content("~/api/bank/gets"))
+                                                                                                                        .Data(@"function filterProducts() { return { branch: $('#Object_BankCode').val() } }"))
+                                                                                                                        )
+                                                                                                                        .SelectedIndex(-1)
+                                                                                                                        .Enable(isCanEdit)
+                                                                                                                        .AutoBind(false)
+                                                                                                                        .CascadeFrom("Object_BankCode")
+                                                                                                                        .Events(e => e.DataBound("casscadeDatabound"))
+                                                                                                                        .Deferred()
+                                                )
+                                            </div>
+                                            <div class="form-group" id="DivAccountNumber">
+                                                @Html.TextBoxFor(x => x.Object.AccountNumber, ApplicationHelper.Enable(new {
+                                               @class = "form-control", data_validation_for = "Object.AccountNumber", placeholder = Localizer["Input Account Number"].Value,
+                                               onkeydown = "return ValidateNumber(event);",
+                                               maxlength = "16"
+                                           }, isCanEdit))
+
+                                            </div>
+                                            <div class="form-group" id="DivAccountName">
+                                                @Html.TextBoxFor(x => x.Object.AccountName, ApplicationHelper.Enable(new {
+                                                    @class = "form-control", data_validation_for = "Object.AccountName", placeholder = Localizer["Input Account Name"].Value}, isCanEdit))
+                                            </div>
+                                        </div>
+
+                                    </div>
+
+                                    <div class="col-sm-12">
+                                        <div class="form-group">
+                                            <label><span class="required" aria-required="true"> * </span>@Localizer["Personal Email"] :</label>
+                                            @Html.TextBoxFor(x => x.Object.Email, ApplicationHelper.Enable(new {
+                                            @class = "form-control", data_validation_for = "Object.Email", placeholder = Localizer["Input Email"].Value}, isCanEdit))
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-12">
+                                        <div class="row">
+                                            <div class="col-md-6 form-group">
+                                                <label>@Localizer["Home Phone Number"]</label>
+                                                @Html.TextBoxFor(m => m.Object.HouseNumber, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.HouseNumber", placeholder = Localizer["Input Phone Number"].Value, onkeydown = "return ValidateNumber(event);" }, isCanEdit))
+                                            </div>
+
+                                            <div class="col-md-6 form-group">
+                                                <label><span class="required" aria-required="true"> * </span>@Localizer["Phone Number"]</label>
+                                                @Html.TextBoxFor(m => m.Object.MobilePhoneNumber, ApplicationHelper.Enable(new { @class = "form-control", data_validation_for = "Object.MobilePhoneNumber", placeholder = Localizer["Input Phone Number"].Value, onkeydown = "return ValidateNumber(event);" }, isCanEdit))
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </fieldset>
+
+                            <fieldset>
+                                <legend>@Localizer["Heirs Data"]</legend>
+                                <div id="inputahliwaris">
+                                    <div class="form-group">
+                                        <label>@Localizer["Family Relationship"]</label>
+                                        @(Html.KendoComboBoxFor(x => x.Object.FamilyRelation, "FamilyRelation")
+                                                                                                                                                       .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.FamilyRelation" })
+                                                                                                                                                       .Placeholder(Localizer["Select Family Relationship"].Value)
+                                                                                                                                                       .DataTextField("Name")
+                                                                                                                                                       .DataValueField("Code")
+                                                                                                                                                       .DataSource(dataSource => dataSource
+                                                                                                                                                       .Ajax()
+                                                                                                                                                       .Read(read => read.Url(Url.Content("~/api/category/getsbycategory?category=familyTypeCode")))
+                                                                                                                                                       )
+                                                                                                                                                       .Events(x =>
+                                                                                                                                                       {
+                                                                                                                                                           x.Change("onchangeFamilyRelationship");
+                                                                                                                                                       })
+                                                                                                                                                       .SelectedIndex(-1)
+                                                                                                                                                       .Enable(isCanEdit)
+                                                                                                                                                       .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group" id="divPasangan">
+                                        <label>@Localizer["Name"]</label>
+                                        @Html.TextBoxFor(x => x.Object.Name, ApplicationHelper.Enable(new {
+                                        @class = "form-control", data_validation_for = "Object.Name", placeholder = Localizer["Input Name"].Value}, isCanEdit))
+                                    </div>
+                                    <div class="form-group" id="divAnakAngkat">
+                                        <label>@Localizer["Name"]</label>
+                                        @(Html.KendoComboBox("anakangkat", "", "", "Gender", "Name")
+                                                                                    .HtmlAttributes(new { @class = "form-control" })
+                                                                                    .Placeholder(Localizer["Adopted Children"].Value)
+                                                                                    .DataSource(dataSource => dataSource
+                                                                                    .Ajax()
+                                                                                    .Read(read => read.Url(Url.Content("~/api/claimbenefit/getchildadopted")))
+                                                                                    )
+                                                                                    .Events(x => x.Change("onChangeChild"))
+                                                                                    .Enable(isCanEdit)
+                                                                                    .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group" id="divAnakKandung">
+                                        <label>@Localizer["Name"]</label>
+                                        @(Html.KendoComboBox("anakkandung", "", "", "Gender", "Name")
+                                                                                    .HtmlAttributes(new { @class = "form-control" })
+                                                                                    .Placeholder(Localizer["Biological Children"].Value)
+                                                                                    .DataSource(dataSource => dataSource
+                                                                                    .Ajax()
+                                                                                    .Read(read => read.Url(Url.Content("~/api/claimbenefit/getchildbiological")))
+                                                                                    )
+                                                                                    .Events(x => x.Change("onChangeChild"))
+                                                                                    .Enable(isCanEdit)
+                                                                                    .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <label>@Localizer["Date of Birth"]</label>
+                                        @(Html.Hidden("jeniskelamin"))
+                                        @(Html.Kendo().DatePickerFor(x => x.Object.BrithDate)
+                                                                                                      .HtmlAttributes(new { @class = "form-control", @data_validation_for = "Object.BrithDate", placeholder = Localizer["Select Date (dd/MM/yyyy)"].Value })
+                                                                                                      .Enable(isCanEdit)
+                                                                                                      .Format("dd/MM/yyyy")
+                                                                                                      .Deferred()
+                                        )
+                                    </div>
+                                    <div class="form-group">
+                                        <button id="btnAdd" onclick="onSave()" type="button" class="btn btn-circle btn-outline btn-icon-only"><span class="fa fa-plus"></span></button><label>&nbsp; @Localizer["Add Heir"]</label>
+                                    </div>
+                                </div>
+
+                                @(Html.Kendo().Grid(Model.Object.AhliWaris)
+                                                                    .Name("grid")
+                                                                    .HtmlAttributes(new { data_filter = "request-history-filter" })
+                                                                    .Columns(columns =>
+                                                                    {
+                                                                        columns.Template(@"
+                                                                                                                                            <div class='row'>
+                                                                                                                                                <div class='col-md-10'>
+                                                                                                                                                    <span>#:Name#</span></br>
+                                                                                                                                                    <span>#: kendo.toString(kendo.parseDate(BrithDate), 'dd/MM/yyyy') #</span></br>
+                                                                                                                                                    <span>#:FamilyRelation#</span></br>
+                                                                                                                                                    <input type='hidden' name='Object.Ahliwaris[][Name]' value='#:Name#'></input>
+                                                                                                                                                    <input type='hidden' name='Object.Ahliwaris[][BrithDate]' value='#:kendo.toString(kendo.parseDate(BrithDate), 'yyyy-MM-dd')#'></input>
+                                                                                                                                                    <input type='hidden' name='Object.Ahliwaris[][FamilyRelation]' value='#:FamilyRelation#'></input>
+                                                                                                                                                    <input type='hidden' name='Object.Ahliwaris[][FamilyRelationCode]' value='#:FamilyRelationCode#'></input>
+                                                                                                                                                    <input type='hidden' name='Object.Ahliwaris[][GenderCode]' value='#:GenderCode#'></input>
+                                                                                                                                                </div>
+                                                                                                                                                <div class='deleteahliwaris col-md-2'>
+                                                                                                                                                    <button type='button' onclick='onDelete(this)' class='btn btn-circle btn-outline btn-icon-onl' style='background-color:transparent'><span class='fa fa-close'></span></button>
+                                                                                                                                                </div>
+                                                                                                                                            </div>
+                                                                                                                                        ").Title(" ");
+                                                                    })
+                                                                    .Events(e => e.DataBound("databoundahliwaris"))
+                                                                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>Data Ahli Waris Not Found</div>"))
+                                                                    .Deferred()
+                                )
+                                <div id="gridLama">
+                                    @(Html.Kendo().Grid(Model.Object.AhliWarisLama)
+                                                                            .Name("grid2")
+                                                                            .HtmlAttributes(new { data_filter = "request-history-filter" })
+                                                                            .Columns(columns =>
+                                                                            {
+                                                                                columns.Template(@"
+                                                                                                                                                                        <div class='row'>
+                                                                                                                                                                            <div class='col-md-10'>
+                                                                                                                                                                                <input type='hidden' name='Object.AhliwarisLama[][Name]' value='#:Name#'></input>
+                                                                                                                                                                                <input type='hidden' name='Object.AhliwarisLama[][BrithDate]' value='#:kendo.toString(kendo.parseDate(BrithDate), 'yyyy-MM-dd')#'></input>
+                                                                                                                                                                                <input type='hidden' name='Object.AhliwarisLama[][FamilyRelation]' value='#:FamilyRelation#'></input>
+                                                                                                                                                                                <input type='hidden' name='Object.AhliwarisLama[][FamilyRelationCode]' value='#:FamilyRelationCode#'></input>
+                                                                                                                                                                                <input type='hidden' name='Object.AhliwarisLama[][GenderCode]' value='#:GenderCode#'></input>
+                                                                                                                                                                            </div>
+                                                                                                                                                                        </div>
+                                                                                                                                                                    ").Title(" ");
+                                                                            })
+                                                                            .Events(e => e.DataBound("databoundahliwaris"))
+                                                                            .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>Data Ahli Waris Not Found</div>"))
+                                                                            .Deferred()
+                                    )
+                                </div>
+                                
+                            </fieldset>
+                        </div>
+
+                        <div class="col-md-5">
+                            <fieldset class="border p-2">
+                                <legend class="w-auto">@Localizer["Notes"]</legend>
+                                <div class="form-group">
+                                    <label>@Localizer["Notes Detail"]</label>
+                                    @Html.TextAreaFor(x => x.Object.Remarks, ApplicationHelper.Enable(new {
+                                   @class = "form-control", placeholder = Localizer["Input Notes"].Value
+                               }, isCanEdit))
+                                </div>
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

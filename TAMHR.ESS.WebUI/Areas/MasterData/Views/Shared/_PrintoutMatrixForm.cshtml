@@ -1,0 +1,67 @@
+﻿@model TAMHR.ESS.Domain.PrintoutMatrixView
+@{ 
+    var isNew = Model.Id == default(Guid);
+}
+<form method="@(isNew ? "post" : "put")" action="~/api/master-data/printout-matrix">
+    @Html.HiddenFor(x => x.Id)
+    <div class="row">
+        <div class="col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Form"]</label>
+                @(Html.Kendo().ComboBox().Name("FormId")
+                    .HtmlAttributes(new { @class = "form-control", data_validation_for = "FormId" })
+                    .DataTextField("Title")
+                    .DataValueField("Id")
+                    .Placeholder(Localizer["Please select form"].Value)
+                    .Value(Model.FormId == default(Guid) ? string.Empty : Model.FormId.ToString())
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/form/gets")))
+                    )
+                )
+                <span class="invalid" data-validation-for="FormId"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Sub Type"]</label>
+                @Html.TextBoxFor(x => x.SubType, new { @class = "form-control", placeholder = Localizer["Please input sub type if any"].Value })
+                <span class="invalid" data-validation-for="SubType"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label>@Localizer["Approver Location"]</label>
+                @Html.TextBoxFor(x => x.ApproverLocation, new { @class = "form-control", placeholder = Localizer["Please input approver location"].Value })
+                <span class="invalid" data-validation-for="ApproverLocation"></span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Approver Type"]</label>
+                @Html.KendoListComboBoxFor(x => x.ApproverType, new[] { "Group|G", "Position|S", "Job Chief|JC", "Job|C", "Hierarchy|N", "Requester|R" }).HtmlAttributes(new { @class = "form-control", @data_validation_for = "ApproverType", placeholder = Localizer["Please select approver type"].Value })
+                <span class="invalid" data-validation-for="ApproverType"></span>
+            </div>
+        </div>
+        <div class="col-md-6 col-12">
+            <div class="form-group">
+                <label><span class="required" aria-required="true"> * </span>@Localizer["Approver"]</label>
+                @(Html.KendoComboBoxAutocompleteFor(x => x.Approver, Url.Content("~/api/approvalmatrix/get-mapping-query"), "function() { return { 'code': $('#Approver').val() } }", pageSize: 50)
+                    .AutoBind(false)
+                    .SelectedIndex(-1)
+                    .Placeholder(Localizer["Please select approver"].Value)
+                    .CascadeFrom("ApproverType")
+                    .CascadeFromField("Type")
+                )
+                <span class="invalid" data-validation-for="Approver"></span>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a class="btn red-haze" data-trigger="submit" data-callback="updateHandler">@Localizer["Save"]</a>
+    </div>
+</form>

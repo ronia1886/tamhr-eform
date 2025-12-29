@@ -1,0 +1,38 @@
+﻿<ul id="mcu-filter" class="page-toolbars" data-role="filter">
+    <li>
+        <a class="font-purple-plum" data-trigger="handler" data-handler="filterHandler">
+            <i class="icon-magnifier"></i>
+        </a>
+        <input type="text" class="search-input hidden" data-trigger="filter" data-operator="or" data-filters='["NoReg","YearPeriod"]'/>
+    </li>
+    <li class="dropdown dropdown-arrow">
+        <a href="javascript:;" class="font-normal dropdown-toggle font-green-haze" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-sort-amount-desc"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+           <li>
+                <a href="javascript:;" data-trigger="filter" data-sort="CreatedOn">@Localizer["Date Created"]</a>
+            </li>
+            <li class="dropdown-divider"></li>
+            <li class="p-2">
+                <a href="javascript:;" class="btn red" data-trigger="filter" data-clear="sort">@Localizer["Clear"]</a>
+            </li>
+        </ul>
+    </li>
+
+    <li class="dropdown">
+        <a href="javascript:;"
+           class="font-green-haze" id="AddMcu">
+            <i class="fa fa-plus-circle"></i>
+        </a>
+    </li>
+
+</ul>
+
+<div id="McuModal" class="modal fade bs-modal-lg show" role="dialog" aria-hidden="true" style="display: none;" data-backdrop="static">
+    <div class="modal-dialog" style="width: 90%; max-width: 1800px; height: 90%; max-height: 90%;">
+        <div class="modal-content">
+        </div>
+    </div>
+</div>
+

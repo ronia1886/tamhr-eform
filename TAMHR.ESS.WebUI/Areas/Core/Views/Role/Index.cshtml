@@ -1,0 +1,97 @@
+﻿@{
+    ScriptManager.RegisterReference("listview");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a href="javascript:;" data-target="grid" data-trigger="modal" data-modal="role-modal" data-modal-title="Create new Role" data-modal-ajax="true" data-ajax-url="~/core/role/load">
+                    @Localizer["Create Role"]
+                </a>
+            </li>
+            <li>
+                <a href="~/api/role/download">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Role" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/role">
+                    @Localizer["Upload"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/x-kendo-tmpl" id="template">
+        <div class="col-md-6 col-12">
+            <div class="custom-control custom-checkbox d-inline">
+                <input id="#:Id#_cb" class="custom-control-input" type="checkbox" name="Permissions[]" value="#:Id#" #: Active ? "checked" : "" # />
+                <label class="custom-control-label" for="#:Id#_cb">#:Description#</label>
+            </div>
+        </div>
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Roles"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.Role>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "role-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Role").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-2"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Title#</h6>
+                                    <small>#:Description#</small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.RoleTypeCode).Title("Type").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"<span class=""badge badge-primary badge-roundless"">#:RoleTypeCode#</span>").Width("8rem").MinScreenWidth(700);
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""role-modal"" data-modal-title=""Edit Role - #:RoleKey#"" data-modal-ajax=""true"" data-ajax-url=""~/core/role/load"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-edit""></i>
+                                </a>
+                            </div>
+                        ").Width("8rem");
+                        //columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                        //    <div class=""btn-group"">
+                        //        <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""role-modal"" data-modal-title=""Edit Role - #:RoleKey#"" data-modal-ajax=""true"" data-ajax-url=""~/core/role/load"" data-parameters-id=""#:Id#"">
+                        //            <i class=""ft-edit""></i>
+                        //        </a>
+                        //        <a class=""btn btn-sm red-haze"" data-trigger=""handler"" data-url=""~/api/role"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                        //            <i class=""ft-trash""></i>
+                        //        </a>
+                        //    </div>
+                        //").Width("8rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/role/gets")))
+                        .Sort(sort => sort.Add("Description").Ascending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

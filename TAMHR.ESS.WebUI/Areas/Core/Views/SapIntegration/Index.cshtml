@@ -1,0 +1,172 @@
+﻿@{
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    ScriptManager.RegisterReferences("dropdownlist", "combobox", "listview");
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> @Localizer["Actions"] <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                <a data-trigger="handler" data-handler="excelHandler" data-parameters-url="@Url.Content("~/api/sapintegration/export")">
+                    @Localizer["Download"]
+                </a>
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript" src="~/js/pages/sap-integration.js"></script>
+    <script type="text/javascript">
+        app.registerHandler("searchHandler", function () {``
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                query = $filterWrapper.data("query") || {},
+                startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                formId = $("#FormId").data("kendoComboBox").value(),
+                formName = $("#FormId").data("kendoComboBox").text(),
+                zeroDownloadCount = $("#DownloadCount").data("kendoComboBox").value();
+
+           
+
+            if (formName === "Termination") {
+                query.filter = [{
+                    field: 'TerminationDate',
+                    value: startDateStr,
+                    operator: 'gte'
+                }, {
+                    field: 'TerminationDate',
+                    value: endDateStr,
+                    operator: 'lte'
+                }, {
+                    field: 'FormId',
+                    value: formId,
+                    operator: 'eq'
+                }];
+            } else {
+                query.filter = [{
+                    field: 'LastApprovedOn',
+                    value: startDateStr,
+                    operator: 'gte'
+                }, {
+                    field: 'LastApprovedOn',
+                    value: endDateStr,
+                    operator: 'lte'
+                }, {
+                    field: 'FormId',
+                    value: formId,
+                    operator: 'eq'
+                }];
+            }
+
+
+            if (zeroDownloadCount === 'True') {
+                query.filter.push({
+                    field: 'DownloadCount',
+                    value: 0,
+                    operator: 'eq'
+                });
+            }
+            
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                let $el = $(el),
+                    ds = $el.data("kendoGrid").dataSource;
+
+                let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                ds.query(executeQuery);
+            });
+
+            $filterWrapper.data("query", query);
+        });
+
+        $(function () {
+            $(document).on('click', '.k-link,.k-list .k-item', function (e) {
+                e.stopPropagation();
+            });
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <div class="custom-control custom-checkbox d-inline">
+                    <input id="check-all" type="checkbox" class="custom-control-input" data-trigger="handler" data-handler="checkAllHandler">
+                    <label class="custom-control-label" for="check-all"></label>
+                </div>
+                <h3 class="card-title">@Localizer["List of Documents"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.DocumentApprovalView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "document-approval-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).ClientTemplate(@"
+                            <div class=""custom-control custom-checkbox mt-3"">
+                                <input type=""checkbox"" name=""ids[]"" id=""cb#:Id#"" value=""#:Id#"" class=""custom-control-input"" data-trigger=""handler"" data-handler=""checkHandler"">
+                                <label class=""custom-control-label"" for=""cb#:Id#""></label>
+                            </div>
+                        ").HtmlAttributes(new { @class = "pr-0" }).Width(35);
+                        columns.Bound(c => c.Id).Title("Document").ClientTemplate(@"
+                            <div class=""media"">
+                                <div class=""media-body ml-2"">
+                                    <h6 class=""mt-1 mb-0 bold""><a class=""font-blue-sharp"" target=""_blank"" href=""" + Url.Content("~/core/form/redirectto?formKey=#:FormKey#&id=#:Id#") + @""">#:DocumentNumber#</a></h6>
+                                    <small class=""d-block font-small-2""><b>#:FormTitle#</b> requested by <b>#:CreatorName#</b></small>
+                                    <small class=""d-block font-small-2"">Last approved - #:kendo.toString(LastApprovedOn, 'dd/MM/yyyy HH:mm tt')#</small>
+                                    # if(DownloadCount > 0) { #<a class=""font-blue-sharp"" href=""javascript:;"" data-trigger=""modal"" data-modal=""view-count-modal"" data-modal-title=""Hit Count - #:DocumentNumber#"" data-modal-ajax=""true"" data-ajax-url=""~/core/sapintegration/viewcount"" data-parameters-id=""#:Id#""><small class=""d-block font-small-2"">Download count - #:DownloadCount#</small></a># } else { #
+                                    <small class=""d-block font-small-2"">Download count - #:DownloadCount#</small>
+                                    # } #
+                                </div>
+                            </div>
+                        ").HtmlAttributes(new { @class = "pl-3 align-middle" });
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center align-middle" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm green-jungle"" data-trigger=""handler"" data-handler=""singleDownloadHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-download""></i>
+                                </a>
+                            </div>
+                        ").Width("8rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .Events(evt =>
+                    {
+                        evt.DataBinding(@<text>function() {
+                            this.element.removeClass("k-grid k-widget k-display-block");
+                            this.element.find("table").addClass("table w-100 mb-1");
+                        }</text>);
+
+                        evt.DataBound(@<text>function() {
+                            $("#check-all").prop("disabled", this.dataSource.total() === 0);
+                        }</text>);
+                    })
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        //.Read(read => read.Url(Url.Content("~/api/task/completed")))
+                        //20221124 | Roni | ubah get data karena ada CR Vacation Allowance
+                    .Read(read => read.Url(Url.Content("~/api/sapintegration/completed")))
+                        .Sort(sort => sort.Add("CreatedOn").Descending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.AlwaysVisible(false);
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.PageSizes(new[] { 5, 10, 25, 100, 200, 500 });
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>

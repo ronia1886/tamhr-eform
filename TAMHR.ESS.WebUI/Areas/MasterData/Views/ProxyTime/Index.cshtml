@@ -1,0 +1,439 @@
+﻿@{
+    ScriptManager.RegisterReference("datetimepicker");
+    var pathUrl = $"{Context.Request.Scheme}://{Context.Request.Host}{Context.Request.PathBase}";
+}
+@section pageToolbars {
+    <div class="dropdown">
+        <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+            <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-right">
+            <li>
+                @*<a id="downloadProxy" href="~/api/proxy-time/download">
+                    @Localizer["Download"]
+                </a>*@
+
+                <a href="javascript:;" data-trigger="handler" data-handler="downloadReportHandler">
+                    @Localizer["Download"]
+                </a>
+            </li>
+            <li>
+                <a href="javascript:;" data-trigger="modal" data-modal="upload-modal" data-modal-title="Upload Proxy Time" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/proxy-time">
+                @Localizer["Upload"]
+                </a>
+
+                @*<a href="javascript:;" data-trigger="modal" data-modal="proxyTimeNewModal" data-modal-title="Upload Proxy Time" data-modal-ajax="true" data-ajax-url="~/core/home/genericdatauploader" data-parameters-url="~/api/vaccineschedule/download">
+                    @Localizer["Upload"]
+                </a>*@
+            </li>
+        </ul>
+    </div>
+}
+@section scripts {
+    <script type="text/javascript">
+        //const { type } = require("jquery");
+
+        app.registerHandler("searchHandler", function () {``
+            var $this = $(this),
+                $filterWrapper = $this.closest("[data-role='filter']"),
+                query = $filterWrapper.data("query") || {},
+                startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                name = $("#Name").val(),
+                noreg = $("#NoReg").val();
+            
+            query.filter = [{
+                field: 'WorkingDate',
+                value: startDate,
+                operator: 'gte'
+            }, {
+                field: 'WorkingDate',
+                value: endDate,
+                operator: 'lte'
+            }, {
+                field: 'Name',
+                value: name,
+                operator: 'contains'
+            }, {
+                field: 'NoReg',
+                value: noreg,
+                operator: 'contains'
+            }];
+            
+            let $els = $("[data-filter='" + $filterWrapper.attr("id") + "']");
+
+            $.each($els, (key, el) => {
+                let $el = $(el),
+                    ds = $el.data("kendoGrid").dataSource;
+
+                let executeQuery = $.extend({}, query, { page: ds.options.page, pageSize: ds.options.pageSize });
+
+                ds.query(executeQuery);
+            });
+
+        // Tidak dipakai
+        // (function () {
+        //     const base = app.resolveUrl("~/api/proxy-time/download");
+        //     if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(base)) {
+        //         console.warn("Unsafe base URL for download, aborting");
+        //         return;
+        //     }
+
+        //     const params = new URLSearchParams({
+        //         sd:    String(startDateStr ?? "").trim(),
+        //         ed:    String(endDateStr  ?? "").trim(),
+        //         name:  name,
+        //         noreg: noreg
+        //     });
+
+        //     const candidate = base + "?" + params.toString();
+
+        //     $("#downloadProxy").attr("href", candidate);
+        // })();
+
+            $filterWrapper.data("query", query);
+        });
+
+        app.registerHandler("downloadReportHandler", function () {
+           var startDate = $("#StartDate").data("kendoDatePicker").value() || new Date(1800, 0, 1),
+                endDate = $("#EndDate").data("kendoDatePicker").value() || new Date(9999, 11, 31),
+                startDateStr = kendo.toString(startDate, "yyyy-MM-dd"),
+                endDateStr = kendo.toString(endDate, "yyyy-MM-dd"),
+                name = $("#Name").val(),
+                noreg = $("#NoReg").val();
+                    {
+                      const base = app.resolveUrl("~/api/proxy-time/download");
+                      const params = new URLSearchParams({
+                        sd:    String(startDateStr ?? "").trim(),
+                        ed:    String(endDateStr  ?? "").trim(),
+                        name:  String(name        ?? "").trim(),
+                        noreg: String(noreg       ?? "").trim()
+                      });
+                      const url = base + "?" + params.toString();
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }
+
+        });
+
+        app.registerHandler("uploadHandler", function () {
+            var $this = $(this),
+                allowedExtensions = ['xls', 'xlsx'],
+                $fileInputWrapper = $("#UploadExcelPath"),
+                $fileInput = $this.closest("form").find("input[type='file']"),
+                fileName = $fileInput.val();
+            console.log($this);
+            if (fileName.length === 0) {
+                app.warning("Mohon pilih file.");
+
+                return;
+            }
+            else {
+                var extension = fileName.replace(/^.*\./, '');
+
+                if ($.inArray(extension, allowedExtensions) === -1) {
+                    app.warning("Mohon pilih hanya file excel.");
+
+                    return;
+                }
+            }
+
+            var formData = new FormData();
+            formData.append("file", $fileInput[0].files[0]);
+
+            app.blockUI({ boxed: true });
+            $.ajax({
+                url: app.resolveUrl("~/api/proxy-time/upload"),
+                data: formData,
+                cache: false,
+                contentType: false,
+                processData: false,
+                type: 'POST'
+            }).done(function (data) {
+                if (data.TotalSuccess === data.TotalUpload && data.TotalSuccess > 0) {
+                    app.success(app.translate("Success upload all data"));
+                }
+                else if (data.TotalSuccess < data.TotalUpload && data.TotalSuccess > 0) {
+                    app.warning(kendo.format(app.translate("Success upload {0} of {1} data, with warning"), data.TotalSuccess, data.TotalUpload) + ":<br/>" + data.Messages.join("<br/>"));
+                }
+                else {
+                    app.error(app.translate("Failed upload Proxy Time") + ":<br/>" + data.Messages.join("<br/>"));
+                }
+
+                $fileInput.val("");
+                $fileInputWrapper.val("");
+                app.refreshControl("grid");
+                app.unblockUI();
+                $("#proxyTimeNewModal").modal("hide");
+            });
+        });
+
+        function formatDateToString(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0'); // bulan 01-12
+            const day = date.getDate().toString().padStart(2, '0');          // tanggal 01-31
+
+            let hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+
+            // tentukan AM atau PM
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+
+            // ubah 24-jam ke 12-jam format
+            //hours = hours % 12;
+            //hours = hours ? hours : 12; // jam 0 jadi 12
+            const hoursStr = hours.toString().padStart(2, '0');
+            //${ ampm }
+            return `${day}/${month}/${year} ${hoursStr}:${minutes} ${ampm}`;
+        }
+
+        function onProxyInChanged() {
+            let presenceCode = $("#AbsentStatus").val();
+            let proxyInPicker = $("#WorkingTimeIn").data("kendoDateTimePicker");
+            let proxyOutPicker = $("#WorkingTimeOut").data("kendoDateTimePicker");
+            var comboBoxShift = $("#ShiftCode").data("kendoComboBox");
+            let selectedDataItem = comboBoxShift.dataItem();
+            console.log(selectedDataItem);
+            let UpdateShiftCode = $("#ShiftCode").val();
+            if (presenceCode === "1") {
+      
+      
+                let NormalTimeIn = $("#NormalTimeIn").val();
+                let NormalTimeOut = $("#NormalTimeOut").val();
+            
+
+                if (selectedDataItem) {
+                    //console.log("NormalTimeOut:", selectedDataItem.NormalTimeOutText);
+                    let setTimeOut = selectedDataItem.NormalTimeOutText.split(":");
+                    let setTimeIn = selectedDataItem.NormalTimeINText.split(":");
+                    //console.log("hour", setTime[0]);
+                    //console.log("minute", setTime[1]);
+                    let newNormaltiMeOut = new Date(NormalTimeOut);
+                    let newNormalTimeIn = new Date(NormalTimeIn);
+                    newNormalTimeIn.setHours(parseInt(setTimeIn[0]), parseInt(setTimeIn[1]), 0, 0);
+                    newNormaltiMeOut.setHours(parseInt(setTimeOut[0]), parseInt(setTimeOut[1]), 0, 0);
+                    NormalTimeOut = newNormaltiMeOut;
+                    NormalTimeIn = newNormalTimeIn;
+                }
+                console.log(NormalTimeOut);
+            
+                if (proxyInPicker && proxyOutPicker) {
+                    //console.log("new");
+                    let proxyInValue = proxyInPicker.value();
+                    let NormalProxyOut = new Date(NormalTimeOut);
+                    let NormalTimeInDate = new Date(NormalTimeIn);
+                    let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+                    if (UpdateShiftCode === "1NJ8") {
+                        threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+                    }
+                    console.log(NormalProxyOut);
+                    console.log(NormalTimeInDate);
+                    //console.log(UpdateShiftCode);
+                    //console.log(proxyInValue.getTime() > NormalTimeInDate.getTime() );
+
+
+                    if (proxyInValue > NormalTimeInDate && (UpdateShiftCode === "1NJ8" || UpdateShiftCode === "1NS8")) {
+                        // Tambah 8 jam 45 menit
+                        //console.log("new test 1");
+                        let minOutValue = new Date(proxyInValue.getTime() + threshold * 60000);
+                        proxyOutPicker.value(minOutValue);
+                        proxyOutPicker.min(minOutValue);
+                        document.querySelector('#WorkingTimeOut').value = formatDateToString(minOutValue);
+                    }
+                    else if (NormalTimeInDate > NormalProxyOut) {
+                        NormalProxyOut = NormalProxyOut.addDays(1);
+                        proxyOutPicker.value(NormalProxyOut);
+
+                        proxyOutPicker.min(NormalProxyOut);
+
+                        document.querySelector('#WorkingTimeOut').value = formatDateToString(NormalProxyOut);
+                    }
+                    else {
+                        //console.log("new test 3");
+                        //let minOutValue = new Date(NormalTimeOut.getTime());
+                        proxyOutPicker.value(NormalProxyOut);
+
+                        proxyOutPicker.min(NormalProxyOut);
+
+                        document.querySelector('#WorkingTimeOut').value = formatDateToString(NormalProxyOut);
+                    }
+                }
+            } else {
+                //console.log("test");
+                //console.log(proxyOutPicker);
+                let minOut = proxyInPicker.value();
+                minOut.setHours(0, 0, 0, 0);
+                //let maxOut = proxyInPicker.value();
+                //maxOut.addDays(1).setHours(24, 59, 0, 0);
+                //console.log(minOut);
+                //console.log(maxOut);
+                proxyOutPicker.min(minOut);
+                //proxyOutPicker.max(maxOut);
+            }
+        }
+
+        function onProxyOutChanged() {
+            console.log("test proxyOut");
+            let proxyInPicker = $("#WorkingTimeIn").data("kendoDateTimePicker");
+            let proxyOutPicker = $("#WorkingTimeOut").data("kendoDateTimePicker");
+            let presenceCode = $("#AbsentStatus").data("kendoComboBox")?.value() || $("#AbsentStatus").val();
+            let UpdateShiftCode = $("#ShiftCode").val();
+            let NormalTimeIn = $("#NormalTimeIn").val();
+            let NormalTimeInDate = new Date(NormalTimeIn);
+            let NormalTimeOut = $("#NormalTimeOut").val();
+            if (presenceCode === "1") {
+                console.log("newnew");
+                if (proxyInPicker && proxyOutPicker) {
+                    let proxyInValue = proxyInPicker.value();
+                    let proxyOutValue = proxyOutPicker.value();
+
+                    let threshold = 8 * 60 + 45;// 8 jam 45 menit = 525 menit
+                    if (UpdateShiftCode === "1NJ8") {
+                        threshold = 8 * 60 + 60;// 9 Jam = 540 menit
+                    }
+                    let minOutValue = new Date(proxyInValue.getTime() + threshold * 60000);
+                    //console.log(minOutValue);
+                    if (proxyInValue > NormalTimeInDate && UpdateShiftCode === "1NJ8" || UpdateShiftCode === "1NS8") {
+                        //console.log("testnew");
+
+                    } else {
+                        minOutValue = new Date(NormalTimeOut);
+                    }
+
+                    //console.log(proxyOutValue);
+                    //console.log(minOutValue);
+                    //console.log(proxyOutValue < minOutValue);
+
+                    if (proxyOutValue < minOutValue) {
+                        console.log("nice");
+                        proxyOutPicker.value(minOutValue);
+                        proxyOutPicker.min(minOutValue);
+                        document.querySelector('#WorkingTimeOut').value = formatDateToString(minOutValue);
+                    }
+
+
+                }
+            }
+        }
+
+        
+
+
+
+        $(function () {
+
+            $(document).on('click', '.k-link', function (e) {
+                e.stopPropagation();
+            });
+
+            
+
+        });
+    </script>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of Proxy Time"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("_Toolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.TimeManagementView>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "proxy-time-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Faskes").ClientTemplate(@"
+                            <div class=""media"">
+                                <img class=""rounded mt-1"" src=""#:app.resolveImageUrl(NoReg)#"" alt=""avatar"" style=""width: 2.5rem; height: 2.5rem;"">
+                                <div class=""media-body ml-3"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Name#</h6>
+                                    <small class=""d-block"">#:AbsentName#</small>
+                                    <small class=""d-block"">#:kendo.toString(WorkingDate, 'dd/MM/yyyy')#</small>
+                                    <small class=""d-block""><span class=""font-green-jungle"">#:$.toDefault(kendo.toString(WorkingTimeIn, 'dd/MM/yyyy HH:mm tt'), '?')#</span> - <span class=""font-red-sunglo"">#:$.toDefault(kendo.toString(WorkingTimeOut, 'dd/MM/yyyy HH:mm tt'), '?')#</span></small>
+                                </div>
+                            </div>
+                        ");
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <a class=""btn btn-sm blue-sharp"" data-trigger=""modal"" data-modal=""proxy-time-modal"" data-modal-title=""Edit Proxy Time - #:Name#"" data-modal-ajax=""true"" data-ajax-url=""~/masterdata/proxytime/load"" data-parameters-id=""#:Id#"">
+                                <i class=""ft-edit""></i>
+                            </a>
+                        ").Width(90);
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/proxy-time/gets")))
+                        .PageSize(10)
+                        .Sort(sort =>
+                        {
+                            sort.Add("Name");
+                            sort.Add("WorkingDate");
+                        })
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="proxyTimeNewModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss-modal="modal2">&times;</button>
+                <h4 class="modal-title">@Localizer["Upload Proxy Time"]</h4>
+
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    @*<label>@Localizer["Upload Time"]</label>*@
+                    <form method="post" enctype="multipart/form-data">
+                        <div class="file-group">
+                            <div class="input-group-area">
+                                <input id="UploadExcelPath" onfocus="this.blur()" readonly="readonly" placeholder="Nama File" />
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Browse"]
+                                    <input class="file" type="file" id="fUpload" data-auto-upload="false" name="UploadExcelPath" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+                                </div>
+                            </div>
+                            <div class="input-group-icon">
+                                <div class="file btn">
+                                    @Localizer["Upload"]
+                                    <input class="file" type="button" value="Upload" data-trigger="handler" data-handler="uploadHandler" />
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                    <div class="mt-3">
+                        <a class="btn green-haze btn-sm" href="~/api/proxy-time/download-template">
+                            <i class="ft-download"></i> Download Template
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    $("input[type='file']").change(function () {
+        console.log("tes upload");
+        var fileName = $(this).val();
+        $("#UploadExcelPath").val(fileName);
+    });
+</script>

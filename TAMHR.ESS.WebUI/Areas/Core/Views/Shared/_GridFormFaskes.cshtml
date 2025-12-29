@@ -1,0 +1,50 @@
+﻿<div class="form-group">
+    <label>Search</label>
+    <input type="search" id="search" class="form-control" />
+</div>
+<div style="overflow:auto">
+    @(Html.Kendo().Grid<TAMHR.ESS.Domain.Faskes>()
+            .Name("faskesGrid")
+            .HtmlAttributes(new { style = "min-width:max-content" })
+            .Columns(columns =>
+            {
+                columns.Bound(c => c.FaskesCode).Filterable(true).Title("Faskes Code");
+                columns.Bound(c => c.FaskesName).Filterable(true).Title("Faskes Name");
+                columns.Bound(c => c.FaskesAddress).Filterable(true).Title("Faskes Adress");
+                columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+        <a class=""btn"" data-trigger=""handler"" data-handler=""selectFaskes"" data-parameters-code=""#:FaskesCode#"" data-parameters-name=""#:FaskesName#"">Select</a>
+    ").Width(170);
+            })
+            .Pageable(p => p.AlwaysVisible(false))
+            .DataSource(dataSource => dataSource
+                .Ajax()
+                .PageSize(10)
+                .Read(read => read.Url(Url.Content("~/api/faskes/gets")))
+            )
+    )
+</div>
+<script type="text/javascript">
+    $("#search").keyup(function () {
+        var val = $('#search').val();
+        $("#faskesGrid").data("kendoGrid").dataSource.filter({
+            logic  : "or",
+            filters: [
+                {
+                    field: "FaskesCode",
+                    operator: "contains",
+                    value   : val
+                },
+                {
+                    field: "FaskesName",
+                    operator: "contains",
+                    value   : val
+                },
+                {
+                    field: "FaskesAddress",
+                    operator: "contains",
+                    value: val
+                }
+            ]
+        });
+    });
+</script>

@@ -1,0 +1,132 @@
+﻿@model PdfViewModel;
+@inject TAMHR.ESS.Infrastructure.DomainServices.CoreService coreService;
+@{
+    Layout = null;
+    var obj = Model.Object as IEnumerable<TAMHR.ESS.Domain.AyoSekolahReportStoredEntity>;
+    var firstData = obj.FirstOrDefault() ?? new AyoSekolahReportStoredEntity();
+    var year = firstData != null ? firstData.CreatedOn.Year : DateTime.Now.Year;
+    // Buat matrix Print Out
+    string DivisionHead = "";
+    var currentCulture = new System.Globalization.CultureInfo("id-ID");
+}
+<style type="text/css">
+    .border-bottom {
+        border-bottom: 1px solid black
+    }
+
+    .border-top {
+        border-top: 2px solid black
+    }
+
+    .bold {
+        font-weight: bold
+    }
+</style>
+<hr style="margin-bottom:50px;" />
+
+<h3 style="text-align:left; height:10px">@year SPECIAL LOAN FOR CHILD SCHOOL SUPPORT</h3>
+<h3 style="text-align:left; height:10px"><u>APPLICATION LIST</u></h3>
+
+<table border="0" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px">
+    <colgroup>
+        <col style="width: 3%">
+        <col style="width: 10%">
+        <col style="width: 87%">
+    </colgroup>
+    <tr>
+        <td colspan="2">Key Point<label style="float:right">:</label></td>
+    </tr>
+    <tr>
+        <td>1.</td>
+        <td colspan="2">Approaching New School year of @year, company consider that some employees may require additional cash outflow for school registration as well as preparation for entering new school year (new uniform, school kit, etc). Especially for @year this period is almost at the same timing with Festive season.</td>
+    </tr>
+    <tr>
+        <td>2.</td>
+        <td>Policy<label style="float:right">:</label></td>
+        <td>[a] Using existing loan program</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>[b] Eligible for permanent employee</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>[c] Applied only for this year (July @year)</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>[d] Amount provided considering employee's affordability</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>[e] Loan Settlement through 1 times deduction in December @year</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td>[f] Subsidized interest</td>
+    </tr>
+    <tr><td colspan="3" class="bold">&nbsp;</td></tr>
+</table>
+@{ 
+    var counter = 1;
+}
+<table border="1" cellspacing="4" cellpadding="2" style="width: 100%; font-family:'Segoe UI'; font-size:12px; border-collapse:collapse">
+    <tbody>
+        <tr class="tableizer-firstrow bold" style="background-color:yellow">
+            <td style="width:5%" align="center"> NO</td>
+            <td style="width:10%" align="center"> Noreg</td>
+            <td style="width:20%" align="center">Name</td>
+            <td style="width:20%" align="center">Divisi</td>
+            <td style="width:20%" align="center">Section</td>
+            <td style="width:10%" align="center">Class</td>
+            <td style="width:15%" align="center">Signed</td>
+        </tr>
+        @foreach (var data in obj)
+        {
+        <tr>
+            <td align="center">@(counter++)</td>
+            <td align="center">@data.NoReg</td>
+            <td align="center">@data.Name</td>
+            <td align="center">@data.Division</td>
+            <td align="center">@data.Section</td>
+            <td align="center">@data.EmployeeSubgroupText</td>
+            <td>&nbsp;</td>
+        </tr>
+        }
+    </tbody>
+</table>
+<p></p>
+
+<table style="font-family:'Segoe UI'; font-size:12px">
+    <tr>
+        <td>Jakarta,</td>
+        <td class="border-bottom" style="width:200px"></td>
+    </tr>
+</table>
+
+<table style="width:100%; font-family:'Segoe UI'; margin:0px;" cellspacing="0">
+    <tr>
+        <td style="width:40%"></td>
+
+        <td style="width:10%"></td>
+
+        <td style="width:50%">
+            <table align="right" border="1" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="width:150px" align="center">Division Head</td>
+                </tr>
+                <tr>
+                    <td height="100px" style="width:150px; text-align: center; font-style: italic;"></td>
+                </tr>
+                <tr>
+                    <td height="25px" style="width:150px" align="center">@DivisionHead</td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>

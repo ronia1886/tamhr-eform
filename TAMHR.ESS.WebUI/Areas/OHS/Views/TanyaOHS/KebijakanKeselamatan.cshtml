@@ -1,0 +1,224 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("grid", "combobox", "pdfviewer", "datepicker");
+
+    var now = DateTime.Now.Date;
+    var currentPeriod = now.Year;
+    var currentMonth = now.Month;
+    var offsetYear = 2020;
+
+    var periods = Enumerable.Range(offsetYear, (currentPeriod - offsetYear) + 1)
+        .OrderByDescending(x => x);
+
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+}
+@section scripts {
+    <script type="text/javascript" src="~/plugins/A/Axios/axios.min.js"></script>
+    <script type="text/javascript" src="~/plugins/M/Moment/moment.js"></script>
+    <partial name="ModalFeedback" />
+}
+<script type="text/javascript">
+    var FaqList = [
+        {
+            "topik": "Rawat Inap",
+            "pertanyaan": [
+                {
+                    "q": "Saya berencana menjalani tindakan/operasi di RS. Apakah dapat di tanggung perusahaan atau asuransi?",
+                    "a": "Tindakan medis atau operasi Anda akan ditanggung oleh asuransi jika sesuai dengan indikasi medis yang berlaku. Namun, pihak rumah sakit perlu mengirimkan informasi lengkap mengenai rencana tindakan, pengobatan, atau perawatan kepada pihak asuransi sebelum prosedur dilakukan, agar proses klaim dapat diproses sesuai ketentuan."
+                },
+                {
+                    "q": "Mengapa tidak semua biaya perawatan di tanggung asuransi/perusahaan?",
+                    "a": "Jika perawatan di rumah sakit dilakukan sesuai dengan ketentuan (indikasi medis yang tepat dan hak kelas perawatan yang sesuai), biaya perawatan dapat ditanggung oleh perusahaan melalui asuransi. Namun, beberapa biaya yang tidak dapat ditanggung oleh perusahaan antara lain biaya non-medis, seperti makanan untuk penunggu, susu bayi, pembalut, dan lain-lain. Selain itu, obat-obatan yang dikategorikan sebagai herbal atau suplemen juga tidak termasuk dalam cakupan penangguangan"
+                },
+                {
+                    "q": "Bagaimana perhitungan penanggungan pribadi bila saya dirawat dengan kelas yang lebih tinggi dari hak kelas saya?",
+                    "a": "Pihak rumah sakit akan menghitung total biaya berdasarkan kelas perawatan yang dipilih oleh karyawan dan juga kelas yang sesuai dengan hak karyawan. Selisih antara biaya hak dan biaya kelas yang dipilih akan menjadi tanggung jawab karyawan dan harus dibayar langsung di rumah sakit.\n\nContoh:\n\nHak kelas 1: Jika dirawat di kelas 1, total biaya perawatan adalah 10 juta.\nKelas perawatan yang dipilih karyawan: VIP, dengan total biayaperawatan di VIP sebesar 20 juta.\nMaka, selisih yang harus dibayarkan oleh karyawan adalah 20 juta - 10 juta, yaitu 10 juta."
+                },
+                {
+                    "q": "Apakah ada benefit kontrol setelah rawat inap?",
+                    "a": "Berdasarkan PKB TAM, setiap karyawan berhak untuk mendapatkan maksimal 3 kali rawat jalan / kontrol post rawat inap menggunakan Guarantee Letter TAM. Adapun benefit kontrol ini wajib memiliki diagnosa yang sama dengan diagnosa saat rawat inap"
+                },
+                {
+                    "q": "Saya/istri saya akan melahirkan dalam waktu dekat. Bagaimana proses penjaminannya?",
+                    "a": "Silahkan Anda meminta pihak RS untuk mengajukan permintaan rawat inap ke pihak asuransi lengkap dengan diagnosa, rencana kelahiran dan keterangan kondisi medis. Pihak Asuransi akan mengiriman penjaminan langsung ke RS dan Anda akan mendapat pemberitahuan dari RS mengenai penjaminan tersebut"
+                },
+                {
+                    "q": "Apakah semua proses persalinan akan ditanggung perusahaan?",
+                    "a": "Berdasarkan PKB TAM, perusahaan menjamin biaya persalinan karyawan atau istri karyawan hingga anak ke 3. Biaya persalinan yang ditanggung adalah berdasarkan indikasi medis. Biaya non medis seperti popok bayi, susu, suplemen, tindik, vaksin dll menjadi tanggungan karyawan"
+                },
+                {
+                    "q": "Saya/istri saya akan melahirkan anak ke 4, namun dokter mengatakan persalinannya berbahaya dan perlu operasi. Apakah perusahaan menanggung biaya ini?",
+                    "a": "Berdasarkan PKB TAM, perusahaan menjamin persalinan sampai dengan kelahiran ke-3, kecuali persalinan yang tidak normal yang dapat membahayakan jiwa anak/ ibu berdasarkan keterangan dokter. Anda perlu meminta surat keterangan dari dokter yang menuliskan diagnosa dan indikasi dilakukan operasi. Surat keterangan rencana persalinan dengan operasi diberikan kepada dokter perusahaan paling cepat 1,5 bulan dan paling lambat 2 minggu sebelum hari persalinan. Diskusikan kondisi ini dengan dokter perusahaan. "
+                },
+                {
+                    "q": "Apakah saya dapat memilih dimana saya akan dirawat inap?",
+
+                    "a": "Berdasarkan PKB, Apabila pekerja atau keluarganya berdasarkan keterangan dokter harus menjalani perawatan dan pengobatan (rawat inap) di rumah sakit, maka pekerja atau keluarganya menggunakan Rumah Sakit St. Carolus Jakarta atau Rumah Sakit pada wilayah tertentu yang telah ditunjuk/ ditetapkan Perusahaan. Anda dapat menemukan nama nama rumah sakit yang bekerjasama dengan Asuransi Astralife di aplikasi MyAstralife"
+                },
+                {
+                    "q": "Biaya apa saja yang dapat di tanggung perusahaan/asuransi bila saya perlu di rawat inap di RS?",
+                    "a": "Yang dimaksud dengan perawatan dan pengobatan di Rumah Sakit adalah biaya-biaya yang dikeluarkan selama perawatan di Rumah Sakit yang sesuai dengan indikasi medis  (kecuali biaya non medis, suplemen/vitamin dan obat herbal),,dan hak Kelas kamar Rumah Sakit . Anda dapat menemukan detail hak kelas kamar di buku PKB pasal 31"
+                },
+                {
+                    "q": "Bagaimana bila hak kelas kamar saya penuh di RS?",
+                    "a": "Bila kelas kamar telah penuh maka dapat menempati kelas kamar setingkat lebih tinggi untuk waktu maksimal 3 (tiga) hari\nSaat ini asuransi yang dipilih oleh perusahaan telah bekerja sama dengan lebih dari 900 RS di seluruh Indonesia."
+                },
+                {
+                    "q": "Mengapa anak saya tidak mendapatkan kartu asuransi untuk rawat inap?",
+                    "a": "Perusahaan meminta pihak asuransi untuk menerbitkan kartu asuransi sesuai dengan data karyawan di bagian kekaryawanan. \nAnda wajib mengupdate data Anda bila terdapat perubahaan/penambahan anggota keluarga. \nBenefit asuransi rawat inap akan dihentikan ketika anak karyawan telah mencapai umur 23 tahun atau sudah menikah."
+                },
+                {
+                    "q": "Berapa lama SLA reimburse perawatan sejak di ajukan? ",
+                    "a": "Reimburse akan diproses setelah semua dokumen lengkap dan dikirimkan dokumen asli ke Klinik Pratama Sunter 2 (cek dokumen apa saja yang diperlukan di pertanyaan dokumen yang diperlukan untuk reimburse). Bila seluruh dokumen telah lengkap dan sesuai, maka proses ini akan selesai dalam 10 hari kerja. "
+                },
+                {
+                    "q": "Apabila saya di rawat di RS yang bukan merupakan RS Rujukan Perusahaan, apakah saya dapat mengajukan pertanggungan dengan metode reimburse?",
+                    "a": "Perusahaan akan melakukan review terhadap beberapa hal, diantaranya kesesuaian diagnosa dengan pengobatan, lama rawat inap dll. Oleh sebab itu, pastikan Anda telah mensubmit seluruh dokumen asli ke Klinik Pratama Sunter 2. Bila hasil review telah sesuai , maka berdasarkan PKB TAM pasal 31,  Perusahaan akan melakukan penggantian (reimburse) biaya-biaya berdasarkan patokan biaya di Rumah Sakit St. Carolus Jakarta."
+                },
+                {
+                    "q": "Dokumen apa saja yang diperlukan untuk mengajukan reimburse perawatan?",
+                    "a": "1. Kwitansi pengobatan asli dengan rinciannya ( misal : biaya dokter 100rb, biaya obat A 100rb, biaya laboratorium Dengue 100rb dan seterusnya) \n2. Resume rawat inap/rawat jalan yang mencantumkan diagnosa dengan cap RS, Cap SIP dokter , dan tanda tangan Dokter yang merawat\n3. Copy resep\n4. Kwitansi resep\n5. Hasil laboratorium (bila ada pemeriksaan lab)\nMasa berlaku dokumen ini adalah maksimal 30 hari kalender sejak tanggal diterbitkan. Anda dapat mengirimkan dokumen asli ke Klinik Pratama Sunter 2, ditujukan kepada Bpk. Haikal Fikry/dr.Puspa/ Bpk, Ghofur"
+                },
+                {
+                    "q": "Bagaimana jika kartu asuransi saya hilang?",
+                    "a": "Anda dapat melakukan pengajuan kehilangan kartu asuransi melalui e form, setelah data di submit Anda dapat menunggu selama 14 hari kerja. Setelah kartu selesai kartu akan dikirimkan langsung ke Admin Divisi "
+                },
+                {
+                    "q": "Bila ada selisih biaya yang harus saya bayarkan akibat perawatan di RS (misal akibat naik kelas atau tindakan non medis), apakah bisa menggunakan skema potong gaji?",
+                    "a": "Perusahaan menjamin biaya perawatan di RS apabila sesuai dengan indikasi medis dan sesuai hak kelasnya. Biaya yang ditimbulkan akibat perawatan yang tidak sesuai akan ditagihkan langsung oleh pihak RS kepada karyawan dan wajib di selesaikan di RS sebelum kepulangan sehingga tidak dapat menggunakan skema potong gaji. "
+                },
+                {
+                    "q": "Apakah saya /keluarga saya dapat melakukan rawat inap di klinik rawat inap? ",
+                    "a": "Rumah sakit merupakan tempat paling tepat untuk kasus rawat ini. Klinik memiliki banyak keterbatasan seperti fasilitas, tenaga medis terutama dokter yang dapat  mempengaruhi kualitas pengobatan dan pemulihan yang dapat menyebabkan keterlambatan penanganan, kecacatan dan bahkan kematian. Oleh sebab itu, perusahaan hanya menanggung perawatan yang dilakukan di RS sesuai indikasi medis melalui asuransi."
+                }
+            ]
+        },
+        {
+            "topik": "Rawat Jalan",
+            "pertanyaan": [
+                {
+                    "q": "Apakah perusahaan memberikan benefit kesehatan untuk rawat jalan?",
+                    "a": "Perusahaan memberikan Bantuan Pemeliharaan Kesehatan kepada Pekerja dan \nkeluarganya, dipergunakan untuk pemeriksaan kesehatan dan / atau pengobatan yang\ndibayarkan bersamaan dengan pembayaran upah setiap bulan dan besarnya ditetapkan\nPerusahaan. Anda dapat mengetahui detail dari besarnya nilai ini di PKB pasal 30"
+                },
+                {
+                    "q": "Apakah saya bisa mendapat benefit untuk pemasangan KB",
+                    "a": "Perusahaan memberikan jaminan untuk pemasangan dan pemeriksaan spiral, susuk, vasektomi dan tubektomi bagi Pekerja atau istri Pekerja yang mengikuti program Keluarga Berencana."
+                },
+                {
+                    "q": "Apakah saya dapat menggunakan fasilitas kesehatan di perusahaan untuk pengobatan penyakit?",
+                    "a": "Saat ini perusahaan memiliki 2 tipe fasilitas kesehatan di perusahaan. \nA. UPKK : Anda dapat memeriksakan kesehatan dan mendapatkan informasi kesehatan dan konsultasi di fasilitas ini. Fasilitas ini juga dapat memberikan pertolongan pertama (P3K) bila karyawan sakit saat di tempat kerja\nB. Klinik Pratama : Fasilitas ini tidak hanya menyediakan layanan edukasi dan pemeriksaan kesehatan, namun juga pengobatan dan tindakan medis ringan"
+                },
+                {
+                    "q": "Bagaimana jika kartu asuransi saya hilang?",
+                    "a": "Anda dapat melakukan pengajuan kehilangan kartu asuransi melalui e form, setelah data di submit Anda dapat menunggu selama 14 hari kerja. Setelah kartu selesai kartu akan dikirimkan langsung ke Admin Divisi "
+                },
+                {
+                    "q": "Dokumen apa saja yang diperlukan untuk mengajukan reimburse perawatan?",
+                    "a": "1. Kwitansi pengobatan asli dengan rinciannya ( misal : biaya dokter 100rb, biaya obat A 100rb, biaya laboratorium Dengue 100rb dan seterusnya) \n2. Resume rawat inap/rawat jalan yang mencantumkan diagnosa dengan cap RS, Cap SIP dokter , dan tanda tangan Dokter yang merawat\n3. Copy resep\n4. Kwitansi resep\n5. Hasil laboratorium (bila ada pemeriksaan lab)\nMasa berlaku dokumen ini adalah maksimal 30 hari kalender sejak tanggal diterbitkan. Anda dapat mengirimkan permintaan reimburse melalui e-form, kemudian kirimkan dokumen asli ke Klinik Pratama Sunter 2, ditujukan kepada Bpk. Haikal Fikry/dr.Puspa/ Bpk, Ghofur"
+                },
+                {
+                    "q": "Berapa lama claim asuransi dari Rawat Jalan saya akan dibayarkan?",
+                    "a": "Claim asuransi akan diproses setelah Anda mengirimkan berkas  lengkap(Lembar reimburse astralife, Kwitansi Asli, Diagnosa, Copy Resep Obat, Hasil Lab jika ada Pemeriksaan lab) dikirimkan ke Klinik Pratama Sunter 2. Lalu Klinik akan mengirimkan ke Astra Life, Proses Pengecekan dan Pembayaran akan berlangsung selama 10 Hari kerja. \nBila jumlah claim Anda < 2 juta, Anda juga dapat melakukan claim langsung ke Astralife melalui Aplikasi My Astralife. Melalui aplikasi ini Anda dapat memantau langsung proses Claim Anda secara langsung"
+                },
+                {
+                    "q": "Dokumen apa saja yang diperlukan untuk mengajukan reimburse rawat jalan Asuransi?",
+                    "a": "1. Kwitansi pengobatan asli dengan rinciannya ( misal : biaya dokter 100rb, biaya obat A 100rb, biaya laboratorium Dengue 100rb dan seterusnya) \n2. Resume rawat inap/rawat jalan yang mencantumkan diagnosa dengan cap RS, Cap SIP dokter , dan tanda tangan Dokter yang merawat\n3. Copy resep\n4. Kwitansi resep\n5. Hasil laboratorium (bila ada pemeriksaan lab)\n6. Lembar reimburse rawat jalan Astralife yang telah diisi lengkap\nMasa berlaku dokumen ini adalah maksimal 30 hari kalender sejak tanggal diterbitkan. Anda dapat mengirimkan dokumen asli ke Klinik Pratama Sunter 2, ditujukan kepada Bpk. Haikal Fikry/dr.Puspa/ Bpk, Ghofur. \n\nBila jumlah claim Anda < 2 juta, Anda juga dapat melakukan claim langsung ke Astralife melalui Aplikasi My Astralife. Melalui aplikasi ini Anda dapat memantau langsung proses Claim Anda secara langsung"
+                },
+                {
+                    "q": "Dimana saya dapat menemukan lembar reimburse rawat jalan/rawat inap Asuransi Astralife?",
+                    "a": "Anda dapat mendownload formulir di Aplikasi My Astralife atau download di bawah ini"
+                },
+                {
+                    "q": "Bagaimana cara menghubungkan polis rawat jalan saya dengan aplikasi Halodoc?",
+                    "a": "Anda dapat menemukan guidelinesnya di bawah ini"
+                },
+                {
+                    "q": "Apakah pengobatan di Klinik Pratama Sunter 2 dapat di claim ke Asuransi Astralife bila saya memiliki benefit rawat jalan?",
+                    "a": "Bisa. Klinik Pratama Sunter 2 dapat memberikan pelayanan yang dapat di claim ke Asuransi Astralife. Seluruh dokumen yang diperlukan akan di bantu disiapkan oleh Klinik. \nKetentuan penanggungan sama seperti Anda berobat di RS atau di klinik lain"
+                },
+                {
+                    "q": "Bila dokter menyarankan saya untuk kontrol lebih dari 3 kali sesudah rawat inap, apakah bisa dijaminkan?",
+                    "a": "Sesuai ketentuan dari PKB TAM, karyawan berhak untuk mendapatkan kontrol post rawat inap (dengan diagnosa yang sama dengan saat rawat inap) maksimal 3 kali. "
+                }
+            ]
+        },
+        {
+            "topik": "Kebijakan Umum, Medical Checkup dan Program Mental Health",
+            "pertanyaan": [
+                {
+                    "q": "Dimana saya dapat menemukan kebijakan kesehatan PT TAM ?",
+                    "a": "Anda dapat menemukan kebijakan kesehatan PT TAM di Buku Perjanjian Kerja Bersama (PKB) TAM , pasal 31"
+                },
+                {
+                    "q": "Apakah saya wajib mengikuti Medical Check Up?",
+                    "a": "Perusahaan sangat concern dengan kesehatan dan keselamatan karyawan terutama di tempat kerja. Oleh sebab itu, setiap karyawan berhak dan wajib mengikuti Medical Check Up yang telah ditentukan oleh perusahaan, serta wajib melakukan follow up/ tindak lanjut hasil pemeriksaan tersebut. "
+                },
+                {
+                    "q": "Hasil Medical Check Up saya memerlukan pengobatan rawat jalan rutin. Apakah bisa di tanggung perusahaan?",
+                    "a": "Perusahaan telah memberikan Bantuan Pemeliharaan Kesehatan (BPK) kepada Pekerja dan keluarganya, dipergunakan untuk pemeriksaan kesehatan dan / atau pengobatan yang dibayarkan bersamaan dengan pembayaran upah setiap bulan.  Selain itu perusahaan memberikan perhatian terhadap kondisi kesehatan Pekerja dan Keluarganya dengan menyelenggarakan aktivitas promosi pemeliharaan kesehatan, menyediakan Sarana Balai Pengobatan (UPKK/ Klinik) dan BPJS Kesehatan. Anda dapat memaksimalkan penggunaan BPK, BPJS kesehatan dan sarana pengobatan klinik ini. "
+                },
+                {
+                    "q": "Apakah perusahaan menfasilitasi konsultasi atau konseling untuk mental health?",
+                    "a": "Perusahaan memahami bahwa setiap individu dapat menghadapi berbagai tantangan, baik yang berkaitan dengan kehidupan pribadi, keluarga, maupun pekerjaan yang dapat mempengaruhi kesehatan mental dan kesejahteraan secara keseluruhan. \nSebagai bentuk komitmen terhadap kesejahteraan karyawan, perusahaan menyediakan layanan EAP dengan dukungan profesional melalui konseling yang bersifat rahasia. Anda dapat menghubungi layanan EAP melalui Hotline +62 812-1123-123. "
+                }
+            ]
+        }
+    ];
+
+    document.addEventListener("DOMContentLoaded", function (event) {
+        var FaqRoot = $("#FaqRoot");
+        var html = "";
+        FaqList.forEach((i, ii) => {
+            var htmlTopik = "";
+            htmlTopik += `<a class="btn btn-primary" data-toggle="collapse" href="#topik${ii}" role="button" aria-expanded="false" aria-controls="collapseExample">${i.topik}</a>`
+            htmlTopik += `<div class="collapse" id="topik${ii}">`;
+            i.pertanyaan.forEach((j, ji) => {
+                var htmlPertanyaan = "";
+                htmlPertanyaan += `<a data-toggle="collapse" href="#q${ii}${ji}">${j.q}</p>
+                        <p class="collapse" id="q${ii}${ji}" style="color:black;">${j.a}</p>`;
+                htmlTopik += htmlPertanyaan;
+            })
+            htmlTopik += `</div>`;
+            html += htmlTopik;
+        });
+        FaqRoot.append(html);
+    });
+</script>
+<div class="card">
+    <div class="card-header bordered" style="padding:0;">
+        <div style="padding:1em;">
+            <div style="display: flex; width: 100%; flex-direction: row-reverse;">
+                <a class="btn btn-sm red-sunglo" id="btnNewConsult"
+                   href="../../Module/OHS/PdfKebijakan/Kebijakan Keselamatan.pdf"
+                   download>
+                    <i class="fa fa-file"></i>
+                    Download Pdf
+                </a>
+            </div>
+            <div class="col-12">
+                <h1 style=" font-weight: 600;">Kebijakan Keselamatan</h1>
+                <br />
+                <h3>Kebijakan Dasar Keselamatan, Kesehatan Kerja dan Lingkungan</h3>
+                <img src="../../Module/OHS/ImageKebijakan/Kebijakan Dasar Keselamatan, Kesehatan Kerja dan Lingkungan.jpg" style="width: 100%;" />
+                <h3></h3>
+                <br />
+                <h3>Safety Golden Rules</h3>
+                <img src="../../Module/OHS/ImageKebijakan/Safety Golden Rules PT Toyota Astra Motor.jpg" style="width: 100%;" />
+            </div>
+        </div>
+        <div style="display: flex; background: #197BD0; color: white; flex-direction: row; padding: 1em;">
+            <h3 style="flex: 1; font-weight: 600; ">Apakah artikel ini membantu?</h3>
+            <button class="btn btn-primary" onclick="OpenFeedbackFAQ()"
+                    style="background: #136B43; border: none;"
+                    >
+                Iya
+            </button>
+            <button class="btn btn-primary" onclick="OpenFeedbackFAQ()" 
+                    style="margin-left: 1em; border: none; background: #CF333F"
+                    >
+                Tidak
+            </button>
+        </div>
+    </div>
+</div>

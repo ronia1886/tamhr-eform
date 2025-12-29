@@ -1,0 +1,250 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@inject IScriptManager ScriptManager
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("datepicker","grid","combobox");
+    int Period = ViewBag.Period;
+    string NoReg = ViewBag.NoReg;
+    string Name = ViewBag.Name;
+    string PostName = ViewBag.PostName;
+    var listtype = new List<object> {
+        new { Text = "All", Value = "" },
+        new { Text = "WFH", Value = "WFH" },
+        new { Text = "WFO", Value = "WFO"}
+    };
+
+    var currentDate = DateTime.Now.Date;
+    DateTime minDate = new DateTime(Period, 1, 1);
+    DateTime maxDate = new DateTime(Period, 12, 31);
+    //DateTime firstMonthDate = Convert.ToDateTime(Period + "-" + currentDate.Month + "-01");
+    //DateTime lastMonthDate = Convert.ToDateTime(Period + "-" + currentDate.Month + "-"+ DateTime.DaysInMonth(currentDate.Year, currentDate.Month)); 
+}
+
+@section scripts{
+    <script type="text/javascript">
+        $.filterChange = function () {
+            dateFrom = $("#wfhDateFrom").data("kendoDatePicker").value();
+            dateTo = $("#wfhDateTo").data("kendoDatePicker").value();
+            type = $("#type").data("kendoComboBox").value();
+
+            finalFilters = {
+                logic: "and",
+                filters: []
+            };
+
+            if (dateFrom != "" && dateTo !="") {
+                finalFilters.filters.push({
+                    field: 'PlanDate',
+                    operator: 'ge',
+                    value: dateFrom
+                });
+
+                finalFilters.filters.push({
+                    field: 'PlanDate',
+                    operator: 'le',
+                    value: dateTo
+                });
+            }
+            if(type!=""){
+                var child_filter =
+                {
+                    logic: "or",
+                    filters: []
+                };
+                child_filter.filters.push(
+                {
+                    field: 'Plans',
+                    operator: 'eq',
+                    value: type
+                });
+                
+                child_filter.filters.push(
+                {
+                    field: 'Actual',
+                    operator: 'eq',
+                    value: type
+                });
+                finalFilters.filters.push(child_filter);
+            }
+            $("#grid").data("kendoGrid").dataSource.filter(finalFilters);
+        }
+
+        $.getData = function () {
+            return {
+                DateFrom: $("#wfhDateFrom").data("kendoDatePicker").value(),
+                DateTo: $("#wfhDateTo").data("kendoDatePicker").value(),
+            };
+        };
+
+        $.downloadWFHDetail = function () {
+            Period = "@Period";
+            NoReg = "@NoReg";
+            DateFrom = kendo.toString($("#wfhDateFrom").data("kendoDatePicker").value(),"yyyy-MM-dd");
+            DateTo = kendo.toString($("#wfhDateTo").data("kendoDatePicker").value(),"yyyy-MM-dd");
+            window.open(app.resolveUrl("~/api/annual-planning/download-wfh-planning-detail?Period=" + Period + "&NoReg=" + NoReg + "&strDateFrom=" + DateFrom + "&strDateTo="+DateTo, "_blank"));
+        };
+
+        var datePicker = $("#wfhDateFrom").kendoDatePicker({}).getKendoDatePicker();
+
+        datePicker.dateView.options.change = function () {
+            datePicker._change(this.value());
+        };
+
+        (function ($, app) {
+            $(function () {
+                $(document).on('click', '.k-link, li.k-item', function (e) {
+                    e.stopPropagation();
+                });
+            });
+        })(jQuery, app);
+    </script>
+}
+<div class="row">
+ <div class="col">
+    <div class="card">
+        <div class="card-header bordered">
+            <h4 class="card-title">@Localizer["Annual WFH Planning"] @Period</h4>
+            @*<div class="heading-elements">
+                    @await Html.PartialAsync("~/Areas/TimeManagement/Views/AnnualPlanning/Form/_WFHToolbars.cshtml")
+            </div>*@
+            <div class="heading-elements text-right" style="width:200px">
+                <ul id="absence-filter" class="page-toolbars" data-role="filter">
+                    <li class="dropdown custom-filter">
+                        <a class="dropdown-toggle font-medium-2 font-blue-sharp" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <i class="fa fa-filter"></i>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-right" style="width: 200px">
+                            <form class="form-horizontal p-2" role="form">
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>@Localizer["Start Date"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("wfhDateFrom")
+                                                .Value(minDate)
+                                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                .Format("dd/MM/yyyy")
+                                                .Deferred()
+                                            )
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>@Localizer["End Date"]</label>
+                                            @(Html.Kendo().DatePicker()
+                                                .Name("wfhDateTo")
+                                                .Value(maxDate)
+                                                .HtmlAttributes(new { style = "width: 100%", placeholder = Localizer["Please input a date"].Value })
+                                                .Format("dd/MM/yyyy")
+                                                .Deferred()
+                                            )
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-group">
+                                            <label>@Localizer["Type"]</label>
+                                            @(Html.Kendo().ComboBox()
+                                                      .Name("type")
+                                                      .DataTextField("Text")
+                                                      .DataValueField("Value")
+                                                      .BindTo(listtype)
+                                                      .Placeholder(Localizer["Please select type"].Value)
+                                                      .HtmlAttributes(new { style = "width: 100%" })
+                                                      .Deferred()
+                                                )
+                                        </div>
+                                    </div>
+                    
+                                </div>
+                                <hr class="mt-1"/>
+                                <a href="javascript:;" class="btn red btn-block" data-trigger="handler" data-handler="searchHandler" onClick="$.filterChange();">@Localizer["Search"]</a>
+                                <a href="javascript:;" class="btn green-jungle btn-block" data-trigger="handler" data-handler="downloadWFHDetail" onclick="$.downloadWFHDetail();">
+                                    @Localizer["Download"]
+                                </a>
+                            </form>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="card-content">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="portlet light profile-light">
+                                    <div class="portlet-body">
+                                        <div class="profpic">
+                                            <div class="profpic-wrapper">
+                                                <div class="profpic-avatar">
+                                                    <img src="@ConfigService.ResolveAvatar(@NoReg)" style="width: 2.5rem;height: 2.8125rem;border-radius: 50%;">
+                                                </div>
+                                                <div class="profpic-body">
+                                                    <span class="profpic-title">@Name</span>
+                                                    <span class="profpic-description">@PostName</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12">&nbsp;</div>
+                    <div class="col-md-12">
+                        @(Html.Kendo().Grid<TAMHR.ESS.Domain.AnnualWFHPlanningDetailStoredEntity>()
+                        .Name("grid")
+                        .Columns(columns =>
+                                        {
+                                            columns.Bound(c => c.PlanDate)
+                                                .Title(Localizer["Plan Date"].Value)
+                                                .Width(150)
+                                                .ClientTemplate(@"#= kendo.toString(PlanDate, ""dd/MM/yyyy"" )#")
+                                                .HtmlAttributes(new { @class = "text-center" });
+                                            columns.Bound(c => c.Plans)
+                                                .Width(60)
+                                                .Title(Localizer["Plan"].Value)
+                                                .Width(150)
+                                                .HtmlAttributes(new { @class = "text-center" });
+                                            columns.Bound(c => c.Actual)
+                                                .Width(60)
+                                                .Title(Localizer["Actual"].Value)
+                                                .Width(150)
+                                                .HtmlAttributes(new { @class = "text-center" });
+                                            columns.Bound(c => c.Remark)
+                                                .Width(60)
+                                                .Title(Localizer["Remark"].Value)
+                                                .Width(150);
+                                        })
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/annual-planning/get-wfh-details?Period=" + Period + "&NoReg=" + NoReg))
+                                            .Data("$.getData"))
+                                            .PageSize(10)
+                                        )
+                                        .DataSource(dataSource => dataSource
+                                            .Ajax()
+                                            .Read(read => read.Url(Url.Content("~/api/annual-planning/get-wfh-details?Period=" + Period + "&NoReg=" + NoReg))
+                                            .Data("$.getData"))
+                                            .PageSize(10)
+                                        )
+                                        .Resizable(resizable => resizable.Columns(true))
+                                        .Pageable(options =>
+                                        {
+                                            options.Input(true);
+                                            options.Numeric(false);
+                                            //options.PageSizes(new[] { 5, 10, 20, 25, 100, 200 });
+                                        })
+                                        .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                                        .Scrollable()
+                        .Deferred()
+                        )
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

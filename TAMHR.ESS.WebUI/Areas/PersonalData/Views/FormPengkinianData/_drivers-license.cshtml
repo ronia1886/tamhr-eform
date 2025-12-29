@@ -1,0 +1,73 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService;
+@inject TAMHR.ESS.Infrastructure.DomainServices.UpdateDataService profileservice;
+@{
+    var user = User.GetClaim("NoReg");
+    var data = profileservice.GetPersonalDataDriverLicense(user).FirstOrDefault();
+}
+
+@if (data != null)
+{
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8 col-sm-12">
+                <div class="">
+                    <fieldset class="card-header" data-toggle="collapse" href="#sim" role="button" aria-expanded="false" aria-controls="sim">
+                        <legend>Driver License</legend>
+                        <div class="collapse show" id="sim">
+                            <div class="row">
+                                <label class="col-md-4">Jenis sim</label>
+                                <span class="col-md-8">: @data.SimType</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">No SIM</label>
+                                <span class="col-md-8">: @data.SimNumber</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Nama</label>
+                                <span class="col-md-8">: @data.Name</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Alamat</label>
+                                <span class="col-md-8">: @data.Address</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tempat / Tanggal Lahir</label>
+                                <span class="col-md-8">: @data.BirthPlace / @data.BirthDate.ToString("dd-MMM-yyy")</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Tinggi</label>
+                                <span class="col-md-8">: @data.Height</span>
+                            </div>
+                            <div class="row">
+                                <label class="col-md-4">Berlaku Sampai Dengan</label>
+                                <span class="col-md-8">: @data.ValidityPeriod</span>
+                            </div>
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+            <div class="col-md-4 col-sm-12">
+                <fieldset class="card-header" data-toggle="collapse" href="#ijazahdoc" role="button" aria-expanded="false" aria-controls="ijazahdoc">
+                    <legend>Document</legend>
+                    <div class="form-group collapse show" id="ijazahdoc">
+                        <div class="col-sm-12 text-center align-items-center">
+                            <div>
+                                <small>SIM</small>
+                            </div>
+                            <img alt="Default Profile Picture" class="center-image" style="width:7rem;" src="@ConfigService.ResolveAvatar(user)">
+                        </div>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+    </div>
+
+
+}
+else
+{
+    <div class="text-center py-4 px-2 text-muted small"><img src="/img/folder.svg" style="width: 150px;"><br>No data found</div>
+}
+
+<hr />
+

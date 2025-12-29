@@ -1,0 +1,566 @@
+﻿@inject TAMHR.ESS.Infrastructure.DomainServices.ConfigService ConfigService
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ScriptManager.RegisterReferences("dropdownlist", "grid", "datepicker", "combobox", "chart", "dropdowntree", "multiselect");
+    //var version = Microsoft.Extensions.PlatformAbstractions.PlatformServices.Default.Application.ApplicationVersion;
+    var chief = bool.Parse(User.GetClaim("Chief") ?? "False");
+    var now = DateTime.Now;
+    var start = new DateTime(now.Year, now.Month, 1);
+    var end = start.AddMonths(1).AddDays(-1);
+    var divisiData = (IEnumerable<DropDownTreeItemModel>)ViewBag.divisionData;
+	var areaData = (IEnumerable<DropDownTreeItemModel>)ViewBag.areaData;
+	string item = "";
+}
+@section scripts {
+	<script type="text/javascript" src="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.js"></script>
+	<script type="text/javascript">
+		function getUrlParameter(name) {
+			name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+			var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+			var results = regex.exec(location.search);
+			return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+		}
+
+		function filterGridByUrlParameters() {
+			var periode = getUrlParameter('Periode');
+			var divisionCode = getUrlParameter('DivisionCode');
+			var areaId = getUrlParameter('AreaId');
+
+			// Ambil nilai dari filter
+			const periodeFilter = $('#Periode').data('kendoDatePicker').value(); // Ambil nilai DatePicker
+			const divisionFilter = $('#division').data('kendoComboBox').value(); // Ambil nilai ComboBox Division
+			const areasFilter = $('#AreaSearch').data('kendoComboBox').value(); // Ambil nilai ComboBox Area
+
+			const formattedPeriod = periodeFilter ? kendo.toString(new Date(periodeFilter), "yyyy-MM") : periode;
+			divisionCode = divisionFilter ? divisionFilter.split('#')[0] : divisionCode;
+			areaId = areasFilter ? areasFilter : areaId;
+
+			return {
+				Periode: formattedPeriod,
+				DivisionCode: divisionCode,
+				AreaId: areaId
+			};
+		}
+
+		function onDataBound(e) {
+			var data = this.dataSource.data();
+			if (data.length === 0) {
+				// Handle empty data case
+			}
+		}
+	</script>
+	<script>
+	//Fungsi untuk mendapatkan nilai parameter dari URL
+	function getUrlParameter(name) {
+		name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+		var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+		var results = regex.exec(location.search);
+		return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+	}
+
+	function populateFilters() {
+		var periode = getUrlParameter('Periode');
+		var divisionCode = getUrlParameter('DivisionCode');
+		var divisionName = getUrlParameter('DivisionName');
+		var areaId = getUrlParameter('AreaId');
+		divisionCode = divisionCode? divisionCode +"#"+ divisionName : null
+		setTimeout(function() {
+			var areaComboBox = $("#AreaSearch").data("kendoComboBox");
+			areaComboBox.readonly(true);
+			if (periode && $("#Periode").data("kendoDatePicker")) {
+				$("#Periode").data("kendoDatePicker").value(new Date(periode));
+			}
+			if (divisionCode && $("#division").data("kendoComboBox")) {
+				$("#division").data("kendoComboBox").value(divisionCode);
+				$("#division").data("kendoComboBox").readonly(true); // menambahkan atribut disabled
+			}
+			if (areaId && $("#AreaSearch").data("kendoComboBox")) {
+				$("#AreaSearch").data("kendoComboBox").value(areaId);
+				$("#AreaSearch").data("kendoComboBox").readonly(true); // menambahkan atribut disabled
+			}
+
+		}, 500); // Waktu tunggu 1 detik untuk memastikan elemen diinisialisasi
+	}
+
+	$(document).ready(function() {
+		// Function to determine the base URL dynamically
+		function getBaseUrl() {
+			const currentPath = window.location.pathname;
+			const baseUrlWithEssOhs = `${window.location.origin}/ess_v2/api/ohs/area-activity/report/download-report`;
+			const baseUrlWithoutEssOhs = `${window.location.origin}/api/ohs/area-activity/report/download-report`;
+
+				return currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+		}
+
+		$('#btnDownload').on('click', function () {
+			// Ambil nilai filter
+			const periode = $("#Periode").data("kendoDatePicker").value();
+			const DivisionSelected = $("#division").data("kendoComboBox").value();
+			const area = $("#AreaSearch").data("kendoComboBox").value();
+			var division = DivisionSelected.split('#')[0];
+			var divisionName = DivisionSelected.split('#')[1];
+			// Format nilai periode menjadi 'YYYY-MM'
+			const formattedPeriode = periode ? kendo.toString(kendo.parseDate(periode), "yyyy-MM") : "";
+			// Susun query string
+			const queryParams = [];
+			if (formattedPeriode) queryParams.push(`Periode=${formattedPeriode}`);
+			if (division) queryParams.push(`DivisionCode=${encodeURIComponent(division)}`);
+			if (area) queryParams.push(`AreaId=${encodeURIComponent(area)}`);
+			if (divisionName) queryParams.push(`DivisionName=${encodeURIComponent(divisionName)}`);
+
+			// Buat URL akhir
+
+			// Usage
+			const baseUrl = getBaseUrl();
+			console.log(baseUrl);
+			const fullUrl = baseUrl + (queryParams.length ? `?${queryParams.join("&")}` : "");
+
+			// Arahkan browser ke URL untuk memulai unduhan
+			window.open(fullUrl, "_blank");
+		})
+
+		$("#Periode").on("focus", function() {
+			$(this).data("kendoDatePicker").open();
+		});
+
+		$('#btnSearch').on('click', function () {
+				
+			// Ambil nilai dari filter
+			const periode = $('#Periode').data('kendoDatePicker').value(); // Ambil nilai DatePicker
+			const DivisionSelected = $('#division').data('kendoComboBox').value(); // Ambil nilai ComboBox Division
+			console.log('DivisionSelected>>',DivisionSelected);
+			const areas = $('#AreaSearch').data('kendoComboBox').value(); // Ambil nilai ComboBox Area
+			
+			var divisions = DivisionSelected.split('#')[0];
+				
+			// Format filter
+			const filters = [];
+
+			if (periode) {
+				filters.push({
+					field: 'CreatedOnSearch',
+					operator: 'eq',
+					value: kendo.toString(kendo.parseDate(periode), 'yyyy-MM')
+				});
+			}
+
+			if (divisions && divisions.length > 0) {
+				filters.push({
+					field: 'DivisionCode',
+						operator: 'eq',
+					value: divisions
+				});
+			}
+
+			if (areas && areas.length > 0) {
+				filters.push({
+					field: 'AreaId',
+					operator: 'eq',
+					value: areas
+				});
+			}
+				console.log('filter>>',filters)
+			// Terapkan filter ke semua grid
+			applyFiltersToAllGrids(filters);
+		});
+
+		$('#btnClear').on('click', function () {
+			// Reset filter form
+			$('#Periode').data('kendoDatePicker').value(null);
+			$('#division').data('kendoComboBox').value('');
+			$('#AreaSearch').data('kendoComboBox').value('');
+
+
+			// Hapus filter dari semua grid
+			applyFiltersToAllGrids([]);
+		});
+
+		populateFilters();
+	});
+
+	function applyFiltersToAllGrids(filters) {
+		const gridIds = [
+				'#grid_total_worker',
+				'#grid_near_miss',
+				'#grid_property_damage',
+				'#grid_working_accident',
+				'#grid_traffic_accident',
+				'#grid_facility',
+				'#grid_fire_protection',
+				'#grid_apar_refill',
+				'#grid_training_record',
+				'#grid_project_activity'
+		];
+
+		gridIds.forEach(gridId => {
+			const grid = $(gridId).data('kendoGrid');
+			if (grid) {
+				const gridFilters = [...filters];
+
+				// Tambahkan filter khusus untuk grid_near_miss
+				if (gridId === '#grid_near_miss') {
+					gridFilters.push({
+						field: 'IncidentTypeCode',
+						operator: 'eq',
+						value: 'near_miss'
+					});
+				}
+
+				// Tambahkan filter khusus untuk grid_near_miss
+				if (gridId === '#grid_property_damage') {
+					gridFilters.push({
+						field: 'IncidentTypeCode',
+						operator: 'eq',
+						value: 'property_damage'
+					});
+				}
+
+				// Tambahkan filter khusus untuk grid_near_miss
+				if (gridId === '#grid_working_accident') {
+					gridFilters.push({
+						field: 'IncidentTypeCode',
+						operator: 'eq',
+						value: 'working_accident'
+					});
+				}
+
+				// Tambahkan filter khusus untuk grid_near_miss
+				if (gridId === '#grid_traffic_accident') {
+					gridFilters.push({
+						field: 'IncidentTypeCode',
+						operator: 'eq',
+						value: 'traffic_accident'
+					});
+				}
+
+				grid.dataSource.filter({
+					logic: 'and',
+					filters: gridFilters
+				});
+			}
+		});
+	}
+
+	</script>
+}
+
+@section styles  {
+	<link rel="stylesheet" href="~/plugins/bootstrap-clockpicker/bootstrap-clockpicker.min.css" />
+    <style type="text/css">
+		.navbar {
+			/* margin-bottom: 15px; /* Jarak antara navbar dan elemen di bawahnya */ */
+		}
+
+		.navBarMain {
+			display: flex;
+			flex-wrap: wrap; /* Agar tombol turun ke bawah jika tidak cukup lebar */
+			justify-content: center; /* Tombol tetap rapi tanpa menambah jarak kiri & kanan */
+			/* padding-bottom: 10px; /* Ruang ekstra di bawah */ */
+		}
+
+		.navBarMain .nav-item {
+			margin-bottom: 10px; /* Beri jarak hanya ke bawah jika tombol turun */
+		}
+
+
+        .k-grid th {
+            white-space: nowrap;
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+
+        td {
+            white-space: nowrap;
+        }
+
+        .adjustment {
+            width: 40px;
+            text-align: center;
+        }
+
+        .fixed-header {
+            top: 50px;
+            position: fixed;
+            width: auto;
+            z-index: 1;
+        }
+
+        .k-grid-header {
+            width: auto !important;
+            padding-right: 0 !important;
+            border-right: 0px solid #fff !important;
+        }
+
+        .k-grid-content.k-auto-scrollable {
+            overflow-y: hidden !important;
+        }
+
+        .k-grid-content-locked {
+            border-right: 1px solid #ddd;
+            height: 100% !important;
+        }
+
+        .custom-control-label::before, .custom-control-label::after {
+            left: -1.13rem;
+        }
+
+		.nav-item {
+			margin-right: 15px; /* Sesuaikan dengan kebutuhan Anda */
+		}
+
+
+
+		.navbar {
+			/* margin-bottom: 15px; /* Jarak antara navbar dan elemen di bawahnya */ */
+		}
+
+		.navBarMain {
+			display: flex;
+			flex-wrap: wrap; /* Agar tombol turun ke bawah jika tidak cukup lebar */
+			justify-content: center; /* Tombol tetap rapi */
+		}
+
+		.navBarMain .nav-item {
+			margin-bottom: 10px; /* 🔹 Jarak antar tombol tab */
+		}
+
+		.nav-item {
+			margin-right: 15px; /* 🔹 Jarak antar tombol tab di samping */
+		}
+
+		.nav-tabs {
+			display: flex;
+			flex-wrap: wrap; /* 🔹 Pastikan tombol turun ke bawah jika perlu */
+			justify-content: center; /* 🔹 Agar tetap rapi */
+		}
+
+		.nav-tabs .nav-item {
+			margin-bottom: 10px; /* 🔹 Jarak antar tab tanpa media queries */
+		}
+    </style>
+}
+
+@section pageToolbars
+{
+<div class="dropdown">
+    <a href="javascript:;" class="btn btn-sm dropdown-toggle red-sunglo" data-toggle="dropdown">
+        <i class="ft-settings"></i> <span class="d-none d-sm-inline">@Localizer["Actions"]</span> <i class="ft-chevron-down"></i>
+    </a>
+    <ul class="dropdown-menu dropdown-menu-right">
+        <li>
+			<a id="btnDownload" onclick="downloadReport()">
+				<i class="ft-download"></i> &nbsp;@Localizer["Download Area Activity"]
+			</a>
+        </li>
+    </ul>
+</div>
+}
+@section pageTitle
+{
+	<div class="page-title">
+		<h1 class="separator d-none d-lg-inline">List Area Activity</h1>
+		<div class="row breadcrumbs-top d-inline-block d-sm-none">
+			<div class="breadcrumb-wrapper col-12">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item">
+						<a href="/">
+							<i class="icon-home"></i>
+						</a>
+					</li>
+					<li class="breadcrumb-item active">
+						List Area Activity
+					</li>
+				</ol>
+			</div>
+		</div>
+		<div class="row breadcrumbs-top d-none d-sm-inline-block" style="position: relative; top: -2px;">
+			<div class="breadcrumb-wrapper col-12">
+				<ol class="breadcrumb">
+					<li class="breadcrumb-item">
+						<a href="/">
+							<i class="icon-home"></i>
+						</a>
+					</li>
+					<li class="breadcrumb-item">
+						OHS
+					</li>
+					<li class="breadcrumb-item active">
+						<a href="~/ohs/areaactivity">
+							Dashboard Area Activity
+						</a>
+					</li>
+					<li class="breadcrumb-item active">
+						List Area Activity
+					</li>
+				</ol>
+			</div>
+		</div>
+		<script type="text/javascript">
+			document.title = "List Area Activity";
+		</script>
+
+	</div>
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+			<div class="card-header">
+			</div>
+			<div class="card-body">
+				<div class="col-md-12">
+					<div class="row">
+						<div class="card">
+							<div class="card-header bordered">
+								<h4 class="card-title">@Localizer["Area Activity Record"]</h4>
+								<a class="heading-elements-toggle">
+									<i class="ft-ellipsis-h font-medium-3"></i>
+								</a>
+								<div class="heading-elements">
+									<ul class="list-inline mb-0">
+										<li>
+											<a data-action="collapse">
+												<i class="ft-minus"></i>
+											</a>
+										</li>
+									</ul>
+								</div>
+							</div>
+							<div class="card-content">
+								<div class="card-body">
+									<div class="row">
+										<div class="col-md-12 col-sm-12">
+											<fieldset style="padding-bottom: 0 !important; padding-top: 0.4rem !important;">
+												<legend>Filter</legend>
+												<div class="row container-by-date">
+													<div class="form-group col-md-4 col-12">
+														<label>@Localizer["Periode"]</label>
+														@(Html.Kendo().DatePicker()
+														.Name("Periode")
+														.Value(string.Empty)
+														.Events(e => e.Change("$.filterChange"))
+														.Format("MM/yyyy")
+														.Start(CalendarView.Year)
+														.Depth(CalendarView.Year)
+														.DateInput(true)
+														.HtmlAttributes(new { placeholder = "From", style = "width:100%" })
+														.Deferred()
+														)
+													</div>
+													<div class="form-group col-md-4 col-12">
+														<label>@Localizer["Division"]</label>
+														@(Html.Kendo().ComboBox()
+														.Name("division")
+														.DataTextField("Text")
+														.DataValueField("Value")
+														.HtmlAttributes(new { @class = "form-control" })
+														.Filter(Kendo.Mvc.UI.FilterType.Contains)
+														.BindTo(divisiData)
+														.Events(e => e.Change("onDivisionChange"))
+														.Placeholder(Localizer["Please select division"].Value)
+														.Deferred()
+														)
+													</div>
+													<div class="form-group col-md-4 col-12">
+														<label>@Localizer["Area"]</label>
+														@(Html.Kendo().ComboBox()
+														.Name("AreaSearch")
+														.HtmlAttributes(new { @class = "form-control" })
+														.DataTextField("Text")
+														.DataValueField("Value")
+														.Filter(Kendo.Mvc.UI.FilterType.Contains)
+														.BindTo(areaData)
+														.Placeholder(Localizer["Please select Area"].Value)
+														.Deferred()
+														)
+													</div>
+												</div>
+												<div class="row container-by-date">
+													<div class="form-group col-md-12 col-12 text-right">
+														<a class="btn btn-primary" id="btnSearch" style="color: #fff;">
+															<i class="ft-search"></i> &nbsp;@Localizer["Search"]
+														</a>
+														<a class="btn btn-danger" id="btnClear" style="color: #fff;">
+															<i class="ft-refresh-cw"></i> &nbsp;@Localizer["Clear"]
+														</a>
+													</div>
+												</div>
+
+											</fieldset>
+										</div>
+									</div>
+									<div class="row">
+										<nav class="navbar navbar-light justify-content-between">
+											<div class="col-md-12" role="tablist">
+												<ul class="nav nav-tabs navBarMain" role="tablist">
+													<li class="nav-item"><a class="btn btn-primary btn-md" active show" data-toggle="tab" role="tab" aria-selected="true" href="#total_worker">Total Worker</a></li>
+													<li class="nav-item"><a class="btn btn-primary btn-md" data-toggle="tab" role="tab" aria-selected="false" href="#safety_incident">Safety Incident</a></li>
+													<li class="nav-item"><a class="btn btn-primary btn-md" data-toggle="tab" role="tab" aria-selected="false" href="#sarana">Sarana Berdampak K3</a></li>
+													<li class="nav-item"><a class="btn btn-primary btn-md" data-toggle="tab" role="tab" aria-selected="false" href="#training">OHS Training Record</a></li>
+													<li class="nav-item"><a class="btn btn-primary btn-md" data-toggle="tab" role="tab" aria-selected="false" href="#project_activity">Project Activity</a></li>
+												</ul>
+											</div>
+										</nav>
+									</div>
+									
+									<div class="row tab-content" style="padding-top: 10px;">
+										<div id="total_worker" class="col-md-12 tab-pane fade show active">
+											<partial name="TotalWorkerList" model="item" />
+										</div>
+										<div id="safety_incident" class="col-md-12 tab-pane fade">
+											<partial name="SafetyIncidentList" model="item" />
+										</div>
+										<div id="sarana" class="col-md-12 tab-pane fade">
+											<partial name="MeansImpactK3List" model="item" />
+										</div>
+										<div id="training" class="col-md-12 tab-pane fade">
+											<partial name="OhsTrainingRecordList" model="item" />
+										</div>
+										<div id="project_activity" class="col-md-12 tab-pane fade">
+											<partial name="ProjectActivityList" model="item" />
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	
+	function baseUrl() {
+		const currentPath = window.location.pathname;
+		const baseUrlWithEssOhs = `${window.location.origin}/ess_v2`;
+		const baseUrlWithoutEssOhs = `${window.location.origin}`;
+
+		let url = currentPath.includes('/ess_v2') ? baseUrlWithEssOhs : baseUrlWithoutEssOhs;
+
+		return url;
+	}
+
+
+	function onDivisionChange() {
+		
+		const DivisionSelected = $('#division').data('kendoComboBox').value(); // Ambil nilai ComboBox Division
+		var divisions = DivisionSelected.split('#')[0];
+		// Panggil AJAX untuk mendapatkan data area yang difilter berdasarkan divisi yang dipilih
+		$.ajax({
+			url: baseUrl()+'/api/ohs/area-activity/gets-filterAreaDropDown', // Ganti dengan endpoint API Anda untuk mendapatkan data area
+			type: 'POST',
+			data: { divisionCode: divisions },
+			success: function (data) {
+				console.log('data:',data.Data)
+				var areaComboBox = $("#AreaSearch").data("kendoComboBox");
+				areaComboBox.setDataSource(data.Data); // Atur data sumber baru untuk ComboBox area
+				areaComboBox.text(''); // Kosongkan teks input
+				areaComboBox.readonly(false);
+			},
+			error: function (error) {
+				console.log("Error:", error);
+			}
+		});
+	}
+</script>

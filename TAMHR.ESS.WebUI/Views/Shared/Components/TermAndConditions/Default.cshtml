@@ -1,0 +1,20 @@
+﻿<div class="row">
+    <div class="col">
+        <div class="custom-content"></div>
+    </div>
+</div>
+<hr class="mt-2" />
+<div class="row">
+    <div class="col">
+        <div class="form-group">
+            <div class="custom-control custom-checkbox d-inline" style="margin-right: -5px;">
+                <input id="termAndConditionCb" type="checkbox" class="custom-control-input" data-trigger="handler" data-handler="agreeHandler" />
+                <label class="custom-control-label" for="termAndConditionCb">&nbsp;</label>
+            </div>
+            <span>@Localizer["I have read and agree to the Terms and Conditions and Privacy Policy"]</span>
+        </div>
+    </div>
+</div>
+<div class="actions">
+    <a class="btn red-haze disabled" data-trigger="handler" data-handler="submitAgreeHandler">@Localizer["OK"]</a>
+</div>

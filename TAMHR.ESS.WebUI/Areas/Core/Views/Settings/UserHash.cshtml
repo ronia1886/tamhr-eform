@@ -1,0 +1,55 @@
+﻿@{ 
+    ScriptManager.RegisterReferences("combobox");
+}
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header bordered">
+                <h3 class="card-title">@Localizer["List of User Hash"]</h3>
+                <div class="heading-elements">
+                    @await Html.PartialAsync("Components/_UserHashToolbars")
+                </div>
+            </div>
+            <div class="card-body p-0 table-wrap no-table-header">
+                @(Html.Kendo().Grid<TAMHR.ESS.Domain.UserHash>()
+                    .Name("grid")
+                    .HtmlAttributes(new { data_filter = "user-hash-filter" })
+                    .Columns(columns =>
+                    {
+                        columns.Bound(c => c.Id).Title("Config").ClientTemplate(@"
+                            <div class=""media"">
+                                <img class=""mr-3 rounded center-image"" src=""#:app.resolveImageUrl(NoReg)#"" width=""45"" height=""45"">
+                                <div class=""media-body align-self-center"">
+                                    <h6 class=""mt-1 mb-0 bold"">#:Name# (#:NoReg#)</h6>
+                                    <small>#:TypeCode#</small>
+                                </div>
+                            </div>
+                        ");
+
+                        columns.Bound(c => c.Id).Title("Action").HtmlAttributes(new { @class = "text-center" }).ClientTemplate(@"
+                            <div class=""btn-group"">
+                                <a class=""btn btn-sm red"" data-trigger=""handler"" data-url=""~/api/user-hash"" data-handler=""deleteHandler"" data-parameters-id=""#:Id#"">
+                                    <i class=""ft-trash""></i> Remove Hash
+                                </a>
+                            </div>
+                        ").Width("5rem");
+                    })
+                    .NoRecords(config => config.Template(@"<div class=""text-center p-2 text-muted""><i class=""fa fa-clipboard font-large-1""></i><br/>" + Localizer["No data found"].Value + "</div>"))
+                    .DataSource(dataSource => dataSource
+                        .Ajax()
+                        .Read(read => read.Url(Url.Content("~/api/user-hash/gets")))
+                        .PageSize(50)
+                        .Sort(sort => sort.Add(x => x.CreatedOn).Descending())
+                    )
+                    .Pageable(options =>
+                    {
+                        options.Input(true);
+                        options.Numeric(false);
+                        options.AlwaysVisible(false);
+                    })
+                    .Deferred()
+                )
+            </div>
+        </div>
+    </div>
+</div>
